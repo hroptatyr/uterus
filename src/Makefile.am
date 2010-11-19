@@ -1,0 +1,100 @@
+### Makefile.am -- uterus src/ make file
+##
+## Copyright (C) 2008 - 2010  Sebastian Freundt
+##
+## Author:  Sebastian Freundt <hroptatyr@fresse.org>
+##
+## This file is part of uterus.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions
+## are met:
+##
+## 1. Redistributions of source code must retain the above copyright
+##    notice, this list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above copyright
+##    notice, this list of conditions and the following disclaimer in the
+##    documentation and/or other materials provided with the distribution.
+##
+## 3. Neither the name of the author nor the names of any contributors
+##    may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+## FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+## BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+## WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+## OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+## IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+##
+###
+
+AM_CPPFLAGS = -DDEBUG -DTIMESTAMPS -D_GNU_SOURCE
+AM_LDFLAGS = -static
+
+headerdir = $(includedir)/uterus
+
+bin_PROGRAMS =
+noinst_PROGRAMS =
+lib_LTLIBRARIES =
+header_HEADERS =
+
+## buffered writer
+lib_LTLIBRARIES += libuterus.la
+header_HEADERS += utefile.h
+header_HEADERS += utehdr.h
+header_HEADERS += date.h
+header_HEADERS += scommon.h
+header_HEADERS += sl1t.h
+header_HEADERS += scdl.h
+header_HEADERS += m30.h m62.h
+libuterus_la_SOURCES =
+libuterus_la_SOURCES += strptime.c
+libuterus_la_SOURCES += strftime.c
+libuterus_la_SOURCES += timegm.c
+libuterus_la_SOURCES += mktime.c
+libuterus_la_SOURCES += tzraw.c
+libuterus_la_SOURCES += utehdr.c
+libuterus_la_SOURCES += utefile.c
+libuterus_la_SOURCES += utesort.c
+libuterus_la_SOURCES += utetpc.c
+libuterus_la_SOURCES += uteslut.c
+libuterus_la_SOURCES += pageio.h pageio.c
+libuterus_la_SOURCES += prchunk.h prchunk.c
+libuterus_la_CPPFLAGS = $(AM_CPPFLAGS) -DLIBMODE -fPIC
+libuterus_la_CPPFLAGS += -DUSE_DATRIE $(shell pkg-config --cflags datrie-0.2)
+libuterus_la_LDFLAGS = $(AM_LDFLAGS)
+libuterus_la_LDFLAGS += $(shell pkg-config --static --libs datrie-0.2)
+
+bin_PROGRAMS += ute
+ute_SOURCES = ute.c
+ute_SOURCES += ariva.c
+ute_SOURCES += ibrti.c
+ute_SOURCES += dukas.c
+##ute_SOURCES += gesmes.c
+ute_SOURCES += tfraw.c
+##ute_SOURCES += sl1tmux.c
+ute_SOURCES += ute-shnot.c
+ute_LDADD = libuterus.la
+ute_CPPFLAGS = $(AM_CPPFLAGS)
+ute_LDFLAGS = $(AM_LDFLAGS)
+ute_CPPFLAGS +=  $(shell pkg-config --cflags libxml-2.0)
+ute_LDFLAGS += $(shell pkg-config --static --libs libxml-2.0)
+
+# 
+# Help the developers get nice post-processed source files
+
+## Create preprocessor output (debugging purposes only)
+.c.i:
+	$(COMPILE) -E -o $@ $<
+
+## Create assembler output (debugging purposes only)
+.c.s:
+	$(COMPILE) -S -c $(cflags) $<
+

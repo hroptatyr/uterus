@@ -44,6 +44,12 @@ bin_PROGRAMS =
 noinst_PROGRAMS =
 lib_LTLIBRARIES =
 header_HEADERS =
+noinst_LIBRARIES =
+
+## datrie stuff
+noinst_LIBRARIES += libdatrie.a
+libdatrie_a_SOURCES = trie.c
+
 
 ## buffered writer
 lib_LTLIBRARIES += libuterus.la
@@ -68,9 +74,9 @@ libuterus_la_SOURCES += uteslut.c
 libuterus_la_SOURCES += pageio.h pageio.c
 libuterus_la_SOURCES += prchunk.h prchunk.c
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS) -DLIBMODE -fPIC
-libuterus_la_CPPFLAGS += -DUSE_DATRIE $(shell pkg-config --cflags datrie-0.2)
+libuterus_la_CPPFLAGS += -DUSE_DATRIE
 libuterus_la_LDFLAGS = $(AM_LDFLAGS)
-libuterus_la_LDFLAGS += $(shell pkg-config --static --libs datrie-0.2)
+libuterus_la_LIBADD = libdatrie.a
 
 bin_PROGRAMS += ute
 ute_SOURCES = ute.c

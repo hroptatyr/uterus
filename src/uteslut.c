@@ -39,7 +39,7 @@
 #include <sys/mman.h>
 #include "uteslut.h"
 /* symbol table stuff */
-#include <datrie/trie.h>
+#include "trie.h"
 
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
@@ -51,25 +51,15 @@
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
 
-static AlphaMap *__glob_am = NULL;
-
 DEFUN void
 init_slut(void)
 {
-	if (LIKELY(__glob_am == NULL)) {
-		__glob_am = alpha_map_new();
-		alpha_map_add_range(__glob_am, ' ', 'z');
-	}
 	return;
 }
 
 DEFUN void
 fini_slut(void)
 {
-	if (LIKELY(__glob_am != NULL)) {
-		alpha_map_free(__glob_am);
-		__glob_am = NULL;
-	}
 	return;
 }
 
@@ -113,7 +103,7 @@ make_slut(uteslut_t s)
 	init_i2s(s, 128);
 
 	/* init the s2i trie */
-	s->stbl = trie_new(__glob_am);
+	s->stbl = make_trie();
 	return;
 }
 
@@ -130,7 +120,7 @@ free_slut(uteslut_t s)
 }
 
 static uint32_t
-__crea(uteslut_t s, const char *sym, const AlphaChar *ac_sym)
+__crea(uteslut_t s, const char *sym, const char *ac_sym)
 {
 	uint32_t res = ++s->nsyms;
 	slut_sym_t *itbl;
@@ -151,9 +141,9 @@ __crea(uteslut_t s, const char *sym, const AlphaChar *ac_sym)
 }
 
 static inline void
-sym_to_ac(AlphaChar *ac, const char *sym)
+sym_to_ac(char *ac, const char *sym)
 {
-	AlphaChar *acp, *eacp = ac + sizeof(slut_sym_t);
+	char *acp, *eacp = ac + sizeof(slut_sym_t);
 	const char *p;
 
 	for (p = sym, acp = ac; *p && acp < eacp; p++, acp++) {
@@ -169,8 +159,8 @@ sym_to_ac(AlphaChar *ac, const char *sym)
 DEFUN uint16_t
 slut_sym2idx(uteslut_t s, const char *sym)
 {
-	TrieData data[1];
-	AlphaChar ac_sym[sizeof(slut_sym_t)];
+	trie_data_t data[1];
+	char ac_sym[sizeof(slut_sym_t)];
 	uint16_t res;
 
 	/* make an alpha char array first */
@@ -196,8 +186,8 @@ slut_idx2sym(uteslut_t s, uint16_t idx)
 
 
 /* (de)serialiser */
-static Bool
-tri_cb(const AlphaChar *sym, TrieData val, void *clo)
+static int
+tri_cb(const char *sym, trie_data_t val, void *clo)
 {
 	uteslut_t s = clo;
 	uint32_t slot = (uint32_t)val;
@@ -211,7 +201,7 @@ tri_cb(const AlphaChar *sym, TrieData val, void *clo)
 		*tgt = (char)(*sym);
 	}
 	s->nsyms++;
-	return TRUE;
+	return 0;
 }
 
 DEFUN void

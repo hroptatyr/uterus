@@ -1,0 +1,30 @@
+I have a tonne of end of day MetaStock data.  I have this tool XYZ but
+it expects data in OMZ format, one stock at a time.
+I have found this converter ABC:
+  http://www.example.com/ABC.html
+but they discontinued the software and they don't respond to my emails.
+Does anyone have any other converters or a copy of ABC? 
+
+
+HELP PLEASE!!  I've just spent almost two days trying to import intraday
+Metastock data into XYZ and I've given up.  Importing Metastock EOD data
+is however very easy; but I don't know what the problem is when I try to
+import 1-min or 5-mn intraday Metastock data into XYZ.
+
+
+If you don't know what we're on about you'll be fine, you have no real
+use for uterus and need not read on.  The uterus experiment attempts to
+provide a concept to solve aforementioned problems.
+
+It's the vision of a bunch of guys with a strong emphasis on data
+integrity and maintainability.  We constantly moan about the lack of
+standards, poor documentation of market-typical solutions and longevity
+of established formats.
+
+While there are several good solutions out there to store massive
+amounts of intraday tick data, there is not a single good way to
+actually get the data there.  Every data provider comes up with their
+own more or less suitable ad-hoc idea of a file exchange format.
+
+Being deliberately vague, uterus promises nothing and keeps probably
+even less.  It is irregularly maintained and by no means complete.

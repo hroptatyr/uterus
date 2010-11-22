@@ -1,5 +1,5 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
+/** tail.h -- trie tail for keeping suffixes
+ *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
  *
@@ -19,7 +19,6 @@
  */
 
 /*
- * tail.h - trie tail for keeping suffixes
  * Created: 2006-08-12
  * Author:  Theppitak Karoonboonyanan <thep@linux.thai.net>
  */
@@ -38,39 +37,32 @@
 /**
  * @brief Double-array structure type
  */
-typedef struct _Tail  Tail;
+typedef struct tail_s *tail_t;
+typedef const struct tail_s *const_tail_t;
 
-Tail *   tail_new ();
+/* ctor/dtor */
+extern tail_t make_tail(void);
+extern void free_tail(tail_t t);
 
-Tail *   tail_fmread (fmcmb_t stream);
+extern tail_t tail_fmread(fmcmb_t stream);
+extern int tail_fmwrite(const_tail_t t, fmcmb_t stream);
 
-void     tail_free (Tail *t);
+const char *tail_get_suffix(const_tail_t t, trie_idx_t index);
 
-int      tail_fmwrite (const Tail *t, fmcmb_t stream);
+int tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix);
 
+trie_idx_t tail_add_suffix(tail_t t, const char *suffix);
 
-const TrieChar *    tail_get_suffix (const Tail *t, TrieIndex index);
+trie_data_t tail_get_data(const_tail_t t, trie_idx_t index);
 
-Bool     tail_set_suffix (Tail *t, TrieIndex index, const TrieChar *suffix);
+int tail_set_data(tail_t t, trie_idx_t index, trie_data_t data);
+void tail_delete(tail_t t, trie_idx_t index);
 
-TrieIndex tail_add_suffix (Tail *t, const TrieChar *suffix);
+int tail_walk_str(
+	const_tail_t t, trie_idx_t s,
+	short int*suffix_idx, const char *str, int len);
 
-TrieData tail_get_data (const Tail *t, TrieIndex index);
-
-Bool     tail_set_data (Tail *t, TrieIndex index, TrieData data);
-
-void     tail_delete (Tail *t, TrieIndex index);
-
-int      tail_walk_str  (const Tail      *t,
-                         TrieIndex        s,
-                         short           *suffix_idx,
-                         const TrieChar  *str,
-                         int              len);
-
-Bool     tail_walk_char (const Tail      *t,
-                         TrieIndex        s,
-                         short           *suffix_idx,
-                         TrieChar         c);
+int tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c);
 
 /**
  * @brief Test walkability in tail with a character
@@ -86,16 +78,12 @@ Bool     tail_walk_char (const Tail      *t,
  * position @a suffix_idx of entry @a s of the tail data @a t.
  */
 /*
-Bool     tail_is_walkable_char (Tail            *t,
-                                TrieIndex        s,
-                                short            suffix_idx,
-                                const TrieChar   c);
+  Bool     tail_is_walkable_char (Tail            *t,
+  TrieIndex        s,
+  short            suffix_idx,
+  const TrieChar   c);
 */
-#define  tail_is_walkable_char(t,s,suffix_idx,c) \
-    (tail_get_suffix ((t), (s)) [suffix_idx] == (c))
+#define tail_walkable_char_p(t, s, suffix_idx, c)		\
+	(tail_get_suffix((t), (s))[suffix_idx] == (c))
 
 #endif  /* __TAIL_H */
-
-/*
-vi:ts=4:ai:expandtab
-*/

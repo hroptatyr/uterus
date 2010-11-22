@@ -48,7 +48,9 @@ noinst_LIBRARIES =
 
 ## datrie stuff
 noinst_LIBRARIES += libdatrie.a
-libdatrie_a_SOURCES = trie.c
+libdatrie_a_SOURCES =
+libdatrie_a_SOURCES += fileutils.c fileutils.h
+libdatrie_a_SOURCES += trie.c trie.h
 
 
 ## buffered writer
@@ -73,10 +75,12 @@ libuterus_la_SOURCES += utetpc.c
 libuterus_la_SOURCES += uteslut.c
 libuterus_la_SOURCES += pageio.h pageio.c
 libuterus_la_SOURCES += prchunk.h prchunk.c
+## libdatrie again
+libuterus_la_SOURCES += fileutils.c fileutils.h
+libuterus_la_SOURCES += trie.c trie.h
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS) -DLIBMODE -fPIC
 libuterus_la_CPPFLAGS += -DUSE_DATRIE
 libuterus_la_LDFLAGS = $(AM_LDFLAGS)
-libuterus_la_LIBADD = libdatrie.a
 
 bin_PROGRAMS += ute
 ute_SOURCES = ute.c

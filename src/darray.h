@@ -66,7 +66,7 @@ trie_idx_t da_get_check(const_darray_t d, trie_idx_t s);
 
 void da_set_base(darray_t d, trie_idx_t s, trie_idx_t val);
 void da_set_check(darray_t d, trie_idx_t s, trie_idx_t val);
-int da_walk(const_darray_t d, trie_idx_t s, char c);
+int da_walk(const_darray_t d, trie_idx_t *s, char c);
 
 /**
  * @brief Test walkability in double-array structure

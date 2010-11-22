@@ -28,6 +28,7 @@
 #ifndef __TRIE_H
 #define __TRIE_H
 
+#include <stdio.h>
 #include "triedefs.h"
 
 #ifdef __cplusplus
@@ -62,19 +63,15 @@ typedef struct trie_state_s *trie_state_t;
 typedef const struct trie_state_s *const_trie_state_t;
 
 /* ctor/dtor */
-trie_t make_trie(void);
+extern trie_t make_trie(void);
+extern void free_trie(trie_t trie);
 
-trie_t trie_new_from_file(const char *path);
+extern trie_t trie_mread(char *mem, size_t msz);
+extern trie_t trie_fread(FILE *file);
+extern int trie_mwrite(trie_t trie, char **mem, size_t *msz);
+extern int trie_fwrite(trie_t trie, FILE *file);
 
-trie_t trie_mread(char *mem, size_t msz);
-
-void trie_free(trie_t trie);
-
-int trie_save(trie_t trie, const char *path);
-
-int trie_mwrite(trie_t trie, char **mem, size_t *msz);
-
-int trie_dirty_p(const_trie_t trie);
+extern int trie_dirty_p(const_trie_t trie);
 
 /* accessors */
 int trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data);
@@ -87,7 +84,7 @@ int trie_walk(const_trie_t trie, trie_walk_f walkf, void *closure);
 trie_state_t trie_root(const_trie_t trie);
 trie_state_t trie_state_clone(const_trie_state_t s);
 void trie_state_copy(trie_state_t dst, const_trie_state_t src);
-void trie_state_free(trie_state_t s);
+void free_trie_state(trie_state_t s);
 void trie_state_rewind(trie_state_t s);
 int trie_state_walk(trie_state_t s, char c);
 int trie_state_walkable_p(const_trie_state_t s, char c);

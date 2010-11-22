@@ -111,7 +111,7 @@ DEFUN void
 free_slut(uteslut_t s)
 {
 	/* s2i */
-	trie_free(s->stbl);
+	free_trie(s->stbl);
 	s->stbl = NULL;
 	/* i2s */
 	munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
@@ -212,7 +212,7 @@ slut_deser(uteslut_t s, void *data, size_t size)
 	/* init the i2s guy */
 	init_i2s(s, 128);
 	/* traverse the trie and add them symbols */
-	trie_enumerate(s->stbl, tri_cb, s);
+	trie_walk(s->stbl, tri_cb, s);
 	return;
 }
 

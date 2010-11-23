@@ -77,6 +77,7 @@ libuterus_la_SOURCES += pageio.h pageio.c
 libuterus_la_SOURCES += prchunk.h prchunk.c
 ## libdatrie again
 libuterus_la_SOURCES += fileutils.c fileutils.h
+libuterus_la_SOURCES += darray.c darray.h
 libuterus_la_SOURCES += trie.c trie.h
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS) -DLIBMODE -fPIC
 libuterus_la_CPPFLAGS += -DUSE_DATRIE

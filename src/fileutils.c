@@ -121,10 +121,10 @@ fm_write_int32(fmcmb_t filemem, int32_t val)
 {
 	unsigned char buff[4];
 
-	buff[0] = (val >> 24) & 0xff;
-	buff[1] = (val >> 16) & 0xff;
-	buff[2] = (val >> 8) & 0xff;
-	buff[3] = val & 0xff;
+	buff[0] = (unsigned char)((val >> 24) & 0xff);
+	buff[1] = (unsigned char)((val >> 16) & 0xff);
+	buff[2] = (unsigned char)((val >> 8) & 0xff);
+	buff[3] = (unsigned char)(val & 0xff);
 
 	return (fmwrite (buff, 4, 1, filemem) == 1);
 }
@@ -135,7 +135,7 @@ fm_read_int16(fmcmb_t filemem, int16_t *o_val)
 	unsigned char buff[2];
 
 	if (fmread(buff, 2, 1, filemem) == 1) {
-		*o_val = (buff[0] << 8) | buff[1];
+		*o_val = (int16_t)((buff[0] << 8) | buff[1]);
 		return 0;
 	}
 	return -1;
@@ -146,8 +146,8 @@ fm_write_int16(fmcmb_t filemem, int16_t val)
 {
 	unsigned char buff[2];
 
-	buff[0] = val >> 8;
-	buff[1] = val & 0xff;
+	buff[0] = (unsigned char)(val >> 8);
+	buff[1] = (unsigned char)(val & 0xff);
 
 	return (fmwrite (buff, 2, 1, filemem) == 1);
 }

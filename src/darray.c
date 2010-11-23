@@ -280,7 +280,7 @@ free_darray(darray_t d)
  * data block.
  */
 int
-darray_fmwrite(const darray_t d, fmcmb_t stream)
+darray_fmwrite(const_darray_t d, fmcmb_t stream)
 {
 	trie_idx_t i;
 
@@ -304,7 +304,7 @@ darray_fmwrite(const darray_t d, fmcmb_t stream)
  * Get root state for stepwise walking.
  */
 trie_idx_t
-da_get_root(const_darray_t d)
+da_get_root(const_darray_t __attribute__((unused)) d)
 {
 	/* can be calculated value for multi-index trie */
 	return 2;

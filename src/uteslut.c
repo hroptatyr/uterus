@@ -39,7 +39,7 @@
 #include <sys/mman.h>
 #include "uteslut.h"
 /* symbol table stuff */
-#include "trie.h"
+#include "uteslut-trie-glue.h"
 
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
@@ -103,7 +103,7 @@ make_slut(uteslut_t s)
 	init_i2s(s, 128);
 
 	/* init the s2i trie */
-	s->stbl = make_trie();
+	s->stbl = make_slut_tg();
 	return;
 }
 
@@ -111,7 +111,7 @@ DEFUN void
 free_slut(uteslut_t s)
 {
 	/* s2i */
-	free_trie(s->stbl);
+	free_slut_tg(s->stbl);
 	s->stbl = NULL;
 	/* i2s */
 	munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
@@ -131,7 +131,7 @@ __crea(uteslut_t s, const char *sym, const char *ac_sym)
 	}
 
 	/* store in the s2i table (trie) */
-	trie_store(s->stbl, ac_sym, res);
+	slut_tg_put(s->stbl, ac_sym, res);
 	/* store in the i2s table */
 	itbl = s->itbl;
 	for (char *p = itbl[res]; *sym; p++, sym++) {
@@ -159,13 +159,13 @@ sym_to_ac(char *ac, const char *sym)
 DEFUN uint16_t
 slut_sym2idx(uteslut_t s, const char *sym)
 {
-	trie_data_t data[1];
+	uint32_t data[1];
 	char ac_sym[sizeof(slut_sym_t)];
 	uint16_t res;
 
 	/* make an alpha char array first */
 	sym_to_ac(ac_sym, sym);
-	if (!trie_retrieve(s->stbl, ac_sym, data)) {
+	if (!slut_tg_get(s->stbl, ac_sym, data)) {
 		/* create a new entry */
 		res = (uint16_t)__crea(s, sym, ac_sym);
 	} else {
@@ -187,7 +187,7 @@ slut_idx2sym(uteslut_t s, uint16_t idx)
 
 /* (de)serialiser */
 static int
-tri_cb(const char *sym, trie_data_t val, void *clo)
+tri_cb(const char *sym, uint32_t val, void *clo)
 {
 	uteslut_t s = clo;
 	uint32_t slot = (uint32_t)val;
@@ -208,18 +208,18 @@ DEFUN void
 slut_deser(uteslut_t s, void *data, size_t size)
 {
 	/* init the s2i trie */
-	s->stbl = trie_mread(data, size);
+	s->stbl = slut_tg_deser(data, size);
 	/* init the i2s guy */
 	init_i2s(s, 128);
 	/* traverse the trie and add them symbols */
-	trie_walk(s->stbl, tri_cb, s);
+	slut_tg_walk(s->stbl, tri_cb, s);
 	return;
 }
 
 DEFUN void
 slut_seria(uteslut_t s, void **data, size_t *size)
 {
-	trie_mwrite(s->stbl, (void*)data, size);
+	slut_tg_seria(s->stbl, data, size);
 	return;
 }
 

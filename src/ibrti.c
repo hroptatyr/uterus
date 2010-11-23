@@ -131,7 +131,7 @@ ibtl_si(const struct ibrti_tl_s *l)
 	return scom_thdr_tblidx(AS_SCOM(l));
 }
 
-static inline void
+static inline __attribute__((unused)) void
 ibtl_set_si(ibrti_tl_t l, uint16_t si)
 {
 	return scom_thdr_set_tblidx(AS_SCOM_THDR_T(l), si);
@@ -307,7 +307,7 @@ fputn(FILE *whither, const char *p, size_t n)
 #endif
 
 static bool
-parse_symbol(ibrti_tl_t tgt, const char **cursor, void *fwr)
+parse_symbol(ibrti_tl_t UNUSED(tgt), const char **UNUSED(cursor), void *UNUSED(fwr))
 {
 #if 0
 /* FIXME!!! Convert me to proper ute */
@@ -557,7 +557,7 @@ read_line(mux_ctx_t ctx, ibrti_tl_t tl)
 }
 
 static void
-write_tick(mux_ctx_t ctx, ibrti_tl_t tl)
+write_tick(mux_ctx_t UNUSED(ctx), ibrti_tl_t tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
 	struct sl1t_s t[1];
@@ -595,7 +595,7 @@ nomore:
 }
 
 static void
-write_trng(mux_ctx_t ctx, ibrti_tl_t tl)
+write_trng(mux_ctx_t UNUSED(ctx), ibrti_tl_t UNUSED(tl))
 {
 #if 0
 /* FIXME!!! Convert me to proper ute */

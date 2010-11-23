@@ -50,8 +50,9 @@ noinst_LIBRARIES =
 noinst_LIBRARIES += libdatrie.a
 libdatrie_a_SOURCES =
 libdatrie_a_SOURCES += fileutils.c fileutils.h
+libdatrie_a_SOURCES += tail.c tail.h
+libdatrie_a_SOURCES += darray.c darray.h
 libdatrie_a_SOURCES += trie.c trie.h
-
 
 ## buffered writer
 lib_LTLIBRARIES += libuterus.la

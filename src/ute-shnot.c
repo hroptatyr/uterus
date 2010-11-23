@@ -254,7 +254,7 @@ print_snap_rTI(utectx_t uctx, scom_t st, zif_t z)
 	return;
 }
 
-static void __attribute__((unused, noinline))
+static void
 write_snap_fd(shnot_ctx_t ctx, uint16_t cidx)
 {
 	m62_t qpri;

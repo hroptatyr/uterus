@@ -352,7 +352,7 @@ trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data)
 	/* walk through branches */
 	s = da_get_root(trie->da);
 	for (p = key; !trie_da_separate_p(trie->da, s); p++) {
-		if (!da_walk(trie->da, &s, alpha_map_char_to_trie(*p))) {
+		if (da_walk(trie->da, &s, alpha_map_char_to_trie(*p)) < 0) {
 			return -1;
 		}
 		if (*p == 0) {
@@ -364,9 +364,9 @@ trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data)
 	s = trie_da_get_tail_index(trie->da, s);
 	suffix_idx = 0;
 	for ( ; ; p++) {
-		if (!tail_walk_char(
+		if (tail_walk_char(
 			    trie->tail, s, &suffix_idx,
-			    alpha_map_char_to_trie(*p))) {
+			    alpha_map_char_to_trie(*p)) < 0) {
 			return -1;
 		}
 		if (*p == 0) {
@@ -434,7 +434,7 @@ trie_store_maybe(trie_t trie, const char *key, trie_data_t d, int overwritep)
 	/* walk through branches */
 	s = da_get_root(trie->da);
 	for (p = key; !trie_da_separate_p(trie->da, s); p++) {
-		if (!da_walk(trie->da, &s, alpha_map_char_to_trie(*p))) {
+		if (da_walk(trie->da, &s, alpha_map_char_to_trie(*p)) < 0) {
 			char *key_str;
 			int res;
 
@@ -454,9 +454,9 @@ trie_store_maybe(trie_t trie, const char *key, trie_data_t d, int overwritep)
 	t = trie_da_get_tail_index(trie->da, s);
 	suffix_idx = 0;
 	for ( ; ; p++) {
-		if (!tail_walk_char(
+		if (tail_walk_char(
 			    trie->tail, t, &suffix_idx,
-			    alpha_map_char_to_trie(*p))) {
+			    alpha_map_char_to_trie(*p)) < 0) {
 			char *tail_str;
 			int res;
 
@@ -565,7 +565,7 @@ trie_delete(trie_t trie, const char *key)
 	/* walk through branches */
 	s = da_get_root(trie->da);
 	for (p = key; !trie_da_separate_p(trie->da, s); p++) {
-		if (!da_walk(trie->da, &s, alpha_map_char_to_trie(*p))) {
+		if (da_walk(trie->da, &s, alpha_map_char_to_trie(*p)) < 0) {
 			return -1;
 		}
 		if (*p == 0) {
@@ -577,9 +577,9 @@ trie_delete(trie_t trie, const char *key)
 	t = trie_da_get_tail_index(trie->da, s);
 	suffix_idx = 0;
 	for ( ; ; p++) {
-		if (!tail_walk_char(
+		if (tail_walk_char(
 			    trie->tail, t, &suffix_idx,
-			    alpha_map_char_to_trie(*p))) {
+			    alpha_map_char_to_trie(*p)) < 0) {
 			return -1;
 		}
 		if (*p == 0) {
@@ -783,7 +783,7 @@ trie_state_walk(trie_state_t s, char c)
 	if (!s->suffixp) {
 		int ret = da_walk(s->trie->da, &s->index, tc);
 
-		if (ret && trie_da_separate_p(s->trie->da, s->index)) {
+		if (ret == 0 && trie_da_separate_p(s->trie->da, s->index)) {
 			s->index = trie_da_get_tail_index(s->trie->da, s->index);
 			s->suffix_idx = 0;
 			s->suffixp = true;

@@ -122,18 +122,18 @@ tail_fmread(fmcmb_t stream)
 	long int save_pos;
 	tail_t t;
 	trie_idx_t i;
-	uint32_t sig;
+	int32_t sig;
 
 	/* check signature */
 	save_pos = fmtell(stream);
-	if (!fm_read_int32(stream, (int32_t*)&sig) || TAIL_SIGNATURE != sig) {
+	if (fm_read_int32(stream, &sig) < 0 || TAIL_SIGNATURE != sig) {
 		goto exit_file_read;
 	}
 	if ((t = malloc(sizeof(*t))) == NULL) {
 		goto exit_file_read;
 	}
-	if (!fm_read_int32(stream, &t->first_free) ||
-	    !fm_read_int32(stream, &t->num_tails)) {
+	if (fm_read_int32(stream, &t->first_free) < 0 ||
+	    fm_read_int32(stream, &t->num_tails) < 0) {
 		goto exit_tail_created;
 	}
 	if (t->num_tails > SIZE_MAX / sizeof(*t->tails)) {
@@ -145,15 +145,16 @@ tail_fmread(fmcmb_t stream)
 	for (i = 0; i < t->num_tails; i++) {
 		int16_t length;
 
-		if (!fm_read_int32(stream, &t->tails[i].next_free) ||
-		    !fm_read_int32(stream, &t->tails[i].data) ||
-		    !fm_read_int16(stream, &length)) {
+		if (fm_read_int32(stream, &t->tails[i].next_free) < 0 ||
+		    fm_read_int32(stream, &t->tails[i].data) < 0 ||
+		    fm_read_int16(stream, &length) < 0) {
 			goto exit_in_loop;
 		}
 
 		t->tails[i].suffix = (char*)malloc(length + 1);
 		if (length > 0) {
-			if (!fm_read_chars(stream, t->tails[i].suffix, length)) {
+			if (fm_read_chars(
+				    stream, t->tails[i].suffix, length) < 0) {
 				free(t->tails[i].suffix);
 				goto exit_in_loop;
 			}
@@ -216,27 +217,27 @@ tail_fmwrite(const_tail_t t, fmcmb_t stream)
 {
 	trie_idx_t i;
 
-	if (!fm_write_int32 (stream, TAIL_SIGNATURE) ||
-	    !fm_write_int32 (stream, t->first_free)  ||
-	    !fm_write_int32 (stream, t->num_tails)) {
+	if (fm_write_int32(stream, TAIL_SIGNATURE) < 0 ||
+	    fm_write_int32(stream, t->first_free) < 0 ||
+	    fm_write_int32(stream, t->num_tails) < 0) {
 		return -1;
 	}
 	for (i = 0; i < t->num_tails; i++) {
 		int16_t length;
 
-		if (!fm_write_int32(stream, t->tails[i].next_free) ||
-		    !fm_write_int32(stream, t->tails[i].data)) {
+		if (fm_write_int32(stream, t->tails[i].next_free) < 0 ||
+		    fm_write_int32(stream, t->tails[i].data) < 0) {
 			return -1;
 		}
 
 		length = t->tails[i].suffix
 			? strlen(t->tails[i].suffix)
 			: 0;
-		if (!fm_write_int16(stream, length)) {
+		if (fm_write_int16(stream, length) < 0) {
 			return -1;
 		}
 		if (length > 0 &&
-		    !fm_write_chars(stream, t->tails[i].suffix, length)) {
+		    fm_write_chars(stream, t->tails[i].suffix, length) < 0) {
 			return -1;
 		}
 	}

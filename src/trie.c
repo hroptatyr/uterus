@@ -241,10 +241,10 @@ free_trie(trie_t trie)
 static int
 trie_fmwrite(trie_t trie, fmcmb_t stream)
 {
-	if (darray_fmwrite(trie->da, stream) != 0) {
+	if (darray_fmwrite(trie->da, stream) < 0) {
 		return -1;
 	}
-	if (tail_fmwrite(trie->tail, stream) != 0) {
+	if (tail_fmwrite(trie->tail, stream) < 0) {
 		return -1;
 	}
 	trie->dirtyp = 0;

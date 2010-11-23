@@ -120,7 +120,7 @@ free_slut(uteslut_t s)
 }
 
 static uint32_t
-__crea(uteslut_t s, const char *sym, const char *ac_sym)
+__crea(uteslut_t s, const char *sym)
 {
 	uint32_t res = ++s->nsyms;
 	slut_sym_t *itbl;
@@ -131,7 +131,7 @@ __crea(uteslut_t s, const char *sym, const char *ac_sym)
 	}
 
 	/* store in the s2i table (trie) */
-	slut_tg_put(s->stbl, ac_sym, res);
+	slut_tg_put(s->stbl, sym, res);
 	/* store in the i2s table */
 	itbl = s->itbl;
 	for (char *p = itbl[res]; *sym; p++, sym++) {
@@ -140,34 +140,16 @@ __crea(uteslut_t s, const char *sym, const char *ac_sym)
 	return res;
 }
 
-static inline void
-sym_to_ac(char *ac, const char *sym)
-{
-	char *acp, *eacp = ac + sizeof(slut_sym_t);
-	const char *p;
-
-	for (p = sym, acp = ac; *p && acp < eacp; p++, acp++) {
-		*acp = (int32_t)(*p);
-	}
-	/* fill the rest with naughts */
-	for (; acp < eacp; acp++) {
-		*acp = 0;
-	}
-	return;
-}
-
 DEFUN uint16_t
 slut_sym2idx(uteslut_t s, const char *sym)
 {
 	uint32_t data[1];
-	char ac_sym[sizeof(slut_sym_t)];
 	uint16_t res;
 
 	/* make an alpha char array first */
-	sym_to_ac(ac_sym, sym);
-	if (!slut_tg_get(s->stbl, ac_sym, data)) {
+	if (slut_tg_get(s->stbl, sym, data) < 0) {
 		/* create a new entry */
-		res = (uint16_t)__crea(s, sym, ac_sym);
+		res = (uint16_t)__crea(s, sym);
 	} else {
 		res = (uint16_t)(int32_t)data[0];
 	}

@@ -446,8 +446,7 @@ tail_walk_str(
 	int i;
 	short int j;
 
-	suffix = tail_get_suffix(t, s);
-	if (!suffix) {
+	if ((suffix = tail_get_suffix(t, s)) == NULL) {
 		return -1;
 	}
 	i = 0;
@@ -488,8 +487,7 @@ tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c)
 	const char *suffix;
 	char suffix_char;
 
-	suffix = tail_get_suffix(t, s);
-	if (!suffix) {
+	if ((suffix = tail_get_suffix(t, s)) == NULL) {
 		return -1;
 	}
 	suffix_char = suffix[*suffix_idx];

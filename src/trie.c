@@ -511,8 +511,7 @@ trie_branch_in_tail(
 
 	/* adjust separate point in old path */
 	old_tail = trie_da_get_tail_index(trie->da, sep_node);
-	old_suffix = tail_get_suffix(trie->tail, old_tail);
-	if (!old_suffix) {
+	if ((old_suffix = tail_get_suffix(trie->tail, old_tail)) == NULL) {
 		return -1;
 	}
 

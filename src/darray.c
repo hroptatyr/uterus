@@ -437,7 +437,8 @@ da_insert_branch(darray_t d, trie_idx_t s, char c)
 		/* if (base  c) > TRIE_INDEX_MAX which means 'next' is overflow,
 		 * or cell [next] is not free, relocate to a free slot
 		 */
-		if (base > TRIE_INDEX_MAX - c || !da_check_free_cell(d, next)) {
+		if (base > TRIE_INDEX_MAX - c ||
+		    da_check_free_cell(d, next) < 0) {
 			symbols_t symbols;
 			trie_idx_t new_base;
 
@@ -476,7 +477,7 @@ da_insert_branch(darray_t d, trie_idx_t s, char c)
 static int
 da_check_free_cell(darray_t d, trie_idx_t s)
 {
-	return da_extend_pool(d, s) && da_get_check(d, s) < 0;
+	return da_extend_pool(d, s) == 0 && da_get_check(d, s) < 0;
 }
 
 static int
@@ -568,7 +569,7 @@ da_find_free_base(darray_t d, const_symbols_t symbols)
 	}
 	if (s == da_get_free_list(d)) {
 		for (s = first_sym + DA_POOL_BEGIN; ; ++s) {
-			if (!da_extend_pool(d, s)) {
+			if (da_extend_pool(d, s) < 0) {
 				return TRIE_INDEX_ERROR;
 			}
 			if (da_get_check(d, s) < 0) {
@@ -581,7 +582,7 @@ da_find_free_base(darray_t d, const_symbols_t symbols)
 	while (da_fit_symbols(d, s - first_sym, symbols) >= 0) {
 		/* extend pool before getting exhausted */
 		if (-da_get_check(d, s) == da_get_free_list(d)) {
-			if (!da_extend_pool(d, d->num_cells)) {
+			if (da_extend_pool(d, d->num_cells) < 0) {
 				return TRIE_INDEX_ERROR;
 			}
 		}
@@ -602,7 +603,7 @@ da_fit_symbols(darray_t d, trie_idx_t base, const_symbols_t symbols)
 		 * or cell [base  sym] is not free, the symbol is not fit.
 		 */
 		if (base > TRIE_INDEX_MAX - sym ||
-		    !da_check_free_cell(d, base + sym)) {
+		    da_check_free_cell(d, base + sym) < 0) {
 			return -1;
 		}
 	}
@@ -709,6 +710,7 @@ void
 da_prune(darray_t d, trie_idx_t s)
 {
 	da_prune_upto(d, da_get_root (d), s);
+	return;
 }
 
 /**

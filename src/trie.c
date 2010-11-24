@@ -67,7 +67,7 @@ alpha_map_char_to_trie(char c)
 static char
 alpha_map_trie_to_char(char c)
 {
-	return (char)((c == TRIE_CHAR_TERM) ? c - 1 + ' ' : 0);
+	return (char)((c == TRIE_CHAR_TERM) ? 0 : c - 1 + ' ');
 }
 
 static char*

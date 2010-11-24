@@ -210,10 +210,10 @@ darray_fmread(fmcmb_t stream)
 {
 	long int save_pos;
 	darray_t d = NULL;
-	int32_t n;
+	trie_idx_t n;
 
 	/* check signature */
-	save_pos = fmtell (stream);
+	save_pos = fmtell(stream);
 	if (fm_read_int32(stream, &n) < 0 || DA_SIGNATURE != (uint32_t)n) {
 		goto exit_file_read;
 	}
@@ -432,8 +432,8 @@ da_insert_branch(darray_t d, trie_idx_t s, char c)
 		if (da_get_check(d, next) == s) {
 			return next;
 		}
-		/* if (base  c) > TRIE_INDEX_MAX which means 'next' is overflow,
-		 * or cell [next] is not free, relocate to a free slot
+		/* if (base + c) > TRIE_INDEX_MAX which means 'next' is
+		 * overflow or cell [next] is not free, relocate to a free slot
 		 */
 		if (base > TRIE_INDEX_MAX - c ||
 		    !da_check_free_cell(d, next)) {
@@ -446,7 +446,7 @@ da_insert_branch(darray_t d, trie_idx_t s, char c)
 			new_base = da_find_free_base(d, symbols);
 			free_symbols(symbols);
 
-			if (TRIE_INDEX_ERROR == new_base) {
+			if (new_base == TRIE_INDEX_ERROR) {
 				return TRIE_INDEX_ERROR;
 			}
 			da_relocate_base(d, s, new_base);
@@ -461,7 +461,7 @@ da_insert_branch(darray_t d, trie_idx_t s, char c)
 		new_base = da_find_free_base(d, symbols);
 		free_symbols(symbols);
 
-		if (TRIE_INDEX_ERROR == new_base) {
+		if (new_base == TRIE_INDEX_ERROR) {
 			return TRIE_INDEX_ERROR;
 		}
 		da_set_base (d, s, new_base);
@@ -601,7 +601,7 @@ da_fit_symbols(darray_t d, trie_idx_t base, const_symbols_t symbols)
 		 * or cell [base + sym] is not free, the symbol is not fit.
 		 */
 		if (base > TRIE_INDEX_MAX - sym ||
-		    da_check_free_cell(d, base + sym) < 0) {
+		    !da_check_free_cell(d, base + sym)) {
 			return -1;
 		}
 	}

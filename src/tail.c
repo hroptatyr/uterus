@@ -34,27 +34,10 @@
 #include "tail.h"
 #include "fileutils.h"
 
-/*----------------------------------*
- *    INTERNAL TYPES DECLARATIONS   *
- *----------------------------------*/
-
-/*-----------------------------------*
- *    PRIVATE METHODS DECLARATIONS   *
- *-----------------------------------*/
-
 static trie_idx_t tail_alloc_block(tail_t t);
 static void tail_free_block(tail_t t, trie_idx_t block);
 
-/* ==================== BEGIN IMPLEMENTATION PART ====================  */
-
-/*------------------------------------*
- *   INTERNAL TYPES IMPLEMENTATIONS   *
- *------------------------------------*/
-
-/*------------------------------*
- *    PRIVATE DATA DEFINITONS   *
- *------------------------------*/
-
+
 typedef struct tail_block_s {
 	trie_idx_t next_free;
 	trie_data_t data;
@@ -66,10 +49,6 @@ struct tail_s {
 	tail_block_t tails;
 	trie_idx_t first_free;
 };
-
-/*-----------------------------*
- *    METHODS IMPLEMENTAIONS   *
- *-----------------------------*/
 
 #define TAIL_SIGNATURE      0xDFFCDFFC
 #define TAIL_START_BLOCKNO  1

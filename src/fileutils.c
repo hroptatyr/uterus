@@ -97,8 +97,6 @@ fmwrite(const void *data, size_t size, size_t count, fmcmb_t stream)
 }
 
 
-/* ==================== BEGIN IMPLEMENTATION PART ====================  */
-
 /*--------------------------------*
  *    FUNCTIONS IMPLEMENTATIONS   *
  *--------------------------------*/

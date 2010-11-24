@@ -20,7 +20,6 @@
  *
  **/
 /*
- * 
  * Created: 2006-08-14
  * Author:  Theppitak Karoonboonyanan <thep@linux.thai.net>
  */

@@ -83,9 +83,7 @@ static void da_free_cell(darray_t d, trie_idx_t cell);
 static int
 da_walk_recursive(const_darray_t d, trie_idx_t st, darray_walk_f w, void *clo);
 
-
-/* ==================== BEGIN IMPLEMENTATION PART ==================== */
-
+
 /*------------------------------------*
  *   INTERNAL TYPES IMPLEMENTATIONS   *
  *------------------------------------*/

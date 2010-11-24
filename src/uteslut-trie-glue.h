@@ -1,10 +1,10 @@
-/*** uteslut.h -- ute symbol look-up table
+/*** uteslut-trie-glue.h -- glue ute and various trie implementations
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2010 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
  *
- * This file is part of uterus.
+ * This file is part of sushi/uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,66 +33,67 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ **
+ * Comments:
+ * This glues various lookup data structures to uteslut.
+ * This header is for internal use only.
  ***/
 
-#if !defined INCLUDED_uteslut_h_
-# define INCLUDED_uteslut_h_
+#if !defined INCLUDED_uteslut_trie_glue_h_
+#define INCLUDED_uteslut_trie_glue_h_
 
-#include <stddef.h>
+#include <stdint.h>
+#include "trie.h"
 
-#undef DECLF
-#undef DEFUN
-#if defined STATIC_GUTS
-# define DEFUN	static
-# define DECLF	static
-#else  /* !STATIC_GUTS */
-# define DEFUN
-# define DECLF	extern
-#endif	/* STATIC_GUTS */
+/* assumes we have a void* alias __slut_t */
 
-/**
- * Generic symbol, this is non-normative at the moment */
-typedef char slut_sym_t[32];
-
-typedef struct uteslut_s *uteslut_t;
-
-/* anonymous glue type, could be a trie */
-typedef void *__slut_t;
-/* anonymous glue type, could be just an array */
-typedef void *__ilut_t;
-
-struct uteslut_s {
-	/* sym2idx */
-	__slut_t stbl;
-	/* idx2sym */
-	__ilut_t itbl;
-	/* administrative stuff */
-	uint32_t alloc_sz;
-	uint32_t nsyms;
-};
-
-/* (de)initialiser */
-DECLF void init_slut(void);
-DECLF void fini_slut(void);
-
-/* ctor and dtor */
-DECLF void make_slut(uteslut_t s);
-DECLF void free_slut(uteslut_t s);
-
-/* (de)serialiser */
-DECLF void slut_deser(uteslut_t s, void *data, size_t size);
-DECLF void slut_seria(uteslut_t s, void **data, size_t *size);
-
-/* accessors */
-DECLF uint16_t slut_sym2idx(uteslut_t s, const char *sym);
-DECLF const char *slut_idx2sym(uteslut_t s, uint16_t idx);
-
-/**
- * Return the number of symbols currently in the slut S. */
-static inline size_t
-slut_nsyms(uteslut_t s)
+static inline __slut_t
+make_slut_tg(void)
 {
-	return s->nsyms;
+	return make_trie();
 }
 
-#endif	/* INCLUDED_uteslut_h_ */
+static inline void
+free_slut_tg(__slut_t t)
+{
+	free_trie(t);
+	return;
+}
+
+/* should be uint32_t put(__slut_t, const char*) */
+static inline void
+slut_tg_put(__slut_t t, const char *sym, uint32_t data)
+{
+	trie_store(t, sym, data);
+	return;
+}
+
+static inline int
+slut_tg_get(__slut_t t, const char *sym, uint32_t *data)
+{
+	return trie_retrieve(t, sym, (int32_t*)data);
+}
+
+static inline __slut_t
+slut_tg_deser(void *data, size_t dlen)
+{
+	return trie_mread(data, dlen);
+}
+
+static inline void
+slut_tg_seria(__slut_t t, void **data, size_t *dlen)
+{
+	trie_mwrite(t, (void*)data, dlen);
+	return;
+}
+
+typedef int(*slut_tg_walk_f)(const char *key, uint32_t val, void *clo);
+
+static inline void
+slut_tg_walk(__slut_t t, slut_tg_walk_f cb, void *closure)
+{
+	trie_walk(t, (trie_walk_f)cb, closure);
+	return;
+}
+
+#endif	/* INCLUDED_trie_glue_h_ */

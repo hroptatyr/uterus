@@ -29,6 +29,7 @@
 #define __TRIE_H
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "triedefs.h"
 
 #ifdef __cplusplus
@@ -71,7 +72,7 @@ extern trie_t trie_fread(FILE *file);
 extern int trie_mwrite(trie_t trie, char **mem, size_t *msz);
 extern int trie_fwrite(trie_t trie, FILE *file);
 
-extern int trie_dirty_p(const_trie_t trie);
+extern bool trie_dirty_p(const_trie_t trie);
 
 /* accessors */
 int trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data);
@@ -87,7 +88,7 @@ void trie_state_copy(trie_state_t dst, const_trie_state_t src);
 void free_trie_state(trie_state_t s);
 void trie_state_rewind(trie_state_t s);
 int trie_state_walk(trie_state_t s, char c);
-int trie_state_walkable_p(const_trie_state_t s, char c);
+extern bool trie_state_walkable_p(const_trie_state_t s, char c);
 
 /**
  * @brief Check for terminal state
@@ -101,7 +102,7 @@ int trie_state_walkable_p(const_trie_state_t s, char c);
  */
 #define trie_state_terminal_p(s)			\
 	trie_state_walkable_p((s), TRIE_CHAR_TERM)
-int trie_state_single_p(const_trie_state_t s);
+extern bool trie_state_single_p(const_trie_state_t s);
 
 /**
  * @brief Check for leaf state

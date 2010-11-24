@@ -318,7 +318,7 @@ trie_mwrite(trie_t trie, char **mem, size_t *msz)
  * Check if the @a trie is dirty with some pending changes and needs saving
  * to synchronize with the file.
  */
-int
+bool
 trie_dirty_p(const_trie_t trie)
 {
 	return trie->dirtyp;
@@ -359,7 +359,6 @@ trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data)
 			break;
 		}
 	}
-
 	/* walk through tail */
 	s = trie_da_get_tail_index(trie->da, s);
 	suffix_idx = 0;
@@ -511,8 +510,7 @@ trie_branch_in_tail(
 
 	/* adjust separate point in old path */
 	old_tail = trie_da_get_tail_index(trie->da, sep_node);
-	old_suffix = tail_get_suffix(trie->tail, old_tail);
-	if (!old_suffix) {
+	if ((old_suffix = tail_get_suffix(trie->tail, old_tail)) == NULL) {
 		return -1;
 	}
 
@@ -805,7 +803,7 @@ trie_state_walk(trie_state_t s, char c)
  *
  * Test if there is a transition from state @a s with input character @a c.
  */
-int
+bool
 trie_state_walkable_p(const_trie_state_t s, char c)
 {
 	char tc = alpha_map_char_to_trie(c);
@@ -827,7 +825,7 @@ trie_state_walkable_p(const_trie_state_t s, char c)
  * Check if the given state is in a single path, that is, there is no other
  * branch from it to leaf.
  */
-int
+bool
 trie_state_single_p(const_trie_state_t s)
 {
 	return s->suffixp;

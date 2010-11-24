@@ -359,7 +359,6 @@ trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data)
 			break;
 		}
 	}
-
 	/* walk through tail */
 	s = trie_da_get_tail_index(trie->da, s);
 	suffix_idx = 0;

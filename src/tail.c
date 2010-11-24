@@ -492,7 +492,7 @@ tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c)
 	}
 	suffix_char = suffix[*suffix_idx];
 	if (suffix_char == c) {
-		if (0 != suffix_char) {
+		if (suffix_char != 0) {
 			++*suffix_idx;
 		}
 		return 0;

@@ -58,8 +58,17 @@ struct trie_state_s {
 
 
 /* quick alpha map replacement */
-#define alpha_map_char_to_trie(c)	((char)((c) - ' ' + 1))
-#define alpha_map_trie_to_char(c)	((char)((c) + ' ' - 1))
+static char
+alpha_map_char_to_trie(char c)
+{
+	return (char)(c ? c - ' ' + 1 : TRIE_CHAR_TERM);
+}
+
+static char
+alpha_map_trie_to_char(char c)
+{
+	return (char)((c == TRIE_CHAR_TERM) ? c - 1 + ' ' : 0);
+}
 
 static char*
 alpha_map_char_to_trie_str(const char *str)

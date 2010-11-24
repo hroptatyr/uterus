@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+includedir=@includedir@
+libdir=@libdir@
+datadir=@datarootdir@
+
+Name: libuterus
+Description: Universal Tick Encoders R Us
+Version: 0.1
+Libs: @LDFLAGS@ -L${libdir} -luterus
+Cflags: @CPPFLAGS@ -I${includedir}
+

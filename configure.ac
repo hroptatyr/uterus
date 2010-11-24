@@ -14,6 +14,7 @@ AC_PROG_CC_C99
 SXE_CHECK_LIBTOOL
 
 ## output
+AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_OUTPUT

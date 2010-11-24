@@ -97,8 +97,6 @@ ute_SOURCES += ute-shnot.c
 ute_LDADD = libuterus.la
 ute_CPPFLAGS = $(AM_CPPFLAGS)
 ute_LDFLAGS = $(AM_LDFLAGS)
-ute_CPPFLAGS +=  $(shell pkg-config --cflags libxml-2.0)
-ute_LDFLAGS += $(shell pkg-config --static --libs libxml-2.0)
 
 # 
 # Help the developers get nice post-processed source files

@@ -20,9 +20,9 @@ AC_DEFUN([UTE_CHECK_VERSION], [
 		VERSUCC
 
 	elif "${GIT}" symbolic-ref HEAD >/dev/null 2>&1; then
-		ute_cv_d=$("${GIT}" describe --match "v[0-9]*" HEAD 2>/dev/null)
+		ute_cv_d=$("${GIT}" describe --match "v[[]0-9[]]*" HEAD 2>/dev/null)
 		case "${ute_cv_d}" in
-		"v"[0-9]*)
+		"v"[[]0-9[]]*)
 			"${GIT}" update-index -q --refresh
 			ute_cv_t=$("${GIT}" diff-index --name-only HEAD --)
 			if test -z "${ute_cv_t}"; then
@@ -31,7 +31,7 @@ AC_DEFUN([UTE_CHECK_VERSION], [
 			;;
 		*)
 			## no tags yet
-			ute_cv_d=$("${GIT}" show --pretty="format:%h")
+			ute_cv_d=$("${GIT}" show-ref --head --hash=6 HEAD)
 		esac
 		VARNAME="${ute_cv_d}"
 		VERSUCC

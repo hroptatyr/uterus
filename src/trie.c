@@ -100,9 +100,24 @@ alpha_map_trie_to_char_str(const char *str)
 /*------------------------*
  *   INTERNAL FUNCTIONS   *
  *------------------------*/
-#define trie_da_separate_p(da, s)	(da_get_base((da), (s)) < 0)
-#define trie_da_get_tail_index(da, s)	(-da_get_base((da), (s)))
-#define trie_da_set_tail_index(da, s, v)	(da_set_base((da), (s), -(v)))
+static inline bool
+trie_da_separate_p(const_darray_t da, trie_idx_t s)
+{
+	return da_get_base(da, s) < 0;
+}
+
+static inline trie_idx_t
+trie_da_get_tail_index(const_darray_t da, trie_idx_t s)
+{
+	return -da_get_base(da, s);
+}
+
+static inline void
+trie_da_set_tail_index(darray_t da, trie_idx_t s, trie_idx_t v)
+{
+	da_set_base(da, s, -v);
+	return;
+}
 
 static trie_state_t
 make_trie_state(

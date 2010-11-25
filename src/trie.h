@@ -75,19 +75,19 @@ extern int trie_fwrite(trie_t trie, FILE *file);
 extern bool trie_dirty_p(const_trie_t trie);
 
 /* accessors */
-int trie_retrieve(const_trie_t trie, const char *key, trie_data_t *o_data);
-int trie_store(trie_t trie, const char *key, trie_data_t data);
-int trie_store_if_absent(trie_t trie, const char *key, trie_data_t data);
-int trie_delete(trie_t trie, const char *key);
-int trie_walk(const_trie_t trie, trie_walk_f walkf, void *closure);
+extern int trie_retrieve(const_trie_t t, const char *key, trie_data_t *o_data);
+extern int trie_store(trie_t t, const char *key, trie_data_t data);
+extern int trie_store_if_absent(trie_t t, const char *key, trie_data_t data);
+extern int trie_delete(trie_t t, const char *key);
+extern int trie_walk(const_trie_t t, trie_walk_f walkf, void *closure);
 
 /* introspection and state */
-trie_state_t trie_root(const_trie_t trie);
-trie_state_t trie_state_clone(const_trie_state_t s);
-void trie_state_copy(trie_state_t dst, const_trie_state_t src);
-void free_trie_state(trie_state_t s);
-void trie_state_rewind(trie_state_t s);
-int trie_state_walk(trie_state_t s, char c);
+extern trie_state_t trie_root(const_trie_t trie);
+extern trie_state_t trie_state_clone(const_trie_state_t s);
+extern void trie_state_copy(trie_state_t dst, const_trie_state_t src);
+extern void free_trie_state(trie_state_t s);
+extern void trie_state_rewind(trie_state_t s);
+extern int trie_state_walk(trie_state_t s, char c);
 extern bool trie_state_walkable_p(const_trie_state_t s, char c);
 
 /**
@@ -100,8 +100,12 @@ extern bool trie_state_walkable_p(const_trie_state_t s, char c);
  * Check if the given state is a terminal state. A terminal state is a trie
  * state that terminates a key, and stores a value associated with it.
  */
-#define trie_state_terminal_p(s)			\
-	trie_state_walkable_p((s), TRIE_CHAR_TERM)
+static inline bool
+trie_state_terminal_p(const_trie_state_t s)
+{
+	return trie_state_walkable_p(s, TRIE_CHAR_TERM);
+}
+
 extern bool trie_state_single_p(const_trie_state_t s);
 
 /**
@@ -114,10 +118,13 @@ extern bool trie_state_single_p(const_trie_state_t s);
  * Check if the given state is a leaf state. A leaf state is a terminal state 
  * that has no other branch.
  */
-#define trie_state_leaf_p(s)					\
-	(trie_state_single_p(s) && trie_state_terminal_p(s))
+static inline bool
+trie_state_leaf_p(const_trie_state_t s)
+{
+	return trie_state_single_p(s) && trie_state_terminal_p(s);
+}
 
-trie_data_t trie_state_get_data(const_trie_state_t s);
+extern trie_data_t trie_state_get_data(const_trie_state_t s);
 
 #ifdef __cplusplus
 }

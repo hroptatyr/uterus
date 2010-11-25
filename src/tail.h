@@ -26,6 +26,7 @@
 #ifndef __TAIL_H
 #define __TAIL_H
 
+#include <stdbool.h>
 #include "triedefs.h"
 #include "fmcmb.h"
 
@@ -47,22 +48,23 @@ extern void free_tail(tail_t t);
 extern tail_t tail_fmread(fmcmb_t stream);
 extern int tail_fmwrite(const_tail_t t, fmcmb_t stream);
 
-const char *tail_get_suffix(const_tail_t t, trie_idx_t index);
+extern const char *tail_get_suffix(const_tail_t t, trie_idx_t index);
+extern int tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix);
 
-int tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix);
+extern trie_idx_t tail_add_suffix(tail_t t, const char *suffix);
 
-trie_idx_t tail_add_suffix(tail_t t, const char *suffix);
+extern trie_data_t tail_get_data(const_tail_t t, trie_idx_t index);
 
-trie_data_t tail_get_data(const_tail_t t, trie_idx_t index);
+extern int tail_set_data(tail_t t, trie_idx_t index, trie_data_t data);
+extern void tail_delete(tail_t t, trie_idx_t index);
 
-int tail_set_data(tail_t t, trie_idx_t index, trie_data_t data);
-void tail_delete(tail_t t, trie_idx_t index);
-
-int tail_walk_str(
+extern int
+tail_walk_str(
 	const_tail_t t, trie_idx_t s,
 	short int*suffix_idx, const char *str, int len);
 
-int tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c);
+extern int
+tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c);
 
 /**
  * @brief Test walkability in tail with a character
@@ -77,13 +79,11 @@ int tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c);
  * Test if the character @a c can be used to walk from given character 
  * position @a suffix_idx of entry @a s of the tail data @a t.
  */
-/*
-  Bool     tail_is_walkable_char (Tail            *t,
-  TrieIndex        s,
-  short            suffix_idx,
-  const TrieChar   c);
-*/
-#define tail_walkable_char_p(t, s, suffix_idx, c)		\
-	(tail_get_suffix((t), (s))[suffix_idx] == (c))
+static inline bool
+tail_walkable_char_p(tail_t t, trie_idx_t s, short int suffix_idx, char c)
+{
+	const char *sfx = tail_get_suffix(t, s);
+	return sfx[suffix_idx] == c;
+}
 
 #endif  /* __TAIL_H */

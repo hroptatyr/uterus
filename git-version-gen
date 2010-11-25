@@ -103,6 +103,7 @@ if test -d "${BASEDIR}/.git"; then
 	old_v="${v}"
 else
 	## otherwise, just go on with the thing we've got so far
+	echo -n "${v}"
 	exit 0
 fi
 
@@ -161,11 +162,11 @@ fi
 
 # Omit the trailing newline, so that m4_esyscmd can use the result directly.
 new_v=$(echo "${v}" | tr -d '\r\n')
-if test "${old_v}" = "${new_v}"; then
-	## do nothing
-	:
+if test "${new_v}" = "${old_v}"; then
+	## print the old version
+	echo -n "${old_v}"
 else
-	echo "${new_v}" > "${tarball_version_file}"
+	echo -n "${new_v}" | tee -- "${tarball_version_file}"
 fi
 
 ## git-version-gen ends here

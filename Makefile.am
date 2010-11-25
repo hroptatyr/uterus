@@ -64,7 +64,7 @@ EXTRA_DIST = .version
 BUILT_SOURCES = $(top_srcdir)/.version
 .PHONY: $(top_srcdir)/.version
 $(top_srcdir)/.version: git-version-gen
-	$< $@
+	$< $@ >/dev/null
 
 # Arrange so that .tarball-version appears only in distribution tarballs,
 # never in a checked-out repository.

@@ -97,7 +97,7 @@ ute_LDFLAGS = $(AM_LDFLAGS)
 
 BUILT_SOURCES = version.h
 
-version.h: $(top_srcdir)/.version
+version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 
 # 

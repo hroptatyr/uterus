@@ -61,9 +61,9 @@ EXTRA_DIST = .version
 #   tarball.  At least as current as the most recent .tarball-version
 #   creation.  Usable in dependencies, particularly for files that don't
 #   want to depend on config.h but do want to track version changes.
-BUILT_SOURCES = $(top_srcdir)/.version
-.PHONY: $(top_srcdir)/.version
-$(top_srcdir)/.version: git-version-gen
+BUILT_SOURCES = .version
+.PHONY: .version
+.version: git-version-gen
 	$< $@ >/dev/null
 
 # Arrange so that .tarball-version appears only in distribution tarballs,

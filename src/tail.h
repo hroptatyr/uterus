@@ -30,6 +30,10 @@
 #include "triedefs.h"
 #include "fmcmb.h"
 
+#if !defined DECLF
+# define DECLF		extern
+#endif	/* !DECLF */
+
 /**
  * @file tail.h
  * @brief trie tail for keeping suffixes
@@ -42,28 +46,28 @@ typedef struct tail_s *tail_t;
 typedef const struct tail_s *const_tail_t;
 
 /* ctor/dtor */
-extern tail_t make_tail(void);
-extern void free_tail(tail_t t);
+DECLF tail_t make_tail(void);
+DECLF void free_tail(tail_t t);
 
-extern tail_t tail_fmread(fmcmb_t stream);
-extern int tail_fmwrite(const_tail_t t, fmcmb_t stream);
+DECLF tail_t tail_fmread(fmcmb_t stream);
+DECLF int tail_fmwrite(const_tail_t t, fmcmb_t stream);
 
-extern const char *tail_get_suffix(const_tail_t t, trie_idx_t index);
-extern int tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix);
+DECLF const char *tail_get_suffix(const_tail_t t, trie_idx_t index);
+DECLF int tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix);
 
-extern trie_idx_t tail_add_suffix(tail_t t, const char *suffix);
+DECLF trie_idx_t tail_add_suffix(tail_t t, const char *suffix);
 
-extern trie_data_t tail_get_data(const_tail_t t, trie_idx_t index);
+DECLF trie_data_t tail_get_data(const_tail_t t, trie_idx_t index);
 
-extern int tail_set_data(tail_t t, trie_idx_t index, trie_data_t data);
-extern void tail_delete(tail_t t, trie_idx_t index);
+DECLF int tail_set_data(tail_t t, trie_idx_t index, trie_data_t data);
+DECLF void tail_delete(tail_t t, trie_idx_t index);
 
-extern int
+DECLF int
 tail_walk_str(
 	const_tail_t t, trie_idx_t s,
 	short int*suffix_idx, const char *str, int len);
 
-extern int
+DECLF int
 tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c);
 
 /**

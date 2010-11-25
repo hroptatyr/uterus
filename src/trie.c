@@ -28,10 +28,25 @@
 #include <string.h>
 #include <stdbool.h>
 
+#if defined STATIC_TRIE_GUTS
+# define DECLF		static
+# define DEFUN		static __attribute__((unused))
+#else  /* !STATIC_GUTS */
+# define DECLF		extern
+# define DEFUN
+#endif	/* STATIC_GUTS */
+
 #include "trie.h"
 #include "fileutils.h"
 #include "darray.h"
 #include "tail.h"
+
+#if defined STATIC_TRIE_GUTS
+/* and since we're static just include the guys */
+# include "fileutils.c"
+# include "darray.c"
+# include "tail.c"
+#endif	/* STATIC_GUTS */
 
 /**
  * @brief Trie structure

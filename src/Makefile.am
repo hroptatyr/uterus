@@ -49,9 +49,7 @@ noinst_LIBRARIES =
 ## datrie stuff
 noinst_LIBRARIES += libdatrie.a
 libdatrie_a_SOURCES =
-libdatrie_a_SOURCES += fileutils.c fileutils.h
-libdatrie_a_SOURCES += tail.c tail.h
-libdatrie_a_SOURCES += darray.c darray.h
+libdatrie_a_CPPFLAGS = $(AM_CPPFLAGS) -DSTATIC_TRIE_GUTS
 libdatrie_a_SOURCES += trie.c trie.h
 
 ## buffered writer
@@ -64,6 +62,7 @@ header_HEADERS += sl1t.h
 header_HEADERS += scdl.h
 header_HEADERS += m30.h m62.h
 libuterus_la_SOURCES =
+libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
 libuterus_la_SOURCES += strptime.c
 libuterus_la_SOURCES += strftime.c
 libuterus_la_SOURCES += timegm.c
@@ -77,11 +76,9 @@ libuterus_la_SOURCES += uteslut.c
 libuterus_la_SOURCES += pageio.h pageio.c
 libuterus_la_SOURCES += prchunk.h prchunk.c
 ## libdatrie again
-libuterus_la_SOURCES += fileutils.c fileutils.h
-libuterus_la_SOURCES += tail.c tail.h
-libuterus_la_SOURCES += darray.c darray.h
+libuterus_la_CPPFLAGS += -DSTATIC_TRIE_GUTS
 libuterus_la_SOURCES += trie.c trie.h
-libuterus_la_CPPFLAGS = $(AM_CPPFLAGS) -DLIBMODE -fPIC
+libuterus_la_CPPFLAGS += -DLIBMODE -fPIC
 libuterus_la_CPPFLAGS += -DUSE_DATRIE
 libuterus_la_LDFLAGS = $(AM_LDFLAGS)
 

@@ -29,6 +29,10 @@
 
 #include "fileutils.h"
 
+#if !defined DEFUN
+# define DEFUN
+#endif	/* !DEFUN */
+
 /* trick part to mimick FILE like operations on a mem blob */
 static void
 fm_realloc(fmcmb_t stream, size_t new_size)
@@ -101,7 +105,7 @@ fmwrite(const void *data, size_t size, size_t count, fmcmb_t stream)
  *    FUNCTIONS IMPLEMENTATIONS   *
  *--------------------------------*/
 
-int
+DEFUN int
 fm_read_int32(fmcmb_t filemem, int32_t *o_val)
 {
 	unsigned char buff[4];
@@ -114,7 +118,7 @@ fm_read_int32(fmcmb_t filemem, int32_t *o_val)
 	return -1;
 }
 
-int
+DEFUN int
 fm_write_int32(fmcmb_t filemem, int32_t val)
 {
 	unsigned char buff[4];
@@ -127,7 +131,7 @@ fm_write_int32(fmcmb_t filemem, int32_t val)
 	return (fmwrite (buff, 4, 1, filemem) == 1);
 }
 
-int
+DEFUN int
 fm_read_int16(fmcmb_t filemem, int16_t *o_val)
 {
 	unsigned char buff[2];
@@ -139,7 +143,7 @@ fm_read_int16(fmcmb_t filemem, int16_t *o_val)
 	return -1;
 }
 
-int
+DEFUN int
 fm_write_int16(fmcmb_t filemem, int16_t val)
 {
 	unsigned char buff[2];
@@ -150,25 +154,25 @@ fm_write_int16(fmcmb_t filemem, int16_t val)
 	return (fmwrite (buff, 2, 1, filemem) == 1);
 }
 
-int
+DEFUN int
 fm_read_int8(fmcmb_t filemem, int8_t *o_val)
 {
 	return (fmread(o_val, sizeof(int8_t), 1, filemem) == 1);
 }
 
-int
+DEFUN int
 fm_write_int8(fmcmb_t filemem, int8_t val)
 {
 	return (fmwrite(&val, sizeof(int8_t), 1, filemem) == 1);
 }
 
-int
+DEFUN int
 fm_read_chars(fmcmb_t filemem, char *buff, int len)
 {
 	return (fmread(buff, sizeof (char), len, filemem) == len);
 }
 
-int
+DEFUN int
 fm_write_chars(fmcmb_t filemem, const char *buff, int len)
 {
 	return (fmwrite(buff, sizeof (char), len, filemem) == len);

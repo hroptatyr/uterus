@@ -32,6 +32,10 @@
 #include "triedefs.h"
 #include "fmcmb.h"
 
+#if !defined DECLF
+# define DECLF		extern
+#endif	/* !DECLF */
+
 /**
  * @file darray.h
  * @brief Double-array trie structure
@@ -55,19 +59,19 @@ typedef const struct darray_s *const_darray_t;
 typedef int(*darray_walk_f)(const char *key, trie_idx_t sep_node, void *clo);
 
 /* ctor/dtor */
-extern darray_t make_darray(void);
-extern void free_darray(darray_t d);
+DECLF darray_t make_darray(void);
+DECLF void free_darray(darray_t d);
 
-extern darray_t darray_fmread(fmcmb_t filemem);
-extern int darray_fmwrite(const_darray_t d, fmcmb_t filemem);
+DECLF darray_t darray_fmread(fmcmb_t filemem);
+DECLF int darray_fmwrite(const_darray_t d, fmcmb_t filemem);
 
-extern trie_idx_t da_get_root(const_darray_t d);
-extern trie_idx_t da_get_base(const_darray_t d, trie_idx_t s);
-extern trie_idx_t da_get_check(const_darray_t d, trie_idx_t s);
+DECLF trie_idx_t da_get_root(const_darray_t d);
+DECLF trie_idx_t da_get_base(const_darray_t d, trie_idx_t s);
+DECLF trie_idx_t da_get_check(const_darray_t d, trie_idx_t s);
 
-extern void da_set_base(darray_t d, trie_idx_t s, trie_idx_t val);
-extern void da_set_check(darray_t d, trie_idx_t s, trie_idx_t val);
-extern int da_walk(const_darray_t d, trie_idx_t *s, char c);
+DECLF void da_set_base(darray_t d, trie_idx_t s, trie_idx_t val);
+DECLF void da_set_check(darray_t d, trie_idx_t s, trie_idx_t val);
+DECLF int da_walk(const_darray_t d, trie_idx_t *s, char c);
 
 /**
  * @brief Test walkability in double-array structure
@@ -90,9 +94,9 @@ da_walkable_p(const_darray_t d, trie_idx_t s, char c)
 	return da_get_check(d, b + c) == s;
 }
 
-extern trie_idx_t da_insert_branch(darray_t d, trie_idx_t s, char c);
-extern void da_prune(darray_t d, trie_idx_t s);
-extern void da_prune_upto(darray_t d, trie_idx_t p, trie_idx_t s);
-extern int darray_walk(const_darray_t d, darray_walk_f walkf, void *closure);
+DECLF trie_idx_t da_insert_branch(darray_t d, trie_idx_t s, char c);
+DECLF void da_prune(darray_t d, trie_idx_t s);
+DECLF void da_prune_upto(darray_t d, trie_idx_t p, trie_idx_t s);
+DECLF int darray_walk(const_darray_t d, darray_walk_f walkf, void *closure);
 
 #endif  /* __DARRAY_H */

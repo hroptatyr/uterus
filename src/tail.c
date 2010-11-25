@@ -35,6 +35,10 @@
 #include "tail.h"
 #include "fileutils.h"
 
+#if !defined DEFUN
+# define DEFUN
+#endif	/* !DEFUN */
+
 static trie_idx_t tail_alloc_block(tail_t t);
 static void tail_free_block(tail_t t, trie_idx_t block);
 
@@ -71,7 +75,7 @@ struct tail_s {
  *
  * Create a new empty tail object.
  */
-tail_t 
+DEFUN tail_t 
 make_tail(void)
 {
 	tail_t t;
@@ -96,7 +100,7 @@ make_tail(void)
  * file pointer until the end of tail data block. On return, the
  * file pointer is left at the position after the read block.
  */
-tail_t 
+DEFUN tail_t 
 tail_fmread(fmcmb_t stream)
 {
 	long int save_pos;
@@ -164,7 +168,7 @@ exit_file_read:
  *
  * Free the given tail data.
  */
-void
+DEFUN void
 free_tail(tail_t t)
 {
 	trie_idx_t i;
@@ -192,7 +196,7 @@ free_tail(tail_t t)
  * Write tail data to the given @a file, starting from the current file
  * pointer. On return, the file pointer is left after the tail data block.
  */
-int
+DEFUN int
 tail_fmwrite(const_tail_t t, fmcmb_t stream)
 {
 	trie_idx_t i;
@@ -236,7 +240,7 @@ tail_fmwrite(const_tail_t t, fmcmb_t stream)
  * Get suffix from tail with given @a index. The returned string is allocated.
  * The caller should free it with free().
  */
-const char*
+DEFUN const char*
 tail_get_suffix(const_tail_t t, trie_idx_t index)
 {
 	index -= TAIL_START_BLOCKNO;
@@ -252,7 +256,7 @@ tail_get_suffix(const_tail_t t, trie_idx_t index)
  *
  * Set suffix of existing entry of given @a index in tail.
  */
-int
+DEFUN int
 tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix)
 {
 	index -= TAIL_START_BLOCKNO;
@@ -283,7 +287,7 @@ tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix)
  *
  * Add a new suffix entry to tail.
  */
-trie_idx_t
+DEFUN trie_idx_t
 tail_add_suffix(tail_t t, const char *suffix)
 {
 	trie_idx_t new_block;
@@ -357,7 +361,7 @@ tail_free_block(tail_t t, trie_idx_t block)
  *
  * Get data associated to suffix entry @a index in tail data.
  */
-trie_data_t
+DEFUN trie_data_t
 tail_get_data(const_tail_t t, trie_idx_t index)
 {
 	index -= TAIL_START_BLOCKNO;
@@ -375,7 +379,7 @@ tail_get_data(const_tail_t t, trie_idx_t index)
  *
  * Set data associated to suffix entry @a index in tail data.
  */
-int
+DEFUN int
 tail_set_data(tail_t t, trie_idx_t index, trie_data_t data)
 {
 	index -= TAIL_START_BLOCKNO;
@@ -394,7 +398,7 @@ tail_set_data(tail_t t, trie_idx_t index, trie_data_t data)
  *
  * Delete suffix entry from the tail data.
  */
-void
+DEFUN void
 tail_delete(tail_t t, trie_idx_t index)
 {
 	tail_free_block(t, index);
@@ -417,7 +421,7 @@ tail_delete(tail_t t, trie_idx_t index)
  * @a *suffix_idx is updated to the position after the last successful walk,
  * and the function returns the total number of character succesfully walked.
  */
-int
+DEFUN int
 tail_walk_str(
 	const_tail_t t, trie_idx_t s,
 	short int*suffix_idx, const char *str, int len)
@@ -461,7 +465,7 @@ tail_walk_str(
  * it returns TRUE, and @a *suffix_idx is updated to the next character.
  * Otherwise, it returns FALSE, and @a *suffix_idx is left unchanged.
  */
-int
+DEFUN int
 tail_walk_char(const_tail_t t, trie_idx_t s, short int *suffix_idx, char c)
 {
 	const char *suffix;

@@ -31,17 +31,21 @@
 #include <stdio.h>
 #include "fmcmb.h"
 
+#if !defined DECLF
+# define DECLF		extern
+#endif	/* !DECLF */
+
 /* real API */
-extern int fm_read_int32(fmcmb_t filemem, int32_t *o_val);
-extern int fm_write_int32(fmcmb_t filemem, int32_t val);
+DECLF int fm_read_int32(fmcmb_t filemem, int32_t *o_val);
+DECLF int fm_write_int32(fmcmb_t filemem, int32_t val);
 
-extern int fm_read_int16(fmcmb_t filemem, int16_t *o_val);
-extern int fm_write_int16(fmcmb_t filemem, int16_t val);
+DECLF int fm_read_int16(fmcmb_t filemem, int16_t *o_val);
+DECLF int fm_write_int16(fmcmb_t filemem, int16_t val);
 
-extern int fm_read_int8(fmcmb_t filemem, int8_t *o_val);
-extern int fm_write_int8(fmcmb_t filemem, int8_t val);
+DECLF int fm_read_int8(fmcmb_t filemem, int8_t *o_val);
+DECLF int fm_write_int8(fmcmb_t filemem, int8_t val);
 
-extern int fm_read_chars(fmcmb_t filemem, char *buff, int len);
-extern int fm_write_chars(fmcmb_t filemem, const char *buff, int len);
+DECLF int fm_read_chars(fmcmb_t filemem, char *buff, int len);
+DECLF int fm_write_chars(fmcmb_t filemem, const char *buff, int len);
 
 #endif /* __FILEUTILS_H */

@@ -33,6 +33,10 @@
 #include "darray.h"
 #include "fileutils.h"
 
+#if !defined DEFUN
+# define DEFUN
+#endif	/* !DEFUN */
+
 /**
  * @brief Minimum value macro
  */
@@ -169,7 +173,7 @@ struct darray_s {
  *
  * Create a new empty doubla-array object.
  */
-darray_t 
+DEFUN darray_t 
 make_darray(void)
 {
 	darray_t d;
@@ -205,7 +209,7 @@ exit_da_created:
  * file pointer until the end of double array data block. On return, the
  * file pointer is left at the position after the read block.
  */
-darray_t 
+DEFUN darray_t 
 darray_fmread(fmcmb_t stream)
 {
 	long int save_pos;
@@ -257,7 +261,7 @@ exit_file_read:
  *
  * Free the given double-array data.
  */
-void
+DEFUN void
 free_darray(darray_t d)
 {
 	free(d->cells);
@@ -277,7 +281,7 @@ free_darray(darray_t d)
  * file pointer. On return, the file pointer is left after the double-array
  * data block.
  */
-int
+DEFUN int
 darray_fmwrite(const_darray_t d, fmcmb_t stream)
 {
 	trie_idx_t i;
@@ -301,7 +305,7 @@ darray_fmwrite(const_darray_t d, fmcmb_t stream)
  *
  * Get root state for stepwise walking.
  */
-trie_idx_t
+DEFUN trie_idx_t
 da_get_root(const_darray_t __attribute__((unused)) d)
 {
 	/* can be calculated value for multi-index trie */
@@ -319,7 +323,7 @@ da_get_root(const_darray_t __attribute__((unused)) d)
  *
  * Get BASE cell value for the given state.
  */
-trie_idx_t
+DEFUN trie_idx_t
 da_get_base(const_darray_t d, trie_idx_t s)
 {
 	return (s < d->num_cells) ? d->cells[s].base : TRIE_INDEX_ERROR;
@@ -335,7 +339,7 @@ da_get_base(const_darray_t d, trie_idx_t s)
  *
  * Get CHECK cell value for the given state.
  */
-trie_idx_t
+DEFUN trie_idx_t
 da_get_check(const_darray_t d, trie_idx_t s)
 {
 	return (s < d->num_cells) ? d->cells[s].check : TRIE_INDEX_ERROR;
@@ -351,7 +355,7 @@ da_get_check(const_darray_t d, trie_idx_t s)
  *
  * Set BASE cell for the given state to the given value.
  */
-void
+DEFUN void
 da_set_base(darray_t d, trie_idx_t s, trie_idx_t val)
 {
 	if (s < d->num_cells) {
@@ -369,7 +373,7 @@ da_set_base(darray_t d, trie_idx_t s, trie_idx_t val)
  *
  * Set CHECK cell for the given state to the given value.
  */
-void
+DEFUN void
 da_set_check(darray_t d, trie_idx_t s, trie_idx_t val)
 {
 	if (s < d->num_cells) {
@@ -392,7 +396,7 @@ da_set_check(darray_t d, trie_idx_t s, trie_idx_t val)
  * returns TRUE and @a s is updated to the new state. Otherwise, it returns
  * FALSE and @a s is left unchanged.
  */
-int
+DEFUN int
 da_walk(const_darray_t d, trie_idx_t *s, char c)
 {
 	trie_idx_t next;
@@ -418,7 +422,7 @@ da_walk(const_darray_t d, trie_idx_t *s, char c)
  * represented by index @a s in double-array structure @a d.
  * Note that it assumes that no such arc exists before inserting.
  */
-trie_idx_t
+DEFUN trie_idx_t
 da_insert_branch(darray_t d, trie_idx_t s, char c)
 {
 	trie_idx_t base, next;
@@ -703,7 +707,7 @@ da_extend_pool(darray_t d, trie_idx_t to_index)
  * If @a s still has some children states, it does nothing. Otherwise, 
  * it deletes the node and all its parents which become non-separate.
  */
-void
+DEFUN void
 da_prune(darray_t d, trie_idx_t s)
 {
 	da_prune_upto(d, da_get_root (d), s);
@@ -721,7 +725,7 @@ da_prune(darray_t d, trie_idx_t s)
  * given parent @a p. The prunning stop when either the parent @a p
  * is met, or a first non-separate node is found.
  */
-void
+DEFUN void
 da_prune_upto(darray_t d, trie_idx_t p, trie_idx_t s)
 {
 	while (p != s && !da_has_children(d, s)) {
@@ -783,7 +787,7 @@ da_free_cell(darray_t d, trie_idx_t cell)
  * the separate node, and user-supplied data. Returning FALSE from such
  * callback will stop enumeration and return FALSE.
  */
-int
+DEFUN int
 darray_walk(const_darray_t d, darray_walk_f walkf, void *closure)
 {
 	return da_walk_recursive(d, da_get_root(d), walkf, closure);

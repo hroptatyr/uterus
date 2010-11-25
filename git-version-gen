@@ -83,7 +83,7 @@ v=
 ## First see if there is a tarball-only version file.
 ## then try "git describe", then default.
 if test -f "${tarball_version_file}"; then
-	v=$(head -n1 -- "${tarball_version_file}") || exit 1
+	v=$(head -n 1 -- "${tarball_version_file}") || exit 1
 	case "${v}" in
 	[0-9a-f]*)
 		;;
@@ -140,7 +140,7 @@ if test v=$(git describe --abbrev=4 --match='v[0-9]*' HEAD 2>/dev/null \
 	## Remove the "g" in git describe's output string, to save a byte.
 	v=$(echo "${v}" | sed 's/-/./;s/\(.*\)-g/\1-/')
 else
-	v=$(git show-ref --head --hash=4 HEAD 2>/dev/null)
+	v=$(git show-ref --head --hash=8 HEAD 2>/dev/null | head -n 1)
 fi
 
 v=$(echo "${v}" | sed 's/^v//')

@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([uterus], m4_esyscmd([./git-version-gen .version]), [http://www.ga-group.nl/])
+AC_INIT([uterus], m4_esyscmd([./git-version-gen]), [http://www.ga-group.nl/])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([src/config.h])

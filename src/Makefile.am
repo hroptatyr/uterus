@@ -95,6 +95,11 @@ ute_LDADD = libuterus.la
 ute_CPPFLAGS = $(AM_CPPFLAGS)
 ute_LDFLAGS = $(AM_LDFLAGS)
 
+BUILT_SOURCES = version.h
+
+version.h: $(top_srcdir)/.version
+	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
+
 # 
 # Help the developers get nice post-processed source files
 

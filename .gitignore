@@ -19,3 +19,5 @@ libltdl/
 ++*
 =*
 .rsync-filter
+.version
+version.h

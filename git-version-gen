@@ -65,84 +65,107 @@
 # dist-hook:
 #	echo $(VERSION) > $(distdir)/.tarball-version
 
-case $# in
-    1|2) ;;
-    *) echo 1>&2 "Usage: $0 \$srcdir/.tarball-version" \
-         '[TAG-NORMALIZATION-SED-SCRIPT]'
-       exit 1;;
-esac
+## keep track of the basedir and our own name
+BASEDIR=$(dirname "${0}")
+BASESCR=$(basename "${0}")
 
-tarball_version_file=$1
+if test "${#}" -lt 1 -o "${#}" -gt 2; then
+	echo "Usage: ${BASESCR} VERSION-FILE [TAG-NORMALIZATION-SED-SCRIPT]" >&2
+	exit 1
+fi
+
+tarball_version_file="${1}"
 tag_sed_script="${2:-s/x/x/}"
-nl='
-'
 
-# Avoid meddling by environment variable of the same name.
+## Avoid meddling by environment variable of the same name.
 v=
 
-# First see if there is a tarball-only version file.
-# then try "git describe", then default.
+## First see if there is a tarball-only version file.
+## then try "git describe", then default.
 if test -f "${tarball_version_file}"; then
-    v=$(head -n1 -- "${tarball_version_file}") || exit 1
-    case "${v}" in
-	[0-9a-f]*) ;;
-	*) v= ;;
-    esac
-    if test -z "${v}"; then
-	echo "$0: WARNING: ${tarball_version_file} seems to be damaged" 1>&2
-    fi
+	v=$(head -n1 -- "${tarball_version_file}") || exit 1
+	case "${v}" in
+	[0-9a-f]*)
+		;;
+	*)
+		## reset v
+		v=
+		;;
+	esac
+	if test -z "${v}"; then
+		echo "${BASESCR}: WARNING: " \
+			"${tarball_version_file} seems to be damaged" >&2
+	fi
 fi
 
-if test -n "${v}"; then
-    : # use $v
-elif test -d .git \
-    && v=$(git describe --abbrev=4 --match='v[0-9]*' HEAD 2>/dev/null \
-	  || git describe --abbrev=4 HEAD 2>/dev/null) \
-    && v=$(printf '%s\n' "${v}" | sed "${tag_sed_script}") \
-    && case "${v}" in
-	 v[0-9]*) ;;
-	 *) (exit 1) ;;
-       esac
-then
-    # Is this a new git that lists number of commits since the last
-    # tag or the previous older version that did not?
-    #   Newer: v6.10-77-g0f8faeb
-    #   Older: v6.10-g0f8faeb
-    case "${v}" in
-	*-*-*) : git describe is okay three part flavor ;;
-	*-*)
-	    : git describe is older two part flavor
-	    # Recreate the number of commits and rewrite such that the
-	    # result is the same as if we were using the newer version
-	    # of git describe.
-	    vtag=$(echo "${v}" | sed 's/-.*//')
-	    numcommits=$(git rev-list "${vtag}"..HEAD | wc -l)
-	    v=$(echo "${v}" | sed "s/\(.*\)-\(.*\)/\1-${numcommits}-\2/");
-	    ;;
-    esac
-
-    # Change the first '-' to a '.', so version-comparing tools work properly.
-    # Remove the "g" in git describe's output string, to save a byte.
-    v=$(echo "${v}" | sed 's/-/./;s/\(.*\)-g/\1-/');
+if test -d "${BASEDIR}/.git"; then
+	## save the ${v} we've got so far
+	old_v="${v}"
 else
-    v=$(git show-ref --head --hash=6 HEAD 2>/dev/null)
+	## otherwise, just go on with the thing we've got so far
+	exit 0
 fi
 
-v=$(echo "${v}" |sed 's/^v//')
+if test v=$(git describe --abbrev=4 --match='v[0-9]*' HEAD 2>/dev/null \
+	  || git describe --abbrev=4 HEAD 2>/dev/null) \
+	&& v=$(printf '%s\n' "${v}" | sed "${tag_sed_script}") \
+	&& case "${v}" in
+	v[0-9]*)
+		;;
+	*)
+		(exit 1)
+		;;
+	esac; then
+	## Is this a new git that lists number of commits since the last
+	## tag or the previous older version that did not?
+	##   Newer: v6.10-77-g0f8faeb
+	##   Older: v6.10-g0f8faeb
+	case "${v}" in
+	*-*-*)
+		: git describe is okay three part flavor
+		;;
+	*-*)
+		: git describe is older two part flavor
+		## Recreate the number of commits and rewrite such that the
+		## result is the same as if we were using the newer version
+		## of git describe.
+		vtag=$(echo "${v}" | sed 's/-.*//')
+		numcommits=$(git rev-list "${vtag}"..HEAD | wc -l)
+		v=$(echo "${v}" | sed "s/\(.*\)-\(.*\)/\1-${numcommits}-\2/")
+		;;
+	esac
+
+	## Change the first '-' to a '.', so version-comparing tools
+	## work properly.
+	## Remove the "g" in git describe's output string, to save a byte.
+	v=$(echo "${v}" | sed 's/-/./;s/\(.*\)-g/\1-/')
+else
+	v=$(git show-ref --head --hash=4 HEAD 2>/dev/null)
+fi
+
+v=$(echo "${v}" | sed 's/^v//')
 
 # Don't declare a version "dirty" merely because a time stamp has changed.
 git update-index --refresh > /dev/null 2>&1
 
 dirty=$(git diff-index --name-only HEAD -- 2>/dev/null) || dirty=
-case "${dirty}" in
-    '') ;;
-    *) # Append the suffix only if there isn't one already.
+if test -n "${dirty}"; then
 	case "${v}" in
-	  *-dirty) ;;
-	  *) v="${v}-dirty" ;;
-	esac ;;
-esac
+	*-dirty)
+		;;
+	*)
+		v="${v}-dirty"
+		;;
+	esac
+fi
 
 # Omit the trailing newline, so that m4_esyscmd can use the result directly.
-echo "${v}" | tr -d "$nl"
+new_v=$(echo "${v}" | tr -d '\r\n')
+if test "${old_v}" = "${new_v}"; then
+	## do nothing
+	:
+else
+	echo "${new_v}" > "${tarball_version_file}"
+fi
 
+## git-version-gen ends here

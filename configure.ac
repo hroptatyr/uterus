@@ -1,4 +1,4 @@
-AC_PREREQ([2.64])
+AC_PREREQ([2.61])
 AC_INIT([uterus], [0.1], [http://www.ga-group.nl/])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
@@ -13,7 +13,10 @@ AC_PROG_CC_C99
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
 
+UTE_CHECK_VERSION([UTE_VERSION], [libuterus.version])
+
 ## output
+AC_CONFIG_FILES([libuterus.version])
 AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])

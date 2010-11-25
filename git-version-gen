@@ -106,8 +106,8 @@ else
 	exit 0
 fi
 
-if test v=$(git describe --abbrev=4 --match='v[0-9]*' HEAD 2>/dev/null \
-	  || git describe --abbrev=4 HEAD 2>/dev/null) \
+if test v=$(git describe --abbrev=8 --match='v[0-9]*' HEAD 2>/dev/null \
+	  || git describe --abbrev=8 HEAD 2>/dev/null) \
 	&& v=$(printf '%s\n' "${v}" | sed "${tag_sed_script}") \
 	&& case "${v}" in
 	v[0-9]*)

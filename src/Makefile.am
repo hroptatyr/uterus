@@ -45,6 +45,9 @@ noinst_PROGRAMS =
 lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
+EXTRA_DIST =
+
+BUILT_SOURCES = version.h
 
 ## datrie stuff
 noinst_LIBRARIES += libdatrie.a
@@ -63,39 +66,48 @@ header_HEADERS += scdl.h
 header_HEADERS += m30.h m62.h
 libuterus_la_SOURCES =
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
+libuterus_la_SOURCES += secu.h
+libuterus_la_SOURCES += mem.h
 libuterus_la_SOURCES += strptime.c
 libuterus_la_SOURCES += strftime.c
 libuterus_la_SOURCES += timegm.c
 libuterus_la_SOURCES += mktime.c
-libuterus_la_SOURCES += tzraw.c
-libuterus_la_SOURCES += utehdr.c
-libuterus_la_SOURCES += utefile.c
+libuterus_la_SOURCES += tzraw.c tzraw.h
+libuterus_la_SOURCES += utehdr.c utehdr.h
+libuterus_la_SOURCES += utefile.c utefile.h utefile-private.h
 libuterus_la_SOURCES += utesort.c
-libuterus_la_SOURCES += utetpc.c
-libuterus_la_SOURCES += uteslut.c
-libuterus_la_SOURCES += pageio.h pageio.c
-libuterus_la_SOURCES += prchunk.h prchunk.c
+libuterus_la_SOURCES += utetpc.c utetpc.h
+libuterus_la_SOURCES += uteslut.c uteslut.h
+libuterus_la_SOURCES += pageio.c pageio.h
+libuterus_la_SOURCES += prchunk.c prchunk.h
 ## libdatrie again
 libuterus_la_CPPFLAGS += -DSTATIC_TRIE_GUTS
+libuterus_la_SOURCES += uteslut-trie-glue.h
 libuterus_la_SOURCES += trie.c trie.h
 libuterus_la_CPPFLAGS += -DLIBMODE -fPIC
 libuterus_la_CPPFLAGS += -DUSE_DATRIE
 libuterus_la_LDFLAGS = $(AM_LDFLAGS)
+EXTRA_DIST += triedefs.h
+EXTRA_DIST += fileutils.c fileutils.h
+EXTRA_DIST += darray.c darray.h
+EXTRA_DIST += tail.c tail.h
+EXTRA_DIST += fmcmb.h
+EXTRA_DIST += intvtree.c intvtree.h
 
 bin_PROGRAMS += ute
 ute_SOURCES = ute.c
 ute_SOURCES += ariva.c
 ute_SOURCES += ibrti.c
 ute_SOURCES += dukas.c
-##ute_SOURCES += gesmes.c
 ute_SOURCES += tfraw.c
-##ute_SOURCES += sl1tmux.c
-ute_SOURCES += ute-shnot.c
+ute_SOURCES += sumux.h
+ute_SOURCES += ute-shnot.c ute-shnot.h
 ute_LDADD = libuterus.la
 ute_CPPFLAGS = $(AM_CPPFLAGS)
 ute_LDFLAGS = $(AM_LDFLAGS)
+EXTRA_DIST += ute-print.c ute-print.h
+EXTRA_DIST += ute-mux.c
 
-BUILT_SOURCES = version.h
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@

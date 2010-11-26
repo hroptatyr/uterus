@@ -69,4 +69,5 @@ BUILT_SOURCES = .version
 # Arrange so that .tarball-version appears only in distribution tarballs,
 # never in a checked-out repository.
 dist-hook:
-	echo $(VERSION) > $(distdir)/.tarball-version
+	touch $(distdir)/git-version-gen
+	chmod a+x $(distdir)/git-version-gen

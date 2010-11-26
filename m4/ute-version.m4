@@ -11,8 +11,8 @@ AC_DEFUN([UTE_CHECK_VERSION], [
 	AC_MSG_CHECKING([for ]${PACKAGE_NAME}[ version])
 	if test -f "[]SCRNAME[]"; then
 		VERSION=$(SCRNAME)
-	elif test -f "${ac_top_srcdir}[]SCRNAME[]"; then
-		VERSION=$("${ac_top_srcdir}[]SCRNAME[]")
+	elif test -f "${srcdir}/[]SCRNAME[]"; then
+		VERSION=$("${srcdir}/[]SCRNAME[]")
 	else
 		VERSION="unknown"
 	fi

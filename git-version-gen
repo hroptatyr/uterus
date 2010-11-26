@@ -140,10 +140,6 @@ if test -n "${v}" && case "${v}" in
 		v=$(echo "${v}" | sed "s/\(.*\)-\(.*\)/\1-${numcommits}-\2/")
 		;;
 	esac
-
-	## Change the first '-' to a '.', so version-comparing tools
-	## work properly.
-	v=$(echo "${v}" | sed 's/-/./')
 else
 	v=$(git show-ref --head --hash=8 HEAD 2>/dev/null | head -n 1)
 fi

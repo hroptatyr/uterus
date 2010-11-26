@@ -12,8 +12,6 @@ AC_PROG_CC
 AC_PROG_CC_C99
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
-## check our git version, modifies the package version
-UTE_CHECK_VERSION([git-version-gen])
 
 ## output
 AC_CONFIG_FILES([libuterus.pc])

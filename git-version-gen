@@ -107,10 +107,15 @@ else
 	exit 0
 fi
 
-if test v=$(git describe --abbrev=8 --match='v[0-9]*' HEAD 2>/dev/null \
-	  || git describe --abbrev=8 HEAD 2>/dev/null) \
-	&& v=$(printf '%s\n' "${v}" | sed "${tag_sed_script}") \
-	&& case "${v}" in
+describe()
+{
+	REV="${1}"
+	git describe --abbrev=8 --match='v[0-9]*' "${REV}" 2>/dev/null || \
+		git describe --abbrev=8 "${REV}" 2>/dev/null
+}
+
+v=$(describe HEAD | sed "${tag_sed_script}")
+if test -n "${v}" && case "${v}" in
 	v[0-9]*)
 		;;
 	*)
@@ -138,8 +143,7 @@ if test v=$(git describe --abbrev=8 --match='v[0-9]*' HEAD 2>/dev/null \
 
 	## Change the first '-' to a '.', so version-comparing tools
 	## work properly.
-	## Remove the "g" in git describe's output string, to save a byte.
-	v=$(echo "${v}" | sed 's/-/./;s/\(.*\)-g/\1-/')
+	v=$(echo "${v}" | sed 's/-/./')
 else
 	v=$(git show-ref --head --hash=8 HEAD 2>/dev/null | head -n 1)
 fi

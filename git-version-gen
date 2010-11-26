@@ -168,7 +168,7 @@ if test "${new_v}" = "${old_v}"; then
 elif test -z "${tarball_version_file}"; then
 	echo -n "${new_v}"
 else
-	echo -n "${new_v}" | tee -- "${tarball_version_file}"
+	echo "${new_v}" | tee -- "${tarball_version_file}" | tr -d '\r\n'
 fi
 
 ## git-version-gen ends here

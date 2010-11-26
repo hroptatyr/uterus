@@ -45,7 +45,7 @@ SUBDIRS = src
 pkgconfigdir = @libdir@/pkgconfig
 pkgconfig_DATA = libuterus.pc
 
-EXTRA_DIST = .version
+EXTRA_DIST = .version git-version-gen
 
 # Version string management.  There are two files to be aware of:
 # .tarball-version - present only in a distribution tarball, and not in
@@ -64,10 +64,4 @@ EXTRA_DIST = .version
 BUILT_SOURCES = .version
 .PHONY: .version
 .version: git-version-gen
-	$< $@ >/dev/null
-
-# Arrange so that .tarball-version appears only in distribution tarballs,
-# never in a checked-out repository.
-dist-hook:
-	touch $(distdir)/git-version-gen
-	chmod a+x $(distdir)/git-version-gen
+	$(<D)/$(<F) $@ >/dev/null

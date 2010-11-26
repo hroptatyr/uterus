@@ -4,7 +4,7 @@ dnl Copyright (C) 2010  Sebastian Freundt.
 dnl
 dnl This file is part of uterus
 
-dnl UTE_CHECK_VERSION( SCRIPTNAME, VERSIONFILE )
+dnl UTE_CHECK_VERSION( SCRIPTNAME )
 AC_DEFUN([UTE_CHECK_VERSION], [
 	pushdef([SCRNAME], [$1])
 
@@ -19,6 +19,7 @@ AC_DEFUN([UTE_CHECK_VERSION], [
 	AC_MSG_RESULT([${]VERSION[}])
 
 	PACKAGE_VERSION="${VERSION}"
+	PACKAGE_STRING="${PACKAGE} ${VERSION}"
 	popdef([SCRNAME])
 ])dnl UTE_CHECK_VERSION
 

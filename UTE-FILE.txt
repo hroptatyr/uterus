@@ -24,6 +24,27 @@ codec (backward/forward compatibility).  Metadata is usually
 sufficiently annotated so that the back/forth compatibility paradigm
 is still fulfilled.
 
+The overall file layout, 1 tick file:
+
++---------+-----------+----------+--------------+
+| hdr (1) | ticks (n) | slut (m) | metadata (k) |
++---------+-----------+----------+--------------+
+
+The header is exactly 1 tick page (256 ticks == 4096 bytes) long.
+The ticks section is aligned to 1 tick, i.e. 16 bytes, its length is not
+bounded except for OS-limitations.  The slut is the symbol look-up table
+and variable in size as well.  It's basically an index
+  symbol idx (uint16_t) -> symbol string (char*)
+with a twist, the actual symbol strings are stored in a double-array
+(prefix/postfix) trie for performance reasons, see below for details.
+We say the slut size is variable but it's determined, as the trie
+serialisation is stipulated in this document.  In contrast the metadata
+part is of arbitrary size, the user is responsible as it may be used to
+associate custom data to anything, ticks, symbols, etc.  It is the
+caller's responsibility to keep the metadata in sync, libuterus will
+merely move any data found past the slut to a new location upon
+insertion or deletion of ticks.
+
 
 Tick payloads
 =============
@@ -156,6 +177,9 @@ value   name   indicates
 0x000a  vwp    a VWAP tick (vpr divided by vol)
 0x000b  spl    a split tick, two m30s denoting before and after
 0x000c  oi     an open interest tick (number of all open long contracts)
+0x000d  g32    a generic tick using 2 32bit payloads
+0x000e  g64    a generic tick using 1 64bit payload
+0x000f  reserved
 
 We now discuss predefined tick types.
 
@@ -341,7 +365,7 @@ specification for them.  Here is an assortment of questions:
 
 Tick pages
 ==========
-Tick pages are large collections of ticks of the same kind.
+Tick pages are large collections of ticks of the same kind (really?).
 
 
 Tick file

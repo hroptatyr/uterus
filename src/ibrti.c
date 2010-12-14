@@ -17,6 +17,7 @@
 #include "secu.h"
 #include "date.h"
 #include "sl1t.h"
+#include "utefile.h"
 #include "sumux.h"
 
 #if defined USE_DEBUGGING_ASSERTIONS
@@ -29,6 +30,9 @@
 #define MAX_LINE_LEN	512
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
+/* should coincide with slut_sym_t */
+typedef char cid_t[32];
+
 typedef uint8_t symidx_t;
 typedef struct symtbl_s *symtbl_t;
 /* ariva tick lines */
@@ -38,46 +42,48 @@ typedef struct ibrti_tl_s *ibrti_tl_t;
  * b for bid, B for bid size and t for price stamp and T for BA stamp.
  * Made for type punning, ibrti_tl_s structs are also su_sl1t_t's */
 struct ibrti_tl_s {
-	struct scom_thdr_s t;
+	struct scom_thdr_s t[1];
 	/* not so standard fields now */
-	struct time_sns_s rcv_stmp;
 	uint32_t offs;
 	uint32_t stmp2;
 	uint16_t msec2;
 
 	union {
 		struct {
-			uint32_t p;
-			uint32_t P;
+			m30_t p;
+			m30_t P;
 		};
 		struct {
-			uint32_t b;
-			uint32_t B;
+			m30_t b;
+			m30_t B;
 		};
 		struct {
-			uint32_t a;
-			uint32_t A;
+			m30_t a;
+			m30_t A;
 		};
-		uint64_t v;
 	};
+	m62_t v;
+	m62_t oi;
 	uint32_t seq;
 	uint16_t tt;
 	/* just the lowest bit is used, means bad tick */
 	uint16_t flags;
+
+	cid_t cid;
 };
 
 /* 'nother type extension */
-#define NSYMS	UTEHDR_MAX_SECS
+#define NSYMS	(16384)
 struct metrsymtbl_s {
 	/* fuck ugly, this points into kernel space */
 	utehdr_t st;
 	/* caches */
-	uint32_t tra[NSYMS];
-	uint32_t tsz[NSYMS];
-	uint32_t bid[NSYMS];
-	uint32_t bsz[NSYMS];
-	uint32_t ask[NSYMS];
-	uint32_t asz[NSYMS];
+	m30_t tra[NSYMS];
+	m30_t tsz[NSYMS];
+	m30_t bid[NSYMS];
+	m30_t bsz[NSYMS];
+	m30_t ask[NSYMS];
+	m30_t asz[NSYMS];
 };
 
 
@@ -170,16 +176,6 @@ moar_ticks_p(mux_ctx_t ctx)
 	return prdb_one_more_line_p(ctx->rdr);
 }
 
-/* printers */
-static size_t
-sprint_tstz(char *restrict buf, size_t len, time_t ts)
-{
-	struct tm brktime;
-	ffff_gmtime(&brktime, ts);
-	ffff_strftime(buf, len, &brktime);
-	return 19;
-}
-
 static inline void
 check_tic_stmp(ibrti_tl_t tic)
 {
@@ -204,42 +200,42 @@ enrich_batps(ibrti_tl_t t)
 	int sl = ibtl_si(t);
 	switch (ibtl_ttf(t)) {
 	case SL1T_TTF_TRA:
-		if (t->p == 0 && t->P != 0) {
+		if (t->p.v == 0 && t->P.v != 0) {
 			/* check if we repeat the tick */
-			if (t->P == SYMTBL_TSZ[sl]) {
+			if (t->P.v == SYMTBL_TSZ[sl].v) {
 				return false;
 			}
 			/* use the cached trade price */
 			t->p = SYMTBL_TRA[sl];
-		} else if (t->p != 0) {
+		} else if (t->p.v != 0) {
 			/* cache the trade price */
 			SYMTBL_TRA[sl] = t->p;
 			SYMTBL_TSZ[sl] = t->P;
 		}
 		break;
 	case SL1T_TTF_BID:
-		if (t->b == 0 && t->B != 0) {
+		if (t->b.v == 0 && t->B.v != 0) {
 			/* check if we repeat the tick */
-			if (t->B == SYMTBL_BSZ[sl]) {
+			if (t->B.v == SYMTBL_BSZ[sl].v) {
 				return false;
 			}
 			/* use the cached bid price */
 			t->b = SYMTBL_BID[sl];
-		} else if (t->b != 0) {
+		} else if (t->b.v != 0) {
 			/* cache the bid price */
 			SYMTBL_BID[sl] = t->b;
 			SYMTBL_BSZ[sl] = t->B;
 		}
 		break;
 	case SL1T_TTF_ASK:
-		if (t->a == 0 && t->A != 0) {
+		if (t->a.v == 0 && t->A.v != 0) {
 			/* check if we repeat the tick */
-			if (t->A == SYMTBL_ASZ[sl]) {
+			if (t->A.v == SYMTBL_ASZ[sl].v) {
 				return false;
 			}
 			/* otherwise use the cached ask price */
 			t->a = SYMTBL_ASK[sl];
-		} else if (t->a != 0) {
+		} else if (t->a.v != 0) {
 			/* cache the ask price */
 			SYMTBL_ASK[sl] = t->a;
 			SYMTBL_ASZ[sl] = t->A;
@@ -266,7 +262,7 @@ check_ibrti_tl(ibrti_tl_t t)
 		/* HALTED */
 		return true;
 	}
-	if (!t->p && !t->P) {
+	if (t->p.v == 0 && t->P.v == 0) {
 		return false;
 	}
 	if (ibtl_ttf(t) == SL1T_TTF_UNK) {
@@ -306,33 +302,21 @@ fputn(FILE *whither, const char *p, size_t n)
 }
 #endif
 
-static bool
-parse_symbol(ibrti_tl_t UNUSED(tgt), const char **UNUSED(cursor), void *UNUSED(fwr))
+static const char*
+parse_symbol(ibrti_tl_t tgt, const char *cursor)
 {
-#if 0
-/* FIXME!!! Convert me to proper ute */
-	long int at;
-	uint16_t si;
-	bool res;
+	char *tmp = memchr(cursor, '\t', 32);
+	size_t tl = tmp - cursor;
 
-	if ((res = (at = ffff_strtol(*cursor, cursor, 0)))) {
-		su_secu_t se = su_secu(at, 0, 0);
-		if ((res = (si = sl1t_fio_find_secu_crea(fwr, se)))) {
-			ibtl_set_si(tgt, si);
-		} else {
-			tgt->flags |= 4;
-		}
-	}
-	/* has to be a tab */
 #if defined USE_DEBUGGING_ASSERTIONS
-	assert(*(*cursor)++ == '\t');
-#else  /* !USE_DEBUGGING_ASSERTIONS */
-	(*cursor)++;
+	assert(tl > 0);
+	assert(*tmp == '\t');
 #endif	/* USE_DEBUGGING_ASSERTIONS */
-	return res;
-#else  /* !0 */
-	return false;
-#endif	/* 0 */
+
+	memcpy(tgt->cid, cursor, tl);
+	tgt->cid[tl] = '\0';
+	/* put cursor after tab char */
+	return tmp + 1;
 }
 
 static inline uint16_t
@@ -352,69 +336,8 @@ parse_rTI_tick_type(char buf)
 	}
 }
 
-
-static __attribute__((unused)) size_t
-reco_tl(char *buf, ibrti_tl_t t)
-{
-	size_t len = 0;
-	if (t->p) {
-		len += sprintf(buf + len, "\tp%2.4f", ffff_m30_d((m30_t)t->p));
-	}
-	if (t->P) {
-		len += sprintf(buf + len, "\tP%2.4f", ffff_m30_d((m30_t)t->P));
-	}
-	if (ibtl_ts_sec(t)) {
-		char ts[32];
-		uint16_t msec = ibtl_ts_msec(t);
-		sprint_tstz(ts, sizeof(ts), ibtl_ts_sec(t));
-		len += sprintf(buf + len, "\tt%s.%03hu", ts, msec);
-	}
-	if (t->stmp2) {
-		char ts[32];
-		sprint_tstz(ts, sizeof(ts), t->stmp2);
-		len += sprintf(buf + len, "\tt%s.%03hu", ts, t->msec2);
-	}
-	if (check_ibrti_tl(t)) {
-		len += sprintf(buf + len, " GOOD");
-	} else {
-		len += sprintf(buf + len, " INVAL");
-	}
-	return len;
-}
-
-static __attribute__((unused)) void
-pr_tl(int fd, ibrti_tl_t t, const char *cursor, size_t len)
-{
-	char b[512];
-	size_t lsz;
-
-	if (t->flags & 4) {
-		static const char oob[] = "out-of-bounds";
-		lsz = sizeof(oob) - 1;
-		memcpy(b, oob, lsz);
-	} else {
-		uint16_t si = ibtl_si(t);
-		su_secu_t sec = SYMTBL_SEC[si];
-		uint32_t quodi = su_secu_quodi(sec);
-		uint32_t quoti = su_secu_quoti(sec);
-		uint16_t pot = su_secu_pot(sec);
-		lsz = sprintf(b, "%u/%u@%hu", quodi, quoti, pot);
-	}
-	b[lsz++] = ' ';
-#if 1
-	memcpy(b + lsz, cursor, len);
-	lsz = lsz + len;
-	lsz += reco_tl(b + lsz, t);
-	b[lsz++] = '\n';
-#else
-	lsz += sprintf(b + lsz, "%zu\n", len);
-#endif
-	write(fd, b, lsz);
-	return;
-}
-
 static const char*
-parse_tline(ibrti_tl_t tgt, const char *line, void *fwr)
+parse_tline(ibrti_tl_t tgt, const char *line  )
 {
 /* just assumes there is enough space */
 	const char *cursor = line;
@@ -472,15 +395,9 @@ parse_tline(ibrti_tl_t tgt, const char *line, void *fwr)
 	}								\
 	while (*cursor++ != '\t')
 
-	/* symbol comes next, or `nothing' or `C-c' */
-	if (UNLIKELY(!parse_symbol(tgt, &cursor, fwr))) {
-		/* mark tick as bad */
-		tgt->flags |= 1;
-		if (cursor - line > 60) {
-			fputs("long line detected\n", stderr);
-		}
-		goto eol;
-	}
+	/* symbol first */
+	cursor = parse_symbol(tgt, cursor);
+
 	PARSE_TIME(tgt->stmp2, cursor, cursor);
 	PARSE_MSEC(tgt->msec2, cursor, cursor);
 	/* read seq (maybe) */
@@ -497,12 +414,13 @@ parse_tline(ibrti_tl_t tgt, const char *line, void *fwr)
 	case SL1T_TTF_BID:
 	case SL1T_TTF_ASK:
 	case SL1T_TTF_TRA:
-		tgt->p = (uint32_t)v1;
-		tgt->P = (uint32_t)v2;
+		tgt->p.v = v1;
+		tgt->P.v = v2;
 		break;
 	case SL1T_TTF_VOL: {
-		m30_t tmp = {.v = v2};
-		tgt->v = ffff_m62_get_m30(tmp).v;
+		m30_t tmp;
+		tmp.v = v2;
+		tgt->v = ffff_m62_get_m30(tmp);
 		break;
 	}
 	default:
@@ -510,7 +428,6 @@ parse_tline(ibrti_tl_t tgt, const char *line, void *fwr)
 		break;
 	}
 
-eol:
 	/* this definitely crashes if the file doesnt end in a new line */
 	while (*cursor++ != '\n');
 #undef PARSE_TT
@@ -528,7 +445,7 @@ read_line(mux_ctx_t ctx, ibrti_tl_t tl)
 	bool res;
 
 	line = prdb_current_line(ctx->rdr);
-	endp = parse_tline(tl, line, ctx->wrr);
+	endp = parse_tline(tl, line);
 
 	/* ffw the read buffer */
 	prdb_set_current_line_by_ptr(ctx->rdr, endp);
@@ -546,6 +463,9 @@ read_line(mux_ctx_t ctx, ibrti_tl_t tl)
 	/* assess tick quality */
 	check_tic_stmp(tl);
 	check_tic_offs(tl);
+
+	/* look up the symbol */
+	tl->t->tblidx = ute_sym2idx(ctx->wrr, tl->cid);
 	/* check if it's good or bad line */
 	if (!(res = check_ibrti_tl(tl))) {
 		/* bad */
@@ -575,38 +495,20 @@ write_tick(mux_ctx_t UNUSED(ctx), ibrti_tl_t tl)
 	case SL1T_TTF_ASK:
 	case SL1T_TTF_TRA:
 		sl1t_set_ttf(t, ibtl_ttf(tl));
-		t->bid = tl->p;
-		t->bsz = tl->P;
+		t->bid = tl->p.v;
+		t->bsz = tl->P.v;
 		break;
 	case SL1T_TTF_VOL:
 		sl1t_set_ttf(t, ibtl_ttf(tl));
-		t->w[0] = tl->v;
+		t->w[0] = tl->v.v;
 		break;
 	case SL1T_TTF_UNK:
 	default:
 		return;
 	}
 nomore:
-#if 0
-/* FIXME!!! Convert me to proper ute */
-	sl1t_fio_write_ticks(ctx->wrr, t, 1);
-#endif	/* 0 */
-	return;
-}
-
-static void
-write_trng(mux_ctx_t UNUSED(ctx), ibrti_tl_t UNUSED(tl))
-{
-#if 0
-/* FIXME!!! Convert me to proper ute */
-	utehdr_t fhdr = sl1t_fio_fhdr(ctx->wrr);
-	time_range_t tr = utehdr_nth_trng(fhdr, ibtl_si(tl));
-	if (UNLIKELY(tr->lo == 0)) {
-		tr->lo = ibtl_ts_sec(tl);
-	}
-	/* always set the last seen date */
-	tr->hi = ibtl_ts_sec(tl);
-#endif	/* 0 */
+	/* just one tick to worry about */
+	ute_add_tick(ctx->wrr, AS_SCOM(t));
 	return;
 }
 
@@ -618,11 +520,13 @@ read_lines(mux_ctx_t ctx)
 		memset(&atl, 0, sizeof(atl));
 		if (read_line(ctx, &atl)) {
 			write_tick(ctx, &atl);
-			write_trng(ctx, &atl);
 		}
 	}
 	return;
 }
+
+/* is this the right zone? */
+static const char tfraw_zone[] = "Europe/Berlin";
 
 void
 ibrti_slab(mux_ctx_t ctx)
@@ -630,16 +534,14 @@ ibrti_slab(mux_ctx_t ctx)
 	/* open our timezone definition */
 	if (ctx->opts->zone != NULL) {
 		z = zif_read_inst(ctx->opts->zone);
+	} else {
+		z = zif_read_inst(tfraw_zone);
 	}
 	/* init reader and writer */
 	ctx->rdr = make_prdbuf(ctx->infd);
 	/* wipe symtbl */
 	memset(&symtbl, 0, sizeof(symtbl));
-#if 0
-/* FIXME!!! Convert me to proper ute */
-	/* i wanna stab myself */
-	symtbl.st = sl1t_fio_fhdr(ctx->wrr);
-#endif	/* 0 */
+
 	/* main loop */
 	lno = 0;
 	while (fetch_lines(ctx)) {
@@ -648,10 +550,6 @@ ibrti_slab(mux_ctx_t ctx)
 	}
 	/* expobuf is the reader of our choice */
 	free_prdbuf(ctx->rdr);
-#if 0
-/* FIXME!!! Convert me to proper ute */
-	free_sl1t_writer(ctx->wrr);
-#endif	/* 0 */
 	if (z != NULL) {
 		zif_free(z);
 	}

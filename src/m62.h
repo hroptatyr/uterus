@@ -282,7 +282,7 @@ ffff_m30_vwap(m62_t volpri, m62_t vol)
 {
 	m30_t res;
 	res.v = 0;
-	if (volpri.expo == 1 && vol.expo == 2) {
+	if (volpri.expo == 1 && vol.expo == 2 && vol.mant != 0) {
 		/* only case we support */
 		res.mant = (volpri.mant / vol.mant);
 		res.expo = 1;

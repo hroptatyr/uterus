@@ -732,7 +732,11 @@ void
 ariva_slab(mux_ctx_t ctx)
 {
 	/* open our timezone definition */
-	z = zif_read_inst(ariva_zone);
+	if (ctx->opts->zone != NULL) {
+		z = zif_read_inst(ctx->opts->zone);
+	} else {
+		z = zif_read_inst(ariva_zone);
+	}
 	/* init reader and writer */
 	ctx->rdr = make_prdbuf(ctx->infd);
 	/* wipe symtbl */
@@ -744,7 +748,9 @@ ariva_slab(mux_ctx_t ctx)
 	}
 	/* expobuf is the reader of our choice */
 	free_prdbuf(ctx->rdr);
-	zif_free(z);
+	if (z != NULL) {
+		zif_free(z);
+	}
 	return;
 }
 

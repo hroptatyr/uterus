@@ -41,23 +41,23 @@
 #include "utefile.h"
 #include "sl1t.h"
 
-/* simple all in one tool */
-
-#include "ute-print.c"
-#include "ute-mux.c"
-#include "ute-shnot.h"
-
 /* for our options parser */
 #include "ute-opt.h"
 #include "version.h"
 
-static void
-ute_cmd_sort(const char *file)
+/* simple all in one tool */
+#include "ute-print.c"
+#include "ute-mux.c"
+#include "ute-shnot.h"
+
+static int
+ute_cmd_sort(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
 {
+	const char *file = argv[1];
 	void *hdl = ute_open(file, UO_RDWR);
 	ute_sort(hdl);
 	ute_close(hdl);
-	return;
+	return 0;
 }
 
 static int

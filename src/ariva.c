@@ -29,6 +29,8 @@
 #define FLAG_INVAL	0x01
 #define FLAG_HALTED	0x02
 
+typedef char cid_t[32];
+
 typedef uint8_t symidx_t;
 typedef struct symtbl_s *symtbl_t;
 /* ariva tick lines */
@@ -65,6 +67,8 @@ struct ariva_tl_s {
 	};
 	/* just the lowest bit is used, means bad tick */
 	uint32_t flags;
+
+	cid_t cid;
 };
 
 /* 'nother type extension */
@@ -351,10 +355,10 @@ parse_time(const char *buf)
 }
 
 static bool
-parse_symbol(ariva_tl_t tgt, const char **cursor, void *UNUSED(_fwr))
+parse_symbol(ariva_tl_t tgt, const char **cursor)
 {
 #define FIDDLE3(a, b, c)	(((a) << 16) + ((b) << 8) + (c))
-	size_t UNUSED(len);
+	size_t len;
 	const char *p = *cursor;
 	uint32_t sum = FIDDLE3(p[0], p[1], p[2]);
 
@@ -380,10 +384,9 @@ parse_symbol(ariva_tl_t tgt, const char **cursor, void *UNUSED(_fwr))
 			return false;
 		}
 	}
-	if ((len = p - *cursor) >= UTEHDR_SYMLEN) {
-		len = UTEHDR_SYMLEN;
-	}
-	atl_set_si(tgt, /*sl1t_fio_find_sym_crea(fwr, *cursor, len)*/1);
+	len = p - *cursor;
+	memcpy(tgt->cid, *cursor, len);
+	tgt->cid[len] = '\0';
 	*cursor = p + 1;
 #undef FIDDLE3
 	return true;
@@ -577,7 +580,7 @@ out:
 }
 
 static const char*
-parse_tline(ariva_tl_t tgt, const char *line, void *fwr)
+parse_tline(ariva_tl_t tgt, const char *line)
 {
 /* just assumes there is enough space */
 	const char *cursor = line;
@@ -587,7 +590,7 @@ parse_tline(ariva_tl_t tgt, const char *line, void *fwr)
 		goto eol;
 	}
 	/* symbol comes next, or `nothing' or `C-c' */
-	if (UNLIKELY(!parse_symbol(tgt, &cursor, fwr))) {
+	if (UNLIKELY(!parse_symbol(tgt, &cursor))) {
 		goto eol;
 	}
 	/* and now all the rest */
@@ -602,11 +605,14 @@ static bool
 read_line(mux_ctx_t ctx, ariva_tl_t tl)
 {
 	const char *line = prdb_current_line(ctx->rdr);
-	const char *endp = parse_tline(tl, line, ctx->wrr);
+	const char *endp = parse_tline(tl, line);
 	bool res;
 	/* assess tick quality */
 	check_tic_stmp(tl);
 	check_tic_offs(tl);
+
+	/* lookup the symbol (or create it) */
+	atl_set_si(tl, ute_sym2idx(ctx->wrr, tl->cid));
 	/* check if it's good or bad line */
 	if ((res = check_ariva_tl(tl))) {
 		/* good */
@@ -689,29 +695,6 @@ nomore:
 	return;
 }
 
-#if 0
-static void
-write_trng(mux_ctx_t ctx, ariva_tl_t tl)
-{
-/* we cant bring this until there's clarity about what we're gonna do
- * with metadata */
-	utehdr_t fhdr = sl1t_fio_fhdr(ctx->wrr);
-	time_range_t tr = utehdr_nth_trng(fhdr, atl_si(tl));
-	if (UNLIKELY(tr->lo == 0)) {
-		tr->lo = atl_ts_sec(tl);
-	}
-	/* always set the last seen date */
-	tr->hi = atl_ts_sec(tl);
-	return;
-}
-#else
-static void
-write_trng(mux_ctx_t UNUSED(ctx), ariva_tl_t UNUSED(tl))
-{
-	return;
-}
-#endif
-
 static void
 read_lines(mux_ctx_t ctx)
 {
@@ -720,7 +703,6 @@ read_lines(mux_ctx_t ctx)
 		memset(&atl, 0, sizeof(atl));
 		if (read_line(ctx, &atl)) {
 			write_tick(ctx, &atl);
-			write_trng(ctx, &atl);
 		}
 	}
 	return;

@@ -190,11 +190,6 @@ ute_cmd_mux_popt(sumux_opt_t opts, int argc, const char *argv[])
 			/* --name SYM */
 			opts->sname = argv[++i];
 
-		} else if (!strcmp(argv[i], "--zone") ||
-			   !strcmp(argv[i], "-z")) {
-			/* --timezone ZONE */
-			opts->zone = argv[++i];
-
 		} else if (!strcmp(argv[i], "--output") ||
 			   !strcmp(argv[i], "-o")) {
 			/* --output FILE */
@@ -268,10 +263,12 @@ ute_cmd_mux(sumux_opt_t opts)
 }
 
 static int
-ute_cmd_mux_args(int argc, const char *argv[])
+ute_cmd_mux_args(ute_opt_t octx, int argc, const char *argv[])
 {
 	struct sumux_opt_s opts[1] = {{0}};
 
+	/* get globally specified options */
+	opts->octx = octx;
 	/* parse options */
 	ute_cmd_mux_popt(opts, argc, argv);
 	/* now call the actual mux command */

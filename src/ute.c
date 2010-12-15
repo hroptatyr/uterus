@@ -156,7 +156,8 @@ again:
 			octx->argc++;
 			octx->cmd = ute_cmd_help;
 
-		} else {
+		} else if (octx->cmd == NULL) {
+			/* only break when there's no command yet */
 			break;
 		}
 	}

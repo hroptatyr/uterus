@@ -526,7 +526,7 @@ read_lines(mux_ctx_t ctx)
 }
 
 /* is this the right zone? */
-static const char tfraw_zone[] = "Europe/Berlin";
+static const char ibrti_zone[] = "Europe/Berlin";
 
 void
 ibrti_slab(mux_ctx_t ctx)
@@ -535,7 +535,7 @@ ibrti_slab(mux_ctx_t ctx)
 	if (ctx->opts->octx->zone != NULL) {
 		z = zif_read_inst(ctx->opts->octx->zone);
 	} else {
-		z = zif_read_inst(tfraw_zone);
+		z = zif_read_inst(ibrti_zone);
 	}
 	/* init reader and writer */
 	ctx->rdr = make_prdbuf(ctx->infd);

@@ -94,14 +94,15 @@ Options common to all commands:\n\
 static int
 ute_cmd_help(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
 {
-	if (argv == NULL || argv[1] == NULL || strcmp(argv[1], "help") == 0) {
-		fputs(usage, stdout);
-
+	if (argv == NULL || argv[1] == NULL) {
+		goto fallthrough;
 	} else if (strcmp(argv[1], "mux") == 0) {
 		fputs(ute_cmd_mux_help, stdout);
-
 	} else if (strcmp(argv[1], "print") == 0) {
 		fputs(ute_cmd_print_help, stdout);
+	} else {
+	fallthrough:
+		fputs(usage, stdout);
 	}
 	return 0;
 }

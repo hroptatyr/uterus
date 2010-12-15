@@ -47,6 +47,10 @@
 #include "ute-mux.c"
 #include "ute-shnot.h"
 
+/* for our options parser */
+#include "ute-opt.h"
+#include "version.h"
+
 static void
 ute_cmd_sort(const char *file)
 {
@@ -56,72 +60,13 @@ ute_cmd_sort(const char *file)
 	return;
 }
 
-static void
-ute_test(const char *file)
+static int
+ute_cmd_version(ute_opt_t UNUSED(o), int UNUSED(ac), const char *UNUSED(av[]))
 {
-	void *hdl = ute_open(file, UO_CREAT | UO_TRUNC);
-	struct sl1t_s t[1];
-	for (int i = 0; i < 4194304; i++) {
-		t[0].hdr->sec = 1234567890 - i + ((i % 900) ? 0 : 900);
-		t[0].hdr->msec = (uint16_t)(i % 77);
-		t[0].hdr->ttf = SL1T_TTF_TRA;
-		t[0].v[0] = 1234 + i;
-		/* add him */
-		ute_add_tick(hdl, AS_SCOM(t));
-	}
-	ute_close(hdl);
-	return;
-}
-
-static void
-ute_cmd_tes2(const char *file)
-{
-	void *hdl = ute_open(file, UO_CREAT | UO_TRUNC);
-	struct sl1t_s t[1];
-	for (int i = 0; i < 80000000; i++) {
-		t[0].hdr->sec = 1234567890 + i + ((i % 900) ? 0 : -900);
-		t[0].hdr->msec = (uint16_t)(i % 77);
-		t[0].hdr->ttf = SL1T_TTF_TRA;
-		t[0].v[0] = 1234 + i;
-		/* add him */
-		ute_add_tick(hdl, AS_SCOM(t));
-	}
-	ute_close(hdl);
-	return;
-}
-
-static void
-ute_cmd_tes3(const char *file)
-{
-	void *hdl = ute_open(file, UO_CREAT | UO_TRUNC);
-	struct sl1t_s t[1];
-	for (int i = 0; i < 6000000; i++) {
-		t[0].hdr->sec = 1234567890 + (i % 114000) + ((i * i) % 17);
-		t[0].hdr->msec = (uint16_t)(i % 77);
-		t[0].hdr->ttf = SL1T_TTF_TRA;
-		t[0].v[0] = 1234 + i;
-		/* add him */
-		ute_add_tick(hdl, AS_SCOM(t));
-	}
-	ute_close(hdl);
-	return;
-}
-
-static void
-ute_cmd_tes4(const char *file)
-{
-	void *hdl = ute_open(file, UO_CREAT | UO_TRUNC);
-	struct sl1t_s t[1];
-	for (int i = 0; i < 80000000; i++) {
-		t[0].hdr->sec = 1234567890 + i + (i % 262144 == 10 ? -4 : 0);
-		t[0].hdr->msec = (uint16_t)(i % 77);
-		t[0].hdr->ttf = SL1T_TTF_TRA;
-		t[0].v[0] = 1234 + i;
-		/* add him */
-		ute_add_tick(hdl, AS_SCOM(t));
-	}
-	ute_close(hdl);
-	return;
+	fputs("ute v", stdout);
+	fputs(UTE_VERSION, stdout);
+	fputc('\n', stdout);
+	return 0;
 }
 
 static const char usage[] = "\
@@ -138,75 +83,119 @@ Use 'ute help COMMAND' for more information \
 on a specific command\n\
 \n\
 Options common to all commands:\n\
--z, --zone NAME      Treat date/time strings as in time zone NAME.\n\
+-q, --quiet       Suppress all output.\n\
+-v, --verbose     Be more talkative.\n\
+-z, --zone NAME   Treat date/time strings as in time zone NAME.\n\
+\n\
+-h, --help        Print this help screen.\n\
+-V, --version     Print version information.\n\
 \n";
 
-static void
-ute_help(const char *cmd)
+static int
+ute_cmd_help(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
 {
-	if (cmd == NULL || strcmp(cmd, "help") == 0) {
+	if (argv == NULL || argv[1] == NULL || strcmp(argv[1], "help") == 0) {
 		fputs(usage, stdout);
 
-	} else if (strcmp(cmd, "mux") == 0) {
+	} else if (strcmp(argv[1], "mux") == 0) {
 		fputs(ute_cmd_mux_help, stdout);
 
-	} else if (strcmp(cmd, "print") == 0) {
+	} else if (strcmp(argv[1], "print") == 0) {
 		fputs(ute_cmd_print_help, stdout);
 	}
-	return;
+	return 0;
+}
+
+static int
+ute_popt(ute_opt_t octx, int argc, char *argv[])
+{
+	int i = 0;
+
+	memset(octx, 0, sizeof(*octx));
+	if (argc <= 1) {
+		return -1;
+	}
+
+	/* common options */
+again:
+	for (i++; i < argc; i++) {
+		/* check options */
+		if (strcmp(argv[i], "-q") == 0 ||
+		    strcmp(argv[i], "--quiet") == 0) {
+			octx->verbosity--;
+
+		} else if (strcmp(argv[i], "-v") == 0 ||
+			   strcmp(argv[i], "--verbose") == 0) {
+			octx->verbosity++;
+
+		} else if (strcmp(argv[i], "-z") == 0 ||
+			   strcmp(argv[i], "--zone") == 0) {
+			octx->zone = argv[++i];
+
+		} else if (strcmp(argv[i], "-V") == 0 ||
+			   strcmp(argv[i], "--version") == 0) {
+			octx->cmd = ute_cmd_version;
+			break;
+
+		} else if (strcmp(argv[i], "-h") == 0 ||
+			   strcmp(argv[i], "--help") == 0) {
+			if (octx->cmd == NULL) {
+				/* someone just ute --help */
+				octx->cmd = ute_cmd_help;
+				break;
+			}
+			/* command already set, must be called like
+			 *   ute CMD --help
+			 * rewrite that to ute help CMD */
+			octx->argv--;
+			octx->argc++;
+			octx->cmd = ute_cmd_help;
+
+		} else {
+			break;
+		}
+	}
+
+	if (octx->cmd) {
+		return 0;
+	}
+
+	/* command checking */
+	octx->argc = argc - i;
+	octx->argv = (const char**)(argv + i);
+	if (strcmp(argv[i], "help") == 0) {
+		octx->cmd = ute_cmd_help;
+
+	} else if (strcmp(argv[i], "version") == 0) {
+		octx->cmd = ute_cmd_version;
+
+	} else if (strcmp(argv[i], "mux") == 0) {
+		octx->cmd = ute_cmd_mux_args;
+
+	} else if (strcmp(argv[i], "print") == 0) {
+		octx->cmd = ute_cmd_print_args;
+
+	} else if (strcmp(argv[i], "shnot") == 0) {
+		octx->cmd = ute_cmd_shnot_args;
+
+	} else if (strcmp(argv[i], "sort") == 0) {
+		octx->cmd = ute_cmd_sort;
+	}
+
+	goto again;
 }
 
 int
-main(int argc, const char *argv[])
+main(int argc, char *argv[])
 {
-	if (argc <= 1) {
-		goto out;
+	struct ute_opt_s octx[1];
 
-	} else if (strcmp(argv[1], "mux") == 0) {
-		ute_cmd_mux_args(argc - 1, argv + 1);
-
-	} else if (strcmp(argv[1], "print") == 0) {
-		ute_cmd_print_args(argc - 1, argv + 1);
-
-	} else if (strcmp(argv[1], "shnot") == 0) {
-		return ute_cmd_shnot_args(argc - 1, argv + 1);
-
-	} else if (strcmp(argv[1], "sort") == 0) {
-		if (argv[2] == NULL) {
-			goto out;
-		}
-		ute_cmd_sort(argv[2]);
-
-	} else if (strcmp(argv[1], "test") == 0) {
-		if (argv[2] == NULL) {
-			goto out;
-		}
-		ute_test(argv[2]);
-
-	} else if (strcmp(argv[1], "tes2") == 0) {
-		if (argv[2] == NULL) {
-			goto out;
-		}
-		ute_cmd_tes2(argv[2]);
-
-	} else if (strcmp(argv[1], "tes3") == 0) {
-		if (argv[2] == NULL) {
-			goto out;
-		}
-		ute_cmd_tes3(argv[2]);
-
-	} else if (strcmp(argv[1], "tes4") == 0) {
-		if (argv[2] == NULL) {
-			goto out;
-		}
-		ute_cmd_tes4(argv[2]);
-
-	} else {
-	out:
-		ute_help(argv[2]);
+	if (ute_popt(octx, argc, argv) < 0 || octx->cmd == NULL) {
+		ute_cmd_help(octx, octx->argc, octx->argv);
 		return 1;
 	}
-	return 0;
+
+	return octx->cmd(octx, octx->argc, octx->argv);
 }
 
 /* ute.c ends here */

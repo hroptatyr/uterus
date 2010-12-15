@@ -123,15 +123,19 @@ again:
 		/* check options */
 		if (strcmp(argv[i], "-q") == 0 ||
 		    strcmp(argv[i], "--quiet") == 0) {
+			argv[i] = NULL;
 			octx->verbosity--;
 
 		} else if (strcmp(argv[i], "-v") == 0 ||
 			   strcmp(argv[i], "--verbose") == 0) {
+			argv[i] = NULL;
 			octx->verbosity++;
 
 		} else if (strcmp(argv[i], "-z") == 0 ||
 			   strcmp(argv[i], "--zone") == 0) {
+			argv[i] = NULL;
 			octx->zone = argv[++i];
+			argv[i] = NULL;
 
 		} else if (strcmp(argv[i], "-V") == 0 ||
 			   strcmp(argv[i], "--version") == 0) {

@@ -180,7 +180,11 @@ ute_cmd_mux_popt(sumux_opt_t opts, int argc, const char *argv[])
 	opts->infiles = malloc(argc * sizeof(char*));
 	/* parse options */
 	for (int i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "--format") ||
+		if (argv[i] == NULL) {
+			/* global options are set to NULL */
+			continue;
+
+		} else if (!strcmp(argv[i], "--format") ||
 		    !strcmp(argv[i], "-f")) {
 			/* --format FMT */
 			opts->muxf = find_muxer(argv[++i]);

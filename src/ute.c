@@ -124,21 +124,28 @@ ute_cmd_tes4(const char *file)
 	return;
 }
 
+static const char usage[] = "\
+Usage: ute COMMAND ARGS\n\
+\n\
+Supported commands:\n\
+  help    This help screen\n\
+  mux     Generate an ute file from a tick source\n\
+  print   Print the contents of an ute file\n\
+  shnot   Generate top-level snapshots from ute files\n\
+  sort    Test sort the file\n\
+\n\
+Use 'ute help COMMAND' for more information \
+on a specific command\n\
+\n\
+Options common to all commands:\n\
+-z, --zone NAME      Treat date/time strings as in time zone NAME.\n\
+\n";
+
 static void
 ute_help(const char *cmd)
 {
 	if (cmd == NULL || strcmp(cmd, "help") == 0) {
-		fputs("usage: ute COMMAND ARGS\n"
-		      "\n"
-		      "Supported commands:\n"
-		      "  help    This help screen\n"
-		      "  mux     Generate an ute file from a tick source\n"
-		      "  print   Print the contents of an ute file\n"
-		      "  shnot   Generate top-level snapshots from ute files\n"
-		      "  sort    Test sort the file\n"
-		      "\n"
-		      "Use 'ute help COMMAND' for more information "
-		      "on a specific command\n", stdout);
+		fputs(usage, stdout);
 
 	} else if (strcmp(cmd, "mux") == 0) {
 		fputs(ute_cmd_mux_help, stdout);

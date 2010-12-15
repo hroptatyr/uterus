@@ -1,6 +1,8 @@
 #if !defined INCLUDED_sumux_h_
 #define INCLUDED_sumux_h_
 
+#include "ute-opt.h"
+
 typedef struct mux_ctx_s *mux_ctx_t;
 typedef struct sumux_opt_s *sumux_opt_t;
 
@@ -23,8 +25,8 @@ struct sumux_opt_s {
 	const char *outfile;
 	const char *badfile;
 	const char *sname;
-	const char *zone;
 	void(*muxf)(mux_ctx_t);
+	ute_opt_t octx;
 };
 
 extern void ariva_slab(mux_ctx_t);

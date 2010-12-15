@@ -131,8 +131,9 @@ ute_cmd_print_popt(sumux_opt_t opts, int argc, const char *argv[])
 	opts->infiles = malloc(argc * sizeof(char*));
 
 	for (int i = 1; i < argc; i++) {
-		if (0) {
-			;
+		if (argv[i] == NULL) {
+			/* global options are set to NULL */
+			continue;
 		} else if (!strcmp(argv[i], "--help") ||
 			   !strcmp(argv[i], "-h")) {
 			/* --help */
@@ -177,10 +178,12 @@ ute_cmd_print(sumux_opt_t opts)
 }
 
 static int
-ute_cmd_print_args(int argc, const char *argv[])
+ute_cmd_print_args(ute_opt_t octx, int argc, const char *argv[])
 {
 	struct sumux_opt_s opts[1] = {{0}};
 
+	/* get globally specified options */
+	opts->octx = octx;
 	/* parse options */
 	ute_cmd_print_popt(opts, argc, argv);
 	/* now call the actual mux command */

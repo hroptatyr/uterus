@@ -65,6 +65,7 @@
 
 #include "ute-shnot.h"
 #include "ute-print.h"
+#include "ute-opt.h"
 
 #define SUSHI_MODE		1
 #define TRUE_OPEN		1
@@ -121,6 +122,9 @@ struct shnot_opt_s {
 	const char *outfile;
 	const char *badfile;
 	const char *sname;
+
+	/* global options */
+	ute_opt_t octx;
 
 	/* time zone info */
 	zif_t z;
@@ -487,10 +491,12 @@ ute_cmd_shnot(shnot_opt_t opts)
 }
 
 int
-ute_cmd_shnot_args(int argc, const char *argv[])
+ute_cmd_shnot_args(ute_opt_t octx, int argc, const char *argv[])
 {
 	struct shnot_opt_s opts[1] = {{0}};
 
+	/* assign global opts */
+	opts->octx = octx;
 	/* parse options */
 	ute_cmd_shnot_popt(opts, argc, argv);
 	/* now call the actual mux command */

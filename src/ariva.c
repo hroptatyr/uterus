@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-#include "pageio.h"
+#include "prchunk.h"
 #include "secu.h"
 #include "date.h"
 #include "utefile.h"
@@ -23,6 +23,18 @@
 #include "m30.h"
 #include "m62.h"
 
+#if defined __INTEL_COMPILER
+# pragma warning(disable:981)
+#endif	/* __INTEL_COMPILER */
+#if !defined LIKELY
+# define LIKELY(_x)	__builtin_expect((_x), 1)
+#endif
+#if !defined UNLIKELY
+# define UNLIKELY(_x)	__builtin_expect((_x), 0)
+#endif	/* !UNLIKELY */
+#if !defined UNUSED
+# define UNUSED(_x)	__attribute__((unused)) _x
+#endif	/* !UNUSED */
 #define MAX_LINE_LEN	512
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
@@ -96,6 +108,7 @@ static struct metrsymtbl_s symtbl;
 #define SYMTBL_ASK	(symtbl.ask)
 #define SYMTBL_ASZ	(symtbl.asz)
 #define SYMTBL_AUCP	(symtbl.aucp)
+static size_t lno;
 
 /* convenience bindings to access the sl1t_t slot in there */
 static inline __attribute__((pure)) uint32_t
@@ -149,22 +162,21 @@ atl_cached_sec(const struct ariva_tl_s *l)
 
 /* read buffer goodies */
 static inline bool
-fetch_lines(mux_ctx_t ctx)
+fetch_lines(mux_ctx_t UNUSED(ctx))
 {
-	return prdb_fetch_lines(ctx->rdr);
+	return !(prchunk_fill() < 0);
 }
 
 static inline void
-unfetch_lines(mux_ctx_t ctx)
+unfetch_lines(mux_ctx_t UNUSED(ctx))
 {
-	prdb_unfetch_lines(ctx->rdr);
 	return;
 }
 
 static inline bool
-moar_ticks_p(mux_ctx_t ctx)
+moar_ticks_p(mux_ctx_t UNUSED(ctx))
 {
-	return prdb_one_more_line_p(ctx->rdr);
+	return prchunk_haslinep();
 }
 
 /* printers */
@@ -288,7 +300,7 @@ static inline bool
 check_ariva_tl(ariva_tl_t t)
 {
 	/* look if this looks good */
-	if (t->flags & 1) {
+	if (t->flags & FLAG_INVAL) {
 		return false;
 	}
 	if (!atl_ts_sec(t)) {
@@ -463,168 +475,160 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 }
 
 static void
-parse_keyval(ariva_tl_t tgt, const char **cursor)
+parse_keyval(ariva_tl_t tgt, const char *p)
 {
 /* assumes tgt's si is set already */
-	const char *p = *cursor;
-
-	while (true) {
-		switch (*p++) {
-		case '\n':
-			p--;
-			goto out;
-		case 'p':
-			tgt->p = ffff_m30_get_s((char**)&p);
-			p++;
-			/* store in cache */
-			SYMTBL_TRA[atl_si(tgt)] = tgt->p;
-			/* also reset auction */
-			SYMTBL_AUCP[atl_si(tgt)] = false;
-			continue;
-		case 'b':
-			tgt->b = ffff_m30_get_s((char**)&p);
-			p++;
-			/* store in cache */
-			SYMTBL_BID[atl_si(tgt)] = tgt->b;
-			if (tgt->b.mant == 0) {
-				tgt->flags |= FLAG_HALTED;
-			}
-			continue;
-		case 'a':
-			tgt->a = ffff_m30_get_s((char**)&p);
-			p++;
-			/* store in cache */
-			SYMTBL_ASK[atl_si(tgt)] = tgt->a;
-			if (tgt->a.mant == 0) {
-				tgt->flags |= FLAG_HALTED;
-			}
-			continue;
-		case 'k':
-			tgt->k = ffff_m30_get_s((char**)&p);
-			p++;
-			/* once weve seen this, an auction is going on */
-			SYMTBL_AUCP[atl_si(tgt)] = true;
-			continue;
-		case 'v':
-			/* unlike our `v' this is the vol-pri */
-			tgt->V = ffff_m62_get_s((char**)&p);
-			p++;
-			continue;
-		case 'P':
-			tgt->P = ffff_m30_23_get_s((char**)&p);
-			p++;
-			continue;
-		case 'B':
-			tgt->B = ffff_m30_23_get_s((char**)&p);
-			p++;
-			/* store in cache */
-			SYMTBL_BSZ[atl_si(tgt)] = tgt->B;
-			if (tgt->B.mant == 0) {
-				tgt->flags |= FLAG_HALTED;
-			}
-			continue;
-		case 'A':
-			tgt->A = ffff_m30_23_get_s((char**)&p);
-			p++;
-			/* store in cache */
-			SYMTBL_ASZ[atl_si(tgt)] = tgt->A;
-			if (tgt->A.mant == 0) {
-				tgt->flags |= FLAG_HALTED;
-			}
-			continue;
-		case 'V':
-			/* this is the volume */
-			tgt->v = ffff_m62_get_s((char**)&p);
-			p++;
-			continue;
-
-		case 'T':
-			tgt->stmp2 = parse_time(p);
-			p += 15;
-			if (atl_ts_sec(tgt) > 0) {
-				continue;
-			}
-			/* store in cache */
-			SYMTBL_METR[atl_si(tgt)] = tgt->stmp2;
-			continue;
-		case 't':
-			/* price stamp */
-			atl_set_ts_sec(tgt, parse_time(p));
-			p += 15;
-			/* also set the instruments metronome */
-			SYMTBL_METR[atl_si(tgt)] = atl_ts_sec(tgt);
-			continue;
-		case 'c':
-			/* must be a candle tick, kick it */
-			tgt->flags = FLAG_INVAL;
-			goto out;
-		default:
+	switch (*p++) {
+	case 'p':
+		tgt->p = ffff_m30_get_s((char**)&p);
+		/* store in cache */
+		SYMTBL_TRA[atl_si(tgt)] = tgt->p;
+		/* also reset auction */
+		SYMTBL_AUCP[atl_si(tgt)] = false;
+		break;
+	case 'b':
+		tgt->b = ffff_m30_get_s((char**)&p);
+		/* store in cache */
+		SYMTBL_BID[atl_si(tgt)] = tgt->b;
+		if (tgt->b.mant == 0) {
+			tgt->flags |= FLAG_HALTED;
+		}
+		break;
+	case 'a':
+		tgt->a = ffff_m30_get_s((char**)&p);
+		/* store in cache */
+		SYMTBL_ASK[atl_si(tgt)] = tgt->a;
+		if (tgt->a.mant == 0) {
+			tgt->flags |= FLAG_HALTED;
+		}
+		break;
+	case 'k':
+		tgt->k = ffff_m30_get_s((char**)&p);
+		/* once weve seen this, an auction is going on */
+		SYMTBL_AUCP[atl_si(tgt)] = true;
+		break;
+	case 'v':
+		/* unlike our `v' this is the vol-pri */
+		tgt->V = ffff_m62_get_s((char**)&p);
+		break;
+	case 'P':
+		tgt->P = ffff_m30_23_get_s((char**)&p);
+		break;
+	case 'B':
+		tgt->B = ffff_m30_23_get_s((char**)&p);
+		/* store in cache */
+		SYMTBL_BSZ[atl_si(tgt)] = tgt->B;
+		if (tgt->B.mant == 0) {
+			tgt->flags |= FLAG_HALTED;
+		}
+		break;
+	case 'A':
+		tgt->A = ffff_m30_23_get_s((char**)&p);
+		/* store in cache */
+		SYMTBL_ASZ[atl_si(tgt)] = tgt->A;
+		if (tgt->A.mant == 0) {
+			tgt->flags |= FLAG_HALTED;
+		}
+		break;
+	case 'V':
+		/* this is the volume */
+		tgt->v = ffff_m62_get_s((char**)&p);
+		break;
+	case 'T':
+		tgt->stmp2 = parse_time(p);
+		if (atl_ts_sec(tgt) > 0) {
 			break;
 		}
-		while (*p > ' ') {
-			p++;
-		}
-		if (*p == ' ') {
-			p++;
-		}
+		/* store in cache */
+		SYMTBL_METR[atl_si(tgt)] = tgt->stmp2;
+		break;
+	case 't':
+		/* price stamp */
+		atl_set_ts_sec(tgt, parse_time(p));
+		/* also set the instruments metronome */
+		SYMTBL_METR[atl_si(tgt)] = atl_ts_sec(tgt);
+		break;
+	case 'o':
+	case 'h':
+	case 'l':
+	case 'c':
+		/* must be a candle tick, kick it */
+		tgt->flags = FLAG_INVAL;
+	default:
+		return;
 	}
-out:
+	return;
+}
+
+static bool
+parse_keyvals(ariva_tl_t tgt, const char *cursor)
+{
+/* assumes tgt's si is set already, this parses xVAL [SPC xVAL ...] pairs
+ * also assumes that the string in cursor is nul-terminated */
+	const char *p = cursor;
+
+	while (true) {
+		parse_keyval(tgt, p);
+		if (UNLIKELY(tgt->flags & FLAG_INVAL)) {
+			return false;
+		} else if (UNLIKELY((p = strchr(p, ' ')) == NULL)) {
+			break;
+		}
+		p++;
+	}
+
 	if (tgt->flags & FLAG_HALTED &&
 	    (tgt->k.mant != 0 || tgt->P.mant != 0 ||
 	     (tgt->a.mant != 0 && tgt->A.mant != 0) ||
 	     (tgt->b.mant != 0 && tgt->B.mant != 0))) {
 		tgt->flags &= ~FLAG_HALTED;
 	}
-	*cursor = p;
-	return;
-}
-
-static const char*
-parse_tline(ariva_tl_t tgt, const char *line)
-{
-/* just assumes there is enough space */
-	const char *cursor = line;
-
-	/* receive time stamp, always first on line */
-	if (UNLIKELY(!parse_rcv_stmp(tgt, &cursor))) {
-		goto eol;
-	}
-	/* symbol comes next, or `nothing' or `C-c' */
-	if (UNLIKELY(!parse_symbol(tgt, &cursor))) {
-		goto eol;
-	}
-	/* and now all the rest */
-	parse_keyval(tgt, &cursor);
-eol:
-	while (*cursor++ != '\n');
-	return cursor;
+	return true;
 }
 
 
 static bool
 read_line(mux_ctx_t ctx, ariva_tl_t tl)
 {
-	const char *line = prdb_current_line(ctx->rdr);
-	const char *endp = parse_tline(tl, line);
+	char *line;
+	size_t llen;
 	bool res;
+	const char *cursor;
+
+	llen = prchunk_getline(&line);
+	lno++;
+
+	/* we parse the line in 3 steps, receive time stamp, symbol, values */
+	cursor = line;
+	/* receive time stamp, always first on line */
+	if (UNLIKELY(!parse_rcv_stmp(tl, &cursor))) {
+		return false;
+	}
+	/* symbol comes next, or `nothing' or `C-c' */
+	if (UNLIKELY(!parse_symbol(tl, &cursor))) {
+		return false;
+	}
+	/* lookup the symbol (or create it) */
+	atl_set_si(tl, ute_sym2idx(ctx->wrr, tl->cid));
+	/* and now parse the key value pairs */
+	if (UNLIKELY(!parse_keyvals(tl, cursor))) {
+		return false;
+	}
+
 	/* assess tick quality */
 	check_tic_stmp(tl);
 	check_tic_offs(tl);
 
-	/* lookup the symbol (or create it) */
-	atl_set_si(tl, ute_sym2idx(ctx->wrr, tl->cid));
 	/* check if it's good or bad line */
 	if ((res = check_ariva_tl(tl))) {
 		/* good */
 		enrich_batps(tl);
 	} else {
 		/* bad */
-		tl->flags = 1;
+		tl->flags = FLAG_INVAL;
 		/* we should make this optional */
-		pr_tl(ctx, tl, line, endp - line - 1);
+		pr_tl(ctx, tl, line, llen);
 	}
-	/* ffw the read buffer */
-	prdb_set_current_line_by_ptr(ctx->rdr, endp);
 	return res;
 }
 
@@ -699,10 +703,9 @@ static void
 read_lines(mux_ctx_t ctx)
 {
 	while (moar_ticks_p(ctx)) {
-		struct ariva_tl_s atl;
-		memset(&atl, 0, sizeof(atl));
-		if (read_line(ctx, &atl)) {
-			write_tick(ctx, &atl);
+		struct ariva_tl_s atl[1] = {{0}};
+		if (read_line(ctx, atl)) {
+			write_tick(ctx, atl);
 		}
 	}
 	return;
@@ -719,17 +722,18 @@ ariva_slab(mux_ctx_t ctx)
 	} else {
 		z = zif_read_inst(ariva_zone);
 	}
-	/* init reader and writer */
-	ctx->rdr = make_prdbuf(ctx->infd);
+	/* init reader, we use prchunk here */
+	init_prchunk(ctx->infd);
 	/* wipe symtbl */
 	memset(&symtbl, 0, sizeof(symtbl));
 	/* main loop */
+	lno = 0;
 	while (fetch_lines(ctx)) {
 		read_lines(ctx);
 		unfetch_lines(ctx);
 	}
-	/* expobuf is the reader of our choice */
-	free_prdbuf(ctx->rdr);
+	/* free prchunk resources */
+	free_prchunk();
 	if (z != NULL) {
 		zif_free(z);
 	}

@@ -78,7 +78,6 @@ libuterus_la_SOURCES += utefile.c utefile.h utefile-private.h
 libuterus_la_SOURCES += utesort.c
 libuterus_la_SOURCES += utetpc.c utetpc.h
 libuterus_la_SOURCES += uteslut.c uteslut.h
-libuterus_la_SOURCES += pageio.c pageio.h
 libuterus_la_SOURCES += prchunk.c prchunk.h
 ## libdatrie again
 libuterus_la_CPPFLAGS += -DSTATIC_TRIE_GUTS

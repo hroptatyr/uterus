@@ -65,6 +65,7 @@ header_HEADERS += sl1t.h
 header_HEADERS += scdl.h
 header_HEADERS += m30.h m62.h
 libuterus_la_SOURCES =
+EXTRA_libuterus_la_SOURCES =
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
 libuterus_la_SOURCES += secu.h
 libuterus_la_SOURCES += mem.h
@@ -86,15 +87,17 @@ libuterus_la_SOURCES += trie.c trie.h
 libuterus_la_CPPFLAGS += -DLIBMODE -fPIC
 libuterus_la_CPPFLAGS += -DUSE_DATRIE
 libuterus_la_LDFLAGS = $(AM_LDFLAGS)
-EXTRA_DIST += triedefs.h
-EXTRA_DIST += fileutils.c fileutils.h
-EXTRA_DIST += darray.c darray.h
-EXTRA_DIST += tail.c tail.h
-EXTRA_DIST += fmcmb.h
-EXTRA_DIST += intvtree.c intvtree.h
+EXTRA_libuterus_la_SOURCES += triedefs.h
+EXTRA_libuterus_la_SOURCES += fileutils.c fileutils.h
+EXTRA_libuterus_la_SOURCES += darray.c darray.h
+EXTRA_libuterus_la_SOURCES += tail.c tail.h
+EXTRA_libuterus_la_SOURCES += fmcmb.h
+EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 
 bin_PROGRAMS += ute
-ute_SOURCES = ute.c
+ute_SOURCES =
+EXTRA_ute_SOURCES =
+ute_SOURCES += ute.c
 ute_SOURCES += ariva.c
 ute_SOURCES += ibrti.c
 ute_SOURCES += dukas.c
@@ -104,8 +107,9 @@ ute_SOURCES += ute-shnot.c ute-shnot.h
 ute_LDADD = libuterus.la
 ute_CPPFLAGS = $(AM_CPPFLAGS)
 ute_LDFLAGS = $(AM_LDFLAGS)
-EXTRA_DIST += ute-print.c ute-print.h
-EXTRA_DIST += ute-mux.c
+EXTRA_ute_SOURCES += ute-print.c ute-print.h
+EXTRA_ute_SOURCES += ute-mux.c
+EXTRA_ute_SOURCES += ute-opt.h
 
 
 version.h: $(top_builddir)/.version

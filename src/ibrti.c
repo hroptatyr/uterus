@@ -13,7 +13,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
-#include "pageio.h"
+#include "prchunk.h"
 #include "secu.h"
 #include "date.h"
 #include "sl1t.h"
@@ -26,6 +26,16 @@
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
+
+#if !defined LIKELY
+# define LIKELY(_x)	__builtin_expect((_x), 1)
+#endif
+#if !defined UNLIKELY
+# define UNLIKELY(_x)	__builtin_expect((_x), 0)
+#endif	/* !UNLIKELY */
+#if !defined UNUSED
+# define UNUSED(_x)	__attribute__((unused)) _x
+#endif	/* !UNUSED */
 
 #define MAX_LINE_LEN	512
 #define countof(x)	(sizeof(x) / sizeof(*x))
@@ -160,20 +170,19 @@ ibtl_set_ttf(ibrti_tl_t l, uint16_t tt)
 static inline bool
 fetch_lines(mux_ctx_t ctx)
 {
-	return prdb_fetch_lines(ctx->rdr);
+	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
 static inline void
-unfetch_lines(mux_ctx_t ctx)
+unfetch_lines(mux_ctx_t UNUSED(ctx))
 {
-	prdb_unfetch_lines(ctx->rdr);
 	return;
 }
 
 static inline bool
 moar_ticks_p(mux_ctx_t ctx)
 {
-	return prdb_one_more_line_p(ctx->rdr);
+	return prchunk_haslinep(ctx->rdr);
 }
 
 static inline void
@@ -336,14 +345,14 @@ parse_rTI_tick_type(char buf)
 	}
 }
 
-static const char*
-parse_tline(ibrti_tl_t tgt, const char *line  )
+static bool
+parse_tline(ibrti_tl_t tgt, const char *line)
 {
 /* just assumes there is enough space */
 	const char *cursor = line;
 	uint32_t v1, v2;
 
-#define NEXT_TAB(_x)	while (*_x++ != '\t')
+#define NEXT_TAB(_x)	(_x = strchr(_x, '\t') + 1)
 #define PARSE_TIME(_tgt, _cursor, _line)	\
 	_tgt = parse_time(_cursor);		\
 	NEXT_TAB(_cursor)
@@ -362,10 +371,10 @@ parse_tline(ibrti_tl_t tgt, const char *line  )
 	_tgt = (uint16_t)ffff_strtol(_cursor, &_cursor, 0);	\
 	_cursor++
 #define PARSE_TT(_tgt, _cursor, _line)				\
-	if (LIKELY(_cursor[1] == '\n')) {			\
+	if (LIKELY(_cursor[1] == '\0')) {			\
 		_tgt = parse_rTI_tick_type(_cursor[0]);		\
 		_cursor++;					\
-	} else if (LIKELY(_cursor[2] == '\n')) {		\
+	} else if (LIKELY(_cursor[2] == '\0')) {		\
 		_tgt = SL1T_TTF_UNK;				\
 		_cursor += 2;					\
 	} else {						\
@@ -379,7 +388,7 @@ parse_tline(ibrti_tl_t tgt, const char *line  )
 	} else {							\
 		_else;							\
 	}								\
-	while (*cursor++ != '\t')
+	cursor = strchr(cursor, '\t') + 1
 #define RDQTY(_into, _else)						\
 	/* care about \N */						\
 	if (cursor[0] != '\\' /* || cursor[1] == 'N' */) {		\
@@ -393,7 +402,7 @@ parse_tline(ibrti_tl_t tgt, const char *line  )
 	} else {							\
 		_else;							\
 	}								\
-	while (*cursor++ != '\t')
+	cursor = strchr(cursor, '\t') + 1
 
 	/* symbol first */
 	cursor = parse_symbol(tgt, cursor);
@@ -428,38 +437,24 @@ parse_tline(ibrti_tl_t tgt, const char *line  )
 		break;
 	}
 
-	/* this definitely crashes if the file doesnt end in a new line */
-	while (*cursor++ != '\n');
 #undef PARSE_TT
 #undef PARSE_SEQ
 #undef RDPRI
 #undef RDQTY
-	return cursor;
+	return true;
 }
 
 
 static bool
 read_line(mux_ctx_t ctx, ibrti_tl_t tl)
 {
-	const char *line, *endp;
+	char *line;
 	bool res;
 
-	line = prdb_current_line(ctx->rdr);
-	endp = parse_tline(tl, line);
-
-	/* ffw the read buffer */
-	prdb_set_current_line_by_ptr(ctx->rdr, endp);
-
+	(void)prchunk_getline(ctx->rdr, &line);
 	lno++;
-#if defined USE_DEBUGGING_ASSERTIONS
-	assert(endp[-1] == '\n');
-#elif defined USE_ASSERTIONS
-	if (endp[-1] != '\n') {
-		char buf[MAX_LINE_LEN];
-		memcpy(buf, line, endp - line);
-		SUSHI_DEBUG("misparsed line: \"%s\"\n", buf);
-	}
-#endif	/* USE_DEBUGGING_ASSERTIONS */
+	parse_tline(tl, line);
+
 	/* assess tick quality */
 	check_tic_stmp(tl);
 	check_tic_offs(tl);
@@ -537,19 +532,18 @@ ibrti_slab(mux_ctx_t ctx)
 	} else {
 		z = zif_read_inst(ibrti_zone);
 	}
-	/* init reader and writer */
-	ctx->rdr = make_prdbuf(ctx->infd);
+	/* init reader, we use prchunk here */
+	ctx->rdr = init_prchunk(ctx->infd);
 	/* wipe symtbl */
 	memset(&symtbl, 0, sizeof(symtbl));
-
 	/* main loop */
 	lno = 0;
 	while (fetch_lines(ctx)) {
 		read_lines(ctx);
 		unfetch_lines(ctx);
 	}
-	/* expobuf is the reader of our choice */
-	free_prdbuf(ctx->rdr);
+	/* free prchunk resources */
+	free_prchunk(ctx->rdr);
 	if (z != NULL) {
 		zif_free(z);
 	}

@@ -49,20 +49,20 @@
 typedef struct prch_ctx_s *prch_ctx_t;
 
 /* non-reentrant! */
-FDECL void init_prchunk(int fd);
-FDECL void free_prchunk(void);
+FDECL prch_ctx_t init_prchunk(int fd);
+FDECL void free_prchunk(prch_ctx_t);
 
-FDECL int prchunk_fill(void);
+FDECL int prchunk_fill(prch_ctx_t ctx);
 
-FDECL size_t prchunk_get_nlines(void);
-FDECL size_t prchunk_get_ncols(void);
+FDECL size_t prchunk_get_nlines(prch_ctx_t);
+FDECL size_t prchunk_get_ncols(prch_ctx_t);
 
-FDECL size_t prchunk_getlineno(char **p, int lno);
-FDECL size_t prchunk_getline(char **p);
-FDECL void prchunk_reset(void);
-FDECL int prchunk_haslinep(void);
+FDECL size_t prchunk_getlineno(prch_ctx_t ctx, char **p, int lno);
+FDECL size_t prchunk_getline(prch_ctx_t ctx, char **p);
+FDECL void prchunk_reset(prch_ctx_t ctx);
+FDECL int prchunk_haslinep(prch_ctx_t ctx);
 
-FDECL void prchunk_rechunk(char delim, int ncols);
-FDECL size_t prchunk_getcolno(char **p, int lno, int cno);
+FDECL void prchunk_rechunk(prch_ctx_t ctx, char delim, int ncols);
+FDECL size_t prchunk_getcolno(prch_ctx_t ctx, char **p, int lno, int cno);
 
 #endif	/* INCLUDED_prchunk_h_ */

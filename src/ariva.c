@@ -162,9 +162,9 @@ atl_cached_sec(const struct ariva_tl_s *l)
 
 /* read buffer goodies */
 static inline bool
-fetch_lines(mux_ctx_t UNUSED(ctx))
+fetch_lines(mux_ctx_t ctx)
 {
-	return !(prchunk_fill() < 0);
+	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
 static inline void
@@ -174,9 +174,9 @@ unfetch_lines(mux_ctx_t UNUSED(ctx))
 }
 
 static inline bool
-moar_ticks_p(mux_ctx_t UNUSED(ctx))
+moar_ticks_p(mux_ctx_t ctx)
 {
-	return prchunk_haslinep();
+	return prchunk_haslinep(ctx->rdr);
 }
 
 /* printers */
@@ -595,7 +595,7 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	bool res;
 	const char *cursor;
 
-	llen = prchunk_getline(&line);
+	llen = prchunk_getline(ctx->rdr, &line);
 	lno++;
 
 	/* we parse the line in 3 steps, receive time stamp, symbol, values */
@@ -723,7 +723,7 @@ ariva_slab(mux_ctx_t ctx)
 		z = zif_read_inst(ariva_zone);
 	}
 	/* init reader, we use prchunk here */
-	init_prchunk(ctx->infd);
+	ctx->rdr = init_prchunk(ctx->infd);
 	/* wipe symtbl */
 	memset(&symtbl, 0, sizeof(symtbl));
 	/* main loop */
@@ -733,7 +733,7 @@ ariva_slab(mux_ctx_t ctx)
 		unfetch_lines(ctx);
 	}
 	/* free prchunk resources */
-	free_prchunk();
+	free_prchunk(ctx->rdr);
 	if (z != NULL) {
 		zif_free(z);
 	}

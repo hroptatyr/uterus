@@ -160,9 +160,9 @@ tftl_set_si(tfraw_tl_t l, uint16_t si)
 
 /* read buffer goodies */
 static inline bool
-fetch_lines(mux_ctx_t UNUSED(ctx))
+fetch_lines(mux_ctx_t ctx)
 {
-	return !(prchunk_fill() < 0);
+	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
 static inline void
@@ -172,9 +172,9 @@ unfetch_lines(mux_ctx_t UNUSED(ctx))
 }
 
 static inline bool
-moar_ticks_p(mux_ctx_t UNUSED(ctx))
+moar_ticks_p(mux_ctx_t ctx)
 {
-	return prchunk_haslinep();
+	return prchunk_haslinep(ctx->rdr);
 }
 
 /* printers */
@@ -459,7 +459,7 @@ read_line(mux_ctx_t ctx, tfraw_tl_t tl)
 	size_t llen;
 	bool res;
 
-	llen = prchunk_getline(&line);
+	llen = prchunk_getline(ctx->rdr, &line);
 	lno++;
 	if (!parse_tline(tl, line, llen)) {
 		return false;
@@ -562,7 +562,7 @@ tfraw_slab(mux_ctx_t ctx)
 		z = zif_read_inst(tfraw_zone);
 	}
 	/* init reader, we use prchunk here */
-	init_prchunk(ctx->infd);
+	ctx->rdr = init_prchunk(ctx->infd);
 	/* main loop */
 	lno = 0;
 	while (fetch_lines(ctx)) {
@@ -570,7 +570,7 @@ tfraw_slab(mux_ctx_t ctx)
 		unfetch_lines(ctx);
 	}
 	/* expobuf is the reader of our choice */
-	free_prchunk();
+	free_prchunk(ctx->rdr);
 	if (z != NULL) {
 		zif_free(z);
 	}

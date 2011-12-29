@@ -315,6 +315,11 @@ bucketiser(shnot_ctx_t ctx, const_sl1t_t t)
 	uint16_t i = sl1t_tblidx(t);
 	xsnap_t b = ctx->bkt->snap + i;
 
+	/* for efficiency we could very well dispense with this check */
+	if (UNLIKELY(ctx->bkt->nsyms == 0)) {
+		return;
+	}
+
 	check_candle(ctx, t);
 	xsnap_push(b, t);
 	return;

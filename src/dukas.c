@@ -57,6 +57,9 @@
 #if !defined htonll
 # define htonll(x)	ntohll(x)
 #endif	/* !htonll */
+#if !defined LIKELY
+# define LIKELY(_x)	__builtin_expect((_x), 1)
+#endif	/* !LIKELY */
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !UNLIKELY */
@@ -173,9 +176,11 @@ write_cdl(mux_ctx_t ctx, struct dcc_s *tl)
 
 
 static void
-prepare(mux_ctx_t UNUSED(ctx))
+prepare(mux_ctx_t ctx)
 {
-	uint16_t idx = 1;
+	uint16_t idx = LIKELY(ctx->opts->sname != NULL)
+		? ute_sym2idx(ctx->wrr, ctx->opts->sname)
+		: 0;
 
 	/* t is static, so set the static components here */
 	sl1t_set_ttf(t + 0, SL1T_TTF_BID);

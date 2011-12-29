@@ -145,6 +145,7 @@ write_tick(mux_ctx_t ctx, struct dc_s *tl)
 	t[1].asz = ffff_m30_get_d(tl->aq.d).v;
 
 	ute_add_tick(ctx->wrr, AS_SCOM(t));
+	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
 	return;
 }
 

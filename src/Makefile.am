@@ -35,19 +35,25 @@
 ##
 ###
 
-AM_CPPFLAGS = -DDEBUG -DTIMESTAMPS -D_GNU_SOURCE
+AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L -D__USE_XOPEN2K8
+AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
 AM_LDFLAGS = -static
 
 headerdir = $(includedir)/uterus
+utedir = $(libexecdir)/ute
+
+M4 = m4
 
 bin_PROGRAMS =
 noinst_PROGRAMS =
+ute_PROGRAMS =
 lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
-EXTRA_DIST =
+EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
 
 BUILT_SOURCES = version.h
+GGO_HELPERS = common.ggo.in
 
 ## datrie stuff
 noinst_LIBRARIES += libdatrie.a
@@ -103,7 +109,6 @@ ute_SOURCES += ibrti.c
 ute_SOURCES += dukas.c
 ute_SOURCES += tfraw.c
 ute_SOURCES += sumux.h
-ute_SOURCES += ute-shnot.c ute-shnot.h
 ute_LDADD = libuterus.la
 ute_CPPFLAGS = $(AM_CPPFLAGS)
 ute_LDFLAGS = $(AM_LDFLAGS)
@@ -112,8 +117,22 @@ EXTRA_ute_SOURCES += ute-mux.c
 EXTRA_ute_SOURCES += ute-opt.h
 
 
+UTE_CMD_CPPFLAGS = -DSTANDALONE
+
+ute_PROGRAMS += ute-shnot
+ute_shnot_SOURCES = ute-shnot.c ute-shnot-clo.ggo
+ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_shnot_LDFLAGS = $(AM_LDFLAGS)
+ute_shnot_LDADD = libuterus.la
+BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
+
+
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
+
+## ggo rule
+%.c %.h: %.ggo $(GGO_HELPERS)
+	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt -l -F $*
 
 # 
 # Help the developers get nice post-processed source files

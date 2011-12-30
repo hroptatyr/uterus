@@ -371,6 +371,7 @@ fini_buckets(shnot_ctx_t UNUSED(ctx))
 }
 
 
+#if !defined STANDALONE
 /* ute shnot FILE [...] */
 static const char ute_cmd_shnot_help[] =
 	"usage: ute shnot [-i INTERVAL] [-m OFFSET] [-o OUTFILE] FILE ...\n"
@@ -451,6 +452,7 @@ ute_cmd_shnot_popt(shnot_opt_t opts, int argc, const char *argv[])
 	opts->infiles[ifi] = NULL;
 	return;
 }
+#endif	/* !STANDALONE */
 
 static void
 ute_cmd_shnot_unpopt(shnot_opt_t opts)
@@ -502,13 +504,45 @@ ute_cmd_shnot_args(ute_opt_t octx, int argc, const char *argv[])
 
 	/* assign global opts */
 	opts->octx = octx;
+#if !defined STANDALONE
 	/* parse options */
 	ute_cmd_shnot_popt(opts, argc, argv);
+#endif	/* STANDALONE */
 	/* now call the actual mux command */
 	ute_cmd_shnot(opts);
 	/* clear our resources */
 	ute_cmd_shnot_unpopt(opts);
 	return 0;
 }
+
+
+#if defined STANDALONE
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "ute-shnot-clo.h"
+#include "ute-shnot-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
+
+int
+main(int argc, char *argv[])
+{
+	struct gengetopt_args_info argi[1];
+	int res = 0;
+
+	if (cmdline_parser(argc, argv, argi)) {
+		res = 1;
+		goto out;
+	}
+
+out:
+	cmdline_parser_free(argi);
+	return res;
+}
+#endif	/* STANDALONE */
 
 /* ute-shnot.c ends here */

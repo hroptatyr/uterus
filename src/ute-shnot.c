@@ -283,7 +283,7 @@ new_candle(shnot_ctx_t ctx)
 	}
 
 	/* write all the snapshots so far */
-	for (uint16_t i = 0; i < ctx->bkt->nsyms; i++) {
+	for (uint16_t i = 0; i <= ctx->bkt->nsyms; i++) {
 		write_snap_fd(ctx, i);
 	}
 	return;
@@ -331,7 +331,7 @@ deinit(shnot_ctx_t UNUSED(ctx))
 {
 	xsnap_t snap = ctx->bkt->snap;
 	if (snap) {
-		munmap(snap, ctx->bkt->nsyms * sizeof(*snap));
+		munmap(snap, (ctx->bkt->nsyms + 1) * sizeof(*snap));
 	}
 	return;
 }
@@ -345,7 +345,7 @@ init_buckets(shnot_ctx_t ctx, utectx_t hdl)
 
 	if (ctx->bkt->nsyms < nsyms) {
 		xsnap_t snap = ctx->bkt->snap;
-		size_t sz = nsyms * sizeof(*snap);
+		size_t sz = (nsyms + 1) * sizeof(*snap);
 		ctx->bkt->snap = mmap(snap, sz, PMEM, FMEM, 0, 0);
 		ctx->bkt->nsyms = nsyms;
 	}

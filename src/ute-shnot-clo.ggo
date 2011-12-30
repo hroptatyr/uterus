@@ -1,0 +1,17 @@
+args "--unamed-opts --long-help"
+package "ute shnot"
+usage "ute shnot [OPTION]... FILEs..."
+description "Draw market snapshots from given FILEs.
+A snapshot at a time T comprises the quotes that last occurred before T."
+
+option "interval" i
+	"Make a snapshot every SECS seconds (default: 300)"
+	int typestr="SECS" optional
+
+option "modulus" m
+	"Start SECS seconds past midnight (default 0)"
+	int typestr="SECS" optional
+
+option "zone" z
+	"Use time zone NAME for tty output (default UTC)"
+	string typestr="NAME" optional

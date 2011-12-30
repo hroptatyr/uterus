@@ -181,9 +181,6 @@ again:
 	} else if (strcmp(argv[i], "print") == 0) {
 		octx->cmd = ute_cmd_print_args;
 
-	} else if (strcmp(argv[i], "shnot") == 0) {
-		octx->cmd = ute_cmd_shnot_args;
-
 	} else if (strcmp(argv[i], "sort") == 0) {
 		octx->cmd = ute_cmd_sort;
 	}

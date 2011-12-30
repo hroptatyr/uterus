@@ -104,6 +104,15 @@ struct bkts_s {
 	xsnap_t snap;
 };
 
+struct shnot_opt_s {
+	/* time zone info */
+	zif_t z;
+
+	int interval;
+	int offset;
+	int dryp;
+};
+
 struct shnot_ctx_s {
 	/* contains the currently processed ute file */
 	void *rdr;
@@ -114,24 +123,7 @@ struct shnot_ctx_s {
 	struct bkts_s bkt[1];
 
 	/* our options */
-	shnot_opt_t opts;
-};
-
-struct shnot_opt_s {
-	const char **infiles;
-	const char *outfile;
-	const char *badfile;
-	const char *sname;
-
-	/* global options */
-	ute_opt_t octx;
-
-	/* time zone info */
-	zif_t z;
-
-	int interval;
-	int offset;
-	int dryp;
+	struct shnot_opt_s opt[1];
 };
 
 /* ssnap fiddlers */
@@ -183,7 +175,7 @@ set_buckets_time(bkts_t bctx, time_t new_st)
 static inline time_t
 aligned_stamp(shnot_ctx_t ctx, time_t ts)
 {
-	return (time_t)(ts - ((ts - ctx->opts->offset) % ctx->opts->interval));
+	return (time_t)(ts - ((ts - ctx->opt->offset) % ctx->opt->interval));
 }
 
 static bool
@@ -206,7 +198,7 @@ write_snap(shnot_ctx_t ctx, uint16_t cidx)
 
 	sn = (xn = ctx->bkt->snap + cidx)->sn;
 	scom_thdr_set_tblidx(sn->hdr, cidx);
-	scom_thdr_set_sec(sn->hdr, ctx->bkt->cur_ts + ctx->opts->interval);
+	scom_thdr_set_sec(sn->hdr, ctx->bkt->cur_ts + ctx->opt->interval);
 	scom_thdr_set_ttf(sn->hdr, SSNP_FLAVOUR);
 
 	sn->tvpr = ffff_m30_vwap(xn->qpri, xn->nt).v;
@@ -279,14 +271,14 @@ write_snap_fd(shnot_ctx_t ctx, uint16_t cidx)
 	ctx->bkt->snap[cidx].sn->tq = ffff_m30_from_m62(nt).v;
 
 	/* and off to the generic printer */
-	print_snap_rTI(ctx->rdr, (scom_t)ctx->bkt->snap[cidx].sn, ctx->opts->z);
+	print_snap_rTI(ctx->rdr, (scom_t)ctx->bkt->snap[cidx].sn, ctx->opt->z);
 	return;
 }
 
 static void
 new_candle(shnot_ctx_t ctx)
 {
-	if (UNLIKELY(ctx->opts->dryp)) {
+	if (UNLIKELY(ctx->opt->dryp)) {
 		return;
 	}
 
@@ -328,9 +320,9 @@ bucketiser(shnot_ctx_t ctx, const_sl1t_t t)
 
 /* simple bucket sort */
 static void
-init(shnot_ctx_t ctx, shnot_opt_t opts)
+init(shnot_ctx_t ctx, shnot_opt_t opt)
 {
-	ctx->opts = opts;
+	*ctx->opt = *opt;
 	return;
 }
 
@@ -371,111 +363,52 @@ fini_buckets(shnot_ctx_t UNUSED(ctx))
 }
 
 
-#if !defined STANDALONE
-/* ute shnot FILE [...] */
-static const char ute_cmd_shnot_help[] =
-	"usage: ute shnot [-i INTERVAL] [-m OFFSET] [-o OUTFILE] FILE ...\n"
-	"\n\
-Draw market snapshots from given FILEs.\n\
-A snapshot at a time T comprises the quotes that last occurred before T.\n\
-\n\
--i, --interval SECS  Make a snapshot every SECS seconds (default 300).\n\
--m, --modulus SECS   Start SECS seconds past midnight (default 0).\n\
--z, --zone NAME      Use time zone NAME for tty output (default UTC).\n\
-";
+#if defined STANDALONE
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "ute-shnot-clo.h"
+#include "ute-shnot-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
 
-static void __attribute__((noreturn))
-__shnot_fuck_off_and_die(void)
+int
+main(int argc, char *argv[])
 {
-	fputs(ute_cmd_shnot_help, stdout);
-	exit(1);
-}
-
-static void
-ute_cmd_shnot_popt(shnot_opt_t opts, int argc, const char *argv[])
-{
-	/* input file index */
-	int ifi = 0;
-
-	/* first of all make a infiles array as large as argv */
-	opts->infiles = malloc(argc * sizeof(char*));
+	struct gengetopt_args_info argi[1];
+	int res = 0;
+	/* our shnot context */
+	struct shnot_ctx_s ctx[1] = {{0}};
+	struct shnot_opt_s opt[1] = {{0}};
 
 	/* set default values */
-	opts->interval = 300;
-	opts->offset = 0;
-	opts->dryp = 0;
-	opts->z = NULL;
+	argi->interval_arg = 300;
+	argi->modulus_arg = 0;
+	argi->zone_arg = NULL;
 
-	for (int i = 1; i < argc; i++) {
-		if (0) {
-			;
-		} else if (!strcmp(argv[i], "--help") ||
-			   !strcmp(argv[i], "-h")) {
-			/* --help */
-			free(opts->infiles);
-			__shnot_fuck_off_and_die();
-
-		} else if (!strcmp(argv[i], "--interval") ||
-			   !strcmp(argv[i], "-i")) {
-			/* --interval NUM */
-			opts->interval = strtol(argv[++i], NULL, 10);
-
-		} else if (argv[i][0] == '-' && argv[i][1] == 'i') {
-			/* -iNUM (sans the space) */
-			opts->interval = strtol(argv[i] + 2, NULL, 10);
-
-		} else if (!strcmp(argv[i], "--modulus") ||
-			   !strcmp(argv[i], "-m")) {
-			/* --offset NUM */
-			opts->offset = strtol(argv[++i], NULL, 10);
-
-		} else if (argv[i][0] == '-' && argv[i][1] == 'm') {
-			/* -mNUM (sans the space) */
-			opts->offset = strtol(argv[i] + 2, NULL, 10);
-
-		} else if (!strcmp(argv[i], "--output") ||
-			   !strcmp(argv[i], "-o")) {
-			/* --output FILE */
-			opts->outfile = argv[++i];
-
-		} else if (!strcmp(argv[i], "--zone") ||
-			   !strcmp(argv[i], "-z")) {
-			/* open our timezone definition */
-			opts->z = zif_read_inst(argv[++i]);
-
-		} else {
-			/* must be a file to process */
-			opts->infiles[ifi++] = argv[i];
-		}
+	if (cmdline_parser(argc, argv, argi)) {
+		res = 1;
+		goto out;
 	}
-	/* finalise the infile list */
-	opts->infiles[ifi] = NULL;
-	return;
-}
-#endif	/* !STANDALONE */
 
-static void
-ute_cmd_shnot_unpopt(shnot_opt_t opts)
-{
-	/* just that inline thing */
-	free(opts->infiles);
-	if (opts->z != NULL) {
-		zif_free(opts->z);
+	/* set up our option struct, just to decouple from gengetopt's struct */
+	if (argi->zone_given) {
+		opt->z = zif_read_inst(argi->zone_arg);
 	}
-	return;
-}
+	opt->interval = argi->interval_arg;
+	opt->offset = argi->modulus_arg;
 
-static void
-ute_cmd_shnot(shnot_opt_t opts)
-{
-	struct shnot_ctx_s ctx[1] = {{0}};
+	/* initialise context */
+	init(ctx, opt);
 
-	/* initialise the buckets */
-	init(ctx, opts);
-	for (const char **p = opts->infiles; *p; p++) {
+	for (unsigned int j = 0; j < argi->inputs_num; j++) {
+		const char *f = argi->inputs[j];
 		void *hdl;
 
-		if ((hdl = ute_open(*p, UO_RDONLY)) == NULL) {
+		if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
 			continue;
 		}
 		/* (re)initialise our buckets */
@@ -494,52 +427,11 @@ ute_cmd_shnot(shnot_opt_t opts)
 	}
 	/* leave a footer and finish the shnot series */
 	deinit(ctx);
-	return;
-}
-
-int
-ute_cmd_shnot_args(ute_opt_t octx, int argc, const char *argv[])
-{
-	struct shnot_opt_s opts[1] = {{0}};
-
-	/* assign global opts */
-	opts->octx = octx;
-#if !defined STANDALONE
-	/* parse options */
-	ute_cmd_shnot_popt(opts, argc, argv);
-#endif	/* STANDALONE */
-	/* now call the actual mux command */
-	ute_cmd_shnot(opts);
-	/* clear our resources */
-	ute_cmd_shnot_unpopt(opts);
-	return 0;
-}
-
-
-#if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-shnot-clo.h"
-#include "ute-shnot-clo.c"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
-
-int
-main(int argc, char *argv[])
-{
-	struct gengetopt_args_info argi[1];
-	int res = 0;
-
-	if (cmdline_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	}
 
 out:
+	if (opt->z != NULL) {
+		zif_free(opt->z);
+	}
 	cmdline_parser_free(argi);
 	return res;
 }

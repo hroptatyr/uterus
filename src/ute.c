@@ -104,7 +104,7 @@ __pr_help(void)
 	puts("\nSupported commands:");
 
 	SUBCMD(help);
-	//SUBCMD(mux);
+	SUBCMD(mux);
 	SUBCMD(print);
 	SUBCMD(shnot);
 	//SUBCMD(sort);

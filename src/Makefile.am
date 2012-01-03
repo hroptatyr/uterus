@@ -126,6 +126,18 @@ ute_print_LDFLAGS = $(AM_LDFLAGS)
 ute_print_LDADD = libuterus.la
 BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
+ute_PROGRAMS += ute-mux
+ute_mux_SOURCES = ute-mux.c ute-mux-clo.ggo
+ute_mux_SOURCES += ariva.c
+ute_mux_SOURCES += ibrti.c
+ute_mux_SOURCES += dukas.c
+ute_mux_SOURCES += tfraw.c
+ute_mux_SOURCES += sumux.h
+ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_mux_LDFLAGS = $(AM_LDFLAGS)
+ute_mux_LDADD = libuterus.la
+BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
+
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@

@@ -16,6 +16,18 @@ option "zone" z
 	"Use time zone NAME for tty output (default UTC)"
 	string typestr="NAME" optional hidden
 
+option "format" f
+	"Use the specified parser, see below for a list"
+	string typestr="FORMAT" optional hidden
+
+option "name" -
+	"For single-security files use NAME as security symbol"
+	string typestr="NAME" optional hidden
+
+option "output" o
+	"Write result to specified output file (default workload.ute)"
+	string typestr="FILE" optional hidden
+
 section "Options common to all commands"
 
 QUIET

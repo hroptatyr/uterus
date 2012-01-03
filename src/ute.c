@@ -42,18 +42,11 @@
 #include "sl1t.h"
 
 /* for our options parser */
-#include "ute-opt.h"
 #include "version.h"
 
-/* simple all in one tool */
-#include "ute-print.c"
-#include "ute-mux.c"
-#include "ute-shnot.h"
-
 static int
-ute_cmd_sort(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
+ute_cmd_sort(const char *file)
 {
-	const char *file = argv[1];
 	void *hdl = ute_open(file, UO_RDWR);
 	ute_sort(hdl);
 	ute_close(hdl);
@@ -128,7 +121,6 @@ main(int argc, char *argv[])
 {
 	struct gengetopt_args_info argi[1];
 	int res = 0;
-	struct ute_opt_s octx[1];
 
 	if (cmdline_parser(argc, argv, argi)) {
 		__pr_help();

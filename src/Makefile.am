@@ -104,17 +104,9 @@ bin_PROGRAMS += ute
 ute_SOURCES =
 EXTRA_ute_SOURCES =
 ute_SOURCES += ute.c ute-clo.ggo
-ute_SOURCES += ariva.c
-ute_SOURCES += ibrti.c
-ute_SOURCES += dukas.c
-ute_SOURCES += tfraw.c
-ute_SOURCES += sumux.h
 ute_LDADD = libuterus.la
 ute_CPPFLAGS = $(AM_CPPFLAGS)
 ute_LDFLAGS = $(AM_LDFLAGS)
-EXTRA_ute_SOURCES += ute-print.c ute-print.h
-EXTRA_ute_SOURCES += ute-mux.c
-EXTRA_ute_SOURCES += ute-opt.h
 BUILT_SOURCES += ute-clo.c ute-clo.h
 
 

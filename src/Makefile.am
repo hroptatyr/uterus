@@ -127,6 +127,13 @@ ute_shnot_LDFLAGS = $(AM_LDFLAGS)
 ute_shnot_LDADD = libuterus.la
 BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
 
+ute_PROGRAMS += ute-print
+ute_print_SOURCES = ute-print.c ute-print-clo.ggo
+ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_print_LDFLAGS = $(AM_LDFLAGS)
+ute_print_LDADD = libuterus.la
+BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
+
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@

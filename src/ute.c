@@ -112,7 +112,7 @@ __pr_help(void)
 
 	SUBCMD(help);
 	//SUBCMD(mux);
-	//SUBCMD(print);
+	SUBCMD(print);
 	SUBCMD(shnot);
 	//SUBCMD(sort);
 

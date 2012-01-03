@@ -63,6 +63,7 @@
 #include "m30.h"
 #include "m62.h"
 
+#define MAX_LINE_LEN		512
 #define SUSHI_MODE		1
 #define TRUE_OPEN		1
 #define OPTIM_LEVEL		2

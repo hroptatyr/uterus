@@ -24,7 +24,7 @@ struct sumux_opt_s {
 	const char *badfile;
 	const char *sname;
 	void(*muxf)(mux_ctx_t);
-	ute_opt_t octx;
+	const char *zone;
 };
 
 extern void ariva_slab(mux_ctx_t);

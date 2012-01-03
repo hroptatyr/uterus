@@ -527,8 +527,8 @@ void
 ibrti_slab(mux_ctx_t ctx)
 {
 	/* open our timezone definition */
-	if (ctx->opts->octx->zone != NULL) {
-		z = zif_read_inst(ctx->opts->octx->zone);
+	if (ctx->opts->zone != NULL) {
+		z = zif_read_inst(ctx->opts->zone);
 	} else {
 		z = zif_read_inst(ibrti_zone);
 	}

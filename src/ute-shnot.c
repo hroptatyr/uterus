@@ -378,7 +378,7 @@ fini_buckets(shnot_ctx_t UNUSED(ctx))
 int
 main(int argc, char *argv[])
 {
-	struct gengetopt_args_info argi[1];
+	struct shnot_args_info argi[1];
 	int res = 0;
 	/* our shnot context */
 	struct shnot_ctx_s ctx[1] = {{0}};
@@ -389,7 +389,7 @@ main(int argc, char *argv[])
 	argi->modulus_arg = 0;
 	argi->zone_arg = NULL;
 
-	if (cmdline_parser(argc, argv, argi)) {
+	if (shnot_parser(argc, argv, argi)) {
 		res = 1;
 		goto out;
 	}
@@ -432,7 +432,7 @@ out:
 	if (opt->z != NULL) {
 		zif_free(opt->z);
 	}
-	cmdline_parser_free(argi);
+	shnot_parser_free(argi);
 	return res;
 }
 #endif	/* STANDALONE */

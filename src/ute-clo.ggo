@@ -1,16 +1,30 @@
-args "--unamed-opts --long-help"
+args "--unamed-opts --long-help --no-handle-error"
 package "ute"
 usage "ute [OPTION]... COMMAND ARGS..."
-description "Supported commands:
+description "Create, access and modify ute files."
+
+## options used for various subcommands, won't be printed but will be parsed
+option "interval" i
+	"Make a snapshot every SECS seconds (default: 300)"
+	int typestr="SECS" optional hidden
+
+option "modulus" m
+	"Start SECS seconds past midnight (default 0)"
+	int typestr="SECS" optional hidden
+
+option "zone" z
+	"Use time zone NAME for tty output (default UTC)"
+	string typestr="NAME" optional hidden
+
+section "Options common to all commands"
+
+QUIET
+
+text "
+Supported commands:
   help          Print a help screen like this
   mux           Generate an ute file from a tick or candle source
   print         Print the contents of an ute file
   shnot         Generate all-level snapshots from ute files
   sort          Sort ute file chronologically
-
 "
-
-section "Options common to all commands:"
-
-QUIET
-

@@ -63,10 +63,6 @@
 #include "m30.h"
 #include "m62.h"
 
-#include "ute-shnot.h"
-#include "ute-print.h"
-#include "ute-opt.h"
-
 #define SUSHI_MODE		1
 #define TRUE_OPEN		1
 #define OPTIM_LEVEL		2

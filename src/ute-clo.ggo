@@ -1,0 +1,16 @@
+args "--unamed-opts --long-help"
+package "ute"
+usage "ute [OPTION]... COMMAND ARGS..."
+description "Supported commands:
+  help          Print a help screen like this
+  mux           Generate an ute file from a tick or candle source
+  print         Print the contents of an ute file
+  shnot         Generate all-level snapshots from ute files
+  sort          Sort ute file chronologically
+
+"
+
+section "Options common to all commands:"
+
+QUIET
+

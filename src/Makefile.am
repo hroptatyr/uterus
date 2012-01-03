@@ -103,7 +103,7 @@ EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 bin_PROGRAMS += ute
 ute_SOURCES =
 EXTRA_ute_SOURCES =
-ute_SOURCES += ute.c
+ute_SOURCES += ute.c ute-clo.ggo
 ute_SOURCES += ariva.c
 ute_SOURCES += ibrti.c
 ute_SOURCES += dukas.c
@@ -115,6 +115,7 @@ ute_LDFLAGS = $(AM_LDFLAGS)
 EXTRA_ute_SOURCES += ute-print.c ute-print.h
 EXTRA_ute_SOURCES += ute-mux.c
 EXTRA_ute_SOURCES += ute-opt.h
+BUILT_SOURCES += ute-clo.c ute-clo.h
 
 
 UTE_CMD_CPPFLAGS = -DSTANDALONE

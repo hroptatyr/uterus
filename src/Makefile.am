@@ -105,7 +105,7 @@ ute_SOURCES =
 EXTRA_ute_SOURCES =
 ute_SOURCES += ute.c ute-clo.ggo
 ute_LDADD = libuterus.la
-ute_CPPFLAGS = $(AM_CPPFLAGS)
+ute_CPPFLAGS = $(AM_CPPFLAGS) -DUTEDIR=\"$(utedir)\"
 ute_LDFLAGS = $(AM_LDFLAGS)
 BUILT_SOURCES += ute-clo.c ute-clo.h
 

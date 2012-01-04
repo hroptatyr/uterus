@@ -36,14 +36,22 @@
  ***/
 
 /** test client for libuterus */
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <limits.h>
+#include <sys/stat.h>
 #include "utefile.h"
 #include "sl1t.h"
 
 /* for our options parser */
 #include "version.h"
 
+
 static int
 ute_cmd_sort(const char *file)
 {
@@ -51,6 +59,56 @@ ute_cmd_sort(const char *file)
 	ute_sort(hdl);
 	ute_close(hdl);
 	return 0;
+}
+
+
+/* we expect UTEDIR to be defined at this point */
+#if !defined UTEDIR
+# error define UTEDIR
+#endif	/* UTEDIR */
+static bool
+__exep(const char *file)
+{
+	struct stat st;
+	return (stat(file, &st) == 0) && (st.st_mode & S_IXUSR);
+}
+
+static char*
+build_cmd(const char *cmd)
+{
+	const char myself[] = "/proc/self/exe";
+	const char prefix[] = "ute-";
+	char wd[PATH_MAX];
+	char *dp;
+	size_t sz;
+
+	sz = readlink(myself, wd, sizeof(wd));
+	wd[sz] = '\0';
+
+	if ((dp = strrchr(wd, '/')) == NULL) {
+		return NULL;
+	}
+	/* search the path where the binary resides */
+	strncpy(dp + 1, prefix, sizeof(prefix) - 1);
+	strcpy(dp + sizeof(prefix), cmd);
+	if (__exep(wd)) {
+		/* found one ... */
+		goto succ;
+	}
+	/* otherwise try UTEDIR */
+	if ((dp = stpcpy(wd, UTEDIR))[-1] != '/') {
+		*dp++ = '/';
+	}
+	strncpy(dp, prefix, sizeof(prefix) - 1);
+	strcpy(dp + sizeof(prefix) - 1, cmd);
+	if (__exep(wd)) {
+		/* found one ... */
+		goto succ;
+	}
+	return NULL;
+
+succ:
+	return strdup(wd);
 }
 
 
@@ -120,6 +178,8 @@ int
 main(int argc, char *argv[])
 {
 	struct gengetopt_args_info argi[1];
+	char *cmd_f = NULL;
+	const char *cmd;
 	int res = 0;
 
 	if (cmdline_parser(argc, argv, argi)) {
@@ -135,10 +195,21 @@ main(int argc, char *argv[])
 		__pr_help();
 		res = 1;
 		goto out;
+	} else if ((cmd_f = build_cmd((cmd = argi->inputs[0]))) == NULL) {
+		fprintf(stderr, "ute subcommand `%s' not found\n\n", cmd);
+		__pr_help();
+		res = 1;
+		goto out;
 	}
 
 out:
 	cmdline_parser_free(argi);
+
+	if (cmd_f != NULL) {
+		/* prepare the execve */
+		argv[0] = cmd_f;
+		res = execv(cmd_f, argv);
+	}
 	return res;
 }
 

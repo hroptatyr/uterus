@@ -51,13 +51,78 @@
 /* for our options parser */
 #include "version.h"
 
+#if !defined UNUSED
+# define UNUSED(_x)	__attribute__((unused)) _x
+#endif	/* !UNUSED */
+
+/* sub-command handling */
+typedef int(*subcmd_f)(int, char *argv[]);
+
+struct subcmd_s {
+	const char *name;
+	subcmd_f cmdf;
+};
+
+static size_t nsubcmd = 0;
+static struct subcmd_s subcmd[32];
+
+#define CMDFUN(x)				\
+	ute_cmd_##x
+
+#define DEFCMD(x)				\
+	static int CMDFUN(x)
+
+#define PUSHCMD(x)				\
+	DEFCMD(x)(int, char*[]);		\
+	subcmd[nsubcmd].name = #x;		\
+	subcmd[nsubcmd].cmdf = CMDFUN(x);	\
+	nsubcmd++
+
 
-static int
-ute_cmd_sort(const char *file)
+DEFCMD(sort)(int UNUSED(argc), char *argv[])
 {
+	const char *file = argv[1];
 	void *hdl = ute_open(file, UO_RDWR);
 	ute_sort(hdl);
 	ute_close(hdl);
+	return 0;
+}
+
+DEFCMD(version)(int UNUSED(argc), char *UNUSED(argv)[])
+{
+	puts("ute " UTE_VERSION);
+	return 0;
+}
+
+DEFCMD(help)(int UNUSED(argc), char *UNUSED(argv)[])
+{
+#define SUBCMD(x, line)					\
+	do {						\
+		printf("  % -20s " line "\n", #x);	\
+	} while (0)
+
+	/* output version first */
+	ute_cmd_version(0, NULL);
+
+	puts("\
+\n\
+Usage: ute [OPTION]... COMMAND ARGS...\n\
+\n\
+Create, access and modify ute files.\n\
+\n\
+Common options:\n\
+  -h, --help           Print help and exit\n\
+  -V, --version        Print version and exit\n\
+");
+
+	puts("Supported commands:");
+
+	SUBCMD(help, "Print a help screen like this");
+	SUBCMD(mux, "Generate an ute file from a tick or candle source");
+	SUBCMD(print, "Print the contents of an ute file");
+	SUBCMD(shnot, "Generate all-level snapshots from ute files");
+	//SUBCMD(sort, "Sort ute file chronologically");
+	puts("");
 	return 0;
 }
 
@@ -67,8 +132,28 @@ ute_cmd_sort(const char *file)
 # error define UTEDIR
 #endif	/* UTEDIR */
 
+static void
+init_cmds(void)
+{
+	PUSHCMD(help);
+	PUSHCMD(version);
+	PUSHCMD(sort);
+	return;
+}
+
+static subcmd_f
+get_subcmd(const char *cmd)
+{
+	for (size_t i = 0; i < nsubcmd; i++) {
+		if (strcmp(cmd, subcmd[i].name) == 0) {
+			return subcmd[i].cmdf;
+		}
+	}
+	return NULL;
+}
+
 static char*
-__extract_cmd(int argc, char *argv[])
+extract_cmd(int argc, char *argv[])
 {
 /* try and find a subcommand and rearrange argv to leave no holes */
 	int dash_dash_seen_p = 0;
@@ -133,57 +218,26 @@ succ:
 }
 
 
-static void
-__pr_help(void)
-{
-/* this would be the umpp way to do things */
-#define SUBCMD(x, line)					\
-	do {						\
-		printf("  % -20s " line "\n", #x);	\
-	} while (0)
-
-	puts("ute " PACKAGE_VERSION "\n\
-\n\
-Usage: ute [OPTION]... COMMAND ARGS...\n\
-\n\
-Create, access and modify ute files.\n\
-\n\
-Common options:\n\
-  -h, --help           Print help and exit\n\
-  -V, --version        Print version and exit\n\
-");
-
-	puts("Supported commands:");
-
-	SUBCMD(help, "Print a help screen like this");
-	SUBCMD(mux, "Generate an ute file from a tick or candle source");
-	SUBCMD(print, "Print the contents of an ute file");
-	SUBCMD(shnot, "Generate all-level snapshots from ute files");
-	//SUBCMD(sort, "Sort ute file chronologically");
-	puts("");
-	return;
-}
-
 int
 main(int argc, char *argv[])
 {
 	char *cmd_f = NULL;
+	subcmd_f icmd = NULL;
 	const char *cmd;
 	int res = 0;
 
-	if ((cmd = __extract_cmd(argc, argv)) == NULL) {
-		__pr_help();
-		if (argv[1] &&
-		    (strcmp(argv[1], "-h") == 0 ||
-		     strcmp(argv[1], "--help") == 0)) {
-			res = 0;
-		} else {
-			res = 1;
-		}
+	init_cmds();
+	if ((cmd = extract_cmd(argc, argv)) == NULL) {
+		ute_cmd_help(argc, argv);
+		res = 1;
+
+	} else if ((icmd = get_subcmd(cmd)) != NULL) {
+		/* call the internal command */
+		res = fprintf(stderr, "internal cmd %s -> %p\n", cmd, icmd);
 
 	} else if ((cmd_f = build_cmd(cmd)) == NULL) {
 		fprintf(stderr, "ute subcommand `%s' invalid\n\n", cmd);
-		__pr_help();
+		ute_cmd_help(argc, argv);
 		res = 1;
 
 	} else {

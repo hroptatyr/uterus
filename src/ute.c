@@ -68,14 +68,17 @@ ute_cmd_sort(const char *file)
 #endif	/* UTEDIR */
 
 static char*
-__find_cmd(int argc, char *argv[])
+__extract_cmd(int argc, char *argv[])
 {
+/* try and find a subcommand and rearrange argv to leave no holes */
 	int dash_dash_seen_p = 0;
 
 	for (int i = 1; i < argc; i++) {
 		if (argv[i][0] != '-' || dash_dash_seen_p) {
 			char *res = argv[i];
-			argv[i] = NULL;
+			for (int j = i; j < argc; j++) {
+				argv[j] = argv[j + 1];
+			}
 			return res;
 		} else if (argv[i][1] == '-' && argv[i][2] == '\0') {
 			dash_dash_seen_p = 1;
@@ -168,7 +171,7 @@ main(int argc, char *argv[])
 	const char *cmd;
 	int res = 0;
 
-	if ((cmd = __find_cmd(argc, argv)) == NULL) {
+	if ((cmd = __extract_cmd(argc, argv)) == NULL) {
 		__pr_help();
 		if (argv[1] &&
 		    (strcmp(argv[1], "-h") == 0 ||

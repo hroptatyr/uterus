@@ -233,7 +233,7 @@ main(int argc, char *argv[])
 
 	} else if ((icmd = get_subcmd(cmd)) != NULL) {
 		/* call the internal command */
-		res = fprintf(stderr, "internal cmd %s -> %p\n", cmd, icmd);
+		res = icmd(argc, argv);
 
 	} else if ((cmd_f = build_cmd(cmd)) == NULL) {
 		fprintf(stderr, "ute subcommand `%s' invalid\n\n", cmd);

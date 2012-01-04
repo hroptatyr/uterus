@@ -66,6 +66,24 @@ ute_cmd_sort(const char *file)
 #if !defined UTEDIR
 # error define UTEDIR
 #endif	/* UTEDIR */
+
+static char*
+__find_cmd(int argc, char *argv[])
+{
+	int dash_dash_seen_p = 0;
+
+	for (int i = 1; i < argc; i++) {
+		if (argv[i][0] != '-' || dash_dash_seen_p) {
+			char *res = argv[i];
+			argv[i] = NULL;
+			return res;
+		} else if (argv[i][1] == '-' && argv[i][2] == '\0') {
+			dash_dash_seen_p = 1;
+		}
+	}
+	return NULL;
+}
+
 static bool
 __exep(const char *file)
 {
@@ -112,100 +130,60 @@ succ:
 }
 
 
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-clo.h"
-#include "ute-clo.c"
-#include "ute-shnot-clo.h"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
-
 static void
 __pr_help(void)
 {
-#if 0
 /* this would be the umpp way to do things */
-#define SUBCMD(x)							\
-	do {								\
-		printf("  " #x "\n    %s\n", x##_args_info_description); \
-		for (const char **p = x##_args_info_help + 2; *p; p++) { \
-			putchar(' ');					\
-			putchar(' ');					\
-			puts(*p);					\
-		}							\
+#define SUBCMD(x, line)					\
+	do {						\
+		printf("  % -20s " line "\n", #x);	\
 	} while (0)
 
-	puts(CMDLINE_PARSER_PACKAGE_NAME " " CMDLINE_PARSER_VERSION "\n");
+	puts("ute " PACKAGE_VERSION "\n\
+\n\
+Usage: ute [OPTION]... COMMAND ARGS...\n\
+\n\
+Create, access and modify ute files.\n\
+\n\
+Common options:\n\
+  -h, --help           Print help and exit\n\
+  -V, --version        Print version and exit\n\
+");
 
-	if (gengetopt_args_info_purpose && gengetopt_args_info_purpose[0]) {
-		printf("%s\n\n", gengetopt_args_info_purpose);
-	}
-	if (gengetopt_args_info_usage && gengetopt_args_info_usage[0]) {
-		printf("%s\n\n", gengetopt_args_info_usage);
-	}
-	if (gengetopt_args_info_description &&
-	    gengetopt_args_info_description[0]) {
-		printf("%s\n\n", gengetopt_args_info_description);
-	}
+	puts("Supported commands:");
 
-	puts("Common options:");
-	for (const char **p = gengetopt_args_info_help; *p; p++) {
-		if (strncmp(*p, "      --full-help", 17)) {
-			puts(*p);
-		}
-	}
-
-	puts("\nSupported commands:");
-
-	SUBCMD(help);
-	SUBCMD(mux);
-	SUBCMD(print);
-	SUBCMD(shnot);
-	//SUBCMD(sort);
-
-#undef SUBCMD
-#else  /* !0 */
-	cmdline_parser_print_help();
-#endif	/* 0 */
+	SUBCMD(help, "Print a help screen like this");
+	SUBCMD(mux, "Generate an ute file from a tick or candle source");
+	SUBCMD(print, "Print the contents of an ute file");
+	SUBCMD(shnot, "Generate all-level snapshots from ute files");
+	//SUBCMD(sort, "Sort ute file chronologically");
+	puts("");
 	return;
 }
 
 int
 main(int argc, char *argv[])
 {
-	struct gengetopt_args_info argi[1];
 	char *cmd_f = NULL;
 	const char *cmd;
 	int res = 0;
 
-	if (cmdline_parser(argc, argv, argi)) {
+	if ((cmd = __find_cmd(argc, argv)) == NULL) {
 		__pr_help();
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		__pr_help();
-		res = 0;
-		goto out;
-	} else if (argi->inputs_num == 0) {
-		fputs("COMMAND must be specified, see --help\n\n", stderr);
-		__pr_help();
-		res = 1;
-		goto out;
-	} else if ((cmd_f = build_cmd((cmd = argi->inputs[0]))) == NULL) {
-		fprintf(stderr, "ute subcommand `%s' not found\n\n", cmd);
-		__pr_help();
-		res = 1;
-		goto out;
-	}
+		if (argv[1] &&
+		    (strcmp(argv[1], "-h") == 0 ||
+		     strcmp(argv[1], "--help") == 0)) {
+			res = 0;
+		} else {
+			res = 1;
+		}
 
-out:
-	cmdline_parser_free(argi);
+	} else if ((cmd_f = build_cmd(cmd)) == NULL) {
+		fprintf(stderr, "ute subcommand `%s' invalid\n\n", cmd);
+		__pr_help();
+		res = 1;
 
-	if (cmd_f != NULL) {
+	} else {
 		/* prepare the execve */
 		argv[0] = cmd_f;
 		res = execv(cmd_f, argv);

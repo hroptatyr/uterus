@@ -152,6 +152,15 @@ get_subcmd(const char *cmd)
 	return NULL;
 }
 
+static void
+rem_hole(int argc, char *argv[], int from)
+{
+	for (int i = from; i < argc; i++) {
+		argv[i] = argv[i + 1];
+	}
+	return;
+}
+
 static char*
 extract_cmd(int argc, char *argv[])
 {
@@ -161,12 +170,30 @@ extract_cmd(int argc, char *argv[])
 	for (int i = 1; i < argc; i++) {
 		if (argv[i][0] != '-' || dash_dash_seen_p) {
 			char *res = argv[i];
-			for (int j = i; j < argc; j++) {
-				argv[j] = argv[j + 1];
-			}
+			rem_hole(argc, argv, i);
 			return res;
 		} else if (argv[i][1] == '-' && argv[i][2] == '\0') {
 			dash_dash_seen_p = 1;
+		}
+	}
+	return NULL;
+}
+
+static subcmd_f
+rewrite_subcmd(int argc, char *argv[])
+{
+/* try and rewrite subcommands and rearrange argv to leave no holes */
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--help") == 0 ||
+		    strcmp(argv[i], "-h") == 0) {
+			rem_hole(argc, argv, i);
+			return CMDFUN(help);
+		} else if (strcmp(argv[i], "--version") == 0 ||
+			   strcmp(argv[i], "-V") == 0) {
+			rem_hole(argc, argv, i);
+			return CMDFUN(version);
+		} else if (strcmp(argv[i], "--") == 0) {
+			break;
 		}
 	}
 	return NULL;
@@ -227,23 +254,25 @@ main(int argc, char *argv[])
 	int res = 0;
 
 	init_cmds();
-	if ((cmd = extract_cmd(argc, argv)) == NULL) {
+	if ((cmd = extract_cmd(argc, argv)) == NULL &&
+	    /* try the rewriter */
+	    (icmd = rewrite_subcmd(argc, argv)) == NULL) {
 		ute_cmd_help(argc, argv);
 		res = 1;
 
-	} else if ((icmd = get_subcmd(cmd)) != NULL) {
-		/* call the internal command */
-		res = icmd(argc, argv);
-
-	} else if ((cmd_f = build_cmd(cmd)) == NULL) {
-		fprintf(stderr, "ute subcommand `%s' invalid\n\n", cmd);
-		ute_cmd_help(argc, argv);
-		res = 1;
-
-	} else {
+	} else if (cmd != NULL && (cmd_f = build_cmd(cmd)) != NULL) {
 		/* prepare the execve */
 		argv[0] = cmd_f;
 		res = execv(cmd_f, argv);
+
+	} else if (icmd != NULL || (icmd = get_subcmd(cmd)) != NULL) {
+		/* call the internal command */
+		res = icmd(argc, argv);
+
+	} else {
+		fprintf(stderr, "ute subcommand `%s' invalid\n\n", cmd);
+		ute_cmd_help(argc, argv);
+		res = 1;
 	}
 	return res;
 }

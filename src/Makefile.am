@@ -104,17 +104,9 @@ bin_PROGRAMS += ute
 ute_SOURCES =
 EXTRA_ute_SOURCES =
 ute_SOURCES += ute.c
-ute_SOURCES += ariva.c
-ute_SOURCES += ibrti.c
-ute_SOURCES += dukas.c
-ute_SOURCES += tfraw.c
-ute_SOURCES += sumux.h
 ute_LDADD = libuterus.la
-ute_CPPFLAGS = $(AM_CPPFLAGS)
+ute_CPPFLAGS = $(AM_CPPFLAGS) -DUTEDIR=\"$(utedir)\"
 ute_LDFLAGS = $(AM_LDFLAGS)
-EXTRA_ute_SOURCES += ute-print.c ute-print.h
-EXTRA_ute_SOURCES += ute-mux.c
-EXTRA_ute_SOURCES += ute-opt.h
 
 
 UTE_CMD_CPPFLAGS = -DSTANDALONE
@@ -125,6 +117,25 @@ ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_shnot_LDFLAGS = $(AM_LDFLAGS)
 ute_shnot_LDADD = libuterus.la
 BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
+
+ute_PROGRAMS += ute-print
+ute_print_SOURCES = ute-print.c ute-print-clo.ggo
+ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_print_LDFLAGS = $(AM_LDFLAGS)
+ute_print_LDADD = libuterus.la
+BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
+
+ute_PROGRAMS += ute-mux
+ute_mux_SOURCES = ute-mux.c ute-mux-clo.ggo
+ute_mux_SOURCES += ariva.c
+ute_mux_SOURCES += ibrti.c
+ute_mux_SOURCES += dukas.c
+ute_mux_SOURCES += tfraw.c
+ute_mux_SOURCES += sumux.h
+ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_mux_LDFLAGS = $(AM_LDFLAGS)
+ute_mux_LDADD = libuterus.la
+BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
 
 version.h: $(top_builddir)/.version

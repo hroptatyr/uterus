@@ -1,0 +1,24 @@
+args "--unamed-opts --long-help --no-handle-error -a mux_args_info -f mux_parser"
+package "ute mux"
+usage "ute mux [OPTIONS...] FILEs..."
+description "Convert tick sources FILEs to an ute file."
+
+option "format" f
+	"Use the specified parser, see below for a list"
+	string typestr="FORMAT"
+
+option "name" -
+	"For single-security files use NAME as security symbol"
+	string typestr="NAME" optional
+
+option "output" o
+	"Write result to specified output file (default workload.ute)"
+	string typestr="FILE" optional
+
+option "badfile" -
+	"Write erroneous lines to this file"
+	string typestr="FILE" optional
+
+option "zone" z
+	"Treat date/time strings as in time zone NAME (default UTC)"
+	string typestr="NAME" optional

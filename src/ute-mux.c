@@ -47,9 +47,14 @@
 #include <math.h>
 #include <string.h>
 #include "sumux.h"
+#include "sl1t.h"
+#include "utefile.h"
 
+#if !defined UNLIKELY
+# define UNLIKELY(_x)	__builtin_expect((_x), 0)
+#endif	/* !UNLIKELY */
 #if !defined UNUSED
-# define UNUSED(x)	x __attribute__((unused))
+# define UNUSED(_x)	__attribute__((unused)) _x
 #endif	/* !UNUSED */
 #if !defined countof
 # define countof(x)	(sizeof(x) / sizeof(*x))
@@ -66,8 +71,6 @@ struct muxer_s {
 };
 
 
-static char fmt_hlp[256];
-
 static struct muxer_s supported_muxers[] = {
 #if 0
 	{.opt = "sl1t", .muxf = sl1t_mux},
@@ -83,20 +86,7 @@ static struct muxer_s supported_muxers[] = {
 	{.opt = "tenfore", .muxf = tfraw_slab},
 };
 
-/* ute mux FILE [...] */
-static const char ute_cmd_mux_help[] =
-	"usage: ute mux [-o OUTFILE] [-f FORMAT] FILE ...\n"
-	"\n\
-Convert FILE to a ute file, write to OUTFILE (mux.ute by default).\n\
-\n\
-Further options:\n\
--f, --format FORMAT  Use the specified parser, see below for a list.\n\
--n, --name NAME      For single-security files use NAME as security symbol.\n\
--o, --output FILE    Write result to specified output file.\n\
--z, --zone NAME      Treat date/time strings as in time zone NAME.\n\
-\n\
-";
-
+#if 0
 static void
 build_fmt_hlp(void)
 {
@@ -110,16 +100,7 @@ build_fmt_hlp(void)
 	}
 	return;
 }
-
-static void __attribute__((noreturn))
-fuck_off_and_die(void)
-{
-	fputs(ute_cmd_mux_help, stdout);
-	build_fmt_hlp();
-	fputs(fmt_hlp, stdout);
-	fputc('\n', stdout);
-	exit(1);
-}
+#endif
 
 static void
 (*find_muxer(const char *opt))(mux_ctx_t)
@@ -170,90 +151,64 @@ deinit_ticks(mux_ctx_t ctx)
 	return;
 }
 
-static void
-ute_cmd_mux_popt(sumux_opt_t opts, int argc, const char *argv[])
+
+#if defined STANDALONE
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "ute-mux-clo.h"
+#include "ute-mux-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
+
+int
+main(int argc, char *argv[])
 {
-	/* input file index */
-	int ifi = 0;
-
-	/* first of all make a infiles array as large as argv */
-	opts->infiles = malloc(argc * sizeof(char*));
-	/* parse options */
-	for (int i = 1; i < argc; i++) {
-		if (argv[i] == NULL) {
-			/* global options are set to NULL */
-			continue;
-
-		} else if (!strcmp(argv[i], "--format") ||
-		    !strcmp(argv[i], "-f")) {
-			/* --format FMT */
-			opts->muxf = find_muxer(argv[++i]);
-
-		} else if (!strcmp(argv[i], "--name") ||
-			   !strcmp(argv[i], "-n")) {
-			/* --name SYM */
-			opts->sname = argv[++i];
-
-		} else if (!strcmp(argv[i], "--output") ||
-			   !strcmp(argv[i], "-o")) {
-			/* --output FILE */
-			opts->outfile = argv[++i];
-
-		} else if (!strcmp(argv[i], "--badfile") ||
-			   !strcmp(argv[i], "-b")) {
-			/* --badfile FILE */
-			opts->badfile = argv[++i];
-
-		} else if (!strcmp(argv[i], "-")) {
-			/* --help */
-			opts->infiles[ifi++] = "/dev/stdin";
-
-		} else if (!strcmp(argv[i], "--help") ||
-			   !strcmp(argv[i], "-h")) {
-			/* --help */
-			fuck_off_and_die();
-
-		} else {
-			/* must be a file to process */
-			opts->infiles[ifi++] = argv[i];
-		}
-	}
-	if (ifi == 0) {
-		/* weird, should we assume stdin? */
-		opts->infiles[ifi++] = "/dev/stdin";
-	}
-	/* finalise the infile list */
-	opts->infiles[ifi] = NULL;
-	return;
-}
-
-static void
-ute_cmd_mux_unpopt(sumux_opt_t opts)
-{
-	/* just that inline thing */
-	free(opts->infiles);
-	return;
-}
-
-static void
-ute_cmd_mux(sumux_opt_t opts)
-{
+	struct mux_args_info argi[1];
+	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
+	int res = 0;
 
-	if (UNLIKELY(opts->muxf == NULL)) {
-		/* piss off, we need a mux function */
-		fputs("format not specified\n", stderr);
-		return;
+	if (mux_parser(argc, argv, argi)) {
+		res = 1;
+		goto out;
 	}
 
+	if (argi->format_given &&
+	    (UNLIKELY(opts->muxf = find_muxer(argi->format_arg)) == NULL)) {
+		/* piss off, we need a mux function */
+		fputs("format unknown\n", stderr);
+		res = 1;
+		goto out;
+	}
+
+
+	if (argi->name_given) {
+		opts->sname = argi->name_arg;
+	}
+
+	if (argi->output_given) {
+		opts->outfile = argi->output_arg;
+	}
+
+	if (argi->badfile_given) {
+		opts->badfile = argi->badfile_arg;
+	}
+
+	/* the actual muxing step */
 	init_ticks(ctx, opts);
-	for (const char **p = opts->infiles; *p; p++) {
+	for (unsigned int j = 0; j < argi->inputs_num; j++) {
+		const char *f = argi->inputs[j];
+		int fd;
+
 		/* open the infile ... */
-		int fd = open(*p, 0);
-		if (fd >= 0) {
+		if ((fd = open(f, 0)) >= 0) {
 			ctx->infd = fd;
 		} else {
-			fprintf(stderr, "couldn't open file '%s'\n", *p);
+			fprintf(stderr, "couldn't open file '%s'\n", f);
 			/* just try the next bloke */
 			continue;
 		}
@@ -263,23 +218,11 @@ ute_cmd_mux(sumux_opt_t opts)
 		close(fd);
 	}
 	deinit_ticks(ctx);
-	return;
-}
 
-static int
-ute_cmd_mux_args(ute_opt_t octx, int argc, const char *argv[])
-{
-	struct sumux_opt_s opts[1] = {{0}};
-
-	/* get globally specified options */
-	opts->octx = octx;
-	/* parse options */
-	ute_cmd_mux_popt(opts, argc, argv);
-	/* now call the actual mux command */
-	ute_cmd_mux(opts);
-	/* clear our resources */
-	ute_cmd_mux_unpopt(opts);
-	return 0;
+out:
+	mux_parser_free(argi);
+	return res;
 }
+#endif	/* STANDALONE */
 
 /* ute-mux.c ends here */

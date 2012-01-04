@@ -108,61 +108,34 @@ print_tick_rTI(utectx_t uctx, scom_t st)
 }
 
 
-/* ute print FILE*/
-static const char ute_cmd_print_help[] =
-	"usage: ute print FILE\n"
-	"\n"
-	"Print the contents of FILE in an rTickItems like fashion.\n";
+#if defined STANDALONE
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "ute-print-clo.h"
+#include "ute-print-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
 
-static void __attribute__((noreturn))
-__print_fuck_off_and_die(void)
+int
+main(int argc, char *argv[])
 {
-	fputs(ute_cmd_print_help, stdout);
-	exit(1);
-}
+	struct print_args_info argi[1];
+	int res = 0;
 
-static void
-ute_cmd_print_popt(sumux_opt_t opts, int argc, const char *argv[])
-{
-	/* input file index */
-	int ifi = 0;
-
-	/* first of all make a infiles array as large as argv */
-	opts->infiles = malloc(argc * sizeof(char*));
-
-	for (int i = 1; i < argc; i++) {
-		if (argv[i] == NULL) {
-			/* global options are set to NULL */
-			continue;
-		} else if (!strcmp(argv[i], "--help") ||
-			   !strcmp(argv[i], "-h")) {
-			/* --help */
-			__print_fuck_off_and_die();
-		} else {
-			/* must be a file to process */
-			opts->infiles[ifi++] = argv[i];
-		}
+	if (print_parser(argc, argv, argi)) {
+		res = 1;
+		goto out;
 	}
-	/* finalise the infile list */
-	opts->infiles[ifi] = NULL;
-	return;
-}
 
-static void
-ute_cmd_print_unpopt(sumux_opt_t opts)
-{
-	/* just that inline thing */
-	free(opts->infiles);
-	return;
-}
-
-static void
-ute_cmd_print(sumux_opt_t opts)
-{
-	for (const char **p = opts->infiles; *p; p++) {
+	for (unsigned int j = 0; j < argi->inputs_num; j++) {
+		const char *f = argi->inputs[j];
 		void *hdl;
 
-		if ((hdl = ute_open(*p, UO_RDONLY)) == NULL) {
+		if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
 			continue;
 		}
 		/* otherwise print all them ticks */
@@ -172,25 +145,14 @@ ute_cmd_print(sumux_opt_t opts)
 				print_tick_rTI(hdl, ti);
 			}
 		}
+		/* oh right, close the handle */
 		ute_close(hdl);
 	}
-	return;
-}
 
-static int
-ute_cmd_print_args(ute_opt_t octx, int argc, const char *argv[])
-{
-	struct sumux_opt_s opts[1] = {{0}};
-
-	/* get globally specified options */
-	opts->octx = octx;
-	/* parse options */
-	ute_cmd_print_popt(opts, argc, argv);
-	/* now call the actual mux command */
-	ute_cmd_print(opts);
-	/* clear our resources */
-	ute_cmd_print_unpopt(opts);
-	return 0;
+out:
+	print_parser_free(argi);
+	return res;
 }
+#endif	/* STANDALONE */
 
 /* ute-print.c ends here */

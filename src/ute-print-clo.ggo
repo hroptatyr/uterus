@@ -1,0 +1,5 @@
+args "--unamed-opts --long-help --no-handle-error -a print_args_info -f print_parser"
+package "ute print"
+usage "ute print FILEs..."
+description "Print the contents of FILE in an rTickItems like fashion."
+

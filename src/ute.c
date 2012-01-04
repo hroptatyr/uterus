@@ -36,22 +36,50 @@
  ***/
 
 /** test client for libuterus */
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <limits.h>
+#include <sys/stat.h>
 #include "utefile.h"
 #include "sl1t.h"
 
 /* for our options parser */
-#include "ute-opt.h"
 #include "version.h"
 
-/* simple all in one tool */
-#include "ute-print.c"
-#include "ute-mux.c"
-#include "ute-shnot.h"
+#if !defined UNUSED
+# define UNUSED(_x)	__attribute__((unused)) _x
+#endif	/* !UNUSED */
 
-static int
-ute_cmd_sort(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
+/* sub-command handling */
+typedef int(*subcmd_f)(int, char *argv[]);
+
+struct subcmd_s {
+	const char *name;
+	subcmd_f cmdf;
+};
+
+static size_t nsubcmd = 0;
+static struct subcmd_s subcmd[32];
+
+#define CMDFUN(x)				\
+	ute_cmd_##x
+
+#define DEFCMD(x)				\
+	static int CMDFUN(x)
+
+#define PUSHCMD(x)				\
+	DEFCMD(x)(int, char*[]);		\
+	subcmd[nsubcmd].name = #x;		\
+	subcmd[nsubcmd].cmdf = CMDFUN(x);	\
+	nsubcmd++
+
+
+DEFCMD(sort)(int UNUSED(argc), char *argv[])
 {
 	const char *file = argv[1];
 	void *hdl = ute_open(file, UO_RDWR);
@@ -60,145 +88,193 @@ ute_cmd_sort(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
 	return 0;
 }
 
-static int
-ute_cmd_version(ute_opt_t UNUSED(o), int UNUSED(ac), const char *UNUSED(av[]))
+DEFCMD(version)(int UNUSED(argc), char *UNUSED(argv)[])
 {
-	fputs("ute v", stdout);
-	fputs(UTE_VERSION, stdout);
-	fputc('\n', stdout);
+	puts("ute " UTE_VERSION);
 	return 0;
 }
 
-static const char usage[] = "\
-Usage: ute COMMAND ARGS\n\
-\n\
-Supported commands:\n\
-  help    This help screen\n\
-  mux     Generate an ute file from a tick source\n\
-  print   Print the contents of an ute file\n\
-  shnot   Generate top-level snapshots from ute files\n\
-  sort    Test sort the file\n\
-\n\
-Use 'ute help COMMAND' for more information \
-on a specific command\n\
-\n\
-Options common to all commands:\n\
--q, --quiet       Suppress all output.\n\
--v, --verbose     Be more talkative.\n\
--z, --zone NAME   Treat date/time strings as in time zone NAME.\n\
-\n\
--h, --help        Print this help screen.\n\
--V, --version     Print version information.\n\
-\n";
-
-static int
-ute_cmd_help(ute_opt_t UNUSED(octx), int UNUSED(argc), const char *argv[])
+DEFCMD(help)(int UNUSED(argc), char *UNUSED(argv)[])
 {
-	if (argv == NULL || argv[1] == NULL) {
-		goto fallthrough;
-	} else if (strcmp(argv[1], "mux") == 0) {
-		fputs(ute_cmd_mux_help, stdout);
-	} else if (strcmp(argv[1], "print") == 0) {
-		fputs(ute_cmd_print_help, stdout);
-	} else {
-	fallthrough:
-		fputs(usage, stdout);
-	}
+#define SUBCMD(x, line)					\
+	do {						\
+		printf("  % -20s " line "\n", #x);	\
+	} while (0)
+
+	/* output version first */
+	ute_cmd_version(0, NULL);
+
+	puts("\
+\n\
+Usage: ute [OPTION]... COMMAND ARGS...\n\
+\n\
+Create, access and modify ute files.\n\
+\n\
+Common options:\n\
+  -h, --help           Print help and exit\n\
+  -V, --version        Print version and exit\n\
+");
+
+	puts("Supported commands:");
+
+	SUBCMD(help, "Print a help screen like this");
+	SUBCMD(mux, "Generate an ute file from a tick or candle source");
+	SUBCMD(print, "Print the contents of an ute file");
+	SUBCMD(shnot, "Generate all-level snapshots from ute files");
+	//SUBCMD(sort, "Sort ute file chronologically");
+	puts("");
 	return 0;
 }
 
-static int
-ute_popt(ute_opt_t octx, int argc, char *argv[])
+
+/* we expect UTEDIR to be defined at this point */
+#if !defined UTEDIR
+# error define UTEDIR
+#endif	/* UTEDIR */
+
+static void
+init_cmds(void)
 {
-	int i = 0;
+	PUSHCMD(help);
+	PUSHCMD(version);
+	PUSHCMD(sort);
+	return;
+}
 
-	memset(octx, 0, sizeof(*octx));
-	if (argc <= 1) {
-		return -1;
+static subcmd_f
+get_subcmd(const char *cmd)
+{
+	for (size_t i = 0; i < nsubcmd; i++) {
+		if (strcmp(cmd, subcmd[i].name) == 0) {
+			return subcmd[i].cmdf;
+		}
 	}
+	return NULL;
+}
 
-	/* common options */
-again:
-	for (i++; i < argc; i++) {
-		/* check options */
-		if (strcmp(argv[i], "-q") == 0 ||
-		    strcmp(argv[i], "--quiet") == 0) {
-			argv[i] = NULL;
-			octx->verbosity--;
+static void
+rem_hole(int argc, char *argv[], int from)
+{
+	for (int i = from; i < argc; i++) {
+		argv[i] = argv[i + 1];
+	}
+	return;
+}
 
-		} else if (strcmp(argv[i], "-v") == 0 ||
-			   strcmp(argv[i], "--verbose") == 0) {
-			argv[i] = NULL;
-			octx->verbosity++;
+static char*
+extract_cmd(int argc, char *argv[])
+{
+/* try and find a subcommand and rearrange argv to leave no holes */
+	int dash_dash_seen_p = 0;
 
-		} else if (strcmp(argv[i], "-z") == 0 ||
-			   strcmp(argv[i], "--zone") == 0) {
-			argv[i] = NULL;
-			octx->zone = argv[++i];
-			argv[i] = NULL;
+	for (int i = 1; i < argc; i++) {
+		if (argv[i][0] != '-' || dash_dash_seen_p) {
+			char *res = argv[i];
+			rem_hole(argc, argv, i);
+			return res;
+		} else if (argv[i][1] == '-' && argv[i][2] == '\0') {
+			dash_dash_seen_p = 1;
+		}
+	}
+	return NULL;
+}
 
-		} else if (strcmp(argv[i], "-V") == 0 ||
-			   strcmp(argv[i], "--version") == 0) {
-			octx->cmd = ute_cmd_version;
-			break;
-
-		} else if (strcmp(argv[i], "-h") == 0 ||
-			   strcmp(argv[i], "--help") == 0) {
-			if (octx->cmd == NULL) {
-				/* someone just ute --help */
-				octx->cmd = ute_cmd_help;
-				break;
-			}
-			/* command already set, must be called like
-			 *   ute CMD --help
-			 * rewrite that to ute help CMD */
-			octx->argv--;
-			octx->argc++;
-			octx->cmd = ute_cmd_help;
-
-		} else if (octx->cmd == NULL) {
-			/* only break when there's no command yet */
+static subcmd_f
+rewrite_subcmd(int argc, char *argv[])
+{
+/* try and rewrite subcommands and rearrange argv to leave no holes */
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--help") == 0 ||
+		    strcmp(argv[i], "-h") == 0) {
+			rem_hole(argc, argv, i);
+			return CMDFUN(help);
+		} else if (strcmp(argv[i], "--version") == 0 ||
+			   strcmp(argv[i], "-V") == 0) {
+			rem_hole(argc, argv, i);
+			return CMDFUN(version);
+		} else if (strcmp(argv[i], "--") == 0) {
 			break;
 		}
 	}
-
-	if (octx->cmd) {
-		return 0;
-	}
-
-	/* command checking */
-	octx->argc = argc - i;
-	octx->argv = (const char**)(argv + i);
-	if (strcmp(argv[i], "help") == 0) {
-		octx->cmd = ute_cmd_help;
-
-	} else if (strcmp(argv[i], "version") == 0) {
-		octx->cmd = ute_cmd_version;
-
-	} else if (strcmp(argv[i], "mux") == 0) {
-		octx->cmd = ute_cmd_mux_args;
-
-	} else if (strcmp(argv[i], "print") == 0) {
-		octx->cmd = ute_cmd_print_args;
-
-	} else if (strcmp(argv[i], "sort") == 0) {
-		octx->cmd = ute_cmd_sort;
-	}
-
-	goto again;
+	return NULL;
 }
 
+static bool
+__exep(const char *file)
+{
+	struct stat st;
+	return (stat(file, &st) == 0) && (st.st_mode & S_IXUSR);
+}
+
+static char*
+build_cmd(const char *cmd)
+{
+	const char myself[] = "/proc/self/exe";
+	const char prefix[] = "ute-";
+	char wd[PATH_MAX];
+	char *dp;
+	size_t sz;
+
+	sz = readlink(myself, wd, sizeof(wd));
+	wd[sz] = '\0';
+
+	if ((dp = strrchr(wd, '/')) == NULL) {
+		return NULL;
+	}
+	/* search the path where the binary resides */
+	strncpy(dp + 1, prefix, sizeof(prefix) - 1);
+	strcpy(dp + sizeof(prefix), cmd);
+	if (__exep(wd)) {
+		/* found one ... */
+		goto succ;
+	}
+	/* otherwise try UTEDIR */
+	if ((dp = stpcpy(wd, UTEDIR))[-1] != '/') {
+		*dp++ = '/';
+	}
+	strncpy(dp, prefix, sizeof(prefix) - 1);
+	strcpy(dp + sizeof(prefix) - 1, cmd);
+	if (__exep(wd)) {
+		/* found one ... */
+		goto succ;
+	}
+	return NULL;
+
+succ:
+	return strdup(wd);
+}
+
+
 int
 main(int argc, char *argv[])
 {
-	struct ute_opt_s octx[1];
+	char *cmd_f = NULL;
+	subcmd_f icmd = NULL;
+	const char *cmd;
+	int res = 0;
 
-	if (ute_popt(octx, argc, argv) < 0 || octx->cmd == NULL) {
-		ute_cmd_help(octx, octx->argc, octx->argv);
-		return 1;
+	init_cmds();
+	if ((cmd = extract_cmd(argc, argv)) == NULL &&
+	    /* try the rewriter */
+	    (icmd = rewrite_subcmd(argc, argv)) == NULL) {
+		ute_cmd_help(argc, argv);
+		res = 1;
+
+	} else if (cmd != NULL && (cmd_f = build_cmd(cmd)) != NULL) {
+		/* prepare the execve */
+		argv[0] = cmd_f;
+		res = execv(cmd_f, argv);
+
+	} else if (icmd != NULL || (icmd = get_subcmd(cmd)) != NULL) {
+		/* call the internal command */
+		res = icmd(argc, argv);
+
+	} else {
+		fprintf(stderr, "ute subcommand `%s' invalid\n\n", cmd);
+		ute_cmd_help(argc, argv);
+		res = 1;
 	}
-
-	return octx->cmd(octx, octx->argc, octx->argv);
+	return res;
 }
 
 /* ute.c ends here */

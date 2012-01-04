@@ -1,4 +1,4 @@
-args "--unamed-opts --long-help"
+args "--unamed-opts --long-help --no-handle-error -a shnot_args_info -f shnot_parser"
 package "ute shnot"
 usage "ute shnot [OPTION]... FILEs..."
 description "Draw market snapshots from given FILEs.

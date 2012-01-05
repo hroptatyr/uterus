@@ -169,11 +169,29 @@ set_buckets_time(bkts_t bctx, time_t new_st)
 	return;
 }
 
+static inline time_t
+get_buckets_time(bkts_t bctx)
+{
+	return bctx->cur_ts;
+}
+
 
 static inline time_t
 aligned_stamp(shnot_ctx_t ctx, time_t ts)
 {
 	return (time_t)(ts - ((ts - ctx->opt->offset) % ctx->opt->interval));
+}
+
+static inline time_t
+next_stamp(shnot_ctx_t ctx, time_t ts)
+{
+	return ts + ctx->opt->interval;
+}
+
+static inline time_t
+next_aligned_stamp(shnot_ctx_t ctx, time_t ts)
+{
+	return next_stamp(ctx, aligned_stamp(ctx, ts));
 }
 
 static bool
@@ -417,7 +435,12 @@ main(int argc, char *argv[])
 			bucketiser(ctx, (void*)ti);
 		}
 		/* last round */
-		new_candle(ctx);
+		{
+			time_t bkt_tm = get_buckets_time(ctx->bkt);
+			time_t new_ts = next_stamp(ctx, bkt_tm);
+			set_buckets_time(ctx->bkt, new_ts);
+			new_candle(ctx);
+		}
 		/* finish our buckets */
 		fini_buckets(ctx);
 		/* oh right, close the handle */

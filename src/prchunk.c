@@ -372,12 +372,12 @@ prchunk_getcolno(prch_ctx_t ctx, char **p, int lno, int cno)
 {
 	size_t co1, co2;
 
-	if (UNLIKELY(cno >= 0 && cno >= prchunk_get_ncols(ctx))) {
+	if (UNLIKELY(cno < 0 || (size_t)cno >= prchunk_get_ncols(ctx))) {
 		*p = NULL;
 		return 0;
 	}
 	(void)prchunk_getlineno(ctx, p, lno);
-	if (UNLIKELY(cno <= 0)) {
+	if (UNLIKELY(cno == 0)) {
 		return get_col_off(ctx, lno, 0);
 	}
 	/* likely case last */

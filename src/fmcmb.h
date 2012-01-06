@@ -74,7 +74,7 @@ fmseek(fmcmb_t stream, long int offs, int whence)
 		/* rewrite offs in terms of SEEK_SET */
 		offs += stream->msz;
 	case SEEK_SET:
-		if (offs <= stream->msz) {
+		if ((typeof(stream->msz))offs <= stream->msz) {
 			stream->m = stream->mem + offs;
 			return 0;
 		}

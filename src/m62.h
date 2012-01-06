@@ -492,14 +492,15 @@ ffff_m62_get_s(char **nptr)
 	 *   ^        ^^      ^
 	 *   mant mend frac   p
 	 * so frac - mant is the number of integral digits */
-	if ((p - frac) >= 4 && (mend - mant) <= ffff_m62_i_ubounds_l10[0]) {
+	if ((p - frac) >= 4 &&
+	    (uint64_t)(mend - mant) <= ffff_m62_i_ubounds_l10[0]) {
 		r62.expo = 0;
 		r62.mant = __62_0_get_s(mant, (mend - mant), frac, p - frac);
 	} else if ((p - frac) > 0 ||
-		   (mend - mant) <= ffff_m62_i_ubounds_l10[1]) {
+		   (uint64_t)(mend - mant) <= ffff_m62_i_ubounds_l10[1]) {
 		r62.expo = 1;
 		r62.mant = __62_1_get_s(mant, mend - mant, frac, p - frac);
-	} else if ((mend - mant) >= ffff_m62_i_ubounds_l10[2]) {
+	} else if ((uint64_t)(mend - mant) >= ffff_m62_i_ubounds_l10[2]) {
 		r62.expo = 3;
 		r62.mant = __62_23_get_s(mant, mend - mant - 4);
 	} else {

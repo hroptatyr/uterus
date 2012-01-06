@@ -228,7 +228,7 @@ darray_fmread(fmcmb_t stream)
 	if (fm_read_int32(stream, &d->num_cells) < 0) {
 		goto exit_da_created;
 	}
-	if (d->num_cells > SIZE_MAX / sizeof(*d->cells)) {
+	if ((size_t)d->num_cells > SIZE_MAX / sizeof(*d->cells)) {
 		goto exit_da_created;
 	}
 	if ((d->cells = malloc(d->num_cells * sizeof(*d->cells))) == NULL) {

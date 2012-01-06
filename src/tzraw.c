@@ -238,7 +238,7 @@ __find_zrng(zif_t z, int32_t t, int this, int min, int max)
 	res.trno = (uint8_t)trno;
 	res.prev = zif_trans(z, trno);
 	/* special case for GMT+/- zones */
-	res.next = trno + 1 < ntr ? zif_trans(z, trno + 1) : INT_MAX;
+	res.next = res.trno < ntr - 1 ? zif_trans(z, trno + 1) : INT_MAX;
 	res.offs = zif_troffs(z, trno);
 	return res;
 }

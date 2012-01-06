@@ -178,7 +178,7 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->format_given &&
-	    (UNLIKELY(opts->muxf = find_muxer(argi->format_arg)) == NULL)) {
+	    UNLIKELY((opts->muxf = find_muxer(argi->format_arg)) == NULL)) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
 		res = 1;

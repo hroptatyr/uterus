@@ -98,13 +98,13 @@ typedef struct strat_s *strat_t;
 
 struct strat_node_s {
 	strat_node_t next;
-	int pg;
-	int cnt;
-	int pgs[];
+	uint32_t pg;
+	uint32_t cnt;
+	uint32_t pgs[];
 };
 
 struct __cnt_clo_s {
-	int cnt;
+	size_t cnt;
 };
 
 struct strat_s {
@@ -171,7 +171,7 @@ static void
 load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 {
 	size_t e = min_size_t(end_run, ute_npages(ctx));
-	for (int k = start_run, i = 0; k < e; i++, k++) {
+	for (size_t k = start_run, i = 0; k < e; i++, k++) {
 		/* set up page i */
 		seek_page(&sks[i], ctx, k);
 	}
@@ -182,7 +182,7 @@ static void
 dump_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 {
 	size_t e = min_size_t(end_run, ute_npages(ctx));
-	for (int i = 0, k = start_run; k < e; i++, k++) {
+	for (size_t i = 0, k = start_run; k < e; i++, k++) {
 		/* set up page i */
 		flush_seek(&sks[i]);
 	}
@@ -200,12 +200,12 @@ sort_strat(utectx_t ctx)
 	size_t npages = ute_npages(ctx);
 	strat_t sc;
 
-	for (int j = 0; j < npages; ) {
+	for (size_t j = 0; j < npages; ) {
 		/* initialise the seeks */
 		load_runs(sks, ctx, j, j + NRUNS);
 
 		/* obtain intervals */
-		for (int i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
+		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
 			scom_t sb = (const void*)sks[i].data;
 			uint32_t sbs = scom_thdr_sec(sb);
 			//uint16_t sbms = scom_thdr_msec(sb);
@@ -255,7 +255,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 	if (UNLIKELY(curnd == NULL)) {
 		return res;
 	}
-	for (int i = 0; i < curnd->cnt; i++) {
+	for (size_t i = 0; i < curnd->cnt; i++) {
 		scom_t sh;
 		int32_t s;
 		uint16_t ms;

@@ -426,7 +426,7 @@ merge_all(size_t nticks)
 	for (int step = 4; step < IDXSORT_SIZE; ) {
 		int s2 = 2 * step, j;
 
-		for (int i = 0; i < nticks; i += s2) {
+		for (size_t i = 0; i < nticks; i += s2) {
 			merge_up(tgt + i, src + i, step, nticks);
 		}
 		/* last ones */
@@ -453,11 +453,11 @@ idxsort(scom_t p, size_t satsz, size_t nticks)
 	scidx_t *scp = get_scratch();
 	size_t m = min(nticks, IDXSORT_SIZE);
 
-	for (int i = 0; i < m; i++) {
+	for (size_t i = 0; i < m; i++) {
 		scp[i] = make_scidx(p, i);
 		p = DATCA(p, satsz);
 	}
-	for (int i = 0; i < m; i += 4) {
+	for (size_t i = 0; i < m; i += 4) {
 		uint8_t perm = pornsort_perm(scp + i);
 		pornsort_apply(scp + i, perm);
 	}
@@ -470,7 +470,7 @@ idxsort(scom_t p, size_t satsz, size_t nticks)
 static void
 collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
 {
-	for (sidx_t i = 0; i < nticks; i++) {
+	for (size_t i = 0; i < nticks; i++) {
 		sidx_t idx = scidx_idx(idxa[i]);
 		void *s = DATI(src, idx, tsz);
 		memcpy(tgt, s, tsz);
@@ -568,7 +568,7 @@ tpc_sort(utetpc_t tpc)
 	 * we now use a bottom-up merge step */
 	void *tgt = tpc->tp;
 	void *src = new;
-	for (int rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
+	for (size_t rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
 		void *tmp;
 		bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc->tsz);
 		/* swap the roles of src and tgt */

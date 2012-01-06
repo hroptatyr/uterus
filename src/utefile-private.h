@@ -85,7 +85,7 @@ struct utectx_s {
 	/** file descriptor we're banging on about */
 	int fd;
 	/* file size */
-	ssize_t fsz;
+	size_t fsz;
 	/* seek */
 	struct uteseek_s seek[1];
 	/* header cache */
@@ -169,7 +169,7 @@ page_size(utectx_t ctx, uint32_t page)
 	size_t tsz = sizeof(struct sl1t_s);
 	size_t psz = bsz * tsz;
 	size_t tot = sizeof(struct utehdr2_s) + page * psz;
-	return tot + psz <= ctx->fsz ? psz : ctx->fsz - tot;
+	return (tot + psz) <= ctx->fsz ? psz : ctx->fsz - tot;
 }
 
 static inline size_t

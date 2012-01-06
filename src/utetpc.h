@@ -52,7 +52,7 @@
 #endif	/* STATIC_GUTS */
 
 #if !defined SIDX_T
-typedef long int sidx_t;
+typedef size_t sidx_t;
 # define SIDX_T
 #endif	/* !SIDX_T */
 #if !defined UNLIKELY

@@ -47,7 +47,7 @@
 
 typedef struct utectx_s *utectx_t;
 #if !defined SIDX_T
-typedef long int sidx_t;
+typedef size_t sidx_t;
 # define SIDX_T
 #endif	/* !SIDX_T */
 

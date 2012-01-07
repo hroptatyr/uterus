@@ -73,7 +73,6 @@ static struct subcmd_s subcmd[32];
 	static int CMDFUN(x)
 
 #define PUSHCMD(x)				\
-	DEFCMD(x)(int, char*[]);		\
 	subcmd[nsubcmd].name = #x;		\
 	subcmd[nsubcmd].cmdf = CMDFUN(x);	\
 	nsubcmd++

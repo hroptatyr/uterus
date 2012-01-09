@@ -238,7 +238,8 @@ exit_trie_created:
 trie_t
 trie_fread(FILE *file)
 {
-	struct fmcmb_s stream[1] = {{0}};
+	struct fmcmb_s stream[1];
+	memset(stream, 0, sizeof(*stream));
 	stream->f = file;
 	return trie_fmread(stream);
 }
@@ -255,7 +256,8 @@ trie_fread(FILE *file)
 trie_t
 trie_mread(char *mem, size_t msz)
 {
-	struct fmcmb_s stream[1] = {{0}};
+	struct fmcmb_s stream[1];
+	memset(stream, 0, sizeof(*stream));
 	stream->m = stream->mem = mem;
 	stream->msz = msz;
 	return trie_fmread(stream);
@@ -308,7 +310,8 @@ trie_fmwrite(trie_t trie, fmcmb_t stream)
 int
 trie_fwrite(trie_t trie, FILE *file)
 {
-	struct fmcmb_s stream[1] = {{0}};
+	struct fmcmb_s stream[1];
+	memset(stream, 0, sizeof(*stream));
 	stream->f = file;
 	return trie_fmwrite(trie, stream);
 }

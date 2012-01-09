@@ -120,7 +120,7 @@ tail_fmread(fmcmb_t stream)
 	    fm_read_int32(stream, &t->num_tails) < 0) {
 		goto exit_tail_created;
 	}
-	if ((size_t)t->num_tails > SIZE_MAX / sizeof(*t->tails)) {
+	if ((size_t)t->num_tails > (1 << 31) / sizeof(*t->tails)) {
 		goto exit_tail_created;
 	}
 	if ((t->tails = malloc(t->num_tails * sizeof(*t->tails))) == NULL) {

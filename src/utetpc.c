@@ -566,22 +566,23 @@ tpc_sort(utetpc_t tpc)
 	}
 	/* now in NEW there's sorted pages consisting of 256 ticks each
 	 * we now use a bottom-up merge step */
-	void *tgt = tpc->tp;
-	void *src = new;
-	for (size_t rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
-		void *tmp;
-		bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc->tsz);
-		/* swap the roles of src and tgt */
-		tmp = tgt, tgt = src, src = tmp;
+	{
+		void *tgt = tpc->tp;
+		void *src = new;
+		for (size_t rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
+			void *tmp;
+			bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc->tsz);
+			/* swap the roles of src and tgt */
+			tmp = tgt, tgt = src, src = tmp;
+		}
+		if (tpc->tp == tgt) {
+			/* oh, we were about to copy shit into tgt, so
+			 * munmap tpc->tp and install the new vector */
+			tpc->tp = src;
+		}
+		/* munmap()ing is the same in either case */
+		munmap(tgt, tpc->tpsz);
 	}
-	if (tpc->tp == tgt) {
-		/* oh, we were about to copy shit into tgt, so
-		 * munmap tpc->tp and install the new vector */
-		tpc->tp = src;
-	}
-	/* munmap()ing is the same in either case */
-	munmap(tgt, tpc->tpsz);
-
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
 	return;

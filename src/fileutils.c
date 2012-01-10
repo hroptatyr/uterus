@@ -59,7 +59,7 @@ fm_free_space(fmcmb_t stream)
 	return stream->msz - __mtell(stream);
 }
 
-static size_t
+static ssize_t
 fmread(void *data, size_t size, size_t count, fmcmb_t stream)
 {
 	if (stream->msz == 0) {
@@ -78,7 +78,7 @@ fmread(void *data, size_t size, size_t count, fmcmb_t stream)
 	}
 }
 
-static size_t
+static ssize_t
 fmwrite(const void *data, size_t size, size_t count, fmcmb_t stream)
 {
 	if (stream->msz == 0) {

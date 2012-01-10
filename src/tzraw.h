@@ -225,7 +225,7 @@ static inline int32_t
 zif_trans(zif_t z, int n)
 {
 /* no bound check! */
-	return zif_ntrans(z) > 0 ? bswap_32(z->trs[n]) : INT_MIN;
+	return zif_ntrans(z) > 0 ? (int32_t)bswap_32(z->trs[n]) : INT_MIN;
 }
 
 /**

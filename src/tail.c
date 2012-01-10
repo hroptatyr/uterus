@@ -241,10 +241,10 @@ tail_fmwrite(const_tail_t t, fmcmb_t stream)
  * The caller should free it with free().
  */
 DEFUN const char*
-tail_get_suffix(const_tail_t t, trie_idx_t index)
+tail_get_suffix(const_tail_t t, trie_idx_t idx)
 {
-	index -= TAIL_START_BLOCKNO;
-	return (index < t->num_tails) ? t->tails[index].suffix : NULL;
+	idx -= TAIL_START_BLOCKNO;
+	return (idx < t->num_tails) ? t->tails[idx].suffix : NULL;
 }
 
 /**
@@ -257,21 +257,21 @@ tail_get_suffix(const_tail_t t, trie_idx_t index)
  * Set suffix of existing entry of given @a index in tail.
  */
 DEFUN int
-tail_set_suffix(tail_t t, trie_idx_t index, const char *suffix)
+tail_set_suffix(tail_t t, trie_idx_t idx, const char *suffix)
 {
-	index -= TAIL_START_BLOCKNO;
-	if (index < t->num_tails) {
-		/* suffix and t->tails[index].suffix may overlap;
+	idx -= TAIL_START_BLOCKNO;
+	if (idx < t->num_tails) {
+		/* suffix and t->tails[idx].suffix may overlap;
 		 * so, dup it before it's overwritten
 		 */
 		char *tmp = NULL;
 		if (suffix) {
 			tmp = (char*)strdup((const char*)suffix);
 		}
-		if (t->tails[index].suffix) {
-			free (t->tails[index].suffix);
+		if (t->tails[idx].suffix) {
+			free (t->tails[idx].suffix);
 		}
-		t->tails[index].suffix = tmp;
+		t->tails[idx].suffix = tmp;
 		return 0;
 	}
 	return -1;
@@ -362,10 +362,10 @@ tail_free_block(tail_t t, trie_idx_t block)
  * Get data associated to suffix entry @a index in tail data.
  */
 DEFUN trie_data_t
-tail_get_data(const_tail_t t, trie_idx_t index)
+tail_get_data(const_tail_t t, trie_idx_t idx)
 {
-	index -= TAIL_START_BLOCKNO;
-	return (index < t->num_tails) ? t->tails[index].data : TRIE_DATA_ERROR;
+	idx -= TAIL_START_BLOCKNO;
+	return (idx < t->num_tails) ? t->tails[idx].data : TRIE_DATA_ERROR;
 }
 
 /**
@@ -380,11 +380,11 @@ tail_get_data(const_tail_t t, trie_idx_t index)
  * Set data associated to suffix entry @a index in tail data.
  */
 DEFUN int
-tail_set_data(tail_t t, trie_idx_t index, trie_data_t data)
+tail_set_data(tail_t t, trie_idx_t idx, trie_data_t data)
 {
-	index -= TAIL_START_BLOCKNO;
-	if (index < t->num_tails) {
-		t->tails[index].data = data;
+	idx -= TAIL_START_BLOCKNO;
+	if (idx < t->num_tails) {
+		t->tails[idx].data = data;
 		return 0;
 	}
 	return -1;
@@ -399,9 +399,9 @@ tail_set_data(tail_t t, trie_idx_t index, trie_data_t data)
  * Delete suffix entry from the tail data.
  */
 DEFUN void
-tail_delete(tail_t t, trie_idx_t index)
+tail_delete(tail_t t, trie_idx_t idx)
 {
-	tail_free_block(t, index);
+	tail_free_block(t, idx);
 	return;
 }
 

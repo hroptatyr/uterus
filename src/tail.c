@@ -55,7 +55,7 @@ struct tail_s {
 	trie_idx_t first_free;
 };
 
-#define TAIL_SIGNATURE      0xDFFCDFFC
+#define TAIL_SIGNATURE      0xDFFCDFFCL
 #define TAIL_START_BLOCKNO  1
 
 /* tail_t Header:

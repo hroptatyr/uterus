@@ -173,12 +173,6 @@ fetch_lines(mux_ctx_t ctx)
 	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
-static inline void
-unfetch_lines(mux_ctx_t UNUSED(ctx))
-{
-	return;
-}
-
 static inline bool
 moar_ticks_p(mux_ctx_t ctx)
 {
@@ -190,12 +184,6 @@ check_tic_stmp(ibrti_tl_t tic)
 {
 	ibtl_set_ts_sec(tic, tic->stmp2);
 	ibtl_set_ts_msec(tic, tic->msec2);
-	return;
-}
-
-static inline void
-check_tic_offs(ibrti_tl_t UNUSED(t))
-{
 	return;
 }
 
@@ -459,7 +447,6 @@ read_line(mux_ctx_t ctx, ibrti_tl_t tl)
 
 	/* assess tick quality */
 	check_tic_stmp(tl);
-	check_tic_offs(tl);
 
 	/* look up the symbol */
 	tl->t->tblidx = ute_sym2idx(ctx->wrr, tl->cid);
@@ -542,7 +529,6 @@ ibrti_slab(mux_ctx_t ctx)
 	lno = 0;
 	while (fetch_lines(ctx)) {
 		read_lines(ctx);
-		unfetch_lines(ctx);
 	}
 	/* free prchunk resources */
 	free_prchunk(ctx->rdr);

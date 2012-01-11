@@ -383,7 +383,9 @@ parse_tline(ibrti_tl_t tgt, const char *line)
 #define RDPRI(_into, _else)						\
 	/* care about \N */						\
 	if (cursor[0] != '\\' /* || cursor[1] == 'N' */) {		\
-		m30_t tmp = ffff_m30_get_s((char**)&cursor);		\
+		char *nex;						\
+		m30_t tmp = ffff_m30_get_s(&nex);			\
+		cursor = nex;							\
 		_into = tmp.v;						\
 	} else {							\
 		_else;							\

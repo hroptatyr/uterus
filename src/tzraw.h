@@ -109,7 +109,7 @@ struct tzhead {
 
 /* now our view on things */
 typedef struct zif_s *zif_t;
-typedef const struct zih_s *zih_t;
+typedef struct zih_s *zih_t;
 typedef struct ztrdtl_s *ztrdtl_t;
 typedef const char *znam_t;
 

@@ -103,7 +103,7 @@ __read_zif(int fd)
 static void
 __pars_zif(zif_t z)
 {
-	z->trs = (int32_t*)((char*)z->hdr + sizeof(*z->hdr));
+	z->trs = (int32_t*)(z->hdr + 1);
 	z->tys = (uint8_t*)(z->trs + zif_ntrans(z));
 	z->tda = (ztrdtl_t)(z->tys + zif_ntrans(z));
 	z->zn = (char*)(z->tda + zif_ntypes(z));
@@ -264,7 +264,7 @@ __offs(zif_t z, int32_t t)
 	} else if (t >= z->cache.next) {
 		int this = z->cache.trno + 1;
 		int min = this;
-		int max = zif_ntrans(z);
+		size_t max = zif_ntrans(z);
 		z->cache = __find_zrng(z, t, this, min, max);
 	} else if (t < z->cache.prev) {
 		int max = z->cache.trno;

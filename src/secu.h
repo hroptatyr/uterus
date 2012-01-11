@@ -57,9 +57,9 @@ typedef uint64_t su_secu_t;
 typedef union {
 	struct {
 		uint32_t quodi:24;
-		int32_t quoti:24 __attribute__((packed));
+		int32_t quoti:24;
 		uint16_t pot:16;
-	};
+	} __attribute__((packed));
 	uint64_t mux;
 } __attribute__((transparent_union)) su_secu_t;
 #endif	/* !USE_PACKED_STRUCTS */

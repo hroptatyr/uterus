@@ -216,6 +216,8 @@ __m62_add_helper(m62_t a, m62_t b)
 	case 3:
 		/* no need to do anything, it's out of range */
 		return a.mant;
+	default:
+		break;
 	}
 	return 0;
 }
@@ -247,8 +249,8 @@ ffff_m62_mul_2m30(m30_t a, m30_t b)
 {
 	m62_t res;
 
-	if (a.expo == 1 && b.expo == 2 ||
-	    a.expo == 2 && b.expo == 2) {
+	if ((a.expo == 1 && b.expo == 2) ||
+	    (a.expo == 2 && b.expo == 2)) {
 		/* common cases */
 		res.mant = (uint64_t)a.mant * (uint64_t)b.mant;
 		res.expo = a.expo;

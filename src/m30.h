@@ -192,6 +192,8 @@ __m30_add_helper(m30_t a, m30_t b)
 	case 3:
 		/* no need to do anything, it's out of range */
 		return a.mant;
+	default:
+		break;
 	}
 	return 0;
 }

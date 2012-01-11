@@ -667,7 +667,8 @@ da_extend_pool(darray_t d, trie_idx_t to_index)
 {
 	trie_idx_t new_begin;
 	trie_idx_t i;
-	trie_idx_t free_tail;
+	/* free_tail index */
+	trie_idx_t free_tidx;
 
 	if (to_index <= 0 || TRIE_INDEX_MAX <= to_index) {
 		return -1;
@@ -686,9 +687,9 @@ da_extend_pool(darray_t d, trie_idx_t to_index)
 	}
 
 	/* merge the new circular list to the old */
-	free_tail = -da_get_base(d, da_get_free_list(d));
-	da_set_check(d, free_tail, -new_begin);
-	da_set_base(d, new_begin, -free_tail);
+	free_tidx = -da_get_base(d, da_get_free_list(d));
+	da_set_check(d, free_tidx, -new_begin);
+	da_set_base(d, new_begin, -free_tidx);
 	da_set_check(d, to_index, -da_get_free_list(d));
 	da_set_base(d, da_get_free_list(d), -to_index);
 

@@ -542,7 +542,8 @@ static void
 read_lines(mux_ctx_t ctx)
 {
 	while (moar_ticks_p(ctx)) {
-		struct tfraw_tl_s tl[1] = {{0}};
+		struct tfraw_tl_s tl[1];
+		memset(tl, 0, sizeof(*tl));
 		if (read_line(ctx, tl)) {
 			write_tick(ctx, tl);
 		}

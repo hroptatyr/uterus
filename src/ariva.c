@@ -167,12 +167,6 @@ fetch_lines(mux_ctx_t ctx)
 	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
-static inline void
-unfetch_lines(mux_ctx_t UNUSED(ctx))
-{
-	return;
-}
-
 static inline bool
 moar_ticks_p(mux_ctx_t ctx)
 {
@@ -732,7 +726,6 @@ ariva_slab(mux_ctx_t ctx)
 	lno = 0;
 	while (fetch_lines(ctx)) {
 		read_lines(ctx);
-		unfetch_lines(ctx);
 	}
 	/* free prchunk resources */
 	free_prchunk(ctx->rdr);

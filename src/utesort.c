@@ -246,10 +246,10 @@ free_strat(strat_t str)
 	return;
 }
 
-static int
+static ssize_t
 min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 {
-	int res = -1;
+	ssize_t res = -1;
 	int32_t mins = INT_MAX;
 	uint16_t minms = SCOM_MSEC_VALI;
 	strat_node_t curnd = str->last;
@@ -261,7 +261,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 		scom_t sh;
 		int32_t s;
 		uint16_t ms;
-		int pg = curnd->pgs[i];
+		uint32_t pg = curnd->pgs[i];
 
 		if (sks[pg].idx >= sks[pg].mpsz) {
 			continue;
@@ -335,14 +335,14 @@ ute_sort(utectx_t ctx)
 	/* prepare the strategy, we use the last cell as iterator */
 	str->last = str->first;
 	/* ALL-way merge */
-	for (unsigned int j; (j = min_run(sks, npages, str)) >= 0; ) {
+	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
 		void *p = (void*)(sks[j].data + sks[j].idx);
 
 		/* add that bloke */
 		ute_add_tick(hdl, p);
 
 		/* step the j-th run */
-		step_run(sks, j, str);
+		step_run(sks, (size_t)j, str);
 	}
 
 	/* close the ute file */

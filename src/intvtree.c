@@ -63,7 +63,7 @@ struct __node_s {
 	__node_t left;
 	__node_t right;
 	__node_t parent;
-} __attribute__((packed));
+};
 
 struct itree_s {
 	struct __node_s root;

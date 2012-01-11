@@ -165,12 +165,6 @@ fetch_lines(mux_ctx_t ctx)
 	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
-static inline void
-unfetch_lines(mux_ctx_t UNUSED(ctx))
-{
-	return;
-}
-
 static inline bool
 moar_ticks_p(mux_ctx_t ctx)
 {
@@ -337,7 +331,7 @@ parse_tfraw_time(const char *buf)
 	return ts;
 }
 
-static inline bool
+static bool
 parse_prsz(tfraw_tl_t tgt, char *cursor)
 {
 	if (UNLIKELY(cursor[2] != '=')) {
@@ -375,7 +369,7 @@ parse_prsz(tfraw_tl_t tgt, char *cursor)
 	return true;
 }
 
-static inline int
+static int
 parse_aux(tfraw_tl_t tgt, char *cursor)
 {
 	/* check for f16 (vol), f21 (oi), f33 (est. vol) */
@@ -542,7 +536,8 @@ static void
 read_lines(mux_ctx_t ctx)
 {
 	while (moar_ticks_p(ctx)) {
-		struct tfraw_tl_s tl[1] = {{0}};
+		struct tfraw_tl_s tl[1];
+		memset(tl, 0, sizeof(*tl));
 		if (read_line(ctx, tl)) {
 			write_tick(ctx, tl);
 		}
@@ -567,7 +562,6 @@ tfraw_slab(mux_ctx_t ctx)
 	lno = 0;
 	while (fetch_lines(ctx)) {
 		read_lines(ctx);
-		unfetch_lines(ctx);
 	}
 	/* expobuf is the reader of our choice */
 	free_prchunk(ctx->rdr);

@@ -63,7 +63,7 @@ struct __node_s {
 	__node_t left;
 	__node_t right;
 	__node_t parent;
-} __attribute__((packed));
+};
 
 struct itree_s {
 	struct __node_s root;
@@ -79,7 +79,7 @@ static struct __node_s __nil = {
 	.right = &__nil,
 	.parent = &__nil,
 };
-static __node_t nil = &__nil;
+static const __node_t nil = &__nil;
 
 
 /* nodes, ctor */
@@ -121,12 +121,6 @@ static inline bool
 nil_node_p(__node_t in)
 {
 	return in == nil;
-}
-
-static inline __node_t
-nil_node(void)
-{
-	return nil;
 }
 
 static inline int64_t
@@ -303,7 +297,7 @@ itree_ins_help(itree_t it, __node_t z)
 {
 	__node_t x, y;
     
-	z->left = z->right = nil_node();
+	z->left = z->right = nil;
 	y = itree_root_node(it);
 	x = itree_left_root(it);
 	while (!nil_node_p(x)) {
@@ -408,7 +402,7 @@ __succ_of(itree_t it, __node_t x)
 			y = y->parent;
 		}
 		if (y == itree_root_node(it)) {
-			y = nil_node();
+			y = nil;
 			goto out;
 		}
 		goto out;
@@ -444,7 +438,7 @@ __pred_of(itree_t it, __node_t x)
 		y = x->parent;
 		while (x == y->left) { 
 			if (y == itree_root_node(it)) {
-				y = nil_node();
+				y = nil;
 				goto out;
 			}
 			x = y;
@@ -669,7 +663,7 @@ static inline __node_t
 stack_pop(it_ndstk_t stk)
 {
 	if (stk->idx == 0) {
-		return nil_node();
+		return nil;
 	}
 	return stk->stk[--stk->idx];
 }
@@ -678,7 +672,7 @@ static inline __attribute__((unused)) __node_t
 stack_top(it_ndstk_t stk)
 {
 	if (stk->idx == 0) {
-		return nil_node();
+		return nil;
 	}
 	return stk->stk[stk->idx - 1];
 }

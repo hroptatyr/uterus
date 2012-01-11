@@ -109,7 +109,7 @@ struct tzhead {
 
 /* now our view on things */
 typedef struct zif_s *zif_t;
-typedef const struct zih_s *zih_t;
+typedef struct zih_s *zih_t;
 typedef struct ztrdtl_s *ztrdtl_t;
 typedef const char *znam_t;
 
@@ -225,7 +225,7 @@ static inline int32_t
 zif_trans(zif_t z, int n)
 {
 /* no bound check! */
-	return zif_ntrans(z) > 0 ? bswap_32(z->trs[n]) : INT_MIN;
+	return zif_ntrans(z) > 0 ? (int32_t)bswap_32(z->trs[n]) : INT_MIN;
 }
 
 /**

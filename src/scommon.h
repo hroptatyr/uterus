@@ -73,10 +73,10 @@ struct scom_thdr_s {
 	/* millisecs is the standard these days */
 	uint16_t msec:10;
 	/* flags and shite */
-	uint16_t ttf:6 __attribute__((packed));
+	uint16_t ttf:6;
 	/* an index back into the symtbl */
-	uint16_t tblidx:16  __attribute__((packed));
-};
+	uint16_t tblidx:16;
+} __attribute__((packed));
 
 
 /* accessors */

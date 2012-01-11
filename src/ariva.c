@@ -167,12 +167,6 @@ fetch_lines(mux_ctx_t ctx)
 	return !(prchunk_fill(ctx->rdr) < 0);
 }
 
-static inline void
-unfetch_lines(mux_ctx_t UNUSED(ctx))
-{
-	return;
-}
-
 static inline bool
 moar_ticks_p(mux_ctx_t ctx)
 {
@@ -479,15 +473,16 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 {
 /* assumes tgt's si is set already */
 	switch (*p++) {
+		char *UNUSED(tmp);
 	case 'p':
-		tgt->p = ffff_m30_get_s((char**)&p);
+		tgt->p = ffff_m30_get_s(&tmp);
 		/* store in cache */
 		SYMTBL_TRA[atl_si(tgt)] = tgt->p;
 		/* also reset auction */
 		SYMTBL_AUCP[atl_si(tgt)] = false;
 		break;
 	case 'b':
-		tgt->b = ffff_m30_get_s((char**)&p);
+		tgt->b = ffff_m30_get_s(&tmp);
 		/* store in cache */
 		SYMTBL_BID[atl_si(tgt)] = tgt->b;
 		if (tgt->b.mant == 0) {
@@ -495,7 +490,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'a':
-		tgt->a = ffff_m30_get_s((char**)&p);
+		tgt->a = ffff_m30_get_s(&tmp);
 		/* store in cache */
 		SYMTBL_ASK[atl_si(tgt)] = tgt->a;
 		if (tgt->a.mant == 0) {
@@ -503,19 +498,19 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'k':
-		tgt->k = ffff_m30_get_s((char**)&p);
+		tgt->k = ffff_m30_get_s(&tmp);
 		/* once weve seen this, an auction is going on */
 		SYMTBL_AUCP[atl_si(tgt)] = true;
 		break;
 	case 'v':
 		/* unlike our `v' this is the vol-pri */
-		tgt->V = ffff_m62_get_s((char**)&p);
+		tgt->V = ffff_m62_get_s(&tmp);
 		break;
 	case 'P':
-		tgt->P = ffff_m30_23_get_s((char**)&p);
+		tgt->P = ffff_m30_23_get_s(&tmp);
 		break;
 	case 'B':
-		tgt->B = ffff_m30_23_get_s((char**)&p);
+		tgt->B = ffff_m30_23_get_s(&tmp);
 		/* store in cache */
 		SYMTBL_BSZ[atl_si(tgt)] = tgt->B;
 		if (tgt->B.mant == 0) {
@@ -523,7 +518,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'A':
-		tgt->A = ffff_m30_23_get_s((char**)&p);
+		tgt->A = ffff_m30_23_get_s(&tmp);
 		/* store in cache */
 		SYMTBL_ASZ[atl_si(tgt)] = tgt->A;
 		if (tgt->A.mant == 0) {
@@ -532,7 +527,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		break;
 	case 'V':
 		/* this is the volume */
-		tgt->v = ffff_m62_get_s((char**)&p);
+		tgt->v = ffff_m62_get_s(&tmp);
 		break;
 	case 'T':
 		tgt->stmp2 = parse_time(p);
@@ -703,7 +698,8 @@ static void
 read_lines(mux_ctx_t ctx)
 {
 	while (moar_ticks_p(ctx)) {
-		struct ariva_tl_s atl[1] = {{0}};
+		struct ariva_tl_s atl[1];
+		memset(atl, 0, sizeof(*atl));
 		if (read_line(ctx, atl)) {
 			write_tick(ctx, atl);
 		}
@@ -730,7 +726,6 @@ ariva_slab(mux_ctx_t ctx)
 	lno = 0;
 	while (fetch_lines(ctx)) {
 		read_lines(ctx);
-		unfetch_lines(ctx);
 	}
 	/* free prchunk resources */
 	free_prchunk(ctx->rdr);

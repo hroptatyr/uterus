@@ -91,7 +91,9 @@
 #include <limits.h>
 #include "intvtree.c"
 
-#define AS_INT(x)	((int)(long int)(void*)(x))
+#define AS_y(t, x)	((t)(long int)(void*)(x))
+#define AS_INT(x)	AS_y(int, x)
+#define AS_UINT32(x)	AS_y(uint32_t, x)
 
 typedef struct strat_node_s *strat_node_t;
 typedef struct strat_s *strat_t;
@@ -116,7 +118,7 @@ struct strat_s {
 static void
 __mrg(it_node_t itnd, void *clo)
 {
-	int pg = AS_INT(itnd->data);
+	uint32_t pg = AS_UINT32(itnd->data);
 	strat_node_t sn = clo;
 
 	if (sn->pg != pg) {
@@ -244,10 +246,10 @@ free_strat(strat_t str)
 	return;
 }
 
-static int
+static ssize_t
 min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 {
-	int res = -1;
+	ssize_t res = -1;
 	int32_t mins = INT_MAX;
 	uint16_t minms = SCOM_MSEC_VALI;
 	strat_node_t curnd = str->last;
@@ -259,7 +261,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 		scom_t sh;
 		int32_t s;
 		uint16_t ms;
-		int pg = curnd->pgs[i];
+		uint32_t pg = curnd->pgs[i];
 
 		if (sks[pg].idx >= sks[pg].mpsz) {
 			continue;
@@ -277,7 +279,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 }
 
 static void
-step_run(struct uteseek_s *sks, int run, strat_t str)
+step_run(struct uteseek_s *sks, unsigned int run, strat_t str)
 {
 /* advance the pointer in the RUN-th run and fetch new stuff if need be */
 	strat_node_t curnd = str->last;
@@ -308,7 +310,6 @@ ute_sort(utectx_t ctx)
 	size_t npages = ute_npages(ctx);
 	void *hdl;
 	strat_t str;
-	int j;
 
 	/* this is to obtain a merge strategy,
 	 * we have several outcomes:
@@ -334,14 +335,14 @@ ute_sort(utectx_t ctx)
 	/* prepare the strategy, we use the last cell as iterator */
 	str->last = str->first;
 	/* ALL-way merge */
-	while ((j = min_run(sks, npages, str)) >= 0) {
+	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
 		void *p = (void*)(sks[j].data + sks[j].idx);
 
 		/* add that bloke */
 		ute_add_tick(hdl, p);
 
 		/* step the j-th run */
-		step_run(sks, j, str);
+		step_run(sks, (size_t)j, str);
 	}
 
 	/* close the ute file */

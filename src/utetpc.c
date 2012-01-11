@@ -472,7 +472,7 @@ collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
 {
 	for (size_t i = 0; i < nticks; i++) {
 		sidx_t idx = scidx_idx(idxa[i]);
-		void *s = DATI(src, idx, tsz);
+		const void *s = DATCI(src, idx, tsz);
 		memcpy(tgt, s, tsz);
 		tgt = DATA(tgt, tsz);
 	}
@@ -487,8 +487,8 @@ merge_bup(
 	size_t tsz)
 {
 /* merge left source SRCL and right source SRCR into tgt. */
-	const void *elp = DATI(srcl, nticksl, tsz);
-	const void *erp = DATI(srcr, nticksr, tsz);
+	const void *elp = DATCI(srcl, nticksl, tsz);
+	const void *erp = DATCI(srcr, nticksr, tsz);
 
 	for (; srcl < elp && srcr < erp; tgt = DATA(tgt, tsz)) {
 		uint32_t secl = scom_thdr_sec(srcl);
@@ -500,12 +500,12 @@ merge_bup(
 			/* copy the left tick */
 			memcpy(tgt, srcl, tsz);
 			/* step things */
-			srcl = DATA(srcl, tsz);
+			srcl = DATCA(srcl, tsz);
 		} else {
 			/* use the right guy */
 			memcpy(tgt, srcr, tsz);
 			/* step him */
-			srcr = DATA(srcr, tsz);
+			srcr = DATCA(srcr, tsz);
 		}
 	}
 	if (srcl < elp) {

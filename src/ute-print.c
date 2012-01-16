@@ -109,6 +109,19 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
+	if (argi->format_given &&
+	    UNLIKELY((prf = find_printer(argi->format_arg)) == NULL)) {
+		/* we need a printer, so piss off here */
+		fputs("printer format unknown\n", stderr);
+		res = 1;
+		goto out;
+	} else if (!argi->format_given) {
+		/* we pick rudi's fave format for now but
+		 * this is gonna change soon, as soon as we come up with
+		 * the ute text representation, or maybe later */
+		prf = ibrti_pr;
+	}
+
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];
 		void *hdl;

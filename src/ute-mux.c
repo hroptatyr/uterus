@@ -46,9 +46,9 @@
 #endif	/* HAVE_CONFIG_H */
 #include <math.h>
 #include <string.h>
-#include "sumux.h"
 #include "sl1t.h"
 #include "utefile.h"
+#include "ute-mux.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)

@@ -18,7 +18,7 @@
 #include "date.h"
 #include "utefile.h"
 #include "sl1t.h"
-#include "sumux.h"
+#include "ute-mux.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"

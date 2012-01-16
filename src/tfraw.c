@@ -19,7 +19,7 @@
 #include "date.h"
 #include "sl1t.h"
 #include "utefile.h"
-#include "sumux.h"
+#include "ute-mux.h"
 
 #if defined USE_DEBUGGING_ASSERTIONS || 1
 # include <assert.h>

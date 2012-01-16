@@ -69,7 +69,7 @@ mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 	int pgsz = sysconf(_SC_PAGESIZE);
 	sidx_t ofp = off / pgsz, ofi = off % pgsz;
 	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * pgsz);
-	return p != MAP_FAILED ? p + ofi : MAP_FAILED;
+	return LIKELY(p != MAP_FAILED) ? p + ofi : NULL;
 }
 
 static void
@@ -325,8 +325,7 @@ flush_slut(utectx_t ctx)
 		goto out;
 	}
 	/* align to multiples of page size */
-	p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, stsz);
-	if (p == MAP_FAILED) {
+	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, stsz)) == NULL) {
 		goto out;
 	}
 	memcpy(p, stbl, stsz);
@@ -403,7 +402,7 @@ load_slut(utectx_t ctx)
 
 	/* otherwise leap to behind the last tick and
 	 * deserialise the look-up table */
-	if ((slut = mmap_slut(ctx)) != MAP_FAILED) {
+	if ((slut = mmap_slut(ctx)) != NULL) {
 		slut_deser(ctx->slut, slut, ctx->slut_sz);
 		munmap_slut(ctx, slut);
 	}

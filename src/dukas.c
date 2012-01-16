@@ -50,7 +50,7 @@
 #include "sl1t.h"
 #include "scdl.h"
 #include "utefile.h"
-#include "sumux.h"
+#include "ute-mux.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 

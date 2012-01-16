@@ -4,5 +4,6 @@ usage "ute print FILEs..."
 description "Print the contents of FILE in an rTickItems like fashion."
 
 option "format" f
-	"Use the specified parser, see below for a list"
-	string typestr="FORMAT"
+	"Use the specified parser, see below for a list.  \
+Default: ibrti"
+	string optional typestr="FORMAT"

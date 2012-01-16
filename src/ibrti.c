@@ -1,4 +1,40 @@
-/* ib rtickitems as defined by Rudi
+/*** ibrti.h -- ib rtick items as defined by Rudi
+ *
+ * Copyright (C) 2010 - 2012 Sebastian Freundt
+ *
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
+ *
+ * This file is part of sushi/uterus.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the author nor the names of any contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ ***/
+/* ib rtickitems as defined by Rudi:
  * SYMBOL \t TIMESTAMP \t MILLISECONDS \t SEQ \t PRICE \t SIZE \t TICKTYPE
  * The files are in chronological order. */
 
@@ -18,7 +54,9 @@
 #include "date.h"
 #include "sl1t.h"
 #include "utefile.h"
+/* for public mux and demux (print) apis */
 #include "ute-mux.h"
+#include "ute-print.h"
 
 #if defined USE_DEBUGGING_ASSERTIONS
 # include <assert.h>
@@ -536,6 +574,70 @@ ibrti_slab(mux_ctx_t ctx)
 		zif_free(z);
 	}
 	return;
+}
+
+ssize_t
+ibrti_pr(pr_ctx_t pctx, scom_t st)
+{
+	char tl[MAX_LINE_LEN];
+	const_sl1t_t t = (const void*)st;
+	uint32_t sec = sl1t_stmp_sec(t);
+	uint16_t msec = sl1t_stmp_msec(t);
+	uint16_t ttf = sl1t_ttf(t);
+	ssize_t res;
+	char *p;
+
+	/* equip or print context with buffers and whatnot */
+	pctx->buf = tl;
+	pctx->bsz = sizeof(tl);
+	if ((res = print_tick_sym(pctx, st)) >= 0) {
+		p = tl + res;
+		*p++ = '0';
+	} else {
+		return -1;
+	}
+	*p++ = '\t';
+	p += pr_ts(p, sec);
+	*p++ = '\t';
+	p += sprintf(p, "%03hu", msec);
+	*p++ = '\t';
+	/* sequence is always 0 */
+	*p++ = '0';
+	*p++ = '\t';
+	switch (ttf) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_ASK:
+	case SL1T_TTF_TRA:
+	case SL1T_TTF_FIX:
+	case SL1T_TTF_STL:
+	case SL1T_TTF_AUC:
+		/* price value */
+		p += ffff_m30_s(p, (m30_t)t->v[0]);
+		*p++ = '\t';
+		/* size value */
+		p += ffff_m30_s(p, (m30_t)t->v[1]);
+		break;
+	case SL1T_TTF_VOL:
+	case SL1T_TTF_VPR:
+	case SL1T_TTF_OI:
+		/* just one huge value, will there be a m62? */
+		p += ffff_m62_s(p, (m62_t)t->w[0]);
+		break;
+	case SL1T_TTF_UNK:
+	default:
+		break;
+	}
+	*p++ = '\t';
+	/* tick type */
+#pragma warning (disable:2259)
+	*p++ = ttf < 10 ? ttf + '0' : ttf - 10 + 'a';
+#pragma warning (default:2259)
+	*p++ = '\n';
+	*p = '\0';
+
+	/* and off we go */
+	write(pctx->outfd, tl, res = p - tl);
+	return res;
 }
 
 /* ibrti.c ends here */

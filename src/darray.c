@@ -489,7 +489,7 @@ da_has_children(darray_t d, trie_idx_t s)
 	trie_idx_t c, max_c;
 
 	base = da_get_base(d, s);
-	if (TRIE_INDEX_ERROR == base || base < 0) {
+	if (base == TRIE_INDEX_ERROR || base < 0) {
 		return false;
 	}
 	max_c = MIN_VAL(TRIE_CHAR_MAX, TRIE_INDEX_MAX - base);

@@ -35,16 +35,16 @@
 #endif	/* !DECLF */
 
 /* real API */
-DECLF int fm_read_int32(fmcmb_t filemem, int32_t *o_val);
-DECLF int fm_write_int32(fmcmb_t filemem, int32_t val);
+DECLF int fm_read_uint32(fmcmb_t filemem, uint32_t *o_val);
+DECLF int fm_write_uint32(fmcmb_t filemem, uint32_t val);
 
-DECLF int fm_read_int16(fmcmb_t filemem, int16_t *o_val);
-DECLF int fm_write_int16(fmcmb_t filemem, int16_t val);
+DECLF int fm_read_uint16(fmcmb_t filemem, uint16_t *o_val);
+DECLF int fm_write_uint16(fmcmb_t filemem, uint16_t val);
 
-DECLF int fm_read_int8(fmcmb_t filemem, int8_t *o_val);
-DECLF int fm_write_int8(fmcmb_t filemem, int8_t val);
+DECLF int fm_read_uint8(fmcmb_t filemem, uint8_t *o_val);
+DECLF int fm_write_uint8(fmcmb_t filemem, uint8_t val);
 
-DECLF int fm_read_chars(fmcmb_t filemem, char *buff, int len);
-DECLF int fm_write_chars(fmcmb_t filemem, const char *buff, int len);
+DECLF int fm_read_chars(fmcmb_t filemem, char *buff, size_t len);
+DECLF int fm_write_chars(fmcmb_t filemem, const char *buff, size_t len);
 
 #endif	/* INCLUDED_fileutils_h_ */

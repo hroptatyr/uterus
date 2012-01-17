@@ -218,14 +218,14 @@ darray_fmread(fmcmb_t stream)
 
 	/* check signature */
 	save_pos = fmtell(stream);
-	if (fm_read_int32(stream, &n) < 0 || DA_SIGNATURE != (uint32_t)n) {
+	if (fm_read_uint32(stream, (uint32_t*)&n) < 0 || DA_SIGNATURE != n) {
 		goto exit_file_read;
 	}
 	if ((d = malloc(sizeof(*d))) == NULL) {
 		goto exit_file_read;
 	}
 	/* read number of cells */
-	if (fm_read_int32(stream, &d->num_cells) < 0) {
+	if (fm_read_uint32(stream, (uint32_t*)&d->num_cells) < 0) {
 		goto exit_da_created;
 	}
 	if ((size_t)d->num_cells > (1 << 31) / sizeof(*d->cells)) {
@@ -237,8 +237,8 @@ darray_fmread(fmcmb_t stream)
 	d->cells[0].base = DA_SIGNATURE;
 	d->cells[0].check = d->num_cells;
 	for (n = 1; n < d->num_cells; n++) {
-		if (fm_read_int32(stream, &d->cells[n].base) < 0 ||
-		    fm_read_int32(stream, &d->cells[n].check) < 0) {
+		if (fm_read_uint32(stream, (uint32_t*)&d->cells[n].base) < 0 ||
+		    fm_read_uint32(stream, (uint32_t*)&d->cells[n].check) < 0) {
 			goto exit_da_cells_created;
 		}
 	}
@@ -287,8 +287,8 @@ darray_fmwrite(const_darray_t d, fmcmb_t stream)
 	trie_idx_t i;
 
 	for (i = 0; i < d->num_cells; i++) {
-		if (fm_write_int32(stream, d->cells[i].base) < 0 ||
-		    fm_write_int32(stream, d->cells[i].check) < 0) {
+		if (fm_write_uint32(stream, d->cells[i].base) < 0 ||
+		    fm_write_uint32(stream, d->cells[i].check) < 0) {
 			return -1;
 		}
 	}
@@ -489,7 +489,7 @@ da_has_children(darray_t d, trie_idx_t s)
 	trie_idx_t c, max_c;
 
 	base = da_get_base(d, s);
-	if (TRIE_INDEX_ERROR == base || base < 0) {
+	if (base == TRIE_INDEX_ERROR || base < 0) {
 		return false;
 	}
 	max_c = MIN_VAL(TRIE_CHAR_MAX, TRIE_INDEX_MAX - base);

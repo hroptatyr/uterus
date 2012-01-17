@@ -2,7 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
- * Copyright (C) 2010  Sebastian Freundt  <hroptatyr@unserding.org>
+ * Copyright (C) 2010 - 2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,8 @@
  * Created: 2006-08-14
  * Author:  Theppitak Karoonboonyanan <thep@linux.thai.net>
  */
-
-#ifndef __FILEUTILS_H
-#define __FILEUTILS_H
+#if !defined INCLUDED_fileutils_h_
+#define INCLUDED_fileutils_h_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -48,4 +47,4 @@ DECLF int fm_write_int8(fmcmb_t filemem, int8_t val);
 DECLF int fm_read_chars(fmcmb_t filemem, char *buff, int len);
 DECLF int fm_write_chars(fmcmb_t filemem, const char *buff, int len);
 
-#endif /* __FILEUTILS_H */
+#endif	/* INCLUDED_fileutils_h_ */

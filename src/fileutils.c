@@ -114,12 +114,13 @@ fmwrite(const void *data, size_t size, size_t count, fmcmb_t stream)
  *--------------------------------*/
 
 DEFUN int
-fm_read_uint32(fmcmb_t filemem, uint32_t *o_val)
+fm_read_uint32(fmcmb_t filemem, void *o_val)
 {
 	unsigned char buff[4];
+	uint32_t *tmp = o_val;
 
 	if (fmread(buff, sizeof(buff), 1, filemem) == 1) {
-		*o_val = (buff[0] << 24) | (buff[1] << 16) |
+		*tmp = (buff[0] << 24) | (buff[1] << 16) |
 			(buff[2] << 8) | buff[3];
 		return 0;
 	}
@@ -139,12 +140,13 @@ fm_write_uint32(fmcmb_t filemem, uint32_t val)
 }
 
 DEFUN int
-fm_read_uint16(fmcmb_t filemem, uint16_t *o_val)
+fm_read_uint16(fmcmb_t filemem, void *o_val)
 {
 	unsigned char buff[2];
+	uint16_t *tmp = o_val;
 
 	if (fmread(buff, sizeof(buff), 1, filemem) == 1) {
-		*o_val = (uint16_t)((buff[0] << 8) | buff[1]);
+		*tmp = (uint16_t)((buff[0] << 8) | buff[1]);
 		return 0;
 	}
 	return -1;
@@ -161,9 +163,9 @@ fm_write_uint16(fmcmb_t filemem, uint16_t val)
 }
 
 DEFUN int
-fm_read_uint8(fmcmb_t filemem, uint8_t *o_val)
+fm_read_uint8(fmcmb_t filemem, void *o_val)
 {
-	return fmread(o_val, sizeof(*o_val), 1, filemem) == 1 ? 0 : -1;
+	return fmread(o_val, sizeof(uint8_t), 1, filemem) == 1 ? 0 : -1;
 }
 
 DEFUN int
@@ -173,9 +175,9 @@ fm_write_uint8(fmcmb_t filemem, uint8_t val)
 }
 
 DEFUN int
-fm_read_chars(fmcmb_t filemem, char *buff, size_t len)
+fm_read_chars(fmcmb_t filemem, void *buff, size_t len)
 {
-	return fmread(buff, sizeof(*buff), len, filemem) == len ? 0 : -1;
+	return fmread(buff, sizeof(char), len, filemem) == len ? 0 : -1;
 }
 
 DEFUN int

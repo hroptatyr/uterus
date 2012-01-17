@@ -2,7 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
- * Copyright (C) 2010  Sebastian Freundt  <hroptatyr@unserding.org>
+ * Copyright (C) 2010 - 2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,8 @@
  * Created: 2006-08-14
  * Author:  Theppitak Karoonboonyanan <thep@linux.thai.net>
  */
-
-#ifndef __FILEUTILS_H
-#define __FILEUTILS_H
+#if !defined INCLUDED_fileutils_h_
+#define INCLUDED_fileutils_h_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -36,16 +35,16 @@
 #endif	/* !DECLF */
 
 /* real API */
-DECLF int fm_read_int32(fmcmb_t filemem, int32_t *o_val);
-DECLF int fm_write_int32(fmcmb_t filemem, int32_t val);
+DECLF int fm_read_uint32(fmcmb_t filemem, uint32_t *o_val);
+DECLF int fm_write_uint32(fmcmb_t filemem, uint32_t val);
 
-DECLF int fm_read_int16(fmcmb_t filemem, int16_t *o_val);
-DECLF int fm_write_int16(fmcmb_t filemem, int16_t val);
+DECLF int fm_read_uint16(fmcmb_t filemem, uint16_t *o_val);
+DECLF int fm_write_uint16(fmcmb_t filemem, uint16_t val);
 
-DECLF int fm_read_int8(fmcmb_t filemem, int8_t *o_val);
-DECLF int fm_write_int8(fmcmb_t filemem, int8_t val);
+DECLF int fm_read_uint8(fmcmb_t filemem, uint8_t *o_val);
+DECLF int fm_write_uint8(fmcmb_t filemem, uint8_t val);
 
-DECLF int fm_read_chars(fmcmb_t filemem, char *buff, int len);
-DECLF int fm_write_chars(fmcmb_t filemem, const char *buff, int len);
+DECLF int fm_read_chars(fmcmb_t filemem, char *buff, size_t len);
+DECLF int fm_write_chars(fmcmb_t filemem, const char *buff, size_t len);
 
-#endif /* __FILEUTILS_H */
+#endif	/* INCLUDED_fileutils_h_ */

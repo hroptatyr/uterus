@@ -2,7 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
- * Copyright (C) 2010  Sebastian Freundt  <hroptatyr@unserding.org>
+ * Copyright (C) 2010 - 2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -40,7 +40,7 @@ fm_realloc(fmcmb_t stream, size_t new_size)
 /* expand the buffer to at least NEW_SIZE bytes */
 	size_t offs = __mtell(stream);
 
-	/* this should be a callback to allow for user customised reallocators */
+	/* this should be a callback to allow for customised reallocators */
 	stream->mem = realloc(stream->mem, new_size);
 
 	if (offs < new_size) {
@@ -81,23 +81,28 @@ fmread(void *data, size_t size, size_t count, fmcmb_t stream)
 static ssize_t
 fmwrite(const void *data, size_t size, size_t count, fmcmb_t stream)
 {
+#define P	(4096)
+	ssize_t res;
+
 	if (stream->msz == 0) {
-		return fwrite(data, size, count, stream->f);
+		res = fwrite(data, size, count, stream->f);
 	} else {
 		size_t spc_left = fm_free_space(stream);
 		size_t rdb = size * count;
 
 		if (rdb > spc_left) {
 			/* realloc, we need at least (rdb - spc_left) bytes,
-			 * round to nearest multiple of 4096 */
-			size_t spc_needed = (rdb - spc_left) / 4096;
-			size_t new_size = 4096 + 4096 * spc_needed + stream->msz;
+			 * round to nearest multiple of P (4096) */
+			size_t spc_needed = (rdb - spc_left) / P;
+			size_t new_size = P + P * spc_needed + stream->msz;
 			fm_realloc(stream, new_size);
 		}
 		memcpy(stream->m, data, rdb);
 		stream->m += rdb;
-		return rdb / size;
+		res = rdb / size;
 	}
+	return res;
+#undef P
 }
 
 
@@ -128,7 +133,7 @@ fm_write_int32(fmcmb_t filemem, int32_t val)
 	buff[2] = (unsigned char)((val >> 8) & 0xff);
 	buff[3] = (unsigned char)(val & 0xff);
 
-	return (fmwrite (buff, 4, 1, filemem) == 1);
+	return (fmwrite(buff, 4, 1, filemem) == 1);
 }
 
 DEFUN int
@@ -151,31 +156,31 @@ fm_write_int16(fmcmb_t filemem, int16_t val)
 	buff[0] = (unsigned char)(val >> 8);
 	buff[1] = (unsigned char)(val & 0xff);
 
-	return (fmwrite (buff, 2, 1, filemem) == 1);
+	return (fmwrite(buff, 2, 1, filemem) == 1);
 }
 
 DEFUN int
 fm_read_int8(fmcmb_t filemem, int8_t *o_val)
 {
-	return (fmread(o_val, sizeof(int8_t), 1, filemem) == 1);
+	return (fmread(o_val, sizeof(*o_val), 1, filemem) == 1);
 }
 
 DEFUN int
 fm_write_int8(fmcmb_t filemem, int8_t val)
 {
-	return (fmwrite(&val, sizeof(int8_t), 1, filemem) == 1);
+	return (fmwrite(&val, sizeof(val), 1, filemem) == 1);
 }
 
 DEFUN int
 fm_read_chars(fmcmb_t filemem, char *buff, int len)
 {
-	return (fmread(buff, sizeof (char), len, filemem) == len);
+	return (fmread(buff, sizeof(*buff), len, filemem) == len);
 }
 
 DEFUN int
 fm_write_chars(fmcmb_t filemem, const char *buff, int len)
 {
-	return (fmwrite(buff, sizeof (char), len, filemem) == len);
+	return (fmwrite(buff, sizeof(*buff), len, filemem) == len);
 }
 
 /* fileutils.c ends here */

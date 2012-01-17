@@ -106,7 +106,7 @@ tail_fmread(fmcmb_t stream)
 	long int save_pos;
 	tail_t t;
 	trie_idx_t i;
-	int32_t sig;
+	uint32_t sig;
 
 	/* check signature */
 	save_pos = fmtell(stream);

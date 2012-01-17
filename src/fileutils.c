@@ -62,8 +62,10 @@ fm_free_space(fmcmb_t stream)
 static ssize_t
 fmread(void *data, size_t size, size_t count, fmcmb_t stream)
 {
+	ssize_t res;
+
 	if (stream->msz == 0) {
-		return fread(data, size, count, stream->f);
+		res = fread(data, size, count, stream->f);
 	} else {
 		size_t spc_left = fm_free_space(stream);
 		size_t rdb = size * count;
@@ -74,8 +76,9 @@ fmread(void *data, size_t size, size_t count, fmcmb_t stream)
 		}
 		memcpy(data, stream->m, rdb);
 		stream->m += rdb;
-		return rdb / size;
+		res = rdb / size;
 	}
+	return res;
 }
 
 static ssize_t

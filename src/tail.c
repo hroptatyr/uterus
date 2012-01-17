@@ -106,7 +106,7 @@ tail_fmread(fmcmb_t stream)
 	long int save_pos;
 	tail_t t;
 	trie_idx_t i;
-	int32_t sig;
+	uint32_t sig;
 
 	/* check signature */
 	save_pos = fmtell(stream);
@@ -116,8 +116,8 @@ tail_fmread(fmcmb_t stream)
 	if ((t = malloc(sizeof(*t))) == NULL) {
 		goto exit_file_read;
 	}
-	if (fm_read_uint32(stream, &t->first_free) < 0 ||
-	    fm_read_uint32(stream, &t->num_tails) < 0) {
+	if (fm_read_uint32(stream, (uint32_t*)&t->first_free) < 0 ||
+	    fm_read_uint32(stream, (uint32_t*)&t->num_tails) < 0) {
 		goto exit_tail_created;
 	}
 	if ((size_t)t->num_tails > (1 << 31) / sizeof(*t->tails)) {
@@ -129,9 +129,10 @@ tail_fmread(fmcmb_t stream)
 	for (i = 0; i < t->num_tails; i++) {
 		int16_t length;
 
-		if (fm_read_uint32(stream, &t->tails[i].next_free) < 0 ||
-		    fm_read_uint32(stream, &t->tails[i].data) < 0 ||
-		    fm_read_uint16(stream, &length) < 0) {
+		if (fm_read_uint32(
+			    stream, (uint32_t*)&t->tails[i].next_free) < 0 ||
+		    fm_read_uint32(stream, (uint32_t*)&t->tails[i].data) < 0 ||
+		    fm_read_uint16(stream, (uint16_t*)&length) < 0) {
 			goto exit_in_loop;
 		}
 

@@ -10,7 +10,7 @@ TESTS =
 
 TEST_EXTENSIONS = .ut
 UT_LOG_COMPILER = $(srcdir)/ut-test.sh
-AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src --hash sha1sum
+AM_UT_LOG_FLAGS = --hash sha1sum
 LOG_COMPILER = echo
 
 TESTS += mux.1.ut

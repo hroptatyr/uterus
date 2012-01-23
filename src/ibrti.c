@@ -590,11 +590,11 @@ ibrti_pr(pr_ctx_t pctx, scom_t st)
 	/* equip or print context with buffers and whatnot */
 	pctx->buf = tl;
 	pctx->bsz = sizeof(tl);
-	if ((res = print_tick_sym(pctx, st)) >= 0) {
+	if ((res = print_tick_sym(pctx, st)) > 0) {
 		p = tl + res;
-		*p++ = '0';
 	} else {
-		return -1;
+		/* great, no symbol entry, what are we gonna do? */
+		*p++ = '0';
 	}
 	*p++ = '\t';
 	p += pr_ts(p, sec);

@@ -188,9 +188,9 @@ outfile (${OUTFILE}) hashes do not match:
 SHOULD BE: ${OUTFILE_SHA1}
 ACTUAL:    ${sum}
 EOF
-				fail=1
+				exit 1
 			fi
-		done
+		done || fail=1
 	fi
 fi
 

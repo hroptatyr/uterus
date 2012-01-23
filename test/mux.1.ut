@@ -1,0 +1,15 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.a.dukasq"
+OUTFILE="${builddir}/testload.ute"
+CMDLINE="mux -f dukasq '${INFILE}' -o '${OUTFILE}'"
+
+## STDIN
+ 
+## STDOUT
+
+## outfile sum
+OUTFILE_SHA1="da5e63df2dbdda8330464d9cfd67560d0e1a6b59"
+
+## mux.1.ut ends here

@@ -2,7 +2,7 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.a.dukasq"
-OUTFILE="${builddir}/testload.ute"
+OUTFILE="testload.ute"
 CMDLINE="mux --name 'TESJPY' -f dukasq '${INFILE}' -o '${OUTFILE}'"
 
 ## STDIN

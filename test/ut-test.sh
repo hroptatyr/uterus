@@ -83,6 +83,7 @@ myexit()
 	rm_if_not_src "${stdin}" "${srcdir}"
 	rm_if_not_src "${stdout}" "${srcdir}"
 	rm_if_not_src "${stderr}" "${srcdir}"
+	rm_if_not_src "${OUTFILE}"
 	rm -f -- "${tool_stdout}" "${tool_stderr}"
 	exit ${1:-1}
 }
@@ -174,6 +175,23 @@ elif test -s "${tool_stderr}"; then
 	echo "test stderr was:"
 	cat "${tool_stderr}" >&2
 	echo
+fi
+
+## check if we need to hash stuff
+if test -r "${OUTFILE}"; then
+	if test -n "${OUTFILE_SHA1}"; then
+		sha1sum "${OUTFILE}" |
+		while read sum rest; do
+			if test "${sum}" != "${OUTFILE_SHA1}"; then
+				cat <<EOF >&2
+outfile (${OUTFILE}) hashes do not match:
+SHOULD BE: ${OUTFILE_SHA1}
+ACTUAL:    ${sum}
+EOF
+				exit 1
+			fi
+		done || fail=1
+	fi
 fi
 
 myexit ${fail}

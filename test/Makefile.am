@@ -13,4 +13,7 @@ UT_LOG_COMPILER = $(srcdir)/ut-test.sh
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src --hash sha1sum
 LOG_COMPILER = echo
 
+TESTS += mux.1.ut
+TESTS += mux.2.ut
+
 ## Makefile.am ends here

@@ -594,6 +594,7 @@ ibrti_pr(pr_ctx_t pctx, scom_t st)
 		p = tl + res;
 	} else {
 		/* great, no symbol entry, what are we gonna do? */
+		p = tl;
 		*p++ = '0';
 	}
 	*p++ = '\t';

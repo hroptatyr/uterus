@@ -15,5 +15,11 @@ LOG_COMPILER = echo
 
 TESTS += mux.1.ut
 TESTS += mux.2.ut
+EXTRA_DIST += mux.a.dukasq
+
+TESTS += print.1.ut
+TESTS += print.2.ut
+EXTRA_DIST += print.a.ute
+EXTRA_DIST += print.b.ute
 
 ## Makefile.am ends here

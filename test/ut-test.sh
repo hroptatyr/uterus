@@ -53,10 +53,24 @@ done
 ## now in ${1} should be the test file
 testfile="${1}"
 
+## some helper funs
+xrealpath()
+{
+	readlink -f "${1}" 2>/dev/null || \
+		realpath "${1}" 2>/dev/null
+}
+
 ## setup
 fail=0
 tool_stdout=$(mktemp "/tmp/tmp.XXXXXXXXXX")
 tool_stderr=$(mktemp "/tmp/tmp.XXXXXXXXXX")
+
+## also set srcdir in case the testfile needs it
+if test -z "${srcdir}"; then
+	srcdir=$(xrealpath $(dirname "${0}"))
+else
+	srcdir=$(xrealpath "${srcdir}")
+fi
 
 ## source the check
 . "${testfile}" || fail=1
@@ -86,12 +100,6 @@ myexit()
 	rm_if_not_src "${OUTFILE}"
 	rm -f -- "${tool_stdout}" "${tool_stderr}"
 	exit ${1:-1}
-}
-
-xrealpath()
-{
-	readlink -f "${1}" 2>/dev/null || \
-		realpath "${1}" 2>/dev/null
 }
 
 find_file()
@@ -139,11 +147,6 @@ fi
 ## set finals
 if test -x "${builddir}/${TOOL}"; then
 	TOOL=$(xrealpath "${builddir}/${TOOL}")
-fi
-if test -z "${srcdir}"; then
-	srcdir=$(xrealpath $(dirname "${0}"))
-else
-	srcdir=$(xrealpath "${srcdir}")
 fi
 
 stdin=$(find_file "${stdin}")

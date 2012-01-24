@@ -121,6 +121,8 @@ main(int argc, char *argv[])
 		 * the ute text representation, or maybe later */
 		prf = ibrti_pr;
 	}
+	/* normally we'd check for -o|--output */
+	ctx->outfd = STDOUT_FILENO;
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];

@@ -15,5 +15,7 @@ LOG_COMPILER = echo
 
 TESTS += mux.1.ut
 TESTS += mux.2.ut
+TESTS += print.1.ut
+TESTS += print.2.ut
 
 ## Makefile.am ends here

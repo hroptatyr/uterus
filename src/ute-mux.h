@@ -25,6 +25,9 @@ struct sumux_opt_s {
 	const char *sname;
 	void(*muxf)(mux_ctx_t);
 	const char *zone;
+	/** offset for timestamps relative to something other than epoch */
+	int32_t tsoff;
+	uint16_t tt;
 };
 
 extern void ariva_slab(mux_ctx_t);

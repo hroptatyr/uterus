@@ -89,7 +89,25 @@ struct dcc_s {
 	float64_t v;
 };
 
+struct dqbi5_s {
+	uint32_t ts;
+	uint32_t ap;
+	uint32_t bp;
+	uint32_t aq;
+	uint32_t bq;
+};
+
+struct dcbi5_s {
+	uint32_t ts;
+	uint32_t o;
+	uint32_t c;
+	uint32_t l;
+	uint32_t h;
+	uint32_t v;
+};
+
 
+/* little helpers */
 static inline int64_t
 ntohll(int64_t in)
 {
@@ -98,6 +116,24 @@ ntohll(int64_t in)
 	return (upper << 32) | lower;
 }
 
+static m30_t
+__m30_get_dukas(uint32_t val)
+{
+/* turns 131555 into 1.31555000 */
+	/* built-in knowledge */
+	m30_t res;
+
+	if (val < 1000000) {
+		res.mant = val * 1000;
+		res.expo = 0;
+	} else {
+		res.mant = val;
+		res.expo = 2;
+	}
+	return res;
+}
+
+
 static struct sl1t_s t[2];
 static struct scdl_s c[1];
 
@@ -112,6 +148,20 @@ rd1(int f, struct dc_s *b)
 	b->bp.i = ntohll(b->bp.i);
 	b->aq.i = ntohll(b->aq.i);
 	b->bq.i = ntohll(b->bq.i);
+	return true;
+}
+
+static bool
+rd1bi5(int f, struct dqbi5_s *b)
+{
+	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
+		return false;
+	}
+	b->ts = ntohl(b->ts);
+	b->ap = ntohl(b->ap);
+	b->bp = ntohl(b->bp);
+	b->aq = ntohl(b->aq);
+	b->bq = ntohl(b->bq);
 	return true;
 }
 
@@ -146,6 +196,28 @@ write_tick(mux_ctx_t ctx, struct dc_s *tl)
 	sl1t_set_stmp_msec(t + 1, ms);
 	t[1].ask = ffff_m30_get_d(tl->ap.d).v;
 	t[1].asz = ffff_m30_get_d(tl->aq.d).v;
+
+	ute_add_tick(ctx->wrr, AS_SCOM(t));
+	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	return;
+}
+
+static void
+write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
+{
+/* create one or more sparse ticks, sl1t_t objects */
+	unsigned int ts = tl->ts / 1000;
+	unsigned int ms = tl->ts % 1000;
+
+	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
+	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
+	t[0].bid = __m30_get_dukas(tl->bp).v;
+	t[0].bsz = __m30_get_dukas(tl->bq).v;
+
+	sl1t_set_stmp_sec(t + 1, ts);
+	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
+	t[1].ask = __m30_get_dukas(tl->ap).v;
+	t[1].asz = __m30_get_dukas(tl->aq).v;
 
 	ute_add_tick(ctx->wrr, AS_SCOM(t));
 	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
@@ -195,6 +267,7 @@ prepare(mux_ctx_t ctx)
 }
 
 static void
+__attribute__((unused))
 proc_l1(mux_ctx_t ctx)
 {
 	struct dc_s buf;
@@ -210,6 +283,25 @@ proc_l1(mux_ctx_t ctx)
 	do {
 		write_tick(ctx, &buf);
 	} while (rd1(ctx->infd, &buf));
+	return;
+}
+
+static void
+proc_l1bi5(mux_ctx_t ctx)
+{
+	struct dqbi5_s buf;
+
+	/* rinse, rinse, rinse */
+	memset(&buf, 0, sizeof(buf));
+	/* unroll the first element, so we dont have to write the
+	 * time range table info like fucktards */
+	if (!rd1bi5(ctx->infd, &buf)) {
+		return;
+	}
+	/* main loop */
+	do {
+		write_tick_bi5(ctx, &buf);
+	} while (rd1bi5(ctx->infd, &buf));
 	return;
 }
 
@@ -232,35 +324,21 @@ proc_cd(mux_ctx_t ctx)
 	return;
 }
 
+/* new all in one dukas slabber */
 void
-dukasq_slab(mux_ctx_t ctx)
+dukas_slab(mux_ctx_t ctx)
 {
-	/* prepare ourselves */
 	prepare(ctx);
-
-	proc_l1(ctx);
-	return;
-}
-
-void
-dukasa_slab(mux_ctx_t ctx)
-{
-	/* prepare ourselves */
-	prepare(ctx);
-
-	scdl_set_ttf(c, SL1T_TTF_ASK);
-	proc_cd(ctx);
-	return;
-}
-
-void
-dukasb_slab(mux_ctx_t ctx)
-{
-	/* prepare ourselves */
-	prepare(ctx);
-
-	scdl_set_ttf(c, SL1T_TTF_BID);
-	proc_cd(ctx);
+	switch (ctx->opts->tt) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_ASK:
+		scdl_set_ttf(c, ctx->opts->tt);
+		proc_cd(ctx);
+		break;
+	default:
+		proc_l1bi5(ctx);
+		break;
+	}
 	return;
 }
 

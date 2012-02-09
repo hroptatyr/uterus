@@ -32,9 +32,7 @@ struct sumux_opt_s {
 
 extern void ariva_slab(mux_ctx_t);
 extern void ibrti_slab(mux_ctx_t);
-extern void dukasq_slab(mux_ctx_t);
-extern void dukasa_slab(mux_ctx_t);
-extern void dukasb_slab(mux_ctx_t);
+extern void dukas_slab(mux_ctx_t);
 extern void gesmes_slab(mux_ctx_t);
 extern void tfraw_slab(mux_ctx_t);
 extern void sl1t_mux(mux_ctx_t);

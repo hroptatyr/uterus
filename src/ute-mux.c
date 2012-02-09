@@ -77,9 +77,7 @@ static struct muxer_s supported_muxers[] = {
 #endif
 	{.opt = "ariva", .muxf = ariva_slab},
 	{.opt = "ibrti", .muxf = ibrti_slab},
-	{.opt = "dukasq", .muxf = dukasq_slab},
-	{.opt = "dukasa", .muxf = dukasa_slab},
-	{.opt = "dukasb", .muxf = dukasb_slab},
+	{.opt = "dukas", .muxf = dukas_slab},
 #if 0
 	{.opt = "gesmes", .muxf = gesmes_slab},
 #endif

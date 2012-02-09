@@ -214,7 +214,7 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	t[0].bid = __m30_get_dukas(tl->bp).v;
 	t[0].bsz = __m30_get_dukas(tl->bq).v;
 
-	sl1t_set_stmp_sec(t + 1, ts);
+	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
 	t[1].ask = __m30_get_dukas(tl->ap).v;
 	t[1].asz = __m30_get_dukas(tl->aq).v;

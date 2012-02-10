@@ -282,7 +282,7 @@ write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl)
 	unsigned int ts = tl->ts / 1000;
 	unsigned int ms = tl->ts % 1000;
 
-	scdl_set_stmp_sec(c + 0, ts);
+	scdl_set_stmp_sec(c + 0, ts + ctx->opts->tsoff);
 	scdl_set_stmp_msec(c + 0, (uint16_t)ms);
 
 	c[0].h = __m30_get_dukas(tl->h * ctx->opts->mul / ctx->opts->mag).v;

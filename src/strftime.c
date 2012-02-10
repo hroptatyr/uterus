@@ -154,7 +154,7 @@ sprint_second(char *restrict buf, const struct tm *restrict tm)
 }
 
 void
-ffff_strftime(char *restrict b, size_t UNUSED(l), const struct tm *restrict tm)
+ffff_strftime(char *restrict b, size_t UNUSED(l), const struct tm *tm, char sep)
 {
 	sprint_year(&b[0], tm);
 	b[4] = '-';
@@ -162,7 +162,7 @@ ffff_strftime(char *restrict b, size_t UNUSED(l), const struct tm *restrict tm)
 	b[7] = '-';
 	sprint_day(&b[8], tm);
 
-	b[10] = ' ';
+	b[10] = sep;
 	sprint_hour(&b[11], tm);
 	b[13] = ':';
 	sprint_minute(&b[14], tm);

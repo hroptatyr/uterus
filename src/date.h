@@ -78,7 +78,7 @@ ffff_strptime_HMS(const char *buf, struct tm *restrict tm);
  * Like strftime() but sans the format specs argument and only for ISO
  * dates YYYY-MM-DD HH:MM:SS */
 extern void
-ffff_strftime(char *restrict buf, size_t len, const struct tm *restrict tm);
+ffff_strftime(char *restrict buf, size_t len, const struct tm *tm, char sep);
 
 /**
  * Like timegm() but without all the fuss. */

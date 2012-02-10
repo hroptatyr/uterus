@@ -67,21 +67,21 @@ struct pr_ctx_s {
 
 /* some useful fun */
 static inline size_t
-pr_ts(char *restrict buf, uint32_t sec)
+pr_ts(char *restrict buf, uint32_t sec, char sep)
 {
 	struct tm tm;
 	ffff_gmtime(&tm, sec);
-	ffff_strftime(buf, 32, &tm);
+	ffff_strftime(buf, 32, &tm, sep);
 	return 19;
 }
 
 static inline size_t
-pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z)
+pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 {
 	struct tm tm;
 	int h, m, off;
 	ffff_localtime(&tm, sec, z);
-	ffff_strftime(buf, 32, &tm);
+	ffff_strftime(buf, 32, &tm, sep);
 	buf[19] = '.';
 	buf[20] = (char)(((msec / 100) % 10) + '0');
 	buf[21] = (char)(((msec / 10) % 10) + '0');

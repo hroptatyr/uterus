@@ -185,6 +185,21 @@ rd1c(int f, struct dcc_s *b)
 	return true;
 }
 
+static bool
+rd1cbi5(int f, struct dcbi5_s *b)
+{
+	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
+		return false;
+	}
+	b->ts = ntohl(b->ts);
+	b->o = ntohl(b->o);
+	b->c = ntohl(b->c);
+	b->l = ntohl(b->l);
+	b->h = ntohl(b->h);
+	b->v.i = ntohl(b->v.i);
+	return true;
+}
+
 static void
 write_tick(mux_ctx_t ctx, struct dc_s *tl)
 {
@@ -236,18 +251,39 @@ write_cdl(mux_ctx_t ctx, struct dcc_s *tl)
 	uint32_t ts = tl->ts / 1000;
 	uint16_t ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec((void*)c, ts);
-	sl1t_set_stmp_msec((void*)c, ms);
+	scdl_set_stmp_sec(c + 0, ts);
+	scdl_set_stmp_msec(c + 0, ms);
 
 	c[0].h = ffff_m30_get_d(tl->h.d).v;
 	c[0].l = ffff_m30_get_d(tl->l.d).v;
 	c[0].o = ffff_m30_get_d(tl->o.d).v;
 	c[0].c = ffff_m30_get_d(tl->c.d).v;
-	c[0].sta_ts = ts - 9;
+	c[0].sta_ts = ts - 9/*seconds*/;
 	c[0].cnt = ffff_m30_get_d(tl->v.d).v;
 	/* and shove it */
 	ute_add_tick(ctx->wrr, AS_SCOM(c));
-	ute_add_tick(ctx->wrr, AS_SCOM(c + 1));
+	return;
+}
+
+static void
+write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl)
+{
+/* create one or more candles, sl1t_t objects */
+	unsigned int ts = tl->ts / 1000;
+	unsigned int ms = tl->ts % 1000;
+
+	scdl_set_stmp_sec(c + 0, ts);
+	scdl_set_stmp_msec(c + 0, (uint16_t)ms);
+
+	c[0].h = __m30_get_dukas(tl->h).v;
+	c[0].l = __m30_get_dukas(tl->l).v;
+	c[0].o = __m30_get_dukas(tl->o).v;
+	c[0].c = __m30_get_dukas(tl->c).v;
+	/* this is wrong for minutes */
+	c[0].sta_ts = ts - 9/*seconds*/;
+	c[0].cnt = ffff_m30_get_f(tl->v.d).v;
+	/* and shove it */
+	ute_add_tick(ctx->wrr, AS_SCOM(c));
 	return;
 }
 
@@ -311,6 +347,7 @@ proc_l1bi5(mux_ctx_t ctx)
 }
 
 static void
+__attribute__((unused))
 proc_cd(mux_ctx_t ctx)
 {
 	struct dcc_s buf;
@@ -329,6 +366,25 @@ proc_cd(mux_ctx_t ctx)
 	return;
 }
 
+static void
+proc_cdbi5(mux_ctx_t ctx)
+{
+	struct dcbi5_s buf;
+
+	/* rinse */
+	memset(&buf, 0, sizeof(buf));
+	/* unroll the first element, so we dont have to write the
+	 * time range table info like fucktards */
+	if (!rd1cbi5(ctx->infd, &buf)) {
+		return;
+	}
+	/* main loop */
+	do {
+		write_cdl_bi5(ctx, &buf);
+	} while (rd1cbi5(ctx->infd, &buf));
+	return;
+}
+
 /* new all in one dukas slabber */
 void
 dukas_slab(mux_ctx_t ctx)
@@ -338,7 +394,7 @@ dukas_slab(mux_ctx_t ctx)
 	case SL1T_TTF_BID:
 	case SL1T_TTF_ASK:
 		scdl_set_ttf(c, ctx->opts->tt);
-		proc_cd(ctx);
+		proc_cdbi5(ctx);
 		break;
 	default:
 		proc_l1bi5(ctx);

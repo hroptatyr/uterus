@@ -67,46 +67,47 @@ struct pr_ctx_s {
 
 /* some useful fun */
 static inline size_t
-pr_ts(char *restrict buf, uint32_t sec)
+pr_ts(char *restrict buf, uint32_t sec, char sep)
 {
 	struct tm tm;
 	ffff_gmtime(&tm, sec);
-	ffff_strftime(buf, 32, &tm);
+	ffff_strftime(buf, 32, &tm, sep);
 	return 19;
 }
 
 static inline size_t
-pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z)
+pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 {
 	struct tm tm;
 	int h, m, off;
 	ffff_localtime(&tm, sec, z);
-	ffff_strftime(buf, 32, &tm);
+	ffff_strftime(buf, 32, &tm, sep);
 	buf[19] = '.';
 	buf[20] = (char)(((msec / 100) % 10) + '0');
 	buf[21] = (char)(((msec / 10) % 10) + '0');
 	buf[22] = (char)(((msec / 1) % 10) + '0');
-	buf[23] = ' ';
 	/* compute offset as HHMM */
 	if ((off = tm.tm_gmtoff) == 0) {;
-		buf[24] = '+';
+		buf[23] = '+';
+		buf[24] = '0';
 		buf[25] = '0';
-		buf[26] = '0';
+		buf[26] = ':';
 		buf[27] = '0';
 		buf[28] = '0';
 		goto done;
 	} else if (off > 0) {
 		h = off / 3600;
 		m = (off % 3600) / 60;
-		buf[24] = '+';
+		buf[23] = '+';
 	} else /* (off < 0) */ {
 		off = -off;
 		h = off / 3600;
 		m = (off % 3600) / 60;
-		buf[24] = '-';
+		buf[23] = '-';
 	}
-	buf[25] = (char)(((h / 10) % 10) + '0');
-	buf[26] = (char)(((h / 1) % 10) + '0');
+	buf[24] = (char)(((h / 10) % 10) + '0');
+	buf[25] = (char)(((h / 1) % 10) + '0');
+	buf[26] = ':';
 	buf[27] = (char)(((m / 10) % 10) + '0');
 	buf[28] = (char)(((m / 1) % 10) + '0');
 done:
@@ -138,6 +139,9 @@ print_tick_sym(pr_ctx_t pctx, scom_t st)
 	return res;
 }
 
+
+/* public printers */
 extern ssize_t ibrti_pr(pr_ctx_t, scom_t);
+extern ssize_t uta_pr(pr_ctx_t, scom_t);
 
 #endif	/* INCLUDED_ute_print_h_ */

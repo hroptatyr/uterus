@@ -179,7 +179,7 @@ sprint_tstz(char *restrict buf, size_t len, time_t ts)
 {
 	struct tm brktime;
 	ffff_gmtime(&brktime, ts);
-	ffff_strftime(buf, len, &brktime);
+	ffff_strftime(buf, len, &brktime, ' ');
 	return 19;
 }
 

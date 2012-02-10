@@ -378,41 +378,67 @@ old_fmt:
 }
 
 static void
-__attribute__((unused))
-proc_cd(mux_ctx_t ctx)
-{
-	struct dcc_s buf;
-
-	/* rinse */
-	memset(&buf, 0, sizeof(buf));
-	/* unroll the first element, so we dont have to write the
-	 * time range table info like fucktards */
-	if (!rd1c(ctx->infd, &buf)) {
-		return;
-	}
-	/* main loop */
-	do {
-		write_cdl(ctx, &buf);
-	} while (rd1c(ctx->infd, &buf));
-	return;
-}
-
-static void
 proc_cdbi5(mux_ctx_t ctx)
 {
-	struct dcbi5_s buf;
+	union {
+		struct dcc_s bin[1];
+		struct dcbi5_s bi5[2];
+	} buf[1];
 
 	/* rinse */
 	memset(&buf, 0, sizeof(buf));
-	/* unroll the first element, so we dont have to write the
-	 * time range table info like fucktards */
-	if (!rd1cbi5(ctx->infd, &buf)) {
+
+	/* read a probe */
+	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
 		return;
 	}
+
+	/* again we can only make assumptions about the timestamps
+	 * check the two stamps in bi5 and compare their distance */
+	{
+		uint32_t ts0 = ntohl(buf->bi5[0].ts);
+		uint32_t ts1 = ntohl(buf->bi5[1].ts);
+
+		if (ts1 - ts0 > 60/*min*/ * 60/*sec*/ * 1000/*msec*/) {
+			/* definitely old_fmt */
+			goto old_fmt;
+		}
+
+		/* quickly polish the probe */
+		buf->bi5[0].ts = ts0;
+		buf->bi5[0].o = ntohl(buf->bi5[0].o);
+		buf->bi5[0].c = ntohl(buf->bi5[0].c);
+		buf->bi5[0].l = ntohl(buf->bi5[0].l);
+		buf->bi5[0].h = ntohl(buf->bi5[0].h);
+		buf->bi5[0].v.i = ntohl(buf->bi5[0].v.i);
+
+		buf->bi5[1].ts = ts1;
+		buf->bi5[1].o = ntohl(buf->bi5[1].o);
+		buf->bi5[1].c = ntohl(buf->bi5[1].c);
+		buf->bi5[1].l = ntohl(buf->bi5[1].l);
+		buf->bi5[1].h = ntohl(buf->bi5[1].h);
+		buf->bi5[1].v.i = ntohl(buf->bi5[1].v.i);
+	}
+	/* re-use the probe data */
+	write_cdl_bi5(ctx, buf->bi5 + 0);
 	/* main loop */
 	do {
-		write_cdl_bi5(ctx, &buf);
-	} while (rd1cbi5(ctx->infd, &buf));
+		write_cdl_bi5(ctx, buf->bi5 + 1);
+	} while (rd1cbi5(ctx->infd, buf->bi5 + 1));
+	return;
+
+old_fmt:
+	/* polish the probe */
+	buf->bin->ts = ntohll(buf->bin->ts);
+	buf->bin->o.i = ntohll(buf->bin->o.i);
+	buf->bin->c.i = ntohll(buf->bin->c.i);
+	buf->bin->l.i = ntohll(buf->bin->l.i);
+	buf->bin->h.i = ntohll(buf->bin->h.i);
+	buf->bin->v.i = ntohll(buf->bin->v.i);
+	/* main loop */
+	do {
+		write_cdl(ctx, buf->bin);
+	} while (rd1c(ctx->infd, buf->bin));
 	return;
 }
 

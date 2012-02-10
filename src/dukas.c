@@ -374,6 +374,7 @@ old_fmt:
 	do {
 		write_tick(ctx, buf->bin);
 	} while (rd1(ctx->infd, buf->bin));
+	return;
 }
 
 static void

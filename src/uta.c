@@ -143,9 +143,7 @@ uta_pr(pr_ctx_t pctx, scom_t st)
 	p += pr_tsmstz(p, sec, msec, NULL, 'T');
 	*p++ = '\t';
 	/* tick type */
-#pragma warning (disable:2259)
-	*p++ = ttf < 10 ? ttf + '0' : ttf - 10 + 'a';
-#pragma warning (default:2259)
+	p += sprintf(p, "%x", ttf);
 	*p++ = '\t';
 	/* index into the sym table */
 	p += sprintf(p, "%x", sl1t_tblidx(t));

@@ -147,7 +147,9 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 /* oi, open interest tick, the number of all open long contracts */
 #define SL1T_TTF_OI	12
 
+/* flag that denotes double tick size, used for candles et al. */
 #define SCOM_FLAG_LM	16
+/* flag that denotes quadruple tick size(?) used for level2 ticks */
 #define SCOM_FLAG_L2M	32
 
 static inline __attribute__((pure)) uint16_t

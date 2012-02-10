@@ -1,0 +1,15 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.c.dukas.bi5"
+OUTFILE="testload.ute"
+CMDLINE="mux --refdate 1328605200 -f dukas '${INFILE}' -o '${OUTFILE}'"
+
+## STDIN
+ 
+## STDOUT
+
+## outfile sum
+OUTFILE_SHA1=""
+
+## mux.3.ut ends here

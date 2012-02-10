@@ -22,3 +22,19 @@ option "badfile" -
 option "zone" z
 	"Treat date/time strings as in time zone NAME (default UTC)"
 	string typestr="NAME" optional
+
+option "refdate" -
+	"Use STAMP as reference point for time values instead of epoch"
+	int typestr="STAMP" optional
+
+option "flavour" -
+	"Data flavour (bid, ask, trade) for flavour-agnostic formats"
+	enum typestr="F" optional values="b","a","t"
+
+option "multiplier" -
+	"Multiply price values by INT, for fractions also use --magnifier"
+	int optional
+
+option "magnifier" -
+	"Price values are multiplied by INT"
+	int optional

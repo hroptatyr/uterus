@@ -135,7 +135,12 @@ tpc_add_tick(utetpc_t tpc, scom_t t)
 		return;
 	}
 	memcpy(tpc->tp + tpc->tidx, t, tpc->tsz);
-	tpc->tidx += tpc->tsz;
+	if (LIKELY(!(t->ttf & SCOM_FLAG_LM))) {
+		tpc->tidx += tpc->tsz;
+	} else {
+		/* and twice the size for a scdl or ssnap tick */
+		tpc->tidx += tpc->tsz * 2;
+	}
 	if (UNLIKELY(skey < tpc->last)) {
 		set_tpc_unsorted(tpc);
 	}

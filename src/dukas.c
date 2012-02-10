@@ -72,6 +72,11 @@ typedef union {
 	int64_t i;
 } float64_t;
 
+typedef union {
+	float d;
+	int32_t i;
+} float32_t;
+
 struct dc_s {
 	uint64_t ts;
 	float64_t ap;
@@ -89,15 +94,61 @@ struct dcc_s {
 	float64_t v;
 };
 
+struct dqbi5_s {
+	uint32_t ts;
+	uint32_t ap;
+	uint32_t bp;
+	float32_t aq;
+	float32_t bq;
+};
+
+struct dcbi5_s {
+	uint32_t ts;
+	uint32_t o;
+	uint32_t c;
+	uint32_t l;
+	uint32_t h;
+	float32_t v;
+};
+
 
+/* little helpers */
+static inline int64_t
+ntohll2(int32_t upper, int32_t lower)
+{
+	int64_t up64 = ntohl(upper);
+	int64_t lo64 = ntohl(lower);
+	return (up64 << 32) | lo64;
+}
+
 static inline int64_t
 ntohll(int64_t in)
 {
-	int64_t upper = ntohl((int32_t)(in & 0xffffffff));
-	int64_t lower = ntohl((int32_t)(in >> 32));
-	return (upper << 32) | lower;
+	int32_t upper = (int32_t)(in & 0xffffffff);
+	int32_t lower = (int32_t)(in >> 32);
+	return ntohll2(upper, lower);
 }
 
+static m30_t
+__m30_get_dukas(uint32_t val)
+{
+/* turns 131555 into 1.31555000 */
+	/* built-in knowledge */
+	m30_t res;
+
+	if (val < 536870) {
+		/* interpreted as 5 digits beyond the decimal point */
+		res.mant = val * 1000;
+		res.expo = 0;
+	} else {
+		/* interpreted as 5 digits beyond the decimal point */
+		res.mant = val / 10;
+		res.expo = 1;
+	}
+	return res;
+}
+
+
 static struct sl1t_s t[2];
 static struct scdl_s c[1];
 
@@ -116,6 +167,20 @@ rd1(int f, struct dc_s *b)
 }
 
 static bool
+rd1bi5(int f, struct dqbi5_s *b)
+{
+	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
+		return false;
+	}
+	b->ts = ntohl(b->ts);
+	b->ap = ntohl(b->ap);
+	b->bp = ntohl(b->bp);
+	b->aq.i = ntohl(b->aq.i);
+	b->bq.i = ntohl(b->bq.i);
+	return true;
+}
+
+static bool
 rd1c(int f, struct dcc_s *b)
 {
 	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
@@ -127,6 +192,21 @@ rd1c(int f, struct dcc_s *b)
 	b->l.i = ntohll(b->l.i);
 	b->h.i = ntohll(b->h.i);
 	b->v.i = ntohll(b->v.i);
+	return true;
+}
+
+static bool
+rd1cbi5(int f, struct dcbi5_s *b)
+{
+	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
+		return false;
+	}
+	b->ts = ntohl(b->ts);
+	b->o = ntohl(b->o);
+	b->c = ntohl(b->c);
+	b->l = ntohl(b->l);
+	b->h = ntohl(b->h);
+	b->v.i = ntohl(b->v.i);
 	return true;
 }
 
@@ -153,24 +233,66 @@ write_tick(mux_ctx_t ctx, struct dc_s *tl)
 }
 
 static void
-write_cdl(mux_ctx_t ctx, struct dcc_s *tl)
+write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
+{
+/* create one or more sparse ticks, sl1t_t objects */
+	unsigned int ts = tl->ts / 1000;
+	unsigned int ms = tl->ts % 1000;
+
+	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
+	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
+	t[0].bid = __m30_get_dukas(tl->bp * ctx->opts->mul / ctx->opts->mag).v;
+	t[0].bsz = ffff_m30_get_f(tl->bq.d * 1.0e6f).v;
+
+	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
+	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
+	t[1].ask = __m30_get_dukas(tl->ap * ctx->opts->mul / ctx->opts->mag).v;
+	t[1].asz = ffff_m30_get_f(tl->aq.d * 1.0e6f).v;
+
+	ute_add_tick(ctx->wrr, AS_SCOM(t));
+	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	return;
+}
+
+static void
+write_cdl(mux_ctx_t ctx, struct dcc_s *tl, uint32_t cdl_len)
 {
 /* create one or more sparse ticks, sl1t_t objects */
 	uint32_t ts = tl->ts / 1000;
 	uint16_t ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec((void*)c, ts);
-	sl1t_set_stmp_msec((void*)c, ms);
+	scdl_set_stmp_sec(c + 0, ts + cdl_len);
+	scdl_set_stmp_msec(c + 0, ms);
 
 	c[0].h = ffff_m30_get_d(tl->h.d).v;
 	c[0].l = ffff_m30_get_d(tl->l.d).v;
 	c[0].o = ffff_m30_get_d(tl->o.d).v;
 	c[0].c = ffff_m30_get_d(tl->c.d).v;
-	c[0].sta_ts = ts - 9;
+	c[0].sta_ts = ts;
 	c[0].cnt = ffff_m30_get_d(tl->v.d).v;
 	/* and shove it */
 	ute_add_tick(ctx->wrr, AS_SCOM(c));
-	ute_add_tick(ctx->wrr, AS_SCOM(c + 1));
+	return;
+}
+
+static void
+write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl, uint32_t cdl_len)
+{
+/* create one or more candles, scdl_t objects */
+	/* apparently timestamps are in second offsets now */
+	unsigned int ts = tl->ts + ctx->opts->tsoff;
+
+	scdl_set_stmp_sec(c + 0, ts + cdl_len);
+	scdl_set_stmp_msec(c + 0, 0);
+
+	c[0].h = __m30_get_dukas(tl->h * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].l = __m30_get_dukas(tl->l * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].o = __m30_get_dukas(tl->o * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].c = __m30_get_dukas(tl->c * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].sta_ts = ts;
+	c[0].cnt = ffff_m30_get_f(tl->v.d).v;
+	/* and shove it */
+	ute_add_tick(ctx->wrr, AS_SCOM(c));
 	return;
 }
 
@@ -195,72 +317,156 @@ prepare(mux_ctx_t ctx)
 }
 
 static void
-proc_l1(mux_ctx_t ctx)
+proc_l1bi5(mux_ctx_t ctx)
 {
-	struct dc_s buf;
+	union {
+		struct dc_s bin[1];
+		struct dqbi5_s bi5[2];
+	} buf[1];
 
 	/* rinse, rinse, rinse */
-	memset(&buf, 0, sizeof(buf));
-	/* unroll the first element, so we dont have to write the
-	 * time range table info like fucktards */
-	if (!rd1(ctx->infd, &buf)) {
+	memset(buf, 0, sizeof(*buf));
+
+	/* read a probe */
+	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
 		return;
 	}
+	/* the only thing we can make assumptions about is the timestamp
+	 * we check the two stamps in bi5 and compare their distance */
+	{
+		uint32_t ts0 = ntohl(buf->bi5[0].ts);
+		uint32_t ts1 = ntohl(buf->bi5[1].ts);
+
+		if (ts1 - ts0 > 60/*min*/ * 60/*sec*/ * 1000/*msec*/) {
+			/* definitely old_fmt */
+			goto old_fmt;
+		}
+
+		/* quickly polish the probe */
+		buf->bi5[0].ts = ts0;
+		buf->bi5[0].ap = ntohl(buf->bi5[0].ap);
+		buf->bi5[0].bp = ntohl(buf->bi5[0].bp);
+		buf->bi5[0].aq.i = ntohl(buf->bi5[0].aq.i);
+		buf->bi5[0].bq.i = ntohl(buf->bi5[0].bq.i);
+
+		buf->bi5[1].ts = ts1;
+		buf->bi5[1].ap = ntohl(buf->bi5[1].ap);
+		buf->bi5[1].bp = ntohl(buf->bi5[1].bp);
+		buf->bi5[1].aq.i = ntohl(buf->bi5[1].aq.i);
+		buf->bi5[1].bq.i = ntohl(buf->bi5[1].bq.i);
+	}
+	/* re-use the probe data */
+	write_tick_bi5(ctx, buf->bi5 + 0);
 	/* main loop */
 	do {
-		write_tick(ctx, &buf);
-	} while (rd1(ctx->infd, &buf));
+		write_tick_bi5(ctx, buf->bi5 + 1);
+	} while (rd1bi5(ctx->infd, buf->bi5 + 1));
+	return;
+old_fmt:
+	/* polish the probe */
+	buf->bin->ts = ntohll(buf->bin->ts);
+	buf->bin->ap.i = ntohll(buf->bin->ap.i);
+	buf->bin->bp.i = ntohll(buf->bin->bp.i);
+	buf->bin->aq.i = ntohll(buf->bin->aq.i);
+	buf->bin->bq.i = ntohll(buf->bin->bq.i);
+	/* main loop */
+	do {
+		write_tick(ctx, buf->bin);
+	} while (rd1(ctx->infd, buf->bin));
 	return;
 }
 
 static void
-proc_cd(mux_ctx_t ctx)
+proc_cdbi5(mux_ctx_t ctx)
 {
-	struct dcc_s buf;
+	union {
+		struct dcc_s bin[2];
+		struct dcbi5_s bi5[2];
+	} buf[1];
+	unsigned int cdl_len;
 
 	/* rinse */
 	memset(&buf, 0, sizeof(buf));
-	/* unroll the first element, so we dont have to write the
-	 * time range table info like fucktards */
-	if (!rd1c(ctx->infd, &buf)) {
+
+	/* read a probe */
+	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
 		return;
 	}
+
+	/* again we can only make assumptions about the timestamps
+	 * check the two stamps in bi5 and compare their distance */
+	{
+		uint32_t ts0 = ntohl(buf->bi5[0].ts);
+		uint32_t ts1 = ntohl(buf->bi5[1].ts);
+
+		if ((cdl_len = ts1 - ts0) > 60/*min*/ * 60/*sec*/) {
+			/* definitely old_fmt */
+			goto old_fmt;
+		}
+
+		/* quickly polish the probe */
+		buf->bi5[0].ts = ts0;
+		buf->bi5[0].o = ntohl(buf->bi5[0].o);
+		buf->bi5[0].c = ntohl(buf->bi5[0].c);
+		buf->bi5[0].l = ntohl(buf->bi5[0].l);
+		buf->bi5[0].h = ntohl(buf->bi5[0].h);
+		buf->bi5[0].v.i = ntohl(buf->bi5[0].v.i);
+
+		buf->bi5[1].ts = ts1;
+		buf->bi5[1].o = ntohl(buf->bi5[1].o);
+		buf->bi5[1].c = ntohl(buf->bi5[1].c);
+		buf->bi5[1].l = ntohl(buf->bi5[1].l);
+		buf->bi5[1].h = ntohl(buf->bi5[1].h);
+		buf->bi5[1].v.i = ntohl(buf->bi5[1].v.i);
+	}
+	/* re-use the probe data */
+	write_cdl_bi5(ctx, buf->bi5 + 0, cdl_len);
 	/* main loop */
 	do {
-		write_cdl(ctx, &buf);
-	} while (rd1c(ctx->infd, &buf));
+		write_cdl_bi5(ctx, buf->bi5 + 1, cdl_len);
+	} while (rd1cbi5(ctx->infd, buf->bi5 + 1));
+	return;
+
+old_fmt:
+	/* polish the probe */
+	buf->bin->ts = ntohll(buf->bin->ts);
+	buf->bin->o.i = ntohll(buf->bin->o.i);
+	buf->bin->c.i = ntohll(buf->bin->c.i);
+	buf->bin->l.i = ntohll(buf->bin->l.i);
+	buf->bin->h.i = ntohll(buf->bin->h.i);
+	buf->bin->v.i = ntohll(buf->bin->v.i);
+	if (!rd1c(ctx->infd, buf->bin + 1)) {
+		/* assume a day candle and exit */
+		write_cdl(ctx, buf->bin, 86400U);
+		return;
+	}
+	/* otherwise compute the candle length, we know dukascopy will
+	 * not give us overlapping candles, so just diff the time stamps */
+	cdl_len = (buf->bin[1].ts - buf->bin->ts) / 1000;
+	/* and emit the original candle from the probe data */
+	write_cdl(ctx, buf->bin, cdl_len);
+	/* main loop */
+	do {
+		write_cdl(ctx, buf->bin + 1, cdl_len);
+	} while (rd1c(ctx->infd, buf->bin + 1));
 	return;
 }
 
+/* new all in one dukas slabber */
 void
-dukasq_slab(mux_ctx_t ctx)
+dukas_slab(mux_ctx_t ctx)
 {
-	/* prepare ourselves */
 	prepare(ctx);
-
-	proc_l1(ctx);
-	return;
-}
-
-void
-dukasa_slab(mux_ctx_t ctx)
-{
-	/* prepare ourselves */
-	prepare(ctx);
-
-	scdl_set_ttf(c, SL1T_TTF_ASK);
-	proc_cd(ctx);
-	return;
-}
-
-void
-dukasb_slab(mux_ctx_t ctx)
-{
-	/* prepare ourselves */
-	prepare(ctx);
-
-	scdl_set_ttf(c, SL1T_TTF_BID);
-	proc_cd(ctx);
+	switch (ctx->opts->tt) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_ASK:
+		scdl_set_ttf(c, ctx->opts->tt);
+		proc_cdbi5(ctx);
+		break;
+	default:
+		proc_l1bi5(ctx);
+		break;
+	}
 	return;
 }
 

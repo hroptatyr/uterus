@@ -338,7 +338,7 @@ proc_l1bi5(mux_ctx_t ctx)
 		uint32_t ts0 = ntohl(buf->bi5[0].ts);
 		uint32_t ts1 = ntohl(buf->bi5[1].ts);
 
-		if (ts1 - ts0 > 86400 * 1000) {
+		if (ts1 - ts0 > 60/*min*/ * 60/*sec*/ * 1000/*msec*/) {
 			/* definitely old_fmt */
 			goto old_fmt;
 		}

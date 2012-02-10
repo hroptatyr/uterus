@@ -86,27 +86,28 @@ pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 	buf[20] = (char)(((msec / 100) % 10) + '0');
 	buf[21] = (char)(((msec / 10) % 10) + '0');
 	buf[22] = (char)(((msec / 1) % 10) + '0');
-	buf[23] = ' ';
 	/* compute offset as HHMM */
 	if ((off = tm.tm_gmtoff) == 0) {;
-		buf[24] = '+';
+		buf[23] = '+';
+		buf[24] = '0';
 		buf[25] = '0';
-		buf[26] = '0';
+		buf[26] = ':';
 		buf[27] = '0';
 		buf[28] = '0';
 		goto done;
 	} else if (off > 0) {
 		h = off / 3600;
 		m = (off % 3600) / 60;
-		buf[24] = '+';
+		buf[23] = '+';
 	} else /* (off < 0) */ {
 		off = -off;
 		h = off / 3600;
 		m = (off % 3600) / 60;
-		buf[24] = '-';
+		buf[23] = '-';
 	}
-	buf[25] = (char)(((h / 10) % 10) + '0');
-	buf[26] = (char)(((h / 1) % 10) + '0');
+	buf[24] = (char)(((h / 10) % 10) + '0');
+	buf[25] = (char)(((h / 1) % 10) + '0');
+	buf[26] = ':';
 	buf[27] = (char)(((m / 10) % 10) + '0');
 	buf[28] = (char)(((m / 1) % 10) + '0');
 done:

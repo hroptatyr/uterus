@@ -598,7 +598,7 @@ ibrti_pr(pr_ctx_t pctx, scom_t st)
 		*p++ = '0';
 	}
 	*p++ = '\t';
-	p += pr_ts(p, sec);
+	p += pr_ts(p, sec, ' ');
 	*p++ = '\t';
 	p += sprintf(p, "%03hu", msec);
 	*p++ = '\t';

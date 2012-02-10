@@ -20,6 +20,7 @@
 #include "sl1t.h"
 #include "utefile.h"
 #include "ute-mux.h"
+#include "ute-print.h"
 
 #if defined USE_DEBUGGING_ASSERTIONS || 1
 # include <assert.h>
@@ -172,15 +173,6 @@ moar_ticks_p(mux_ctx_t ctx)
 }
 
 /* printers */
-static __attribute__((unused)) size_t
-sprint_tstz(char *restrict buf, size_t len, time_t ts)
-{
-	struct tm brktime;
-	ffff_gmtime(&brktime, ts);
-	ffff_strftime(buf, len, &brktime);
-	return 19;
-}
-
 static inline bool
 enrich_batps(tfraw_tl_t t)
 {
@@ -194,7 +186,7 @@ enrich_batps(tfraw_tl_t t)
 		/* last price is unknown but there was a last price tick?! */
 #if 1
 		char buf[32];
-		sprint_tstz(buf, sizeof(buf), t->t->sec);
+		pr_ts(buf, t->t->sec, ' ');
 		fprintf(stderr, "spurious price tick: "
 			"tra_p == 0, tra_q != 0, %s %s.000\n", t->cid, buf);
 #else

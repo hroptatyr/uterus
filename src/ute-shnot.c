@@ -240,7 +240,7 @@ print_snap_rTI(utectx_t uctx, scom_t st, zif_t z)
 		*p++ = '0';
 	}
 	*p++ = '\t';
-	p += pr_tsmstz(p, sec, msec, z);
+	p += pr_tsmstz(p, sec, msec, z, ' ');
 	*p++ = '\t';
 	/* sequence is always 0 */
 	*p++ = '0';

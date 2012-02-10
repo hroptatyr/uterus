@@ -116,10 +116,8 @@ main(int argc, char *argv[])
 		res = 1;
 		goto out;
 	} else if (!argi->format_given) {
-		/* we pick rudi's fave format for now but
-		 * this is gonna change soon, as soon as we come up with
-		 * the ute text representation, or maybe later */
-		prf = ibrti_pr;
+		/* ute ascii supersedes rudi's fave format */
+		prf = uta_pr;
 	}
 	/* normally we'd check for -o|--output */
 	ctx->outfd = STDOUT_FILENO;

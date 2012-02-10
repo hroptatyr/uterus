@@ -72,6 +72,11 @@ typedef union {
 	int64_t i;
 } float64_t;
 
+typedef union {
+	float d;
+	int32_t i;
+} float32_t;
+
 struct dc_s {
 	uint64_t ts;
 	float64_t ap;
@@ -93,8 +98,8 @@ struct dqbi5_s {
 	uint32_t ts;
 	uint32_t ap;
 	uint32_t bp;
-	uint32_t aq;
-	uint32_t bq;
+	float32_t aq;
+	float32_t bq;
 };
 
 struct dcbi5_s {
@@ -103,7 +108,7 @@ struct dcbi5_s {
 	uint32_t c;
 	uint32_t l;
 	uint32_t h;
-	uint32_t v;
+	float32_t v;
 };
 
 
@@ -160,8 +165,8 @@ rd1bi5(int f, struct dqbi5_s *b)
 	b->ts = ntohl(b->ts);
 	b->ap = ntohl(b->ap);
 	b->bp = ntohl(b->bp);
-	b->aq = ntohl(b->aq);
-	b->bq = ntohl(b->bq);
+	b->aq.i = ntohl(b->aq.i);
+	b->bq.i = ntohl(b->bq.i);
 	return true;
 }
 
@@ -212,12 +217,12 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
 	t[0].bid = __m30_get_dukas(tl->bp).v;
-	t[0].bsz = __m30_get_dukas(tl->bq).v;
+	t[0].bsz = ffff_m30_get_f(tl->bq.d * 1.0e6f).v;
 
 	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
 	t[1].ask = __m30_get_dukas(tl->ap).v;
-	t[1].asz = __m30_get_dukas(tl->aq).v;
+	t[1].asz = ffff_m30_get_f(tl->aq.d * 1.0e6f).v;
 
 	ute_add_tick(ctx->wrr, AS_SCOM(t));
 	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));

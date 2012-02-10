@@ -28,5 +28,5 @@ option "refdate" -
 	int typestr="STAMP" optional
 
 option "flavour" -
-	"Specify data flavour (bid, ask, trade) for flavour-agnostic formats."
+	"Data flavour (bid, ask, trade) for flavour-agnostic formats."
 	enum typestr="F" optional values="b","a","t"

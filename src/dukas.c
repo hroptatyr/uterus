@@ -128,12 +128,14 @@ __m30_get_dukas(uint32_t val)
 	/* built-in knowledge */
 	m30_t res;
 
-	if (val < 1000000) {
+	if (val < 536870) {
+		/* interpreted as 5 digits beyond the decimal point */
 		res.mant = val * 1000;
 		res.expo = 0;
 	} else {
-		res.mant = val;
-		res.expo = 2;
+		/* interpreted as 5 digits beyond the decimal point */
+		res.mant = val / 10;
+		res.expo = 1;
 	}
 	return res;
 }
@@ -231,12 +233,12 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 
 	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
-	t[0].bid = __m30_get_dukas(tl->bp).v;
+	t[0].bid = __m30_get_dukas(tl->bp * ctx->opts->mul / ctx->opts->mag).v;
 	t[0].bsz = ffff_m30_get_f(tl->bq.d * 1.0e6f).v;
 
 	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
-	t[1].ask = __m30_get_dukas(tl->ap).v;
+	t[1].ask = __m30_get_dukas(tl->ap * ctx->opts->mul / ctx->opts->mag).v;
 	t[1].asz = ffff_m30_get_f(tl->aq.d * 1.0e6f).v;
 
 	ute_add_tick(ctx->wrr, AS_SCOM(t));
@@ -275,10 +277,10 @@ write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl)
 	scdl_set_stmp_sec(c + 0, ts);
 	scdl_set_stmp_msec(c + 0, (uint16_t)ms);
 
-	c[0].h = __m30_get_dukas(tl->h).v;
-	c[0].l = __m30_get_dukas(tl->l).v;
-	c[0].o = __m30_get_dukas(tl->o).v;
-	c[0].c = __m30_get_dukas(tl->c).v;
+	c[0].h = __m30_get_dukas(tl->h * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].l = __m30_get_dukas(tl->l * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].o = __m30_get_dukas(tl->o * ctx->opts->mul / ctx->opts->mag).v;
+	c[0].c = __m30_get_dukas(tl->c * ctx->opts->mul / ctx->opts->mag).v;
 	/* this is wrong for minutes */
 	c[0].sta_ts = ts - 9/*seconds*/;
 	c[0].cnt = ffff_m30_get_f(tl->v.d).v;

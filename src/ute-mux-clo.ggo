@@ -30,3 +30,11 @@ option "refdate" -
 option "flavour" -
 	"Data flavour (bid, ask, trade) for flavour-agnostic formats"
 	enum typestr="F" optional values="b","a","t"
+
+option "multiplier" -
+	"Multiply price values by INT, for fractions also use --magnifier"
+	int optional
+
+option "magnifier" -
+	"Price values are multiplied by INT"
+	int optional

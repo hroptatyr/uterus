@@ -217,6 +217,17 @@ main(int argc, char *argv[])
 		break;
 	}
 
+	if (!argi->multiplier_given) {
+		opts->mul = 1;
+	} else {
+		opts->mul = argi->multiplier_arg;
+	}
+	if (!argi->magnifier_given) {
+		opts->mag = 1;
+	} else {
+		opts->mag = argi->magnifier_arg;
+	}
+
 	/* the actual muxing step */
 	init_ticks(ctx, opts);
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {

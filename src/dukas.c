@@ -255,20 +255,20 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 }
 
 static void
-write_cdl(mux_ctx_t ctx, struct dcc_s *tl)
+write_cdl(mux_ctx_t ctx, struct dcc_s *tl, uint32_t cdl_len)
 {
 /* create one or more sparse ticks, sl1t_t objects */
 	uint32_t ts = tl->ts / 1000;
 	uint16_t ms = tl->ts % 1000;
 
-	scdl_set_stmp_sec(c + 0, ts);
+	scdl_set_stmp_sec(c + 0, ts + cdl_len);
 	scdl_set_stmp_msec(c + 0, ms);
 
 	c[0].h = ffff_m30_get_d(tl->h.d).v;
 	c[0].l = ffff_m30_get_d(tl->l.d).v;
 	c[0].o = ffff_m30_get_d(tl->o.d).v;
 	c[0].c = ffff_m30_get_d(tl->c.d).v;
-	c[0].sta_ts = ts - 9/*seconds*/;
+	c[0].sta_ts = ts;
 	c[0].cnt = ffff_m30_get_d(tl->v.d).v;
 	/* and shove it */
 	ute_add_tick(ctx->wrr, AS_SCOM(c));
@@ -276,21 +276,20 @@ write_cdl(mux_ctx_t ctx, struct dcc_s *tl)
 }
 
 static void
-write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl)
+write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl, uint32_t cdl_len)
 {
-/* create one or more candles, sl1t_t objects */
-	unsigned int ts = tl->ts / 1000;
-	unsigned int ms = tl->ts % 1000;
+/* create one or more candles, scdl_t objects */
+	/* apparently timestamps are in second offsets now */
+	unsigned int ts = tl->ts + ctx->opts->tsoff;
 
-	scdl_set_stmp_sec(c + 0, ts);
-	scdl_set_stmp_msec(c + 0, (uint16_t)ms);
+	scdl_set_stmp_sec(c + 0, ts + cdl_len);
+	scdl_set_stmp_msec(c + 0, 0);
 
 	c[0].h = __m30_get_dukas(tl->h * ctx->opts->mul / ctx->opts->mag).v;
 	c[0].l = __m30_get_dukas(tl->l * ctx->opts->mul / ctx->opts->mag).v;
 	c[0].o = __m30_get_dukas(tl->o * ctx->opts->mul / ctx->opts->mag).v;
 	c[0].c = __m30_get_dukas(tl->c * ctx->opts->mul / ctx->opts->mag).v;
-	/* this is wrong for minutes */
-	c[0].sta_ts = ts - 9/*seconds*/;
+	c[0].sta_ts = ts;
 	c[0].cnt = ffff_m30_get_f(tl->v.d).v;
 	/* and shove it */
 	ute_add_tick(ctx->wrr, AS_SCOM(c));
@@ -381,9 +380,10 @@ static void
 proc_cdbi5(mux_ctx_t ctx)
 {
 	union {
-		struct dcc_s bin[1];
+		struct dcc_s bin[2];
 		struct dcbi5_s bi5[2];
 	} buf[1];
+	unsigned int cdl_len;
 
 	/* rinse */
 	memset(&buf, 0, sizeof(buf));
@@ -399,7 +399,7 @@ proc_cdbi5(mux_ctx_t ctx)
 		uint32_t ts0 = ntohl(buf->bi5[0].ts);
 		uint32_t ts1 = ntohl(buf->bi5[1].ts);
 
-		if (ts1 - ts0 > 60/*min*/ * 60/*sec*/ * 1000/*msec*/) {
+		if ((cdl_len = ts1 - ts0) > 60/*min*/ * 60/*sec*/) {
 			/* definitely old_fmt */
 			goto old_fmt;
 		}
@@ -420,10 +420,10 @@ proc_cdbi5(mux_ctx_t ctx)
 		buf->bi5[1].v.i = ntohl(buf->bi5[1].v.i);
 	}
 	/* re-use the probe data */
-	write_cdl_bi5(ctx, buf->bi5 + 0);
+	write_cdl_bi5(ctx, buf->bi5 + 0, cdl_len);
 	/* main loop */
 	do {
-		write_cdl_bi5(ctx, buf->bi5 + 1);
+		write_cdl_bi5(ctx, buf->bi5 + 1, cdl_len);
 	} while (rd1cbi5(ctx->infd, buf->bi5 + 1));
 	return;
 
@@ -435,10 +435,20 @@ old_fmt:
 	buf->bin->l.i = ntohll(buf->bin->l.i);
 	buf->bin->h.i = ntohll(buf->bin->h.i);
 	buf->bin->v.i = ntohll(buf->bin->v.i);
+	if (!rd1c(ctx->infd, buf->bin + 1)) {
+		/* assume a day candle and exit */
+		write_cdl(ctx, buf->bin, 86400U);
+		return;
+	}
+	/* otherwise compute the candle length, we know dukascopy will
+	 * not give us overlapping candles, so just diff the time stamps */
+	cdl_len = (buf->bin[1].ts - buf->bin->ts) / 1000;
+	/* and emit the original candle from the probe data */
+	write_cdl(ctx, buf->bin, cdl_len);
 	/* main loop */
 	do {
-		write_cdl(ctx, buf->bin);
-	} while (rd1c(ctx->infd, buf->bin));
+		write_cdl(ctx, buf->bin + 1, cdl_len);
+	} while (rd1c(ctx->infd, buf->bin + 1));
 	return;
 }
 

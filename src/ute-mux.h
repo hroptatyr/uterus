@@ -25,13 +25,19 @@ struct sumux_opt_s {
 	const char *sname;
 	void(*muxf)(mux_ctx_t);
 	const char *zone;
+	/** offset for timestamps relative to something other than epoch */
+	int32_t tsoff;
+	/** tick type as in sl1t.h */
+	uint16_t tt;
+	/** multiplier for reduced, down-scaled or point-less values */
+	int32_t mul;
+	/** magnifier for expanded or up-scaled values */
+	int32_t mag;
 };
 
 extern void ariva_slab(mux_ctx_t);
 extern void ibrti_slab(mux_ctx_t);
-extern void dukasq_slab(mux_ctx_t);
-extern void dukasa_slab(mux_ctx_t);
-extern void dukasb_slab(mux_ctx_t);
+extern void dukas_slab(mux_ctx_t);
 extern void gesmes_slab(mux_ctx_t);
 extern void tfraw_slab(mux_ctx_t);
 extern void sl1t_mux(mux_ctx_t);

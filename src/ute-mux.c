@@ -77,9 +77,7 @@ static struct muxer_s supported_muxers[] = {
 #endif
 	{.opt = "ariva", .muxf = ariva_slab},
 	{.opt = "ibrti", .muxf = ibrti_slab},
-	{.opt = "dukasq", .muxf = dukasq_slab},
-	{.opt = "dukasa", .muxf = dukasa_slab},
-	{.opt = "dukasb", .muxf = dukasb_slab},
+	{.opt = "dukas", .muxf = dukas_slab},
 #if 0
 	{.opt = "gesmes", .muxf = gesmes_slab},
 #endif
@@ -196,6 +194,38 @@ main(int argc, char *argv[])
 
 	if (argi->badfile_given) {
 		opts->badfile = argi->badfile_arg;
+	}
+
+	if (argi->refdate_given) {
+		/* for simplicity expect unix epoch stamp for now */
+		opts->tsoff = argi->refdate_arg;
+	}
+
+	switch (argi->flavour_arg) {
+	default:
+	case flavour__NULL:
+		opts->tt = SL1T_TTF_UNK;
+		break;
+	case flavour_arg_b:
+		opts->tt = SL1T_TTF_BID;
+		break;
+	case flavour_arg_a:
+		opts->tt = SL1T_TTF_ASK;
+		break;
+	case flavour_arg_t:
+		opts->tt = SL1T_TTF_TRA;
+		break;
+	}
+
+	if (!argi->multiplier_given) {
+		opts->mul = 1;
+	} else {
+		opts->mul = argi->multiplier_arg;
+	}
+	if (!argi->magnifier_given) {
+		opts->mag = 1;
+	} else {
+		opts->mag = argi->magnifier_arg;
 	}
 
 	/* the actual muxing step */

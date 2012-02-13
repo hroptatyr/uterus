@@ -111,6 +111,60 @@ fputn(FILE *whither, const char *p, size_t n)
 }
 #endif	/* USE_DEBUGGING_ASSERTIONS */
 
+static size_t
+__pr_snap(char *tgt, scom_t st)
+{
+	const_ssnap_t snp = (const void*)st;
+	char *p = tgt;
+
+	/* bid price */
+	p += ffff_m30_s(p, (m30_t)snp->bp);
+	*p++ = '\t';
+	/* ask price */
+	p += ffff_m30_s(p, (m30_t)snp->ap);
+	*p++ = '\t';
+	/* bid quantity */
+	p += ffff_m30_s(p, (m30_t)snp->bq);
+	*p++ = '\t';
+	/* ask quantity */
+	p += ffff_m30_s(p, (m30_t)snp->aq);
+	*p++ = '\t';
+	/* volume-weighted trade price */
+	p += ffff_m30_s(p, (m30_t)snp->tvpr);
+	*p++ = '\t';
+	/* trade quantity */
+	p += ffff_m30_s(p, (m30_t)snp->tq);
+	return p - tgt;
+}
+
+static size_t
+__pr_cdl(char *tgt, scom_t st)
+{
+	const_scdl_t cdl = (const void*)st;
+	char *p = tgt;
+
+	/* h(igh) */
+	p += ffff_m30_s(p, (m30_t)cdl->h);
+	*p++ = '\t';
+	/* l(ow) */
+	p += ffff_m30_s(p, (m30_t)cdl->l);
+	*p++ = '\t';
+	/* o(pen) */
+	p += ffff_m30_s(p, (m30_t)cdl->o);
+	*p++ = '\t';
+	/* c(lose) */
+	p += ffff_m30_s(p, (m30_t)cdl->c);
+	*p++ = '\t';
+	/* start of the candle */
+	p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
+	*p++ = '\t';
+	/* event count in candle, print 3 times */
+	p += sprintf(p, "%08x", cdl->cnt);
+	*p++ = '|';
+	p += ffff_m30_s(p, (m30_t)cdl->cnt);
+	return p - tgt;
+}
+
 
 /* public functions, muxer and demuxer, but the muxer doesn't work yet */
 #if 0
@@ -153,7 +207,7 @@ uta_pr(pr_ctx_t pctx, scom_t st)
 	*p++ = '\t';
 	switch (ttf) {
 		const_sl1t_t l1t;
-		const_scdl_t cdl;
+
 	case SL1T_TTF_BID:
 	case SL1T_TTF_ASK:
 	case SL1T_TTF_TRA:
@@ -179,27 +233,14 @@ uta_pr(pr_ctx_t pctx, scom_t st)
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
 	case SL1T_TTF_ASK | SCOM_FLAG_LM:
 	case SL1T_TTF_TRA | SCOM_FLAG_LM:
-		cdl = (const void*)st;
-		/* h(igh) */
-		p += ffff_m30_s(p, (m30_t)cdl->h);
-		*p++ = '\t';
-		/* l(ow) */
-		p += ffff_m30_s(p, (m30_t)cdl->l);
-		*p++ = '\t';
-		/* o(pen) */
-		p += ffff_m30_s(p, (m30_t)cdl->o);
-		*p++ = '\t';
-		/* c(lose) */
-		p += ffff_m30_s(p, (m30_t)cdl->c);
-		*p++ = '\t';
-		/* start of the candle */
-		p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
-		*p++ = '\t';
-		/* event count in candle, print 3 times */
-		p += sprintf(p, "%08x", cdl->cnt);
-		*p++ = '|';
-		p += ffff_m30_s(p, (m30_t)cdl->cnt);
+		p += __pr_cdl(p, st);
 		break;
+
+		/* snaps */
+	case SL1T_TTF_UNK | SCOM_FLAG_LM:
+		p += __pr_snap(p, st);
+		break;
+
 	case SL1T_TTF_UNK:
 	default:
 		break;

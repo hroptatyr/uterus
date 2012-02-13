@@ -240,7 +240,7 @@ ffff_m30_cmp(m30_t a, m30_t b)
 #endif	/* WITH_M30_CMP */
 
 #if !defined DEFINE_GORY_STUFF
-static inline m30_t __attribute__((unused))
+static inline m30_t
 ffff_m30_get_s(char **s __attribute__((unused)))
 {
 	m30_t res;
@@ -249,7 +249,7 @@ ffff_m30_get_s(char **s __attribute__((unused)))
 	return res;
 }
 
-static inline size_t __attribute__((unused))
+static inline size_t
 ffff_m30_s(char *restrict buf, m30_t m __attribute__((unused)))
 {
 	*buf = '\0';
@@ -499,7 +499,7 @@ strrev(char *restrict tgt, char *restrict src)
 }
 #endif	/* !STRREV */
 
-static inline size_t __attribute__((unused))
+static inline size_t
 ffff_m30_s(char *restrict buf, m30_t m)
 {
 	char *tmp = buf;

@@ -39,7 +39,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include "utefile.h"
-#include "sl1t.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
@@ -48,6 +47,10 @@
 #include "strftime.c"
 
 #include "ute-print.h"
+
+#include "scommon.h"
+#include "sl1t.h"
+#include "scdl.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -131,11 +134,12 @@ main(int argc, char *argv[])
 		}
 		/* otherwise print all them ticks */
 		ctx->uctx = hdl;
-		for (size_t i = 0; i < ute_nticks(hdl); i++) {
+		for (size_t i = 0; i < ute_nticks(hdl);) {
 			scom_t ti = ute_seek(hdl, i);
 			if (ti) {
 				prf(ctx, ti);
 			}
+			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
 		}
 		/* oh right, close the handle */
 		ute_close(hdl);

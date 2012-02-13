@@ -82,6 +82,7 @@ struct sl1t_s {
 		};
 	} __attribute__((aligned(8)));
 };
+#define __STRUCT_SL1T_S_DEFINED
 
 /* link mode structure */
 struct sl1t_lm_s {
@@ -101,6 +102,7 @@ struct sl1t_lm_s {
 		};
 	} __attribute__((aligned(8)));
 };
+#define __STRUCT_SL1T_LM_S_DEFINED
 
 
 /* accessors */

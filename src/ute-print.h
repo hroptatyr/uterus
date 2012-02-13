@@ -37,6 +37,8 @@
 #if !defined INCLUDED_ute_print_h_
 #define INCLUDED_ute_print_h_
 
+#include "scommon.h"
+
 #define MAX_LINE_LEN		512
 
 #if !defined LIKELY
@@ -131,8 +133,7 @@ pr_sym(utectx_t ctx, char *restrict buf, uint16_t idx)
 static inline ssize_t
 print_tick_sym(pr_ctx_t pctx, scom_t st)
 {
-	const_sl1t_t t = (const void*)st;
-	uint16_t si = sl1t_tblidx(t);
+	uint16_t si = scom_thdr_tblidx(st);
 	ssize_t res;
 
 	pctx->bsz += res = pr_sym(pctx->uctx, pctx->buf, si);

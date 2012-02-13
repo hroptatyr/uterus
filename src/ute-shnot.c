@@ -115,7 +115,7 @@ xsnap_empty_p(xsnap_t sn)
 }
 
 static void
-xsnap_push(xsnap_t s, const_sl1t_t t)
+xsnap_push_l1t(xsnap_t s, const_sl1t_t t)
 {
 	switch (sl1t_ttf(t)) {
 	case SL1T_TTF_BID:
@@ -131,6 +131,64 @@ xsnap_push(xsnap_t s, const_sl1t_t t)
 		s->nt = ffff_m62_add_m30(s->nt, (m30_t)t->tsz);
 		s->qpri = ffff_m62_add_mul_2m30(
 			s->qpri, (m30_t)t->tra, (m30_t)t->tsz);
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+static void
+xsnap_push_snp(xsnap_t s, const_ssnap_t snp)
+{
+	s->sn->bp = snp->bp;
+	s->sn->ap = snp->ap;
+	s->sn->bq = snp->bq;
+	s->sn->aq = snp->aq;
+	/* shouldn't we rescale this? */
+	s->sn->tvpr = snp->tvpr;
+	s->sn->tq = snp->tq;
+	return;
+}
+
+static void
+xsnap_push_cdl(xsnap_t s, const_scdl_t c)
+{
+	switch (scdl_ttf(c)) {
+	case SL1T_TTF_BID:
+		s->sn->bp = c->c;
+		s->sn->bq = c->cnt;
+		break;
+	case SL1T_TTF_ASK:
+		s->sn->ap = c->c;
+		s->sn->aq = c->cnt;
+		break;
+	case SL1T_TTF_TRA:
+		s->sn->tvpr = c->c;
+		s->sn->tq = c->cnt;
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+static void
+xsnap_push(xsnap_t s, scom_t t)
+{
+	switch (scom_thdr_ttf(t)) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_ASK:
+	case SL1T_TTF_TRA:
+		xsnap_push_l1t(s, (const void*)t);
+		break;
+	case SSNP_FLAVOUR:
+		xsnap_push_snp(s, (const void*)t);
+		break;
+	case SL1T_TTF_BID | SCOM_FLAG_LM:
+	case SL1T_TTF_ASK | SCOM_FLAG_LM:
+	case SL1T_TTF_TRA | SCOM_FLAG_LM:
+		xsnap_push_cdl(s, (const void*)t);
 		break;
 	default:
 		break;
@@ -172,10 +230,10 @@ next_aligned_stamp(shnot_ctx_t ctx, time_t ts)
 }
 
 static bool
-new_candle_p(shnot_ctx_t ctx, const_sl1t_t t)
+new_candle_p(shnot_ctx_t ctx, scom_t t)
 {
 	time_t t1 = ctx->bkt->cur_ts;
-	time_t t2 = aligned_stamp(ctx, sl1t_stmp_sec(t));
+	time_t t2 = aligned_stamp(ctx, scom_thdr_sec(t));
 	return t1 < t2;
 }
 
@@ -219,10 +277,10 @@ new_candle(shnot_ctx_t ctx)
 }
 
 static void
-check_candle(shnot_ctx_t ctx, const_sl1t_t t)
+check_candle(shnot_ctx_t ctx, scom_t t)
 {
 	if (UNLIKELY(new_candle_p(ctx, t))) {
-		time_t new_ts = aligned_stamp(ctx, sl1t_stmp_sec(t));
+		time_t new_ts = aligned_stamp(ctx, scom_thdr_sec(t));
 		set_buckets_time(ctx->bkt, new_ts);
 		new_candle(ctx);
 		bkts_cleanse(ctx->bkt);
@@ -231,9 +289,9 @@ check_candle(shnot_ctx_t ctx, const_sl1t_t t)
 }
 
 static void
-bucketiser(shnot_ctx_t ctx, const_sl1t_t t)
+bucketiser(shnot_ctx_t ctx, scom_t t)
 {
-	uint16_t i = sl1t_tblidx(t);
+	uint16_t i = scom_thdr_tblidx(t);
 	xsnap_t b = ctx->bkt->snap + i;
 
 	check_candle(ctx, t);
@@ -371,9 +429,10 @@ main(int argc, char *argv[])
 		/* (re)initialise our buckets */
 		init_buckets(ctx, hdl, bkt);
 		/* otherwise print all them ticks */
-		for (size_t i = 0; i < ute_nticks(hdl); i++) {
+		for (size_t i = 0; i < ute_nticks(hdl);) {
 			scom_t ti = ute_seek(hdl, i);
-			bucketiser(ctx, (void*)ti);
+			bucketiser(ctx, ti);
+			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
 		}
 		/* last round */
 		{

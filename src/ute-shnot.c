@@ -1,10 +1,10 @@
-/*** shnot.c -- ute snapshots
+/*** ute-shnot.c -- snapshooting from ute files
  *
- * Copyright (C) 2008 - 2010 Sebastian Freundt
+ * Copyright (C) 2008 - 2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,15 +55,16 @@
 #endif	/* USE_ASSERTIONS */
 
 #define DEFINE_GORY_STUFF	1
-#include "sl1t.h"
 #include "utefile.h"
 #include "mem.h"
 #include "date.h"
-#include "scdl.h"
 #include "m30.h"
 #include "m62.h"
-/* some shared code with ute-print */
-#include "ute-print.h"
+/* our own goodness */
+#include "ute-shnot.h"
+
+#include "sl1t.h"
+#include "scdl.h"
 
 #define SUSHI_MODE		1
 #define TRUE_OPEN		1
@@ -86,9 +87,6 @@ typedef struct bkts_s *bkts_t;
 typedef void(*bkt_f)(bkts_t, const_sl1t_t, void *clo);
 typedef struct xsnap_s *xsnap_t;
 
-typedef struct shnot_ctx_s *shnot_ctx_t;
-typedef struct shnot_opt_s *shnot_opt_t;
-
 /* extended ssnap */
 struct xsnap_s {
 	struct ssnap_s sn[1];
@@ -100,28 +98,6 @@ struct bkts_s {
 	uint32_t nsyms;
 	time_t cur_ts;
 	xsnap_t snap;
-};
-
-struct shnot_opt_s {
-	/* time zone info */
-	zif_t z;
-
-	int interval;
-	int offset;
-	int dryp;
-};
-
-struct shnot_ctx_s {
-	/* contains the currently processed ute file */
-	void *rdr;
-	/* contains the ute output file */
-	void *wrr;
-
-	/* our buckets */
-	struct bkts_s bkt[1];
-
-	/* our options */
-	struct shnot_opt_s opt[1];
 };
 
 /* ssnap fiddlers */
@@ -179,13 +155,13 @@ get_buckets_time(bkts_t bctx)
 static inline time_t
 aligned_stamp(shnot_ctx_t ctx, time_t ts)
 {
-	return (time_t)(ts - ((ts - ctx->opt->offset) % ctx->opt->interval));
+	return (time_t)(ts - ((ts - ctx->opts->offset) % ctx->opts->interval));
 }
 
 static inline time_t
 next_stamp(shnot_ctx_t ctx, time_t ts)
 {
-	return ts + ctx->opt->interval;
+	return ts + ctx->opts->interval;
 }
 
 static inline time_t
@@ -203,7 +179,7 @@ new_candle_p(shnot_ctx_t ctx, const_sl1t_t t)
 	return t1 < t2;
 }
 
-static void __attribute__((unused))
+static void
 write_snap(shnot_ctx_t ctx, uint16_t cidx)
 {
 	xsnap_t xn;
@@ -215,93 +191,29 @@ write_snap(shnot_ctx_t ctx, uint16_t cidx)
 
 	sn = (xn = ctx->bkt->snap + cidx)->sn;
 	scom_thdr_set_tblidx(sn->hdr, cidx);
-	scom_thdr_set_sec(sn->hdr, ctx->bkt->cur_ts + ctx->opt->interval);
+	scom_thdr_set_sec(sn->hdr, ctx->bkt->cur_ts + ctx->opts->interval);
+	scom_thdr_set_msec(sn->hdr, 0);
 	scom_thdr_set_ttf(sn->hdr, SSNP_FLAVOUR);
 
+	/* compute the tvpr and the tq */
 	sn->tvpr = ffff_m30_vwap(xn->qpri, xn->nt).v;
 	sn->tq = ffff_m30_from_m62(xn->nt).v;
 
 	/* kick off */
-	//sl1t_fio_write_ticks(ctx->wrr, (void*)sn, 2);
-	return;
-}
-
-static void
-print_snap_rTI(utectx_t uctx, scom_t st, zif_t z)
-{
-	char tl[MAX_LINE_LEN];
-	const_ssnap_t t = (const void*)st;
-	uint16_t si = scom_thdr_tblidx(st);
-	uint32_t sec = scom_thdr_sec(st);
-	uint16_t msec = scom_thdr_msec(st);
-	char *p;
-
-	if ((p = tl + pr_sym(uctx, tl, si)) == tl) {
-		*p++ = '0';
-	}
-	*p++ = '\t';
-	p += pr_tsmstz(p, sec, msec, z, ' ');
-	*p++ = '\t';
-	/* sequence is always 0 */
-	*p++ = '0';
-	*p++ = '\t';
-
-	p += ffff_m30_s(p, (m30_t)t->bp);
-	*p++ = '\t';
-	p += ffff_m30_s(p, (m30_t)t->bq);
-	*p++ = '\t';
-	p += ffff_m30_s(p, (m30_t)t->ap);
-	*p++ = '\t';
-	p += ffff_m30_s(p, (m30_t)t->aq);
-	*p++ = '\t';
-	p += ffff_m30_s(p, (m30_t)t->tvpr);
-	*p++ = '\t';
-	p += ffff_m30_s(p, (m30_t)t->tq);
-	*p++ = '\t';
-
-	/* tick type is not printed in tty mode */
-	*p++ = '\n';
-	*p++ = '\0';
-
-	fputs(tl, stdout);
-	return;
-}
-
-static void
-write_snap_fd(shnot_ctx_t ctx, uint16_t cidx)
-{
-	m62_t qpri;
-	m62_t nt;
-
-	if (xsnap_empty_p(ctx->bkt->snap + cidx)) {
-		return;
-	}
-
-	ctx->bkt->snap[cidx].sn->hdr->tblidx = cidx;
-	ctx->bkt->snap[cidx].sn->hdr->sec = ctx->bkt->cur_ts;
-	ctx->bkt->snap[cidx].sn->hdr->msec = 0;
-
-	/* compute the tvpr and the tq */
-	qpri = ctx->bkt->snap[cidx].qpri;
-	nt = ctx->bkt->snap[cidx].nt;
-	ctx->bkt->snap[cidx].sn->tvpr = ffff_m30_vwap(qpri, nt).v;
-	ctx->bkt->snap[cidx].sn->tq = ffff_m30_from_m62(nt).v;
-
-	/* and off to the generic printer */
-	print_snap_rTI(ctx->rdr, (scom_t)ctx->bkt->snap[cidx].sn, ctx->opt->z);
+	ute_add_tick(ctx->wrr, AS_SCOM(sn));
 	return;
 }
 
 static void
 new_candle(shnot_ctx_t ctx)
 {
-	if (UNLIKELY(ctx->opt->dryp)) {
+	if (UNLIKELY(ctx->opts->dryp)) {
 		return;
 	}
 
 	/* write all the snapshots so far */
 	for (uint16_t i = 0; i <= ctx->bkt->nsyms; i++) {
-		write_snap_fd(ctx, i);
+		write_snap(ctx, i);
 	}
 	return;
 }
@@ -339,7 +251,25 @@ bucketiser(shnot_ctx_t ctx, const_sl1t_t t)
 static void
 init(shnot_ctx_t ctx, shnot_opt_t opt)
 {
-	*ctx->opt = *opt;
+	const char *outf = opt->outfile;
+
+	/* start with a rinse, keep our opts though */
+	memset(ctx, 0, sizeof(*ctx));
+	/* just so we know where our options are */
+	ctx->opts = opt;
+
+	if (outf == NULL) {
+		/* what if outfile == infile? */
+		ctx->wrr = ute_open("workload.ute", UO_CREAT | UO_TRUNC);
+
+	} else if (outf[0] == '-' && outf[1] == '\0') {
+		/* bad idea */
+		ctx->wrr = NULL;
+		fputs("This is binary data, cannot dump to stdout\n", stderr);
+		exit(1);
+	} else {
+		ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC);
+	}
 	return;
 }
 
@@ -354,13 +284,13 @@ deinit(shnot_ctx_t UNUSED(ctx))
 }
 
 static void
-init_buckets(shnot_ctx_t ctx, utectx_t hdl)
+init_buckets(shnot_ctx_t ctx, utectx_t hdl, bkts_t bkt)
 {
 #define PMEM	(PROT_READ | PROT_WRITE)
 #define FMEM	(MAP_ANONYMOUS | MAP_PRIVATE)
 	size_t nsyms = ute_nsyms(hdl);
 
-	if (ctx->bkt->nsyms < nsyms) {
+	if ((ctx->bkt = bkt)->nsyms < nsyms) {
 		xsnap_t snap = ctx->bkt->snap;
 		size_t sz = (nsyms + 1) * sizeof(*snap);
 		ctx->bkt->snap = mmap(snap, sz, PMEM, FMEM, 0, 0);
@@ -396,10 +326,10 @@ int
 main(int argc, char *argv[])
 {
 	struct shnot_args_info argi[1];
-	int res = 0;
-	/* our shnot context */
 	struct shnot_ctx_s ctx[1] = {{0}};
 	struct shnot_opt_s opt[1] = {{0}};
+	struct bkts_s bkt[1];
+	int res = 0;
 
 	/* set default values */
 	argi->interval_arg = 300;
@@ -429,7 +359,7 @@ main(int argc, char *argv[])
 			continue;
 		}
 		/* (re)initialise our buckets */
-		init_buckets(ctx, hdl);
+		init_buckets(ctx, hdl, bkt);
 		/* otherwise print all them ticks */
 		for (size_t i = 0; i < ute_nticks(hdl); i++) {
 			scom_t ti = ute_seek(hdl, i);

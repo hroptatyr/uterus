@@ -195,8 +195,10 @@ uta_pr(pr_ctx_t pctx, scom_t st)
 		/* start of the candle */
 		p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
 		*p++ = '\t';
-		/* event count in candle */
-		p += sprintf(p, "%u", cdl->cnt);
+		/* event count in candle, print 3 times */
+		p += sprintf(p, "%08x", cdl->cnt);
+		*p++ = '|';
+		p += ffff_m30_s(p, (m30_t)cdl->cnt);
 		break;
 	case SL1T_TTF_UNK:
 	default:

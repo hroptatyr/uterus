@@ -210,6 +210,9 @@ rd1cbi5(int f, struct dcbi5_s *b)
 	return true;
 }
 
+#define DUKAS_VMUL	(1.0e6)
+#define DUKAS_VMULF	(1.0e6f)
+
 static void
 write_tick(mux_ctx_t ctx, struct dc_s *tl)
 {
@@ -242,12 +245,12 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
 	t[0].bid = __m30_get_dukas(tl->bp * ctx->opts->mul / ctx->opts->mag).v;
-	t[0].bsz = ffff_m30_get_f(tl->bq.d * 1.0e6f).v;
+	t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
 
 	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
 	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
 	t[1].ask = __m30_get_dukas(tl->ap * ctx->opts->mul / ctx->opts->mag).v;
-	t[1].asz = ffff_m30_get_f(tl->aq.d * 1.0e6f).v;
+	t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
 
 	ute_add_tick(ctx->wrr, AS_SCOM(t));
 	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
@@ -290,7 +293,7 @@ write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl, uint32_t cdl_len)
 	c[0].o = __m30_get_dukas(tl->o * ctx->opts->mul / ctx->opts->mag).v;
 	c[0].c = __m30_get_dukas(tl->c * ctx->opts->mul / ctx->opts->mag).v;
 	c[0].sta_ts = ts;
-	c[0].cnt = ffff_m30_get_f(tl->v.d).v;
+	c[0].cnt = ffff_m30_get_f(tl->v.d * DUKAS_VMULF).v;
 	/* and shove it */
 	ute_add_tick(ctx->wrr, AS_SCOM(c));
 	return;

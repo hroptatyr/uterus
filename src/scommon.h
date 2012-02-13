@@ -290,6 +290,28 @@ scom_thdr_mark_padding(scom_thdr_t t)
 	return;
 }
 
+
+/* helpers for variadically-sized ticks */
+#include "sl1t.h"
+#include "scdl.h"
+
+#if defined __STRUCT_SL1T_S_DEFINED && defined __STRUCT_SCDL_S_DEFINED
+static inline __attribute__((pure)) size_t
+scom_thdr_size(scom_t t)
+{
+/* return the size in bytes of the tick in question */
+	if (!(scom_thdr_ttf(t) & (SCOM_FLAG_LM | SCOM_FLAG_L2M))) {
+		return sizeof(struct sl1t_s);
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_LM) {
+		return sizeof(struct scdl_s);
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_L2M) {
+		return sizeof(struct sbatcdl_s);
+	} else {
+		return 0;
+	}
+}
+#endif	/* __STRUCT_SL1T_S_DEFINED && __STRUCT_SCDL_S_DEFINED */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

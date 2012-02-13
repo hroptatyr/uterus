@@ -127,20 +127,18 @@ clear_tpc(utetpc_t tpc)
 }
 
 DEFUN void
-tpc_add_tick(utetpc_t tpc, scom_t t)
+tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 {
 	uint64_t skey = tick_sortkey(t);
 
 	if (UNLIKELY(tpc->tidx >= tpc->tpsz)) {
 		return;
 	}
-	memcpy(tpc->tp + tpc->tidx, t, tpc->tsz);
-	if (LIKELY(!(t->ttf & SCOM_FLAG_LM))) {
-		tpc->tidx += tpc->tsz;
-	} else {
-		/* and twice the size for a scdl or ssnap tick */
-		tpc->tidx += tpc->tsz * 2;
-	}
+	memcpy(tpc->tp + tpc->tidx, t, tsz);
+	/* just add the total byte size as passed on */
+	tpc->tidx += tsz;
+
+	/* maybe mark the whole shebang as unsorted */
 	if (UNLIKELY(skey < tpc->last)) {
 		set_tpc_unsorted(tpc);
 	}

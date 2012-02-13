@@ -560,13 +560,16 @@ ute_flush(utectx_t ctx)
 void
 ute_add_tick(utectx_t ctx, scom_t t)
 {
+/* the big question here is if we want to allow arbitrary ticks as in
+ * can T be of type scdl too? */
 	if (!tpc_active_p(ctx->tpc)) {
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx), sizeof(struct sl1t_s));
 	} else if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);
 	}
-	tpc_add_tick(ctx->tpc, t);
+	/* we sort the tick question for now by passing on the size of T */
+	tpc_add_tick(ctx->tpc, t, scom_thdr_size(t));
 	return;
 }
 

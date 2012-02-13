@@ -274,9 +274,11 @@ init(shnot_ctx_t ctx, shnot_opt_t opt)
 }
 
 static void
-deinit(shnot_ctx_t UNUSED(ctx))
+deinit(shnot_ctx_t ctx)
 {
 	xsnap_t snap = ctx->bkt->snap;
+
+	ute_close(ctx->wrr);
 	if (snap) {
 		munmap(snap, (ctx->bkt->nsyms + 1) * sizeof(*snap));
 	}

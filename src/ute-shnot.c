@@ -288,18 +288,27 @@ init_buckets(shnot_ctx_t ctx, utectx_t hdl, bkts_t bkt)
 {
 #define PMEM	(PROT_READ | PROT_WRITE)
 #define FMEM	(MAP_ANONYMOUS | MAP_PRIVATE)
-	size_t nsyms = ute_nsyms(hdl);
+	size_t nsyms_hdl = ute_nsyms(hdl);
+	size_t nsyms_bkt = bkt->nsyms;
 
-	if ((ctx->bkt = bkt)->nsyms < nsyms) {
-		xsnap_t snap = ctx->bkt->snap;
-		size_t sz = (nsyms + 1) * sizeof(*snap);
-		ctx->bkt->snap = mmap(snap, sz, PMEM, FMEM, 0, 0);
-		ctx->bkt->nsyms = nsyms;
+	if (nsyms_bkt < nsyms_hdl || (bkt->snap == NULL && nsyms_hdl == 0)) {
+		xsnap_t snap = bkt->snap;
+		size_t sz = (nsyms_hdl + 1) * sizeof(*snap);
+
+		if (snap == NULL) {
+			bkt->snap = mmap(snap, sz, PMEM, FMEM, 0, 0);
+		} else {
+			size_t old = (nsyms_bkt + 1) * sizeof(*snap);
+			bkt->snap = mremap(snap, old, sz, MREMAP_MAYMOVE);
+		}
+		bkt->nsyms = nsyms_hdl;
 	}
 	/* assign the reader */
 	ctx->rdr = hdl;
 	/* scrub the buckets in b thoroughly */
-	bkts_cleanse(ctx->bkt);
+	bkts_cleanse(bkt);
+	/* and assign buckets to ctx */
+	ctx->bkt = bkt;
 	return;
 }
 
@@ -328,7 +337,7 @@ main(int argc, char *argv[])
 	struct shnot_args_info argi[1];
 	struct shnot_ctx_s ctx[1] = {{0}};
 	struct shnot_opt_s opt[1] = {{0}};
-	struct bkts_s bkt[1];
+	struct bkts_s bkt[1] = {{0}};
 	int res = 0;
 
 	/* set default values */

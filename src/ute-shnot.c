@@ -271,10 +271,14 @@ init(shnot_ctx_t ctx, shnot_opt_t opt)
 static void
 deinit(shnot_ctx_t ctx)
 {
-	xsnap_t snap = ctx->bkt->snap;
-
-	ute_close(ctx->wrr);
-	if (snap) {
+	if (ctx->wrr) {
+		/* writing those ticks to the disk is paramount */
+		ute_close(ctx->wrr);
+	}
+	if (ctx->bkt == NULL) {
+		;
+	} else if (ctx->bkt->snap) {
+		xsnap_t snap = ctx->bkt->snap;
 		munmap(snap, (ctx->bkt->nsyms + 1) * sizeof(*snap));
 	}
 	return;

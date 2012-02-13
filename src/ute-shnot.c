@@ -237,18 +237,27 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 	return t1 < t2;
 }
 
+static uint16_t
+copy_sym(shnot_ctx_t ctx, uint16_t cidx)
+{
+	const char *cur_sym = ute_idx2sym(ctx->rdr, cidx);
+	return ute_sym2idx(ctx->wrr, cur_sym);
+}
+
 static void
 write_snap(shnot_ctx_t ctx, uint16_t cidx)
 {
 	xsnap_t xn;
 	ssnap_t sn;
+	uint16_t nidx;
 
 	if (xsnap_empty_p(ctx->bkt->snap + cidx)) {
 		return;
 	}
 
 	sn = (xn = ctx->bkt->snap + cidx)->sn;
-	scom_thdr_set_tblidx(sn->hdr, cidx);
+	nidx = copy_sym(ctx, cidx);
+	scom_thdr_set_tblidx(sn->hdr, nidx);
 	scom_thdr_set_sec(sn->hdr, ctx->bkt->cur_ts + ctx->opts->interval);
 	scom_thdr_set_msec(sn->hdr, 0);
 	scom_thdr_set_ttf(sn->hdr, SSNP_FLAVOUR);

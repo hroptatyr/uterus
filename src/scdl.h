@@ -83,6 +83,7 @@ struct scdl_s {
 		};
 	} __attribute__((aligned(8)));
 };
+#define __STRUCT_SCDL_S_DEFINED
 
 /**
  * Snaps are useful for tools like the trading engine. */
@@ -101,6 +102,7 @@ struct ssnap_s {
 		};
 	} __attribute__((aligned(8)));
 };
+#define __STRUCT_SSNAP_S_DEFINED
 
 /**
  * BAT-OHLC,V candles, 4 sl1ts wide. */
@@ -130,6 +132,7 @@ struct sbatcdl_s {
 		};
 	} __attribute__((aligned(8)));
 };
+#define __STRUCT_SBATCDL_S_DEFINED
 
 
 /* header glue */
@@ -211,6 +214,8 @@ scdl_reset_p(const_scdl_t tgt)
 	return tgt->cnt == 0;
 }
 
+
+#if defined __STRUCT_SL1T_S_DEFINED
 /* ctor */
 static inline struct scdl_s
 scdl_ticks(const_sl1t_t t, size_t nt)
@@ -262,6 +267,7 @@ scdl_join_ticks(scdl_t tgt, const_sl1t_t t, size_t nt)
 	}
 	return;
 }
+#endif	/* __STRUCT_SL1T_S_DEFINED */
 
 static inline void
 scdl_join(scdl_t tgt, const_scdl_t src)

@@ -48,10 +48,13 @@
 #include <stdio.h>
 #include "secu.h"
 #include "date.h"
-#include "sl1t.h"
 #include "utefile.h"
 /* for public demux (print) apis, muxing isn't possible yet */
 #include "ute-print.h"
+
+/* so we know about ticks, candles and snapshots */
+#include "sl1t.h"
+#include "scdl.h"
 
 #if defined USE_DEBUGGING_ASSERTIONS
 # include <assert.h>
@@ -108,6 +111,60 @@ fputn(FILE *whither, const char *p, size_t n)
 }
 #endif	/* USE_DEBUGGING_ASSERTIONS */
 
+static size_t
+__pr_snap(char *tgt, scom_t st)
+{
+	const_ssnap_t snp = (const void*)st;
+	char *p = tgt;
+
+	/* bid price */
+	p += ffff_m30_s(p, (m30_t)snp->bp);
+	*p++ = '\t';
+	/* ask price */
+	p += ffff_m30_s(p, (m30_t)snp->ap);
+	*p++ = '\t';
+	/* bid quantity */
+	p += ffff_m30_s(p, (m30_t)snp->bq);
+	*p++ = '\t';
+	/* ask quantity */
+	p += ffff_m30_s(p, (m30_t)snp->aq);
+	*p++ = '\t';
+	/* volume-weighted trade price */
+	p += ffff_m30_s(p, (m30_t)snp->tvpr);
+	*p++ = '\t';
+	/* trade quantity */
+	p += ffff_m30_s(p, (m30_t)snp->tq);
+	return p - tgt;
+}
+
+static size_t
+__pr_cdl(char *tgt, scom_t st)
+{
+	const_scdl_t cdl = (const void*)st;
+	char *p = tgt;
+
+	/* h(igh) */
+	p += ffff_m30_s(p, (m30_t)cdl->h);
+	*p++ = '\t';
+	/* l(ow) */
+	p += ffff_m30_s(p, (m30_t)cdl->l);
+	*p++ = '\t';
+	/* o(pen) */
+	p += ffff_m30_s(p, (m30_t)cdl->o);
+	*p++ = '\t';
+	/* c(lose) */
+	p += ffff_m30_s(p, (m30_t)cdl->c);
+	*p++ = '\t';
+	/* start of the candle */
+	p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
+	*p++ = '\t';
+	/* event count in candle, print 3 times */
+	p += sprintf(p, "%08x", cdl->cnt);
+	*p++ = '|';
+	p += ffff_m30_s(p, (m30_t)cdl->cnt);
+	return p - tgt;
+}
+
 
 /* public functions, muxer and demuxer, but the muxer doesn't work yet */
 #if 0
@@ -122,10 +179,9 @@ ssize_t
 uta_pr(pr_ctx_t pctx, scom_t st)
 {
 	char tl[MAX_LINE_LEN];
-	const_sl1t_t t = (const void*)st;
-	uint32_t sec = sl1t_stmp_sec(t);
-	uint16_t msec = sl1t_stmp_msec(t);
-	uint16_t ttf = sl1t_ttf(t);
+	uint32_t sec = scom_thdr_sec(st);
+	uint16_t msec = scom_thdr_msec(st);
+	uint16_t ttf = scom_thdr_ttf(st);
 	ssize_t res;
 	char *p;
 
@@ -146,28 +202,45 @@ uta_pr(pr_ctx_t pctx, scom_t st)
 	p += sprintf(p, "%x", ttf);
 	*p++ = '\t';
 	/* index into the sym table */
-	p += sprintf(p, "%x", sl1t_tblidx(t));
+	p += sprintf(p, "%x", scom_thdr_tblidx(st));
 	/* sequence is always 0 */
 	*p++ = '\t';
 	switch (ttf) {
+		const_sl1t_t l1t;
+
 	case SL1T_TTF_BID:
 	case SL1T_TTF_ASK:
 	case SL1T_TTF_TRA:
 	case SL1T_TTF_FIX:
 	case SL1T_TTF_STL:
 	case SL1T_TTF_AUC:
+		l1t = (const void*)st;
 		/* price value */
-		p += ffff_m30_s(p, (m30_t)t->v[0]);
+		p += ffff_m30_s(p, (m30_t)l1t->v[0]);
 		*p++ = '\t';
 		/* size value */
-		p += ffff_m30_s(p, (m30_t)t->v[1]);
+		p += ffff_m30_s(p, (m30_t)l1t->v[1]);
 		break;
 	case SL1T_TTF_VOL:
 	case SL1T_TTF_VPR:
 	case SL1T_TTF_OI:
 		/* just one huge value, will there be a m62? */
-		p += ffff_m62_s(p, (m62_t)t->w[0]);
+		l1t = (const void*)st;
+		p += ffff_m62_s(p, (m62_t)l1t->w[0]);
 		break;
+
+		/* candles */
+	case SL1T_TTF_BID | SCOM_FLAG_LM:
+	case SL1T_TTF_ASK | SCOM_FLAG_LM:
+	case SL1T_TTF_TRA | SCOM_FLAG_LM:
+		p += __pr_cdl(p, st);
+		break;
+
+		/* snaps */
+	case SL1T_TTF_UNK | SCOM_FLAG_LM:
+		p += __pr_snap(p, st);
+		break;
+
 	case SL1T_TTF_UNK:
 	default:
 		break;

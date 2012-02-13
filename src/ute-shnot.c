@@ -381,8 +381,12 @@ init_buckets(shnot_ctx_t ctx, utectx_t hdl, bkts_t bkt)
 }
 
 static void
-fini_buckets(shnot_ctx_t UNUSED(ctx))
+fini_buckets(shnot_ctx_t ctx)
 {
+	if (ctx->bkt) {
+		/* reset the bucket time */
+		set_buckets_time(ctx->bkt, 0);
+	}
 	return;
 }
 
@@ -445,9 +449,9 @@ main(int argc, char *argv[])
 		}
 		/* last round */
 		{
-			time_t bkt_tm = get_buckets_time(ctx->bkt);
+			time_t bkt_tm = get_buckets_time(bkt);
 			time_t new_ts = next_stamp(ctx, bkt_tm);
-			set_buckets_time(ctx->bkt, new_ts);
+			set_buckets_time(bkt, new_ts);
 			new_candle(ctx);
 		}
 		/* finish our buckets */

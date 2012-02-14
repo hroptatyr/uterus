@@ -455,12 +455,22 @@ idxsort(scom_t p, size_t satsz, size_t nticks)
 {
 	scidx_t *scp = get_scratch();
 	size_t m = min(nticks, IDXSORT_SIZE);
+	size_t j = 0;
 
-	for (size_t i = 0; i < m; i++) {
-		scp[i] = make_scidx(p, i);
-		p = DATCA(p, satsz);
+	for (size_t i = 0; i < m; j++) {
+		size_t bsz = scom_thdr_size(p);
+
+		scp[j] = make_scidx(p, i);
+		p = DATCA(p, bsz);
+		/* maybe it's faster to use a hard-coded satsz here? */
+		i += bsz / sizeof(struct sl1t_s);
 	}
-	for (size_t i = 0; i < m; i += 4) {
+	/* fill scp up to the next multiple of 4 */
+	while (j % 4) {
+		scp[j++] = 0;
+	}
+	/* use the local index in scp to do pornsort */
+	for (size_t i = 0; i < j; i += 4) {
 		uint8_t perm = pornsort_perm(scp + i);
 		pornsort_apply(scp + i, perm);
 	}

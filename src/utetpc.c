@@ -213,13 +213,17 @@ pornsort_perm(scidx_t p[4])
 
 	if (p[1].u < p[0].u) {
 		/* swap them right away? */
+		uint64_t tmp;
 		ia = 1, ib = 0;
-		p[0].u = p[1].u, p[1].u = p[0].u;
+		tmp = p[0].u;
+		p[0].u = p[1].u, p[1].u = tmp;
 	}
 	if (p[3].u < p[2].u) {
 		/* swap them right away? */
+		uint64_t tmp;
 		ic = 3, id = 2;
-		p[2].u = p[3].u, p[3].u = p[2].u;
+		tmp = p[2].u;
+		p[2].u = p[3].u, p[3].u = tmp;
 	}
 
 	/* bit like AA-sort now, final comparison */

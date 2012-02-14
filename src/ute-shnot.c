@@ -241,6 +241,9 @@ static uint16_t
 copy_sym(shnot_ctx_t ctx, uint16_t cidx)
 {
 	const char *cur_sym = ute_idx2sym(ctx->rdr, cidx);
+	if (UNLIKELY(cur_sym == NULL)) {
+		return 0;
+	}
 	return ute_sym2idx(ctx->wrr, cur_sym);
 }
 

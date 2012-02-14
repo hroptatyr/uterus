@@ -208,20 +208,17 @@ __ilog2_ceil(size_t n)
 static uint8_t
 pornsort_perm(scidx_t p[4])
 {
-	uint8_t ia = 0, ib = 1, ic = 2, id = 3;
 	uint8_t perm;
 
 	if (p[1].u < p[0].u) {
 		/* swap them right away? */
 		uint64_t tmp;
-		ia = 1, ib = 0;
 		tmp = p[0].u;
 		p[0].u = p[1].u, p[1].u = tmp;
 	}
 	if (p[3].u < p[2].u) {
 		/* swap them right away? */
 		uint64_t tmp;
-		ic = 3, id = 2;
 		tmp = p[2].u;
 		p[2].u = p[3].u, p[3].u = tmp;
 	}
@@ -231,15 +228,15 @@ pornsort_perm(scidx_t p[4])
 		/* c first */
 		if (p[3].u < p[0].u) {
 			/* d next, then a, then b */
-			perm = PERM(ic, id, ia, ib);
+			perm = PERM(2, 3, 0, 1);
 		} else {
 			/* a next */
 			if (p[3].u < p[1].u) {
 				/* d next, then b */
-				perm = PERM(ic, ia, id, ib);
+				perm = PERM(2, 0, 3, 1);
 			} else {
 				/* b next, then d */
-				perm = PERM(ic, ia, ib, id);
+				perm = PERM(2, 0, 1, 3);
 			}
 		}
 	} else {
@@ -248,14 +245,14 @@ pornsort_perm(scidx_t p[4])
 			/* c next */
 			if (p[3].u < p[1].u) {
 				/* d next, then b */
-				perm = PERM(ia, ic, id, ib);
+				perm = PERM(0, 2, 3, 1);
 			} else {
 				/* b next, then d */
-				perm = PERM(ia, ic, ib, id);
+				perm = PERM(0, 2, 1, 3);
 			}
 		} else {
 			/* b next, then c, then d */
-			perm = PERM(ia, ib, ic, id);
+			perm = PERM(0, 1, 2, 3);
 		}
 	}
 	return perm;

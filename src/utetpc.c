@@ -184,6 +184,27 @@ typedef union __attribute__((transparent_union)) {
 	};
 } scidx_t;
 
+/* special version of ilog that works for inputs up to 256 */
+static inline size_t __attribute__((const))
+__ilog2_ceil(size_t n)
+{
+	if (n > 128) {
+		return 256;
+	} else if (n <= 4) {
+		return 4;
+	} else if (n <= 8) {
+		return 8;
+	} else if (n <= 16) {
+		return 16;
+	} else if (n <= 32) {
+		return 32;
+	} else if (n <= 64) {
+		return 64;
+	} else {
+		return 128;
+	}
+}
+
 static uint8_t
 pornsort_perm(scidx_t p[4])
 {
@@ -425,20 +446,17 @@ merge_all(size_t nticks)
 	scidx_t *tgt = src + IDXSORT_SIZE;
 
 	/* steps 4, 8, 16, 32, 64, 128
-	 * we strictly need an even number of steps so that the final
+	 * we strictly need an even number of rounds so that the final
 	 * result is in the first half of gidx */
-	for (int step = 4; step < IDXSORT_SIZE; ) {
-		int s2 = 2 * step, j;
+	for (size_t step = 4; step < nticks; ) {
+		size_t s2 = 2 * step;
 
 		for (size_t i = 0; i < nticks; i += s2) {
 			merge_up(tgt + i, src + i, step, nticks);
 		}
-		/* last ones */
-		if ((j = nticks % s2)) {
-			int i = nticks - j;
-			merge_up(tgt + i, src + i, step, j);
-		}
-		step = s2;
+		/* per definitionem we only hand in nticks that are 2 powers
+		 * so there's no need to merge_up() any remainders */
+
 		/* swap source and target roles (ring buffer) */
 		if (src < tgt) {
 			tgt = get_scratch();
@@ -447,6 +465,12 @@ merge_all(size_t nticks)
 			src = get_scratch();
 			tgt = src + IDXSORT_SIZE;
 		}
+		/* step up */
+		step = s2;
+	}
+	if (UNLIKELY(tgt < src)) {
+		/* odd number of rounds, memmove */
+		memmove(tgt, src, IDXSORT_SIZE * sizeof(*src));
 	}
 	return;
 }
@@ -466,17 +490,18 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 		/* maybe it's faster to use a hard-coded satsz here? */
 		i += bsz / sizeof(struct sl1t_s);
 	}
-	/* fill scp up to the next multiple of 4 */
-	while (j % 4) {
-		scp[j++].u = -1UL;
-	}
+	/* reuse m to compute the next 2-power */
+	m = __ilog2_ceil(j);
+	/* fill scp up with naughts */
+	memset(scp + j, 0, (m - j) * sizeof(*scp));
+
 	/* use the local index in scp to do pornsort */
 	for (size_t i = 0; i < j; i += 4) {
 		uint8_t perm = pornsort_perm(scp + i);
 		pornsort_apply(scp + i, perm);
 	}
 
-	/* merge steps */
+	/* merge steps, up to the next 2-power */
 	merge_all(m);
 	return scp;
 }

@@ -509,7 +509,12 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 static void
 collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
 {
-	for (size_t i = 0, j = 0; i < nticks; j++) {
+	/* skip 0 idxs first */
+	size_t j;
+
+	for (j = 0; j < nticks && idxa[j].u == 0ULL; j++);
+
+	for (size_t i = 0; i < nticks; j++) {
 		sidx_t idx = scidx_idx(idxa[j]);
 		const void *s = DATCI(src, idx, tsz);
 		size_t bsz = scom_thdr_size(s);
@@ -604,6 +609,7 @@ tpc_sort(utetpc_t tpc)
 		size_t ntleft = DATDI(ep, tp, tpc->tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
 		scidx_t *scp = idxsort(tp, tpc->tsz, nticks);
+
 		collate(np, tp, scp, nticks, tpc->tsz);
 		tp = DATI(tp, nticks, tpc->tsz);
 		np = DATI(np, nticks, tpc->tsz);

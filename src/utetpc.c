@@ -452,7 +452,7 @@ merge_all(size_t nticks)
 }
 
 static scidx_t*
-idxsort(scom_t p, size_t satsz, size_t nticks)
+idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 {
 	scidx_t *scp = get_scratch();
 	size_t m = min(nticks, IDXSORT_SIZE);

@@ -468,7 +468,7 @@ idxsort(scom_t p, size_t satsz, size_t nticks)
 	}
 	/* fill scp up to the next multiple of 4 */
 	while (j % 4) {
-		scp[j++] = 0;
+		scp[j++] = -1UL;
 	}
 	/* use the local index in scp to do pornsort */
 	for (size_t i = 0; i < j; i += 4) {

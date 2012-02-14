@@ -228,7 +228,7 @@ pornsort_perm(scidx_t p[4])
 
 /* pornsort of 4 ticks */
 static void
-pornsort_apply(scidx_t *p, uint8_t perm)
+pornsort_apply(scidx_t p[4], uint8_t perm)
 {
 	uint64_t tmp;
 

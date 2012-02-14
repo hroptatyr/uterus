@@ -356,7 +356,7 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 		}
 		if (PERMI(perm, 3) != 3) {
 			/* PERMI(perm, 0) cant be 0 */
-			p[3].u = tmpa[PERMI(perm, 1)];
+			p[3].u = tmpa[PERMI(perm, 3)];
 		}
 	}
 	}

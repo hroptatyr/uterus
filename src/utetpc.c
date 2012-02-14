@@ -395,6 +395,7 @@ fini_scratch(void)
 {
 	if (LIKELY(__gidx != MAP_FAILED)) {
 		(void)munmap(__gidx, SCRATCH_SIZE);
+		__gidx = MAP_FAILED;
 	}
 	return;
 }

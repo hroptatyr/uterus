@@ -229,11 +229,19 @@ next_aligned_stamp(shnot_ctx_t ctx, time_t ts)
 	return next_stamp(ctx, aligned_stamp(ctx, ts));
 }
 
-static bool
+static inline bool
 new_candle_p(shnot_ctx_t ctx, scom_t t)
 {
-	time_t t1 = ctx->bkt->cur_ts;
+	time_t t1 = get_buckets_time(ctx->bkt);
 	time_t t2 = aligned_stamp(ctx, scom_thdr_sec(t));
+
+	if (UNLIKELY(t1 == 0)) {
+		/* t's time becomes the bucket time
+		 * well the aligned stamp of t does, this is not strictly
+		 * correct but necessary to produce equally-sized candles */
+		set_buckets_time(ctx->bkt, t2);
+		return false;
+	}
 	return t1 < t2;
 }
 
@@ -293,8 +301,8 @@ check_candle(shnot_ctx_t ctx, scom_t t)
 {
 	if (UNLIKELY(new_candle_p(ctx, t))) {
 		time_t new_ts = aligned_stamp(ctx, scom_thdr_sec(t));
-		set_buckets_time(ctx->bkt, new_ts);
 		new_candle(ctx);
+		set_buckets_time(ctx->bkt, new_ts);
 		bkts_cleanse(ctx->bkt);
 	}
 	return;
@@ -450,13 +458,9 @@ main(int argc, char *argv[])
 			bucketiser(ctx, ti);
 			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
 		}
-		/* last round */
-		{
-			time_t bkt_tm = get_buckets_time(bkt);
-			time_t new_ts = next_stamp(ctx, bkt_tm);
-			set_buckets_time(bkt, new_ts);
-			new_candle(ctx);
-		}
+		/* last round, just emit what we've got */
+		new_candle(ctx);
+
 		/* finish our buckets */
 		fini_buckets(ctx);
 		/* oh right, close the handle */

@@ -175,35 +175,31 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 typedef uint64_t scidx_t;
 
 static uint8_t
-pornsort_perm(scidx_t *p)
+pornsort_perm(scidx_t p[4])
 {
-	/* satsz is size of satellite data, including the key */
-	uint8_t perm, ia = 0, ib = 1, ic = 2, id = 3;
-	uint64_t p0 = p[0];
-	uint64_t p1 = p[1];
-	uint64_t p2 = p[2];
-	uint64_t p3 = p[3];
+	uint8_t ia = 0, ib = 1, ic = 2, id = 3;
+	uint8_t perm;
 
-	if (p1 < p0) {
+	if (p[1] < p[0]) {
 		/* swap them right away? */
 		ia = 1, ib = 0;
-		p0 = p1, p1 = p[0];
+		p[0] = p[1], p[1] = p[0];
 	}
 	if (p[3] < p[2]) {
 		/* swap them right away? */
 		ic = 3, id = 2;
-		p2 = p3, p3 = p[2];
+		p[2] = p[3], p[3] = p[2];
 	}
 
 	/* bit like AA-sort now, final comparison */
-	if (p2 < p0) {
+	if (p[2] < p[0]) {
 		/* c first */
-		if (p3 < p0) {
+		if (p[3] < p[0]) {
 			/* d next, then a, then b */
 			perm = PERM(ic, id, ia, ib);
 		} else {
 			/* a next */
-			if (p3 < p1) {
+			if (p[3] < p[1]) {
 				/* d next, then b */
 				perm = PERM(ic, ia, id, ib);
 			} else {
@@ -213,9 +209,9 @@ pornsort_perm(scidx_t *p)
 		}
 	} else {
 		/* a first */
-		if (p2 < p1) {
+		if (p[2] < p[1]) {
 			/* c next */
-			if (p3 < p1) {
+			if (p[3] < p[1]) {
 				/* d next, then b */
 				perm = PERM(ia, ic, id, ib);
 			} else {

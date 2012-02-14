@@ -172,7 +172,17 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 	(uint8_t)((p >> (2 * a)) & 0x3)
 #define IDXSORT_SIZE	256
 
-typedef uint64_t scidx_t;
+/* union based scidx
+ * order in the struct part is important as we need this to compare
+ * two such things for sorting; go from least significant to most */
+typedef union __attribute__((transparent_union)) {
+	uint64_t u;
+	struct {
+		uint32_t idx:22;
+		uint32_t msec:10;
+		uint32_t sec:32;
+	};
+} scidx_t;
 
 static uint8_t
 pornsort_perm(scidx_t p[4])
@@ -180,26 +190,26 @@ pornsort_perm(scidx_t p[4])
 	uint8_t ia = 0, ib = 1, ic = 2, id = 3;
 	uint8_t perm;
 
-	if (p[1] < p[0]) {
+	if (p[1].u < p[0].u) {
 		/* swap them right away? */
 		ia = 1, ib = 0;
-		p[0] = p[1], p[1] = p[0];
+		p[0].u = p[1].u, p[1].u = p[0].u;
 	}
-	if (p[3] < p[2]) {
+	if (p[3].u < p[2].u) {
 		/* swap them right away? */
 		ic = 3, id = 2;
-		p[2] = p[3], p[3] = p[2];
+		p[2].u = p[3].u, p[3].u = p[2].u;
 	}
 
 	/* bit like AA-sort now, final comparison */
-	if (p[2] < p[0]) {
+	if (p[2].u < p[0].u) {
 		/* c first */
-		if (p[3] < p[0]) {
+		if (p[3].u < p[0].u) {
 			/* d next, then a, then b */
 			perm = PERM(ic, id, ia, ib);
 		} else {
 			/* a next */
-			if (p[3] < p[1]) {
+			if (p[3].u < p[1].u) {
 				/* d next, then b */
 				perm = PERM(ic, ia, id, ib);
 			} else {
@@ -209,9 +219,9 @@ pornsort_perm(scidx_t p[4])
 		}
 	} else {
 		/* a first */
-		if (p[2] < p[1]) {
+		if (p[2].u < p[1].u) {
 			/* c next */
-			if (p[3] < p[1]) {
+			if (p[3].u < p[1].u) {
 				/* d next, then b */
 				perm = PERM(ia, ic, id, ib);
 			} else {
@@ -240,64 +250,64 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 	case PERM(1, 0, 2, 3):
 		/* (1,2) */
 		/* not possible given the above perm generator */
-		tmp = p[0];
-		p[0] = p[1], p[1] = tmp;
+		tmp = p[0].u;
+		p[0].u = p[1].u, p[1].u = tmp;
 		break;
 
 	case PERM(2, 1, 0, 3):
 		/* (1,3) */
-		tmp = p[0];
-		p[0] = p[2], p[2] = tmp;
+		tmp = p[0].u;
+		p[0].u = p[2].u, p[2].u = tmp;
 		break;
 
 	case PERM(3, 1, 2, 0):
 		/* (1,4) */
-		tmp = p[0];
-		p[0] = p[3], p[3] = tmp;
+		tmp = p[0].u;
+		p[0].u = p[3].u, p[3].u = tmp;
 		break;
 
 	case PERM(0, 2, 1, 3):
 		/* (2,3) */
-		tmp = p[1];
-		p[1] = p[2], p[2] = tmp;
+		tmp = p[1].u;
+		p[1].u = p[2].u, p[2].u = tmp;
 		break;
 
 	case PERM(0, 3, 2, 1):
 		/* (2,4) */
-		tmp = p[1];
-		p[1] = p[3], p[3] = tmp;
+		tmp = p[1].u;
+		p[1].u = p[3].u, p[3].u = tmp;
 		break;
 
 	case PERM(0, 1, 3, 2):
 		/* (3,4) */
 		/* not possible with the above perm generator */
-		tmp = p[2];
-		p[2] = p[3], p[3] = tmp;
+		tmp = p[2].u;
+		p[2].u = p[3].u, p[3].u = tmp;
 		break;
 
 	case PERM(1, 0, 3, 2):
 		/* (1,2)(3,4) */
 		/* not possible with the above perm generator */
-		tmp = p[0];
-		p[0] = p[1], p[1] = tmp;
-		tmp = p[2];
-		p[2] = p[3], p[3] = tmp;
+		tmp = p[0].u;
+		p[0].u = p[1].u, p[1].u = tmp;
+		tmp = p[2].u;
+		p[2].u = p[3].u, p[3].u = tmp;
 		break;
 
 	case PERM(2, 3, 0, 1):
 		/* (1,3)(2,4) */
-		tmp = p[0];
-		p[0] = p[2], p[2] = tmp;
-		tmp = p[1];
-		p[1] = p[3], p[3] = tmp;
+		tmp = p[0].u;
+		p[0].u = p[2].u, p[2].u = tmp;
+		tmp = p[1].u;
+		p[1].u = p[3].u, p[3].u = tmp;
 		break;
 
 	case PERM(3, 2, 1, 0):
 		/* (1,4)(2,3) */
-		tmp = p[0];
-		p[0] = p[3], p[3] = tmp;
-		tmp = p[1];
-		p[1] = p[2], p[2] = tmp;
+		tmp = p[0].u;
+		p[0].u = p[3].u, p[3].u = tmp;
+		tmp = p[1].u;
+		p[1].u = p[2].u, p[2].u = tmp;
 		break;
 
 	default: {
@@ -305,23 +315,23 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 		uint64_t tmpa[4];
 
 		if (PERMI(perm, 0) != 0) {
-			tmpa[0] = p[0];
-			p[0] = p[PERMI(perm, 0)];
+			tmpa[0] = p[0].u;
+			p[0].u = p[PERMI(perm, 0)].u;
 		}
 		if (PERMI(perm, 1) != 1) {
-			tmpa[1] = p[1];
+			tmpa[1] = p[1].u;
 			/* PERMI(perm, 0) cant be 0 */
-			p[1] = p[PERMI(perm, 1)];
+			p[1].u = p[PERMI(perm, 1)].u;
 		}
 		if (PERMI(perm, 2) != 2) {
-			tmpa[2] = p[2];
-			tmpa[3] = p[3];
+			tmpa[2] = p[2].u;
+			tmpa[3] = p[3].u;
 			/* PERMI(perm, 0) cant be 0 */
-			p[2] = tmpa[PERMI(perm, 2)];
+			p[2].u = tmpa[PERMI(perm, 2)];
 		}
 		if (PERMI(perm, 3) != 3) {
 			/* PERMI(perm, 0) cant be 0 */
-			p[3] = tmpa[PERMI(perm, 1)];
+			p[3].u = tmpa[PERMI(perm, 1)];
 		}
 	}
 	}
@@ -331,28 +341,18 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 static inline scidx_t
 make_scidx(scom_t t, sidx_t idx)
 {
-	uint64_t sec = ((uint64_t)scom_thdr_sec(t)) << 32;
-	uint64_t msec = ((uint64_t)(scom_thdr_msec(t) & 0x3ff)) << 22;
-	uint64_t i = idx & 0x3fffff;
-	return sec | msec | i;
+	scidx_t res = {
+		.sec = scom_thdr_sec(t),
+		.msec = scom_thdr_msec(t),
+		.idx = idx,
+	};
+	return res;
 }
 
 static inline uint32_t
 scidx_idx(scidx_t sci)
 {
-	return (uint32_t)(sci & 0x3fffff);
-}
-
-static inline __attribute__((unused)) int32_t
-scidx_sec(scidx_t sci)
-{
-	return (int32_t)((sci >> 32) & 0xffffffff);
-}
-
-static inline __attribute__((unused)) uint16_t
-scidx_msec(scidx_t sci)
-{
-	return (uint16_t)((sci >> 22) & 0x3ff);
+	return sci.idx;
 }
 
 #define min(x, y)	(x < y ? x : y)
@@ -407,13 +407,13 @@ merge_up(scidx_t *tgt, scidx_t *src, int step, int max)
 	int i = 0;
 
 	for (; i1 < ei1 && i2 < ei2; i++) {
-		tgt[i] = src[i1] < src[i2] ? src[i1++] : src[i2++];
+		tgt[i].u = src[i1].u < src[i2].u ? src[i1++].u : src[i2++].u;
 	}
 	for (; i1 < ei1; i++, i1++) {
-		tgt[i] = src[i1];
+		tgt[i].u = src[i1].u;
 	}
 	for (; i2 < ei2; i++, i2++) {
-		tgt[i] = src[i2];
+		tgt[i].u = src[i2].u;
 	}
 	return;
 }
@@ -468,7 +468,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 	}
 	/* fill scp up to the next multiple of 4 */
 	while (j % 4) {
-		scp[j++] = -1UL;
+		scp[j++].u = -1UL;
 	}
 	/* use the local index in scp to do pornsort */
 	for (size_t i = 0; i < j; i += 4) {

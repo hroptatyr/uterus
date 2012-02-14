@@ -371,12 +371,6 @@ min_size_t(size_t x, size_t y)
 static scidx_t *__gidx = MAP_FAILED;
 #define SCRATCH_SIZE	(IDXSORT_SIZE * 2 * sizeof(uint64_t))
 
-static void*
-get_scratch(void)
-{
-	return __gidx;
-}
-
 static void
 init_scratch(void)
 {
@@ -384,6 +378,16 @@ init_scratch(void)
 		__gidx = mmap(NULL, SCRATCH_SIZE, PROT_MEM, MAP_MEM, -1, 0);
 	}
 	return;
+}
+
+static void*
+get_scratch(void)
+{
+/* singleton */
+	if (UNLIKELY(__gidx == MAP_FAILED)) {
+		init_scratch();
+	}
+	return __gidx;
 }
 
 static void

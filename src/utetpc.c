@@ -484,11 +484,14 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 static void
 collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
 {
-	for (size_t i = 0; i < nticks; i++) {
+	for (size_t i = 0; i < nticks;) {
 		sidx_t idx = scidx_idx(idxa[i]);
 		const void *s = DATCI(src, idx, tsz);
-		memcpy(tgt, s, tsz);
-		tgt = DATA(tgt, tsz);
+		size_t bsz = scom_thdr_size(s);
+
+		memcpy(tgt, s, bsz);
+		tgt = DATA(tgt, bsz);
+		i += bsz / sizeof(struct sl1t_s);
 	}
 	return;
 }

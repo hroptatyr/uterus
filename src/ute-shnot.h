@@ -1,6 +1,6 @@
-/*** ute-mux.h -- muxing external sources
+/*** ute-shnot.h -- snapshooting from ute files
  *
- * Copyright (C) 2009 - 2012 Sebastian Freundt
+ * Copyright (C) 2008 - 2012 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -34,48 +34,35 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ***/
-#if !defined INCLUDED_ute_mux_h_
-#define INCLUDED_ute_mux_h_
+#if !defined INCLUDED_ute_shnot_h_
+#define INCLUDED_ute_shnot_h_
 
-typedef struct mux_ctx_s *mux_ctx_t;
-typedef struct sumux_opt_s *sumux_opt_t;
+typedef struct shnot_ctx_s *shnot_ctx_t;
+typedef struct shnot_opt_s *shnot_opt_t;
 
-struct mux_ctx_s {
-	int badfd;
-	/* input file index */
-	int infd;
-
-	/* can be used by the muxer */
+struct shnot_ctx_s {
+	/* contains the currently processed ute file */
 	void *rdr;
-	/* will be used by ute-mux */
+	/* contains the ute output file */
 	void *wrr;
 
+	/* our buckets, defined in the C file */
+	struct bkts_s *bkt;
+
 	/* our options */
-	sumux_opt_t opts;
+	shnot_opt_t opts;
 };
 
-struct sumux_opt_s {
+struct shnot_opt_s {
 	const char **infiles;
 	const char *outfile;
-	const char *badfile;
-	const char *sname;
-	void(*muxf)(mux_ctx_t);
-	const char *zone;
-	/** offset for timestamps relative to something other than epoch */
-	int32_t tsoff;
-	/** tick type as in sl1t.h */
-	uint16_t tt;
-	/** multiplier for reduced, down-scaled or point-less values */
-	int32_t mul;
-	/** magnifier for expanded or up-scaled values */
-	int32_t mag;
+
+	/* time zone info */
+	zif_t z;
+
+	int interval;
+	int offset;
+	int dryp;
 };
 
-extern void ariva_slab(mux_ctx_t);
-extern void ibrti_slab(mux_ctx_t);
-extern void dukas_slab(mux_ctx_t);
-extern void gesmes_slab(mux_ctx_t);
-extern void tfraw_slab(mux_ctx_t);
-extern void sl1t_mux(mux_ctx_t);
-
-#endif	/* INCLUDED_ute_mux_h_ */
+#endif	/* INCLUDED_ute_shnot_h_ */

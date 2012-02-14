@@ -37,6 +37,7 @@
 
 #include <stdint.h>
 #include <sys/mman.h>
+#include <string.h>
 #include "uteslut.h"
 /* symbol table stuff */
 #include "uteslut-trie-glue.h"
@@ -134,9 +135,7 @@ __crea(uteslut_t s, const char *sym)
 	slut_tg_put(s->stbl, sym, res);
 	/* store in the i2s table */
 	itbl = s->itbl;
-	for (char *p = itbl[res]; *sym; p++, sym++) {
-		*p = *sym;
-	}
+	strcpy(itbl[res], sym);
 	return res;
 }
 

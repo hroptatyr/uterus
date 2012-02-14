@@ -507,22 +507,24 @@ merge_bup(
 	const void *elp = DATCI(srcl, nticksl, tsz);
 	const void *erp = DATCI(srcr, nticksr, tsz);
 
-	for (; srcl < elp && srcr < erp; tgt = DATA(tgt, tsz)) {
-		uint32_t secl = scom_thdr_sec(srcl);
-		uint16_t msecl = scom_thdr_msec(srcl);
-		uint32_t secr = scom_thdr_sec(srcr);
-		uint16_t msecr = scom_thdr_msec(srcr);
+	while (srcl < elp && srcr < erp) {
+		uint64_t sl = ((const uint64_t*)srcl)[0];
+		uint64_t sr = ((const uint64_t*)srcr)[0];
 
-		if (secl < secr || (secl == secr && msecl <= msecr)) {
+		if (sl <= sr) {
+			size_t bszl = scom_thdr_size(srcl);
 			/* copy the left tick */
-			memcpy(tgt, srcl, tsz);
+			memcpy(tgt, srcl, bszl);
 			/* step things */
-			srcl = DATCA(srcl, tsz);
+			srcl = DATCA(srcl, bszl);
+			tgt = DATA(tgt, bszl);
 		} else {
+			size_t bszr = scom_thdr_size(srcr);
 			/* use the right guy */
-			memcpy(tgt, srcr, tsz);
-			/* step him */
-			srcr = DATCA(srcr, tsz);
+			memcpy(tgt, srcr, bszr);
+			/* step things */
+			srcr = DATCA(srcr, bszr);
+			tgt = DATA(tgt, bszr);
 		}
 	}
 	if (srcl < elp) {

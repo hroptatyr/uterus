@@ -104,7 +104,7 @@ struct bkts_s {
 static inline void
 bkts_cleanse(bkts_t b)
 {
-	memset(b->snap, 0, b->nsyms * sizeof(*b->snap));
+	memset(b->snap, 0, (b->nsyms + 1) * sizeof(*b->snap));
 	return;
 }
 

@@ -36,19 +36,12 @@
  ***/
 
 #define UTE_SHNOT_C
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
 #if defined HAVE_CONFIG_H
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
-#if defined HAVE_POPT_H
-# include <popt.h>
-#endif	/* HAVE_POPT_H */
-#include <math.h>
-#include <time.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #if defined USE_ASSERTIONS
 #include <assert.h>
@@ -56,13 +49,13 @@
 
 #define DEFINE_GORY_STUFF	1
 #include "utefile.h"
-#include "mem.h"
 #include "date.h"
 #include "m30.h"
 #include "m62.h"
 /* our own goodness */
 #include "ute-shnot.h"
 
+/* we need to look into ticks and tick packets */
 #include "sl1t.h"
 #include "scdl.h"
 
@@ -326,6 +319,8 @@ bucketiser(shnot_ctx_t ctx, scom_t t)
 
 
 /* simple bucket sort */
+#include <stdio.h>
+
 static void
 init(shnot_ctx_t ctx, shnot_opt_t opt)
 {

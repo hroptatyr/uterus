@@ -556,6 +556,7 @@ ute_mktemp(int oflags)
 	}
 	oflags |= UO_CREAT;
 	oflags |= UO_TRUNC;
+	oflags |= UO_RDWR;
 	oflags |= O_EXCL;
 	return make_utectx(tmpnam, resfd, oflags);
 }

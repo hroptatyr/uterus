@@ -486,7 +486,7 @@ make_utectx(const char *fn, int fd, int oflags)
 		res->fname = snodup(fn);
 	}
 	if ((oflags & UO_TRUNC) ||
-		   (st.st_size == 0 && (oflags & UO_CREAT))) {
+	    (st.st_size == 0 && (oflags & UO_CREAT))) {
 		/* user requested truncation, or creation */
 		creat_hdr(res);
 	} else if (res->fsz > 0) {
@@ -556,6 +556,7 @@ ute_mktemp(int oflags)
 	}
 	oflags |= UO_CREAT;
 	oflags |= UO_TRUNC;
+	oflags |= UO_RDWR;
 	oflags |= O_EXCL;
 	return make_utectx(tmpnam, resfd, oflags);
 }
@@ -699,6 +700,12 @@ const char*
 ute_idx2sym(utectx_t ctx, uint16_t idx)
 {
 	return slut_idx2sym(ctx->slut, idx);
+}
+
+const char*
+ute_fn(utectx_t ctx)
+{
+	return ctx->fname;
 }
 
 /* utefile.c ends here */

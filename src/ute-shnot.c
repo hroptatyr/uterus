@@ -333,7 +333,7 @@ init(shnot_ctx_t ctx, shnot_opt_t opt)
 
 	if (outf == NULL) {
 		/* what if outfile == infile? */
-		ctx->wrr = ute_open("workload.ute", UO_CREAT | UO_TRUNC);
+		ctx->wrr = ute_mktemp(0);
 
 	} else if (outf[0] == '-' && outf[1] == '\0') {
 		/* bad idea */
@@ -350,6 +350,13 @@ static void
 deinit(shnot_ctx_t ctx)
 {
 	if (ctx->wrr) {
+		/* check if we wrote to a tmp file */
+		if (ctx->opts->outfile == NULL) {
+			const char *fn;
+			if ((fn = ute_fn(ctx->wrr))) {
+				puts(fn);
+			}
+		}
 		/* writing those ticks to the disk is paramount */
 		ute_close(ctx->wrr);
 	}

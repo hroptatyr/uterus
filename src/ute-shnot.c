@@ -233,16 +233,21 @@ static inline bool
 new_candle_p(shnot_ctx_t ctx, scom_t t)
 {
 	time_t t1 = get_buckets_time(ctx->bkt);
-	time_t t2 = aligned_stamp(ctx, scom_thdr_sec(t));
+	time_t t2 = scom_thdr_sec(t);
+	time_t t3 = aligned_stamp(ctx, t2);
 
 	if (UNLIKELY(t1 == 0)) {
 		/* t's time becomes the bucket time
 		 * well the aligned stamp of t does, this is not strictly
 		 * correct but necessary to produce equally-sized candles */
-		set_buckets_time(ctx->bkt, t2);
+		set_buckets_time(ctx->bkt, t3);
 		return false;
+	} else if (UNLIKELY(scom_thdr_ttf(t) >= SCOM_FLAG_LM)) {
+		/* if a candle or a snap allow on-the-dot stamps too */
+		return t1 < t2 && t3 > t2;
 	}
-	return t1 < t2;
+	/* if it's a genuine tick be strict about the times */
+	return t1 < t3;
 }
 
 static uint16_t

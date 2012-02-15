@@ -701,4 +701,10 @@ ute_idx2sym(utectx_t ctx, uint16_t idx)
 	return slut_idx2sym(ctx->slut, idx);
 }
 
+const char*
+ute_fn(utectx_t ctx)
+{
+	return ctx->fname;
+}
+
 /* utefile.c ends here */

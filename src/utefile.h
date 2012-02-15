@@ -139,6 +139,10 @@ extern uint16_t ute_sym2idx(utectx_t ctx, const char *sym);
  * Given an index IDX return the symbol in the look-up table. */
 extern const char *ute_idx2sym(utectx_t ctx, uint16_t idx);
 
+/**
+ * Return the file name (if any) associated with CTX. */
+extern const char *ute_fn(utectx_t ctx);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

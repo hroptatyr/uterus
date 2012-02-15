@@ -145,7 +145,9 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 static void
 deinit_ticks(mux_ctx_t ctx)
 {
-	ute_close(ctx->wrr);
+	if (ctx->wrr) {
+		ute_close(ctx->wrr);
+	}
 	return;
 }
 

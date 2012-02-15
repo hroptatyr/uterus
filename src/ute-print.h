@@ -37,6 +37,7 @@
 #if !defined INCLUDED_ute_print_h_
 #define INCLUDED_ute_print_h_
 
+#include <string.h>
 #include "scommon.h"
 
 #define MAX_LINE_LEN		512
@@ -68,6 +69,7 @@ struct pr_ctx_s {
 
 
 /* some useful fun */
+#if defined INCLUDED_date_h_
 static inline size_t
 pr_ts(char *restrict buf, uint32_t sec, char sep)
 {
@@ -115,6 +117,7 @@ pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 done:
 	return 29;
 }
+#endif	/* INCLUDED_date_h_ */
 
 static inline size_t
 pr_sym(utectx_t ctx, char *restrict buf, uint16_t idx)

@@ -90,4 +90,16 @@ __xfree(const char *file, int line, void *p)
 #define xnew_array	xnew_a
 #define xresz_a(_x, _s)	xrealloc(_x, sizeof(*(_x)) * (_s))
 
+static inline void*
+snodup(const void *in)
+{
+	union {
+		const void *c;
+		void *p;
+	} res = {
+		.c = in,
+	};
+	return res.p;
+}
+
 #endif	/* INCLUDED_mem_h_ */

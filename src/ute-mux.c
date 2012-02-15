@@ -125,7 +125,7 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 	ctx->opts = opts;
 
 	if (outf == NULL) {
-		ctx->wrr = ute_open("workload.ute", UO_CREAT | UO_TRUNC);
+		ctx->wrr = ute_mktemp(0);
 
 	} else if (outf[0] == '-' && outf[1] == '\0') {
 		/* bad idea */
@@ -145,7 +145,16 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 static void
 deinit_ticks(mux_ctx_t ctx)
 {
-	ute_close(ctx->wrr);
+	if (ctx->wrr) {
+		/* check if we wrote to a tmp file */
+		if (ctx->opts->outfile == NULL) {
+			const char *fn;
+			if ((fn = ute_fn(ctx->wrr))) {
+				puts(fn);
+			}
+		}
+		ute_close(ctx->wrr);
+	}
 	return;
 }
 

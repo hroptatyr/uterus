@@ -237,7 +237,7 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 		return false;
 	} else if (UNLIKELY(scom_thdr_ttf(t) >= SCOM_FLAG_LM)) {
 		/* if a candle or a snap allow on-the-dot stamps too */
-		return t1 < t2 && t3 > t2;
+		return t1 < t3 && t2 > t3;
 	}
 	/* if it's a genuine tick be strict about the times */
 	return t1 < t3;

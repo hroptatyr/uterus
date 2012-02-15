@@ -71,10 +71,16 @@ typedef void *utectx_t;
 #define UO_RDWR		(02)
 #define UO_CREAT	(0100)
 #define UO_TRUNC	(01000)
+#define UO_ANON		(04000000)
 
 /**
  * Open the file in PATH and create a ute context.
- * Argument OFLAGS is like FLAGS in `open()'. */
+ * Argument OFLAGS is like FLAGS in `open()':
+ * UO_RDONLY  open the file read-only
+ * UO_WRONLY  open the file write-only
+ * UO_RDWR    open the file read-write
+ * UO_CREAT   call creat(3) before opening the file
+ * UO_TRUNC   truncate the file to 0 size */
 extern utectx_t ute_open(const char *path, int oflags);
 
 /**
@@ -84,6 +90,14 @@ extern void ute_close(utectx_t);
 /**
  * Flush pending write operations. */
 extern void ute_flush(utectx_t);
+
+/**
+ * Open a (new) temporary file in TMPDIR and create a ute context.
+ * The file will be opened with UO_CREAT and OFLAGS will be ignored
+ * except for
+ * UO_ANON    open a file without a reference in the file system
+ *            (anonymous inode) */
+extern utectx_t ute_mktemp(int oflags);
 
 
 /* accessor */

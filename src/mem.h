@@ -1,10 +1,10 @@
-/*** mem.h -- allocators and shite
+/*** mem.h -- allocators and memory management
  *
- * Copyright (C) 2008, 2009 Sebastian Freundt
+ * Copyright (C) 2008 - 2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,5 +89,17 @@ __xfree(const char *file, int line, void *p)
 #define xnew_a(_x, _s)	xmalloc(sizeof(_x) * (_s))
 #define xnew_array	xnew_a
 #define xresz_a(_x, _s)	xrealloc(_x, sizeof(*(_x)) * (_s))
+
+static inline void*
+snodup(const void *in)
+{
+	union {
+		const void *c;
+		void *p;
+	} res = {
+		.c = in,
+	};
+	return res.p;
+}
 
 #endif	/* INCLUDED_mem_h_ */

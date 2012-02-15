@@ -432,58 +432,67 @@ ute_fini(utectx_t ctx)
 	return;
 }
 
-/* utectx dup */
-static utectx_t
-ute_dup(utectx_t ctx)
+static char*
+ute_tmpnam(void)
 {
-	utectx_t tmp = xnew(*ctx);
-	*tmp = *ctx;
-	return tmp;
+/* return a template for mkstemp(), malloc() it. */
+	static const char tmpnam_dflt[] = "/ute.XXXXXX";
+	static const char tmpdir_var[] = "TMPDIR";
+	static const char tmpdir_pfx[] = "/tmp";
+	const char *tmpdir;
+	size_t tmpdln;
+	char *res;
+
+	if ((tmpdir = getenv(tmpdir_var))) {
+		tmpdln = strlen(tmpdir);
+	} else {
+		tmpdir = tmpdir_pfx;
+		tmpdln = sizeof(tmpdir_pfx) - 1;
+	}
+	res = malloc(tmpdln + sizeof(tmpnam_dflt));
+	memcpy(res, tmpdir, tmpdln);
+	memcpy(res + tmpdln, tmpnam_dflt, sizeof(tmpnam_dflt));
+	return res;
 }
 
-
-/* primitives to kick shit off */
-utectx_t
-ute_open(const char *path, int oflags)
+static utectx_t
+make_utectx(const char *fn, int fd, int oflags)
 {
-	struct utectx_s res[1];
 	struct stat st;
+	utectx_t res;
 
-	/* rinse rinse rinse */
-	memset(res, 0, sizeof(*res));
-
-	/* massage the flags */
-	if (UNLIKELY((oflags & UO_WRONLY))) {
-		/* stupid nutters, we allow read/write, not write-only */
-		oflags = (oflags & ~UO_WRONLY) | UO_RDWR;
-	}
-	/* we need to open the file RDWR at the moment, various
-	 * mmap()s use PROT_WRITE */
-	if (oflags != UO_RDONLY) {
-		oflags |= UO_RDWR;
-	}
-	/* store the access flags */
-	res->oflags = (uint16_t)oflags;
-
-	/* open the file first */
-	if ((res->fd = open(path, oflags, 0644)) < 0) {
-		/* ooooh, leave with a big bang */
+	if (UNLIKELY(fstat(fd, &st) < 0)) {
+		/* we don't want to know what's wrong here */
 		return NULL;
-	}
-	fstat(res->fd, &st);
-	if ((res->fsz = st.st_size) <= 0 && !(oflags & UO_CREAT)) {
+	} else if (UNLIKELY(st.st_size <= 0 && !(oflags & UO_CREAT))) {
 		/* user didn't request creation, so fuck off here */
 		return NULL;
-	} else if ((oflags & UO_TRUNC) ||
-		   (res->fsz <= 0 && (oflags & UO_CREAT))) {
+	}
+
+	/* start creating the result */
+	res = calloc(1, sizeof(*res));
+
+	/* fill in some fields */
+	res->fd = fd;
+	res->fsz = st.st_size;
+	/* flags used to open this file */
+	res->oflags = (uint16_t)oflags;
+
+	if (!(oflags & O_EXCL)) {
+		/* save a copy of the file name */
+		res->fname = strdup(fn);
+	} else {
+		/* same but the name was already malloc'd */
+		res->fname = snodup(fn);
+	}
+	if ((oflags & UO_TRUNC) ||
+		   (st.st_size == 0 && (oflags & UO_CREAT))) {
 		/* user requested truncation, or creation */
 		creat_hdr(res);
 	} else if (res->fsz > 0) {
 		/* no truncation requested and file size is not 0 */
 		cache_hdr(res);
 	}
-	/* save a copy of the file name */
-	res->fname = strdup(path);
 	/* initialise the rest */
 	ute_init(res);
 	/* initialise the tpc session */
@@ -502,7 +511,53 @@ ute_open(const char *path, int oflags)
 		/* load the last page as tpc */
 		load_tpc(res);
 	}
-	return ute_dup(res);
+	return res;
+}
+
+
+/* primitives to kick shit off */
+utectx_t
+ute_open(const char *path, int oflags)
+{
+	int resfd;
+
+	/* massage the flags */
+	if (UNLIKELY((oflags & UO_WRONLY))) {
+		/* stupid nutters, we allow read/write, not write-only */
+		oflags = (oflags & ~UO_WRONLY) | UO_RDWR;
+	}
+	/* we need to open the file RDWR at the moment, various
+	 * mmap()s use PROT_WRITE */
+	if (oflags != UO_RDONLY) {
+		oflags |= UO_RDWR;
+	}
+	/* try and open the file first */
+	if ((resfd = open(path, oflags, 0644)) < 0) {
+		/* ooooh, leave with a big bang */
+		return NULL;
+	}
+	return make_utectx(path, resfd, oflags);
+}
+
+utectx_t
+ute_mktemp(int oflags)
+{
+	char *tmpnam;
+	int resfd;
+
+	/* get a tmp name template for mkstemp() */
+	tmpnam = ute_tmpnam();
+	/* now open it ... */
+	resfd = mkstemp(tmpnam);
+	/* wipe and check for anon */
+	if ((oflags &= UO_ANON)) {
+		/* ... and unlink it if ANON is set */
+		unlink(tmpnam);
+	}
+	oflags |= UO_CREAT;
+	oflags |= UO_TRUNC;
+	oflags |= O_EXCL;
+	return make_utectx(tmpnam, resfd, oflags);
 }
 
 static void

@@ -112,7 +112,7 @@ ute_LDFLAGS = $(AM_LDFLAGS)
 UTE_CMD_CPPFLAGS = -DSTANDALONE
 
 ute_PROGRAMS += ute-shnot
-ute_shnot_SOURCES = ute-shnot.c ute-shnot-clo.ggo
+ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot-clo.ggo
 ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_shnot_LDFLAGS = $(AM_LDFLAGS)
 ute_shnot_LDADD = libuterus.la

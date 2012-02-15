@@ -363,11 +363,18 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 static inline scidx_t
 make_scidx(scom_t t, sidx_t idx)
 {
+#if defined HAVE_ANON_STRUCTS
 	scidx_t res = {
 		.sec = scom_thdr_sec(t),
 		.msec = scom_thdr_msec(t),
 		.idx = idx,
 	};
+#else  /* !HAVE_ANON_STRUCTS */
+	scidx_t res;
+	res.sec = scom_thdr_sec(t);
+	res.msec = scom_thdr_msec(t);
+	res.idx = idx;
+#endif	/* HAVE_ANON_STRUCTS */
 	return res;
 }
 

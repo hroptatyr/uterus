@@ -326,7 +326,7 @@ union __test_u {
 
 	if test "${sxe_cv_have_anon_structs}" = "yes"; then
 		AC_DEFINE([HAVE_ANON_STRUCTS], [1], [
-			Whether c1x anon structs work])
+			Whether c11 anon structs work])
 		$1
 		:
 	else

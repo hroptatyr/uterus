@@ -35,6 +35,8 @@ SXE_CHECK_CC
 SXE_CHECK_CFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
+## we need C11 anon structs
+SXE_CHECK_ANON_STRUCTS
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 

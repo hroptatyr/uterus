@@ -71,4 +71,9 @@ struct sumux_opt_s {
 	int32_t mag;
 };
 
+/**
+ * Public mux function.
+ * Implemented through DSOs. */
+extern void mux(mux_ctx_t mctx);
+
 #endif	/* INCLUDED_ute_mux_h_ */

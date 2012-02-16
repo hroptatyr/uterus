@@ -139,11 +139,11 @@ BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
-uta_la_SOURCES = uta.c uta.h
+uta_la_SOURCES = uta.c
 uta_la_LDFLAGS = -module $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += dukas.la
-dukas_la_SOURCES = dukas.c dukas.h
+dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = -module $(XCCLDFLAGS)
 
 version.h: $(top_builddir)/.version

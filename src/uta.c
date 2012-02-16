@@ -51,8 +51,6 @@
 #include "utefile.h"
 /* for public demux (print) apis, muxing isn't possible yet */
 #include "ute-print.h"
-/* our own publicly exposed API */
-#include "uta.h"
 
 /* so we know about ticks, candles and snapshots */
 #include "sl1t.h"

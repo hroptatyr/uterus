@@ -54,8 +54,6 @@
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 
-#include "dukas.h"
-
 #if !defined htonll
 # define htonll(x)	ntohll(x)
 #endif	/* !htonll */

@@ -140,4 +140,9 @@ print_tick_sym(pr_ctx_t pctx, scom_t st)
 	return res;
 }
 
+/**
+ * Public print function.
+ * Implemented through DSOs. */
+extern ssize_t pr(pr_ctx_t pctx, scom_t st);
+
 #endif	/* INCLUDED_ute_print_h_ */

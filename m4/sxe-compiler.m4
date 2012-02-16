@@ -209,13 +209,30 @@ AC_DEFUN([SXE_OPTIFLAGS], [dnl
 ])dnl SXE_OPTIFLAGS
 
 AC_DEFUN([SXE_FEATFLAGS], [dnl
-	## if libtool then
-	dnl XFLAG="-XCClinker"
 	## default flags for needed features
+
+	## recent gentoos went ballistic again, they compile PIE gcc's
+	## but there's no way to turn that misconduct off ...
+	## however I've got one report about a working PIE build
+	## we'll just check for -nopie here, if it works, we turn it on
+	## (and hence PIE off) and hope bug 16 remains fixed
+	SXE_CHECK_COMPILER_FLAGS([-nopie],
+		[featflags="$featflags -nopie"])
+
+	## icc and gcc related
+	## check if some stuff can be staticalised
+	## actually requires SXE_WARNFLAGS so warnings would be disabled
+	## that affect the outcome of the following tests
 	SXE_CHECK_COMPILER_FLAGS([-static-intel], [
-		ldflags="${ldflags} ${XFLAG} -static-intel"])
+		featflags="${featflags} -static-intel"
+		XCCLDFLAGS="${XCCLDFLAGS} \${XFLAG} -static-intel"], [:],
+		[${SXE_CFLAGS}])
 	SXE_CHECK_COMPILER_FLAGS([-static-libgcc], [
-		ldflags="${ldflags} ${XFLAG} -static-libgcc"])
+		featflags="${featflags} -static-libgcc"
+		XCCLDFLAGS="${XCCLDFLAGS} \${XFLAG} -static-libgcc"], [:],
+		[${SXE_CFLAGS}])
+
+	AC_SUBST([XCCLDFLAGS])
 ])dnl SXE_FEATFLAGS
 
 
@@ -258,16 +275,19 @@ AC_DEFUN([SXE_CHECK_CFLAGS], [dnl
 	dnl are handled separately, not just the xe_cflags_warning stuff.
 
 	## Use either command line flag, environment var, or autodetection
+	CFLAGS=""
 	SXE_DEBUGFLAGS
 	SXE_WARNFLAGS
 	SXE_OPTIFLAGS
+	SXE_CFLAGS="$SXE_CFLAGS $debugflags $optiflags $warnflags"
+
 	SXE_FEATFLAGS
-	SXE_CFLAGS="$debugflags $featflags $optiflags $warnflags"
+	SXE_CFLAGS="$SXE_CFLAGS $featflags"
 
 	## unset the werror flag again
 	AC_LANG_WERROR([off])
 
-	CFLAGS="$SXE_CFLAGS ${ac_cv_env_CFLAGS_value}"
+	CFLAGS="${SXE_CFLAGS} ${ac_cv_env_CFLAGS_value}"
 	AC_MSG_CHECKING([for preferred CFLAGS])
 	AC_MSG_RESULT([${CFLAGS}])
 

@@ -56,6 +56,10 @@ extern void close_aux(ute_dso_t handle);
 extern ute_dso_sym_t find_sym(ute_dso_t handle, const char *sym_name);
 
 /**
+ * Find all modules and call CB. */
+extern int trav_dso(int(*cb)(const char *fname, void *clo), void *clo);
+
+/**
  * Initialise the module system. */
 extern void ute_module_init(void);
 

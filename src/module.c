@@ -126,6 +126,13 @@ find_sym(ute_dso_t handle, const char *sym_name)
 	return lt_dlsym(handle, sym_name);
 }
 
+int
+trav_dso(int(*cb)(const char *fname, void *clo), void *clo)
+{
+	const char *spath = lt_dlgetsearchpath();
+	return lt_dlforeachfile(spath, cb, clo);
+}
+
 
 void
 ute_module_init(void)

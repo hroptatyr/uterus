@@ -270,23 +270,12 @@ dnl SXE_CHECK_COMPILER_FLAGS([flag], [do-if-works], [do-if-not-works])
 ])dnl SXE_CHECK_COMPILER_FLAGS
 
 AC_DEFUN([SXE_CHECK_COMPILER_XFLAG], [dnl
-	## if libtool then
-	case "${LD} ${LIBTOOL}" in
-	*"libtool"*)
-		SXE_CHECK_COMPILER_FLAGS([-XCClinker], [
-			XFLAG="-XCClinker"], [
-			XFLAG="-XCClinker"])
-		;;
-	*"ld"*)
-		## no XFLAG needed
-		XFLAG=""
-		;;
-	*)
-		SXE_CHECK_COMPILER_FLAGS([-Xlinker], [
-			XFLAG="-Xlinker"], [
-			XFLAG=""])
-		;;
-	esac
+	if test "${XFLAG}" = ""; then
+		SXE_CHECK_COMPILER_FLAGS([-XCClinker -foo], [XFLAG="-XCClinker"])
+	fi
+	if test "${XFLAG}" = ""; then
+		SXE_CHECK_COMPILER_FLAGS([-Xlinker -foo], [XFLAG="-Xlinker"])
+	fi
 
 	AC_SUBST([XFLAG])
 ])dnl SXE_CHECK_COMPILER_XFLAG

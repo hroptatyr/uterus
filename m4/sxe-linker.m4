@@ -39,6 +39,8 @@ AC_DEFUN([SXE_CHECK_LINKER_FLAGS], [dnl
 dnl just like SXE_CHECK_COMPILER_FLAGS but calls the linker
 dnl SXE_CHECK_LINKER_FLAGS(<FLAG>, <ACTION-IF-FOUND>, <ACTION-IF-NOT-FOUND>,
 dnl     <ADDITIONAL-FLAGS>)
+	AC_REQUIRE([SXE_CHECK_COMPILER_XFLAG])
+
 	AC_MSG_CHECKING([whether linker accepts $1])
 
 	dnl Some hackery here since AC_CACHE_VAL can't handle a non-literal varname:

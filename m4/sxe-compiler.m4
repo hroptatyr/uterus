@@ -291,6 +291,12 @@ respectively
 ])dnl SXE_CHECK_CFLAGS
 
 AC_DEFUN([SXE_CHECK_CC], [dnl
+	AC_REQUIRE([AC_CANONICAL_HOST])
+	AC_REQUIRE([AC_CANONICAL_BUILD])
+	AC_REQUIRE([AC_PROG_CPP])
+
+	AC_HEADER_STDC
+
 	for i in "gnu1x" "c1x" "gnu99" "c99"; do
 		SXE_CHECK_COMPILER_FLAGS([-std="${i}"], [
 			std="-std=${i}"

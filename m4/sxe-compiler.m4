@@ -210,6 +210,8 @@ AC_DEFUN([SXE_OPTIFLAGS], [dnl
 
 AC_DEFUN([SXE_FEATFLAGS], [dnl
 	## default flags for needed features
+	AC_REQUIRE([SXE_CHECK_COMPILER_XFLAG])
+	XCCFLAG="${XFLAG}"
 
 	## recent gentoos went ballistic again, they compile PIE gcc's
 	## but there's no way to turn that misconduct off ...
@@ -233,6 +235,7 @@ AC_DEFUN([SXE_FEATFLAGS], [dnl
 		[${SXE_CFLAGS}])
 
 	AC_SUBST([XCCLDFLAGS])
+	AC_SUBST([XCCFLAG])
 ])dnl SXE_FEATFLAGS
 
 

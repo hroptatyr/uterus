@@ -325,11 +325,6 @@ or
   make CFLAGS=<your-own-flags> [target]
 respectively
 		])
-
-	LDFLAGS="${ldflags} ${ac_cv_env_LDFLAGS_value}"
-	AC_MSG_CHECKING([for preferred LDFLAGS])
-	AC_MSG_RESULT([${LDFLAGS}])
-
 ])dnl SXE_CHECK_CFLAGS
 
 AC_DEFUN([SXE_CHECK_CC], [dnl

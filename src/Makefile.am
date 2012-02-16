@@ -122,9 +122,11 @@ ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
 ute_print_SOURCES += ibrti.c
 ute_print_SOURCES += uta.c
+ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_print_LDFLAGS = $(AM_LDFLAGS)
 ute_print_LDADD = libuterus.la
+ute_print_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
 ute_PROGRAMS += ute-mux

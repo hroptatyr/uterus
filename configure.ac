@@ -38,6 +38,8 @@ SXE_CHECK_LIBTOOL
 SXE_CHECK_LIBLTDL
 ## we need C11 anon structs
 SXE_CHECK_ANON_STRUCTS
+## check for ld flags that we might need
+SXE_CHECK_LDFLAGS
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 

@@ -79,7 +79,7 @@ static ssize_t
 }
 
 static void
-unfind_printer(ssize_t(*UNUSED(prf))(pr_ctx_t, scom_t))
+unfind_printer(UNUSED(ssize_t(*prf)(pr_ctx_t, scom_t)))
 {
 	if (pr_dso) {
 		close_aux(pr_dso);

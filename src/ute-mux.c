@@ -158,6 +158,12 @@ deinit_ticks(mux_ctx_t ctx)
 	return;
 }
 
+static void
+print_muxers(void)
+{
+	return;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -181,6 +187,12 @@ main(int argc, char *argv[])
 
 	if (mux_parser(argc, argv, argi)) {
 		res = 1;
+		goto out;
+	} else if (argi->help_given) {
+		mux_parser_print_help();
+		fputs("\n", stdout);
+		print_muxers();
+		res = 0;
 		goto out;
 	}
 

@@ -1,11 +1,15 @@
-args "--unamed-opts --long-help --no-handle-error -a mux_args_info -f mux_parser"
+args "--unamed-opts --no-help --long-help --no-handle-error -a mux_args_info -f mux_parser"
 package "ute mux"
 usage "ute mux [OPTIONS...] FILEs..."
 description "Convert tick sources FILEs to an ute file."
 
+option "help" h
+	"Show this help message."
+	optional
+
 option "format" f
 	"Use the specified parser, see below for a list"
-	string typestr="FORMAT"
+	string typestr="FORMAT" optional
 
 option "name" -
 	"For single-security files use NAME as security symbol"

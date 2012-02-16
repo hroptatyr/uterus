@@ -106,8 +106,7 @@ open_aux(const char *fname)
 	lt_dladvise advice[1];
 
 	if (!lt_dladvise_init(advice) &&
-	    !lt_dladvise_ext(advice) &&
-	    !lt_dladvise_global(advice)) {
+	    !lt_dladvise_ext(advice)) {
 		handle = lt_dlopenadvise(fname, advice[0]);
 	}
 	lt_dladvise_destroy(advice);

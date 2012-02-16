@@ -156,6 +156,7 @@ main(int argc, char *argv[])
 
 out:
 	unfind_printer(prf);
+	ute_module_fini();
 	print_parser_free(argi);
 	return res;
 }

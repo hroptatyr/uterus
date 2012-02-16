@@ -1,10 +1,10 @@
-/*** dukas.c -- dukas -> sl1t muxer
+/*** dukas.c -- dukascopy muxer
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2009 - 2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -457,7 +457,7 @@ old_fmt:
 
 /* new all in one dukas slabber */
 void
-dukas_slab(mux_ctx_t ctx)
+mux(mux_ctx_t ctx)
 {
 	prepare(ctx);
 	switch (ctx->opts->tt) {

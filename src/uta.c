@@ -176,7 +176,7 @@ uta_slab(mux_ctx_t ctx)
 #endif	/* 0 */
 
 ssize_t
-uta_pr(pr_ctx_t pctx, scom_t st)
+pr(pr_ctx_t pctx, scom_t st)
 {
 	char tl[MAX_LINE_LEN];
 	uint32_t sec = scom_thdr_sec(st);

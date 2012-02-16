@@ -1,11 +1,11 @@
-/*** ute-mux.h -- muxing external sources
+/*** module.h -- libtool based DSO system
  *
- * Copyright (C) 2009 - 2012 Sebastian Freundt
+ * Copyright (C) 2005 - 2012 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
  * This file is part of uterus.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -34,46 +34,37 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ***/
-#if !defined INCLUDED_ute_mux_h_
-#define INCLUDED_ute_mux_h_
 
-typedef struct mux_ctx_s *mux_ctx_t;
-typedef struct sumux_opt_s *sumux_opt_t;
+#if !defined INCLUDED_module_h_
+#define INCLUDED_module_h_
 
-struct mux_ctx_s {
-	int badfd;
-	/* input file index */
-	int infd;
-
-	/* can be used by the muxer */
-	void *rdr;
-	/* will be used by ute-mux */
-	void *wrr;
-
-	/* our options */
-	sumux_opt_t opts;
-};
-
-struct sumux_opt_s {
-	const char **infiles;
-	const char *outfile;
-	const char *badfile;
-	const char *sname;
-	void(*muxf)(mux_ctx_t);
-	const char *zone;
-	/** offset for timestamps relative to something other than epoch */
-	int32_t tsoff;
-	/** tick type as in sl1t.h */
-	uint16_t tt;
-	/** multiplier for reduced, down-scaled or point-less values */
-	int32_t mul;
-	/** magnifier for expanded or up-scaled values */
-	int32_t mag;
-};
+typedef void *ute_dso_t;
+typedef void *ute_dso_sym_t;
 
 /**
- * Public mux function.
- * Implemented through DSOs. */
-extern void mux(mux_ctx_t mctx);
+ * Open FILE as dso and return a handle.
+ * FILE should be a muxer or demuxer and provide the symbols:
+ * ... */
+extern ute_dso_t open_aux(const char *file);
 
-#endif	/* INCLUDED_ute_mux_h_ */
+/**
+ * Close (read unload) the dso HANDLE. */
+extern void close_aux(ute_dso_t handle);
+
+/**
+ * Find symbol SYM_NAME in dso HANDLE. */
+extern ute_dso_sym_t find_sym(ute_dso_t handle, const char *sym_name);
+
+/**
+ * Find all modules and call CB. */
+extern int trav_dso(int(*cb)(const char *fname, void *clo), void *clo);
+
+/**
+ * Initialise the module system. */
+extern void ute_module_init(void);
+
+/**
+ * Deinitialise the module system. */
+extern void ute_module_fini(void);
+
+#endif	/* INCLUDED_module_h_ */

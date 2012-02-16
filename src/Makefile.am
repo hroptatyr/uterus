@@ -47,6 +47,7 @@ M4 = m4
 bin_PROGRAMS =
 noinst_PROGRAMS =
 ute_PROGRAMS =
+ute_LTLIBRARIES =
 lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
@@ -120,31 +121,37 @@ BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
 
 ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
-ute_print_SOURCES += ibrti.c
-ute_print_SOURCES += uta.c
+ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_print_LDFLAGS = $(AM_LDFLAGS)
+ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_print_LDADD = libuterus.la
+ute_print_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
 ute_PROGRAMS += ute-mux
 ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
-ute_mux_SOURCES += ariva.c
-ute_mux_SOURCES += ibrti.c
-ute_mux_SOURCES += dukas.c
-ute_mux_SOURCES += tfraw.c
+ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_mux_LDFLAGS = $(AM_LDFLAGS)
+ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_mux_LDADD = libuterus.la
+ute_mux_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
+## muxer/demuxer DSOs
+ute_LTLIBRARIES += uta.la
+uta_la_SOURCES = uta.c
+uta_la_LDFLAGS = -module $(XCCLDFLAGS)
+
+ute_LTLIBRARIES += dukas.la
+dukas_la_SOURCES = dukas.c
+dukas_la_LDFLAGS = -module $(XCCLDFLAGS)
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)
-	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt -l -F $*
+	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*
 
 # 
 # Help the developers get nice post-processed source files

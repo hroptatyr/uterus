@@ -3,10 +3,10 @@
 TOOL=ute
 INFILE="${srcdir}/mux.a.dukasq"
 OUTFILE="testload.ute"
-CMDLINE="mux -f dukasq '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="mux -f dukas '${INFILE}' -o '${OUTFILE}'"
 
 ## STDIN
- 
+
 ## STDOUT
 
 ## outfile sum

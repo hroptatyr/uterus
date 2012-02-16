@@ -54,6 +54,8 @@
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 
+#include "dukas.h"
+
 #if !defined htonll
 # define htonll(x)	ntohll(x)
 #endif	/* !htonll */
@@ -457,7 +459,7 @@ old_fmt:
 
 /* new all in one dukas slabber */
 void
-dukas_slab(mux_ctx_t ctx)
+mux(mux_ctx_t ctx)
 {
 	prepare(ctx);
 	switch (ctx->opts->tt) {

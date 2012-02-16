@@ -91,7 +91,16 @@ unfind_printer(UNUSED(ssize_t(*prf)(pr_ctx_t, scom_t)))
 static int
 print_mudem(const char *fname, void *UNUSED(clo))
 {
-	puts(fname);
+	static const char nono[] = "ute";
+
+	/* basename-ify */
+	if ((fname = strrchr(fname, '/'))) {
+		fname++;
+	}
+	/* check for the forbidden words */
+	if (!strstr(fname, nono)) {
+		puts(fname);
+	}
 	return 0;
 }
 

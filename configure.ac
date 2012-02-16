@@ -35,6 +35,7 @@ SXE_CHECK_CC
 SXE_CHECK_CFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
+SXE_CHECK_LIBLTDL
 ## we need C11 anon structs
 SXE_CHECK_ANON_STRUCTS
 

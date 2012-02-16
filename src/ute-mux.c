@@ -71,45 +71,9 @@ struct muxer_s {
 };
 
 
-static struct muxer_s supported_muxers[] = {
-#if 0
-	{.opt = "sl1t", .muxf = sl1t_mux},
-#endif
-	{.opt = "ariva", .muxf = ariva_slab},
-	{.opt = "ibrti", .muxf = ibrti_slab},
-	{.opt = "dukas", .muxf = dukas_slab},
-#if 0
-	{.opt = "gesmes", .muxf = gesmes_slab},
-#endif
-	{.opt = "tenfore", .muxf = tfraw_slab},
-};
-
-#if 0
-static void
-build_fmt_hlp(void)
-{
-	char *p;
-	p = stpcpy(fmt_hlp,
-		   "Input file format, defaults to sl1t if omitted. "
-		   "Supported formats:");
-	for (index_t i = 0; i < countof(supported_muxers); i++) {
-		*p++ = ' ';
-		p = stpcpy(p, supported_muxers[i].opt);
-	}
-	return;
-}
-#endif
-
 static void
 (*find_muxer(const char *opt))(mux_ctx_t)
 {
-	for (index_t i = 0; i < countof(supported_muxers); i++) {
-		/* at the moment we make use of the fact that
-		 * all muxers begin with different letters. */
-		if (opt[0] == supported_muxers[i].opt[0]) {
-			return supported_muxers[i].muxf;
-		}
-	}
 	return NULL;
 }
 

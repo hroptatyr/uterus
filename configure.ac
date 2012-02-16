@@ -33,8 +33,10 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC
 SXE_CHECK_CFLAGS
+SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
+SXE_CHECK_LIBLTDL
 ## we need C11 anon structs
 SXE_CHECK_ANON_STRUCTS
 

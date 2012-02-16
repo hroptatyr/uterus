@@ -51,6 +51,8 @@
 #include "utefile.h"
 /* for public demux (print) apis, muxing isn't possible yet */
 #include "ute-print.h"
+/* our own publicly exposed API */
+#include "uta.h"
 
 /* so we know about ticks, candles and snapshots */
 #include "sl1t.h"
@@ -176,7 +178,7 @@ uta_slab(mux_ctx_t ctx)
 #endif	/* 0 */
 
 ssize_t
-uta_pr(pr_ctx_t pctx, scom_t st)
+pr(pr_ctx_t pctx, scom_t st)
 {
 	char tl[MAX_LINE_LEN];
 	uint32_t sec = scom_thdr_sec(st);

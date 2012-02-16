@@ -45,6 +45,7 @@
 
 #include "timegm.c"
 #include "strftime.c"
+#include "module.h"
 
 #include "ute-print.h"
 
@@ -63,27 +64,54 @@
 #endif	/* !countof */
 
 
-struct printer_s {
-	const char *opt;
-	ssize_t(*prf)(pr_ctx_t, scom_t);
-};
-
-
-static struct printer_s supported_printers[] = {
-	{.opt = "ibrti", .prf = ibrti_pr},
-};
+static ute_dso_t pr_dso;
 
 static ssize_t
 (*find_printer(const char *opt))(pr_ctx_t, scom_t)
 {
-	for (size_t i = 0; i < countof(supported_printers); i++) {
-		/* at the moment we make use of the fact that
-		 * all muxers begin with different letters. */
-		if (strcmp(opt, supported_printers[i].opt) == 0) {
-			return supported_printers[i].prf;
-		}
+	ute_dso_sym_t pr_sym;
+	if ((pr_dso = open_aux(opt)) == NULL) {
+		return NULL;
+	} else if ((pr_sym = find_sym(pr_dso, "pr")) == NULL) {
+		return NULL;
 	}
-	return NULL;
+	return (ssize_t(*)(pr_ctx_t, scom_t))pr_sym;
+}
+
+static void
+unfind_printer(UNUSED(ssize_t(*prf)(pr_ctx_t, scom_t)))
+{
+	if (pr_dso) {
+		close_aux(pr_dso);
+		pr_dso = NULL;
+	}
+	return;
+}
+
+static int
+print_mudem(const char *fname, void *UNUSED(clo))
+{
+	static const char nono[] = "ute";
+
+	/* basename-ify */
+	if ((fname = strrchr(fname, '/'))) {
+		fname++;
+	}
+	/* check for the forbidden words */
+	if (!strstr(fname, nono)) {
+		puts(fname);
+	}
+	return 0;
+}
+
+static void
+print_mudems(void)
+{
+/* bit of layer leak here */
+	/* initialise the module system */
+	ute_module_init();
+	trav_dso(print_mudem, NULL);
+	return;
 }
 
 
@@ -105,22 +133,35 @@ main(int argc, char *argv[])
 	struct print_args_info argi[1];
 	struct pr_ctx_s ctx[1] = {{0}};
 	ssize_t(*prf)(pr_ctx_t, scom_t) = NULL;
+	const char *fmt;
 	int res = 0;
 
 	if (print_parser(argc, argv, argi)) {
 		res = 1;
 		goto out;
+	} else if (argi->help_given) {
+		print_parser_print_help();
+		fputs("\n", stdout);
+		print_mudems();
+		res = 0;
+		goto out;
 	}
 
-	if (argi->format_given &&
-	    UNLIKELY((prf = find_printer(argi->format_arg)) == NULL)) {
+	if (!argi->format_given) {
+		/* superseding rudi's fave format */
+		fmt = "uta";
+	} else {
+		fmt = argi->format_arg;
+	}
+
+	/* initialise the module system */
+	ute_module_init();
+
+	if (UNLIKELY((prf = find_printer(fmt)) == NULL)) {
 		/* we need a printer, so piss off here */
 		fputs("printer format unknown\n", stderr);
 		res = 1;
 		goto out;
-	} else if (!argi->format_given) {
-		/* ute ascii supersedes rudi's fave format */
-		prf = uta_pr;
 	}
 	/* normally we'd check for -o|--output */
 	ctx->outfd = STDOUT_FILENO;
@@ -146,6 +187,8 @@ main(int argc, char *argv[])
 	}
 
 out:
+	unfind_printer(prf);
+	ute_module_fini();
 	print_parser_free(argi);
 	return res;
 }

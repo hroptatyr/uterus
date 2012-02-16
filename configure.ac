@@ -33,13 +33,12 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC
 SXE_CHECK_CFLAGS
+SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
 SXE_CHECK_LIBLTDL
 ## we need C11 anon structs
 SXE_CHECK_ANON_STRUCTS
-## check for ld flags that we might need
-SXE_CHECK_LDFLAGS
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 

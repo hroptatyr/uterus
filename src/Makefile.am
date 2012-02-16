@@ -47,6 +47,7 @@ M4 = m4
 bin_PROGRAMS =
 noinst_PROGRAMS =
 ute_PROGRAMS =
+ute_LTLIBRARIES =
 lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
@@ -124,7 +125,7 @@ ute_print_SOURCES += ibrti.c
 ute_print_SOURCES += uta.c
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_print_LDFLAGS = $(AM_LDFLAGS)
+ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_print_LDADD = libuterus.la
 ute_print_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
@@ -140,6 +141,10 @@ ute_mux_LDFLAGS = $(AM_LDFLAGS)
 ute_mux_LDADD = libuterus.la
 BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
+## muxer/demuxer DSOs
+ute_LTLIBRARIES += uta.la
+uta_la_SOURCES = uta.c uta.h
+uta_la_LDFLAGS = -module $(XCCLDFLAGS)
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@

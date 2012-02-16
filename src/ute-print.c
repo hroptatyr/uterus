@@ -88,6 +88,23 @@ unfind_printer(UNUSED(ssize_t(*prf)(pr_ctx_t, scom_t)))
 	return;
 }
 
+static int
+print_mudem(const char *fname, void *UNUSED(clo))
+{
+	puts(fname);
+	return 0;
+}
+
+static void
+print_mudems(void)
+{
+/* bit of layer leak here */
+	/* initialise the module system */
+	ute_module_init();
+	trav_dso(print_mudem, NULL);
+	return;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -112,6 +129,12 @@ main(int argc, char *argv[])
 
 	if (print_parser(argc, argv, argi)) {
 		res = 1;
+		goto out;
+	} else if (argi->help_given) {
+		print_parser_print_help();
+		fputs("\n", stdout);
+		print_mudems();
+		res = 0;
 		goto out;
 	}
 

@@ -151,7 +151,7 @@ version.h: $(top_builddir)/.version
 
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)
-	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt -l -F $*
+	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*
 
 # 
 # Help the developers get nice post-processed source files

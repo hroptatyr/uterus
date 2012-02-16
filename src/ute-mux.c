@@ -46,7 +46,8 @@
 #endif	/* HAVE_CONFIG_H */
 #include <math.h>
 #include <string.h>
-#include "sl1t.h"
+#include "module.h"
+
 #include "utefile.h"
 #include "ute-mux.h"
 
@@ -65,16 +66,60 @@
 typedef size_t index_t;
 #endif	/* !_INDEXT */
 
-struct muxer_s {
-	const char *opt;
-	void(*muxf)(mux_ctx_t);
-};
-
 
+static ute_dso_t mux_dso;
+
 static void
 (*find_muxer(const char *opt))(mux_ctx_t)
 {
-	return NULL;
+	ute_dso_sym_t mux_sym;
+	if ((mux_dso = open_aux(opt)) == NULL) {
+		return NULL;
+	} else if ((mux_sym = find_sym(mux_dso, "mux")) == NULL) {
+		return NULL;
+	}
+	return (void(*)(mux_ctx_t))mux_sym;
+}
+
+static void
+unfind_muxer(UNUSED(void(*muxf)(mux_ctx_t)))
+{
+	if (mux_dso) {
+		close_aux(mux_dso);
+		mux_dso = NULL;
+	}
+	return;
+}
+
+static int
+print_muxer(const char *fname, void *UNUSED(clo))
+{
+	static const char nono[] = "ute";
+	void(*mux_sym)(mux_ctx_t);
+
+	/* basename-ify */
+	if ((fname = strrchr(fname, '/'))) {
+		fname++;
+	}
+	/* check for the forbidden words */
+	if (!strstr(fname, nono) && (mux_sym = find_muxer(fname))) {
+		putchar('*');
+		putchar(' ');
+		puts(fname);
+		unfind_muxer(mux_sym);
+	}
+	return 0;
+}
+
+static void
+print_muxers(void)
+{
+	/* initialise the module system */
+	ute_module_init();
+
+	puts("Supported formats:");
+	trav_dso(print_muxer, NULL);
+	return;
 }
 
 
@@ -122,12 +167,6 @@ deinit_ticks(mux_ctx_t ctx)
 	return;
 }
 
-static void
-print_muxers(void)
-{
-	return;
-}
-
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -147,6 +186,7 @@ main(int argc, char *argv[])
 	struct mux_args_info argi[1];
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
+	void(*muxf)(mux_ctx_t) = NULL;
 	int res = 0;
 
 	if (mux_parser(argc, argv, argi)) {
@@ -235,6 +275,8 @@ main(int argc, char *argv[])
 	deinit_ticks(ctx);
 
 out:
+	unfind_muxer(muxf);
+	ute_module_fini();
 	mux_parser_free(argi);
 	return res;
 }

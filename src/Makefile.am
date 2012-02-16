@@ -130,9 +130,11 @@ BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
 ute_PROGRAMS += ute-mux
 ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
+ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_mux_LDFLAGS = $(AM_LDFLAGS)
+ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_mux_LDADD = libuterus.la
+ute_mux_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
 ## muxer/demuxer DSOs

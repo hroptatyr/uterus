@@ -8,6 +8,5 @@ option "help" h
 	optional
 
 option "format" f
-	"Use the specified parser, see below for a list.  \
-Default: ibrti"
+	"Use the specified parser, see below for a list."
 	string optional typestr="FORMAT"

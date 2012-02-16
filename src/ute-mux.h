@@ -71,11 +71,9 @@ struct sumux_opt_s {
 	int32_t mag;
 };
 
-extern void ariva_slab(mux_ctx_t);
-extern void ibrti_slab(mux_ctx_t);
-extern void dukas_slab(mux_ctx_t);
-extern void gesmes_slab(mux_ctx_t);
-extern void tfraw_slab(mux_ctx_t);
-extern void sl1t_mux(mux_ctx_t);
+/**
+ * Public mux function.
+ * Implemented through DSOs. */
+extern void mux(mux_ctx_t mctx);
 
 #endif	/* INCLUDED_ute_mux_h_ */

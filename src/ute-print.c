@@ -92,14 +92,18 @@ static int
 print_mudem(const char *fname, void *UNUSED(clo))
 {
 	static const char nono[] = "ute";
+	ssize_t(*pr_sym)(pr_ctx_t, scom_t);
 
 	/* basename-ify */
 	if ((fname = strrchr(fname, '/'))) {
 		fname++;
 	}
 	/* check for the forbidden words */
-	if (!strstr(fname, nono)) {
+	if (!strstr(fname, nono) && (pr_sym = find_printer(fname))) {
+		putchar('*');
+		putchar(' ');
 		puts(fname);
+		unfind_printer(pr_sym);
 	}
 	return 0;
 }
@@ -110,6 +114,8 @@ print_mudems(void)
 /* bit of layer leak here */
 	/* initialise the module system */
 	ute_module_init();
+
+	puts("Supported formats:");
 	trav_dso(print_mudem, NULL);
 	return;
 }

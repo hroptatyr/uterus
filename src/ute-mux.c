@@ -46,7 +46,8 @@
 #endif	/* HAVE_CONFIG_H */
 #include <math.h>
 #include <string.h>
-#include "sl1t.h"
+#include "module.h"
+
 #include "utefile.h"
 #include "ute-mux.h"
 
@@ -65,52 +66,60 @@
 typedef size_t index_t;
 #endif	/* !_INDEXT */
 
-struct muxer_s {
-	const char *opt;
-	void(*muxf)(mux_ctx_t);
-};
-
 
-static struct muxer_s supported_muxers[] = {
-#if 0
-	{.opt = "sl1t", .muxf = sl1t_mux},
-#endif
-	{.opt = "ariva", .muxf = ariva_slab},
-	{.opt = "ibrti", .muxf = ibrti_slab},
-	{.opt = "dukas", .muxf = dukas_slab},
-#if 0
-	{.opt = "gesmes", .muxf = gesmes_slab},
-#endif
-	{.opt = "tenfore", .muxf = tfraw_slab},
-};
-
-#if 0
-static void
-build_fmt_hlp(void)
-{
-	char *p;
-	p = stpcpy(fmt_hlp,
-		   "Input file format, defaults to sl1t if omitted. "
-		   "Supported formats:");
-	for (index_t i = 0; i < countof(supported_muxers); i++) {
-		*p++ = ' ';
-		p = stpcpy(p, supported_muxers[i].opt);
-	}
-	return;
-}
-#endif
+static ute_dso_t mux_dso;
 
 static void
 (*find_muxer(const char *opt))(mux_ctx_t)
 {
-	for (index_t i = 0; i < countof(supported_muxers); i++) {
-		/* at the moment we make use of the fact that
-		 * all muxers begin with different letters. */
-		if (opt[0] == supported_muxers[i].opt[0]) {
-			return supported_muxers[i].muxf;
-		}
+	ute_dso_sym_t mux_sym;
+	if ((mux_dso = open_aux(opt)) == NULL) {
+		return NULL;
+	} else if ((mux_sym = find_sym(mux_dso, "mux")) == NULL) {
+		return NULL;
 	}
-	return NULL;
+	return (void(*)(mux_ctx_t))mux_sym;
+}
+
+static void
+unfind_muxer(UNUSED(void(*muxf)(mux_ctx_t)))
+{
+	if (mux_dso) {
+		close_aux(mux_dso);
+		mux_dso = NULL;
+	}
+	return;
+}
+
+static int
+print_muxer(const char *fname, void *UNUSED(clo))
+{
+	static const char nono[] = "ute";
+	void(*mux_sym)(mux_ctx_t);
+
+	/* basename-ify */
+	if ((fname = strrchr(fname, '/'))) {
+		fname++;
+	}
+	/* check for the forbidden words */
+	if (!strstr(fname, nono) && (mux_sym = find_muxer(fname))) {
+		putchar('*');
+		putchar(' ');
+		puts(fname);
+		unfind_muxer(mux_sym);
+	}
+	return 0;
+}
+
+static void
+print_muxers(void)
+{
+	/* initialise the module system */
+	ute_module_init();
+
+	puts("Supported formats:");
+	trav_dso(print_muxer, NULL);
+	return;
 }
 
 
@@ -177,10 +186,17 @@ main(int argc, char *argv[])
 	struct mux_args_info argi[1];
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
+	void(*muxf)(mux_ctx_t) = NULL;
 	int res = 0;
 
 	if (mux_parser(argc, argv, argi)) {
 		res = 1;
+		goto out;
+	} else if (argi->help_given) {
+		mux_parser_print_help();
+		fputs("\n", stdout);
+		print_muxers();
+		res = 0;
 		goto out;
 	}
 
@@ -259,6 +275,8 @@ main(int argc, char *argv[])
 	deinit_ticks(ctx);
 
 out:
+	unfind_muxer(muxf);
+	ute_module_fini();
 	mux_parser_free(argi);
 	return res;
 }

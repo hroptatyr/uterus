@@ -142,6 +142,7 @@ ute_module_init(void)
 void
 ute_module_fini(void)
 {
+	lt_dlexit();
 	return;
 }
 

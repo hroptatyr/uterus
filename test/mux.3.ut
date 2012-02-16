@@ -6,10 +6,10 @@ OUTFILE="testload.ute"
 CMDLINE="mux --refdate 1328605200 -f dukas '${INFILE}' -o '${OUTFILE}'"
 
 ## STDIN
- 
+
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1=""
+OUTFILE_SHA1="ddab659760fde0201f11ae13e6aefb1cce58268e"
 
 ## mux.3.ut ends here

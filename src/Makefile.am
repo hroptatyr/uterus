@@ -121,8 +121,6 @@ BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
 
 ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
-ute_print_SOURCES += ibrti.c
-ute_print_SOURCES += uta.c
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
@@ -132,10 +130,6 @@ BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
 ute_PROGRAMS += ute-mux
 ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
-ute_mux_SOURCES += ariva.c
-ute_mux_SOURCES += ibrti.c
-ute_mux_SOURCES += dukas.c
-ute_mux_SOURCES += tfraw.c
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_LDFLAGS = $(AM_LDFLAGS)
 ute_mux_LDADD = libuterus.la

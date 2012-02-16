@@ -269,6 +269,28 @@ dnl SXE_CHECK_COMPILER_FLAGS([flag], [do-if-works], [do-if-not-works])
 	fi
 ])dnl SXE_CHECK_COMPILER_FLAGS
 
+AC_DEFUN([SXE_CHECK_COMPILER_XFLAG], [dnl
+	## if libtool then
+	case "${LD} ${LIBTOOL}" in
+	*"libtool"*)
+		SXE_CHECK_COMPILER_FLAGS([-XCClinker], [
+			XFLAG="-XCClinker"], [
+			XFLAG="-XCClinker"])
+		;;
+	*"ld"*)
+		## no XFLAG needed
+		XFLAG=""
+		;;
+	*)
+		SXE_CHECK_COMPILER_FLAGS([-Xlinker], [
+			XFLAG="-Xlinker"], [
+			XFLAG=""])
+		;;
+	esac
+
+	AC_SUBST([XFLAG])
+])dnl SXE_CHECK_COMPILER_XFLAG
+
 
 AC_DEFUN([SXE_CHECK_CFLAGS], [dnl
 	dnl #### This may need to be overhauled so that all of SXEMACS_CC's flags

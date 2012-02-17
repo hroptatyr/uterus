@@ -278,6 +278,7 @@ static void
 upd_mat_arr(mctx_t UNUSED(ctx), matarr_t arr, matdat_t dat)
 {
 	arr->dathdr.nby = __dflt.arr.dathdr.nby + dat->nby;
+	arr->dim.rows = dat->nby / sizeof(double) / arr->dim.cols;
 	return;
 }
 

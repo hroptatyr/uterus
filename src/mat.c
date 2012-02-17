@@ -324,17 +324,18 @@ static void
 put_mat_arr_dat(mctx_t ctx, matarr_t arr, matdat_t dat, size_t nr, size_t nc)
 {
 	size_t origsz = dat->nby;
+	size_t newflen;
 
 	reshape((void*)dat->data, nc, arr->dim.rows, nr);
 	dat->nby = nc * nr * sizeof(double);
 	arr->dim.cols = nc;
 	arr->dim.rows = nr;
 	arr->dathdr.nby = __dflt.arr.dathdr.nby + dat->nby;
-	ctx->flen = arr->dathdr.nby + sizeof(__dflt.hdr) + sizeof(*dat);
+	newflen = arr->dathdr.nby + sizeof(__dflt.hdr) + sizeof(*dat);
 	/* munmap the old guy */
 	munmap_any(ctx, dat, sizeof(__dflt), origsz);
 	/* trunc to new size */
-	ftruncate_algn(ctx->fd, ctx->flen);
+	ctx->flen = ftruncate_algn(ctx->fd, newflen);
 	return;
 }
 
@@ -379,6 +380,9 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	uint16_t ttf = scom_thdr_ttf(st);
 
 	if (nrows >= frag_hdr->dim.rows) {
+		if (frag_dat) {
+			put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
+		}
 		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows + 256, 5);
 		/* reshape */
 		reshape((void*)frag_dat->data, 5, nrows, nrows + 256);

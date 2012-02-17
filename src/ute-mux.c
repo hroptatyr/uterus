@@ -200,14 +200,25 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	if (argi->format_given &&
-	    UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
+	if (!argi->format_given) {
+		/* it's mandatory even though we said it's optional
+		 * but that's just due to Bettini's gengetopt in that
+		 * it doesn't allow you to treat a -h|--help option
+		 * specially */
+		fputs("muxer format (-f|--format) required\n", stderr);
+		res = 1;
+		goto out;
+	}
+
+	/* initialise the module system */
+	ute_module_init();
+
+	if (UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
 		res = 1;
 		goto out;
 	}
-
 
 	if (argi->name_given) {
 		opts->sname = argi->name_arg;

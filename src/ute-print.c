@@ -138,6 +138,7 @@ main(int argc, char *argv[])
 {
 	struct print_args_info argi[1];
 	struct pr_ctx_s ctx[1] = {{0}};
+	struct pr_opt_s opt[1] = {{0}};
 	ssize_t(*prf)(pr_ctx_t, scom_t) = NULL;
 	const char *fmt;
 	int res = 0;
@@ -160,6 +161,10 @@ main(int argc, char *argv[])
 		fmt = argi->format_arg;
 	}
 
+	if (argi->output_given) {
+		opt->outfile = argi->output_arg;
+	}
+
 	/* initialise the module system */
 	ute_module_init();
 
@@ -171,6 +176,9 @@ main(int argc, char *argv[])
 	}
 	/* normally we'd check for -o|--output */
 	ctx->outfd = STDOUT_FILENO;
+	/* we pass on the option structure so modules can have a finer
+	 * control over things, i.e. mmap the output file and whatnot */
+	ctx->opts = opt;
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];

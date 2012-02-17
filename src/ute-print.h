@@ -53,6 +53,7 @@
 #endif	/* !UNUSED */
 
 typedef struct pr_ctx_s *pr_ctx_t;
+typedef struct pr_opt_s *pr_opt_t;
 
 struct pr_ctx_s {
 	/** file index for bad ticks */
@@ -65,6 +66,13 @@ struct pr_ctx_s {
 
 	char *buf;
 	size_t bsz;
+
+	/* options, for finer control */
+	pr_opt_t opts;
+};
+
+struct pr_opt_s {
+	const char *outfile;
 };
 
 

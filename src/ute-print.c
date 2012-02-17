@@ -38,6 +38,7 @@
 /** test client for libuterus */
 #include <stdio.h>
 #include <assert.h>
+#include <fcntl.h>
 #include "utefile.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
@@ -174,8 +175,20 @@ main(int argc, char *argv[])
 		res = 1;
 		goto out;
 	}
-	/* normally we'd check for -o|--output */
-	ctx->outfd = STDOUT_FILENO;
+	if (argi->output_given) {
+		const int oflags = O_CREAT | O_TRUNC | O_RDWR;
+
+		/* store a copy of the file name */
+		opt->outfile = argi->output_arg;
+		if ((ctx->outfd = open(argi->output_arg, oflags, 0644)) < 0) {
+			res = 1;
+			fputs("cannot open output file\n", stderr);
+			goto out;
+		}
+	} else {
+		ctx->outfd = STDOUT_FILENO;
+	}
+
 	/* we pass on the option structure so modules can have a finer
 	 * control over things, i.e. mmap the output file and whatnot */
 	ctx->opts = opt;
@@ -199,6 +212,8 @@ main(int argc, char *argv[])
 		/* oh right, close the handle */
 		ute_close(hdl);
 	}
+	/* close the output file */
+	close(ctx->outfd);
 
 out:
 	unfind_printer(prf);

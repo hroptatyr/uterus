@@ -331,11 +331,13 @@ put_mat_arr_dat(mctx_t ctx, matarr_t arr, matdat_t dat, size_t nr, size_t nc)
 	arr->dim.cols = nc;
 	arr->dim.rows = nr;
 	arr->dathdr.nby = __dflt.arr.dathdr.nby + dat->nby;
+	/* trunc to new size */
 	newflen = arr->dathdr.nby + sizeof(__dflt.hdr) + sizeof(*dat);
+	ctx->flen = ftruncate_algn(ctx->fd, newflen);
+	/* adapt total len, matlab is quite cunty about this */
+	arr->dathdr.nby += ctx->flen - newflen;
 	/* munmap the old guy */
 	munmap_any(ctx, dat, sizeof(__dflt), origsz);
-	/* trunc to new size */
-	ctx->flen = ftruncate_algn(ctx->fd, newflen);
 	return;
 }
 

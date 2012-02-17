@@ -75,7 +75,8 @@ typedef struct matarr_s *matarr_t;
 
 struct mathdr_s {
 	char desc[116];
-	uint64_t subsys_data_off;
+	uint32_t:32;
+	uint32_t:32;
 	uint16_t version;
 	uint16_t endian;
 };
@@ -203,7 +204,6 @@ static const struct {
 } __dflt = {
 	.hdr = {
 		  .desc = "ute print output",
-		  .subsys_data_off = 0,
 		  .version = MAT_VERSION,
 		  .endian = ('M' << 8) + 'I',
 	  },

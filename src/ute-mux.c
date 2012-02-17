@@ -201,7 +201,7 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->format_given &&
-	    UNLIKELY((opts->muxf = find_muxer(argi->format_arg)) == NULL)) {
+	    UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
 		res = 1;
@@ -268,7 +268,7 @@ main(int argc, char *argv[])
 			continue;
 		}
 		/* ... and now mux it */
-		opts->muxf(ctx);
+		muxf(ctx);
 		/* close the infile */
 		close(fd);
 	}

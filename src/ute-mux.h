@@ -59,7 +59,6 @@ struct sumux_opt_s {
 	const char *outfile;
 	const char *badfile;
 	const char *sname;
-	void(*muxf)(mux_ctx_t);
 	const char *zone;
 	/** offset for timestamps relative to something other than epoch */
 	int32_t tsoff;

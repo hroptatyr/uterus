@@ -172,16 +172,24 @@ struct mctx_s {
 	int flags;
 };
 
+static size_t
+ftruncate_algn(int fd, size_t len)
+{
+/* like ftruncate, but round up to multiple of FLEN_ALGN */
+#define FLEN_ALGN	(16U)
+	len += FLEN_ALGN - (len - 1) % FLEN_ALGN - 1;
+	ftruncate(fd, len);
+	return len;
+}
+
 static void
 check_trunc(mctx_t ctx, size_t len)
 {
-#define FLEN_ALGN	(16U)
 	if (len <= ctx->flen) {
 		return;
 	}
 	/* otherwise care about truncation, round up to FLEN_ALGN */
-	len += FLEN_ALGN - (len - 1) % FLEN_ALGN - 1;
-	ftruncate(ctx->fd, ctx->flen = len);
+	ctx->flen = ftruncate_algn(ctx->fd, len);
 	return;
 }
 
@@ -268,6 +276,31 @@ put_mat_arr_hdr(mctx_t ctx, matarr_t arr)
 	return;
 }
 
+static void
+reshape(double *arr, size_t ncols, size_t old_nr, size_t new_nr)
+{
+/* stretch the array ARR */
+	if (old_nr == 0) {
+		/* no reshape needed */
+		;
+	} else if (new_nr > old_nr) {
+		/* A A A B B B C C C -> A A A _ _ _ B B B _ _ _ C C C _ _ _ */
+		while (--ncols > 0) {
+			double *nu_pos = arr + new_nr * ncols;
+			double *ol_pos = arr + old_nr * ncols;
+			memmove(nu_pos, ol_pos, old_nr * sizeof(*arr));
+		}
+	} else if (new_nr < old_nr) {
+		/* A A A _ _ B B B _ _ C C C _ _ -> A A A B B B C C C */
+		for (size_t i = 1; i < ncols; i++) {
+			double *nu_pos = arr + new_nr * i;
+			double *ol_pos = arr + old_nr * i;
+			memmove(nu_pos, ol_pos, new_nr * sizeof(*arr));
+		}
+	}
+	return;
+}
+
 static matdat_t
 get_mat_arr_dat(mctx_t ctx, matarr_t arr, size_t nrows, size_t ncols)
 {
@@ -288,16 +321,20 @@ get_mat_arr_dat(mctx_t ctx, matarr_t arr, size_t nrows, size_t ncols)
 }
 
 static void
-put_mat_arr_dat(mctx_t ctx, matdat_t dat)
+put_mat_arr_dat(mctx_t ctx, matarr_t arr, matdat_t dat, size_t nr, size_t nc)
 {
-	munmap_any(ctx, dat, sizeof(__dflt), dat->nby);
-	return;
-}
+	size_t origsz = dat->nby;
 
-static void
-upd_mat_arr(mctx_t UNUSED(ctx), matarr_t arr, matdat_t dat)
-{
+	reshape((void*)dat->data, nc, arr->dim.rows, nr);
+	dat->nby = nc * nr * sizeof(double);
+	arr->dim.cols = nc;
+	arr->dim.rows = nr;
 	arr->dathdr.nby = __dflt.arr.dathdr.nby + dat->nby;
+	ctx->flen = arr->dathdr.nby + sizeof(__dflt.hdr) + sizeof(*dat);
+	/* munmap the old guy */
+	munmap_any(ctx, dat, sizeof(__dflt), origsz);
+	/* trunc to new size */
+	ftruncate_algn(ctx->fd, ctx->flen);
 	return;
 }
 
@@ -328,8 +365,7 @@ fini(pr_ctx_t UNUSED(pctx))
 {
 	/* update matarr */
 	if (frag_dat) {
-		upd_mat_arr(__gmctx, frag_hdr, frag_dat);
-		put_mat_arr_dat(__gmctx, frag_dat);
+		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
 	}
 	put_mat_arr_hdr(__gmctx, frag_hdr);
 	return;
@@ -344,6 +380,8 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 
 	if (nrows >= frag_hdr->dim.rows) {
 		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows + 256, 5);
+		/* reshape */
+		reshape((void*)frag_dat->data, 5, nrows, nrows + 256);
 	}
 
 	switch (ttf) {

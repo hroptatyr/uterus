@@ -127,13 +127,16 @@ struct matdat_s {
 struct matarr_flag_s {
 	uint32_t dty/*uint32*/;
 	uint32_t flgsz;
-	uint32_t:16;
-	uint32_t:4;
-	uint32_t complex:1;
-	uint32_t global:1;
-	uint32_t logical:1;
-	uint32_t:1;
-	uint32_t class:8;
+	struct {
+		/* from LSB to MSB */
+		uint32_t class:8;
+		uint32_t:1;
+		uint32_t logical:1;
+		uint32_t global:1;
+		uint32_t complex:1;
+		uint32_t:4;
+		uint32_t:16;
+	};
 	uint32_t:32;
 };
 

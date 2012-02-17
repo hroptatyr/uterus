@@ -156,4 +156,9 @@ print_tick_sym(pr_ctx_t pctx, scom_t st)
  * Implemented through DSOs. */
 extern ssize_t pr(pr_ctx_t pctx, scom_t st);
 
+/**
+ * For printers that need initialisation and finalisation. */
+extern void init(pr_ctx_t pctx);
+extern void fini(pr_ctx_t pctx);
+
 #endif	/* INCLUDED_ute_print_h_ */

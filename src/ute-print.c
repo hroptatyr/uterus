@@ -193,6 +193,14 @@ main(int argc, char *argv[])
 	 * control over things, i.e. mmap the output file and whatnot */
 	ctx->opts = opt;
 
+	/* check and call initialiser if any */
+	{
+		void(*initf)(pr_ctx_t);
+		if ((initf = (void(*)(pr_ctx_t))find_sym(pr_dso, "init"))) {
+			initf(ctx);
+		}
+	}
+
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];
 		void *hdl;
@@ -211,6 +219,14 @@ main(int argc, char *argv[])
 		}
 		/* oh right, close the handle */
 		ute_close(hdl);
+	}
+
+	/* check and call finaliser if any */
+	{
+		void(*finif)(pr_ctx_t);
+		if ((finif = (void(*)(pr_ctx_t))find_sym(pr_dso, "fini"))) {
+			finif(ctx);
+		}
 	}
 	/* close the output file */
 	close(ctx->outfd);

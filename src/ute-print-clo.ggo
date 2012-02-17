@@ -10,3 +10,7 @@ option "help" h
 option "format" f
 	"Use the specified parser, see below for a list."
 	string optional typestr="FORMAT"
+
+option "output" o
+	"Write result to specified output file, or stdout if omitted."
+	string typestr="FILE" optional

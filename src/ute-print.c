@@ -38,6 +38,7 @@
 /** test client for libuterus */
 #include <stdio.h>
 #include <assert.h>
+#include <fcntl.h>
 #include "utefile.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
@@ -138,6 +139,7 @@ main(int argc, char *argv[])
 {
 	struct print_args_info argi[1];
 	struct pr_ctx_s ctx[1] = {{0}};
+	struct pr_opt_s opt[1] = {{0}};
 	ssize_t(*prf)(pr_ctx_t, scom_t) = NULL;
 	const char *fmt;
 	int res = 0;
@@ -160,6 +162,10 @@ main(int argc, char *argv[])
 		fmt = argi->format_arg;
 	}
 
+	if (argi->output_given) {
+		opt->outfile = argi->output_arg;
+	}
+
 	/* initialise the module system */
 	ute_module_init();
 
@@ -169,8 +175,31 @@ main(int argc, char *argv[])
 		res = 1;
 		goto out;
 	}
-	/* normally we'd check for -o|--output */
-	ctx->outfd = STDOUT_FILENO;
+	if (argi->output_given) {
+		const int oflags = O_CREAT | O_TRUNC | O_RDWR;
+
+		/* store a copy of the file name */
+		opt->outfile = argi->output_arg;
+		if ((ctx->outfd = open(argi->output_arg, oflags, 0644)) < 0) {
+			res = 1;
+			fputs("cannot open output file\n", stderr);
+			goto out;
+		}
+	} else {
+		ctx->outfd = STDOUT_FILENO;
+	}
+
+	/* we pass on the option structure so modules can have a finer
+	 * control over things, i.e. mmap the output file and whatnot */
+	ctx->opts = opt;
+
+	/* check and call initialiser if any */
+	{
+		void(*initf)(pr_ctx_t);
+		if ((initf = (void(*)(pr_ctx_t))find_sym(pr_dso, "init"))) {
+			initf(ctx);
+		}
+	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];
@@ -191,6 +220,16 @@ main(int argc, char *argv[])
 		/* oh right, close the handle */
 		ute_close(hdl);
 	}
+
+	/* check and call finaliser if any */
+	{
+		void(*finif)(pr_ctx_t);
+		if ((finif = (void(*)(pr_ctx_t))find_sym(pr_dso, "fini"))) {
+			finif(ctx);
+		}
+	}
+	/* close the output file */
+	close(ctx->outfd);
 
 out:
 	unfind_printer(prf);

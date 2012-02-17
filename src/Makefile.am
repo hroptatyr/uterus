@@ -146,6 +146,10 @@ ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = -module $(XCCLDFLAGS)
 
+ute_LTLIBRARIES += mat.la
+mat_la_SOURCES = mat.c
+mat_la_LDFLAGS = -module $(XCCLDFLAGS)
+
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 

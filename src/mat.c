@@ -175,12 +175,12 @@ struct mctx_s {
 static void
 check_trunc(mctx_t ctx, size_t len)
 {
-#define FLEN_ALGN	(16)
+#define FLEN_ALGN	(16U)
 	if (len <= ctx->flen) {
 		return;
 	}
 	/* otherwise care about truncation, round up to FLEN_ALGN */
-	len += 16 - (len - 1) % 16 - 1;
+	len += FLEN_ALGN - (len - 1) % FLEN_ALGN - 1;
 	ftruncate(ctx->fd, ctx->flen = len);
 	return;
 }
@@ -238,7 +238,7 @@ static const struct {
 			  .dty = miINT32,
 			  .dimasz = 8,
 			  .rows = 0,
-			  .cols = 2,
+			  .cols = 0,
 		  },
 		 .nam = {
 			  .dty = miINT8,
@@ -269,14 +269,20 @@ put_mat_arr_hdr(mctx_t ctx, matarr_t arr)
 }
 
 static matdat_t
-get_mat_arr_dat(mctx_t ctx, size_t ndbl)
+get_mat_arr_dat(mctx_t ctx, matarr_t arr, size_t nrows, size_t ncols)
 {
-	size_t nby = ndbl * sizeof(double);
+	size_t nby = nrows * ncols * sizeof(double);
 	matdat_t res = mmap_any(ctx, sizeof(__dflt), nby);
 
 	if (res->dty != miDOUBLE) {
 		res->dty = miDOUBLE;
 		res->nby = nby;
+	}
+	if (arr->dim.rows < nrows) {
+		arr->dim.rows = nrows;
+	}
+	if (arr->dim.cols < ncols) {
+		arr->dim.cols = ncols;
 	}
 	return res;
 }
@@ -292,15 +298,15 @@ static void
 upd_mat_arr(mctx_t UNUSED(ctx), matarr_t arr, matdat_t dat)
 {
 	arr->dathdr.nby = __dflt.arr.dathdr.nby + dat->nby;
-	arr->dim.rows = dat->nby / sizeof(double) / arr->dim.cols;
 	return;
 }
 
 
 /* public demuxer */
 static struct mctx_s __gmctx[1];
-static matarr_t frag_hdr;
-static matdat_t frag_dat;
+static matarr_t frag_hdr = NULL;
+static matdat_t frag_dat = NULL;
+static size_t nrows = 0UL;
 
 void
 init(pr_ctx_t pctx)
@@ -314,8 +320,6 @@ init(pr_ctx_t pctx)
 
 	/* start out with an array */
 	frag_hdr = get_mat_arr_hdr(__gmctx);
-	/* start out with 2 * 256 buckets */
-	frag_dat = get_mat_arr_dat(__gmctx, 2 * 256);
 	return;
 }
 
@@ -323,15 +327,59 @@ void
 fini(pr_ctx_t UNUSED(pctx))
 {
 	/* update matarr */
-	upd_mat_arr(__gmctx, frag_hdr, frag_dat);
-	put_mat_arr_dat(__gmctx, frag_dat);
+	if (frag_dat) {
+		upd_mat_arr(__gmctx, frag_hdr, frag_dat);
+		put_mat_arr_dat(__gmctx, frag_dat);
+	}
 	put_mat_arr_hdr(__gmctx, frag_hdr);
 	return;
 }
 
 ssize_t
-pr(pr_ctx_t pctx, scom_t st)
+pr(pr_ctx_t UNUSED(pctx), scom_t st)
 {
+	uint32_t sec = scom_thdr_sec(st);
+	uint16_t msec = scom_thdr_msec(st);
+	uint16_t ttf = scom_thdr_ttf(st);
+
+	if (nrows >= frag_hdr->dim.rows) {
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows + 256, 5);
+	}
+
+	switch (ttf) {
+		double ts;
+		double bp;
+		double ap;
+		double bq;
+		double aq;
+
+		/* we only process shnots here */
+	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
+		const_ssnap_t snp = (const void*)st;
+		ts = (double)sec / 86400. + 719529.;
+		ts += (double)msec / 1000. / 86400.;
+
+		bp = ffff_m30_d((m30_t)snp->bp);
+		ap = ffff_m30_d((m30_t)snp->ap);
+		bq = ffff_m30_d((m30_t)snp->bq);
+		aq = ffff_m30_d((m30_t)snp->aq);
+
+		{
+			double *d = (void*)frag_dat->data;
+			size_t arows = frag_hdr->dim.rows;
+
+			d[0 * arows + nrows] = ts;
+			d[1 * arows + nrows] = bp;
+			d[2 * arows + nrows] = ap;
+			d[3 * arows + nrows] = bq;
+			d[4 * arows + nrows] = aq;
+			nrows++;
+		}
+		break;
+	}
+	default:
+		break;
+	}
 	return 0;
 }
 

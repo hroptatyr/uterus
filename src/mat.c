@@ -172,6 +172,19 @@ struct mctx_s {
 	int flags;
 };
 
+static void
+check_trunc(mctx_t ctx, size_t len)
+{
+#define FLEN_ALGN	(16)
+	if (len <= ctx->flen) {
+		return;
+	}
+	/* otherwise care about truncation, round up to FLEN_ALGN */
+	len += 16 - (len - 1) % 16 - 1;
+	ftruncate(ctx->fd, ctx->flen = len);
+	return;
+}
+
 static void*
 mmap_any(mctx_t ctx, off_t off, size_t len)
 {
@@ -181,9 +194,7 @@ mmap_any(mctx_t ctx, off_t off, size_t len)
 	char *p;
 
 	/* check for truncation */
-	if (off + len > ctx->flen) {
-		ftruncate(ctx->fd, off + len);
-	}
+	check_trunc(ctx, off + len);
 	/* do the actual mapping */
 	p = mmap(NULL, actlen, ctx->prot, ctx->flags, ctx->fd, actoff);
 	if (LIKELY(p != MAP_FAILED)) {

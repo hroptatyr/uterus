@@ -37,6 +37,7 @@
 #if !defined INCLUDED_ute_print_h_
 #define INCLUDED_ute_print_h_
 
+#include <string.h>
 #include "scommon.h"
 
 #define MAX_LINE_LEN		512
@@ -52,6 +53,7 @@
 #endif	/* !UNUSED */
 
 typedef struct pr_ctx_s *pr_ctx_t;
+typedef struct pr_opt_s *pr_opt_t;
 
 struct pr_ctx_s {
 	/** file index for bad ticks */
@@ -64,10 +66,18 @@ struct pr_ctx_s {
 
 	char *buf;
 	size_t bsz;
+
+	/* options, for finer control */
+	pr_opt_t opts;
+};
+
+struct pr_opt_s {
+	const char *outfile;
 };
 
 
 /* some useful fun */
+#if defined INCLUDED_date_h_
 static inline size_t
 pr_ts(char *restrict buf, uint32_t sec, char sep)
 {
@@ -115,6 +125,7 @@ pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 done:
 	return 29;
 }
+#endif	/* INCLUDED_date_h_ */
 
 static inline size_t
 pr_sym(utectx_t ctx, char *restrict buf, uint16_t idx)
@@ -144,5 +155,10 @@ print_tick_sym(pr_ctx_t pctx, scom_t st)
  * Public print function.
  * Implemented through DSOs. */
 extern ssize_t pr(pr_ctx_t pctx, scom_t st);
+
+/**
+ * For printers that need initialisation and finalisation. */
+extern void init(pr_ctx_t pctx);
+extern void fini(pr_ctx_t pctx);
 
 #endif	/* INCLUDED_ute_print_h_ */

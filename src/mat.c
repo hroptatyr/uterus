@@ -41,6 +41,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <sys/mman.h>
+
 #include "utefile.h"
 #include "ute-print.h"
 
@@ -67,11 +69,20 @@
 
 #define MAT_VERSION	(0x100)
 
+typedef struct mat_s *mat_t;
+typedef struct matdat_s *matdat_t;
+typedef struct matarr_s *matarr_t;
+
 struct mathdr_s {
 	char desc[116];
 	uint64_t subsys_data_off;
 	uint16_t version;
 	uint16_t endian;
+};
+
+struct mat_s {
+	struct mathdr_s hdr;
+	void *data[];
 };
 
 #define miINT8		(1)
@@ -106,19 +117,203 @@ struct mathdr_s {
 #define mxINT64_CLASS	(14)
 #define mxUINT64_CLASS	(15)
 
-struct matdel_s {
+struct matdat_s {
 	uint32_t dty;
 	uint32_t nby;
-	char data[];
+	void *data[];
 };
 
-struct mat_s {
-	struct mathdr_s hdr;
-	char data[];
+struct matarr_flag_s {
+	uint32_t dty/*uint32*/;
+	uint32_t flgsz;
+	uint32_t:16;
+	uint32_t:4;
+	uint32_t complex:1;
+	uint32_t global:1;
+	uint32_t logical:1;
+	uint32_t:1;
+	uint32_t class:8;
+	uint32_t:32;
+};
+
+struct matarr_dim_s {
+	uint32_t dty/*int32*/;
+	uint32_t dimasz/*8, we're 2x2*/;
+	uint32_t rows;
+	uint32_t cols;
+};
+
+struct matarr_nam_s {
+	uint32_t dty/*int8*/;
+	uint32_t nsz/*max 8 bytes*/;
+	char data[8];
+};
+
+struct matarr_s {
+	struct matdat_s dathdr;
+	struct matarr_flag_s flags;
+	struct matarr_dim_s dim;
+	struct matarr_nam_s nam;
 };
 
 
+/* mmap helpers */
+typedef struct mctx_s *mctx_t;
+
+struct mctx_s {
+	size_t flen;
+	unsigned int pgsz;
+	int fd;
+	int prot;
+	int flags;
+};
+
+static void*
+mmap_any(mctx_t ctx, off_t off, size_t len)
+{
+	sidx_t ofp = off / ctx->pgsz, ofi = off % ctx->pgsz;
+	off_t actoff = ofp * ctx->pgsz;
+	size_t actlen = len + ofi;
+	char *p;
+
+	/* check for truncation */
+	if (off + len > ctx->flen) {
+		ftruncate(ctx->fd, off + len);
+	}
+	/* do the actual mapping */
+	p = mmap(NULL, actlen, ctx->prot, ctx->flags, ctx->fd, actoff);
+	if (LIKELY(p != MAP_FAILED)) {
+		return p + ofi;
+	}
+	return NULL;
+}
+
+static void
+munmap_any(mctx_t ctx, void *map, off_t off, size_t len)
+{
+	sidx_t ofi = off % ctx->pgsz;
+	munmap((char*)map - ofi, len + ofi);
+	return;
+}
+
+
+static const struct {
+	struct mathdr_s hdr;
+	struct matarr_s arr;
+} __dflt = {
+	.hdr = {
+		  .desc = "ute print output",
+		  .subsys_data_off = 0,
+		  .version = MAT_VERSION,
+		  .endian = ('M' << 8) + 'I',
+	  },
+	.arr = {
+		 .dathdr = {
+			 .dty = miMATRIX,
+			 .nby = sizeof(__dflt.arr) - sizeof(__dflt.arr.dathdr),
+		 },
+		 .flags = {
+			  .dty = miUINT32,
+			  .flgsz = 8,
+			  .complex = 0,
+			  .global = 0,
+			  .logical = 0,
+			  .class = mxDOUBLE_CLASS,
+		  },
+		 .dim = {
+			  .dty = miINT32,
+			  .dimasz = 8,
+			  .rows = 0,
+			  .cols = 2,
+		  },
+		 .nam = {
+			  .dty = miINT8,
+			  .nsz = 7,
+			  .data = "ute_out",
+		  },
+	 },
+};
+
+static matarr_t
+get_mat_arr_hdr(mctx_t ctx)
+{
+	mat_t res = mmap_any(ctx, 0, sizeof(__dflt));
+	matarr_t arr = (void*)res->data;
+
+	if (arr->dathdr.dty != miMATRIX) {
+		memcpy(res, &__dflt, sizeof(__dflt));
+	}
+	return arr;
+}
+
+static void
+put_mat_arr_hdr(mctx_t ctx, matarr_t arr)
+{
+	char *data = (void*)arr;
+	munmap_any(ctx, data - sizeof(struct mathdr_s), 0, sizeof(__dflt));
+	return;
+}
+
+static matdat_t
+get_mat_arr_dat(mctx_t ctx, size_t ndbl)
+{
+	size_t nby = ndbl * sizeof(double);
+	matdat_t res = mmap_any(ctx, sizeof(__dflt), nby);
+
+	if (res->dty != miDOUBLE) {
+		res->dty = miDOUBLE;
+		res->nby = nby;
+	}
+	return res;
+}
+
+static void
+put_mat_arr_dat(mctx_t ctx, matdat_t dat)
+{
+	munmap_any(ctx, dat, sizeof(__dflt), dat->nby);
+	return;
+}
+
+static void
+upd_mat_arr(mctx_t UNUSED(ctx), matarr_t arr, matdat_t dat)
+{
+	arr->dathdr.nby = __dflt.arr.dathdr.nby + dat->nby;
+	return;
+}
+
+
 /* public demuxer */
+static struct mctx_s __gmctx[1];
+static matarr_t frag_hdr;
+static matdat_t frag_dat;
+
+void
+init(pr_ctx_t pctx)
+{
+	/* set up our context */
+	__gmctx->flen = 0;
+	__gmctx->pgsz = sysconf(_SC_PAGESIZE);
+	__gmctx->fd = pctx->outfd;
+	__gmctx->prot = PROT_READ | PROT_WRITE;
+	__gmctx->flags = MAP_SHARED;
+
+	/* start out with an array */
+	frag_hdr = get_mat_arr_hdr(__gmctx);
+	/* start out with 2 * 256 buckets */
+	frag_dat = get_mat_arr_dat(__gmctx, 2 * 256);
+	return;
+}
+
+void
+fini(pr_ctx_t UNUSED(pctx))
+{
+	/* update matarr */
+	upd_mat_arr(__gmctx, frag_hdr, frag_dat);
+	put_mat_arr_dat(__gmctx, frag_dat);
+	put_mat_arr_hdr(__gmctx, frag_hdr);
+	return;
+}
+
 ssize_t
 pr(pr_ctx_t pctx, scom_t st)
 {

@@ -178,7 +178,9 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 typedef union __attribute__((transparent_union)) {
 	uint64_t u;
 	struct {
-		uint32_t idx:22;
+		/* nearly scommon */
+		uint32_t ttf:6;
+		uint32_t idx:16;
 		uint32_t msec:10;
 		uint32_t sec:32;
 	};
@@ -368,12 +370,14 @@ make_scidx(scom_t t, sidx_t idx)
 		.sec = scom_thdr_sec(t),
 		.msec = scom_thdr_msec(t),
 		.idx = idx,
+		.ttf = scom_thdr_ttf(t),
 	};
 #else  /* !HAVE_ANON_STRUCTS */
 	scidx_t res;
 	res.sec = scom_thdr_sec(t);
 	res.msec = scom_thdr_msec(t);
 	res.idx = idx;
+	res.ttf = scom_thdr_ttf(t);
 #endif	/* HAVE_ANON_STRUCTS */
 	return res;
 }
@@ -603,6 +607,87 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
 	return;
 }
 
+static ssize_t
+tilman_comp(utetpc_t tpc)
+{
+	ssize_t res = 0;
+	/* sink */
+	void *xp = tpc->tp;
+
+	for (void *tp = xp, *ep = DATA(tp, tpc->tidx); tp < ep; ) {
+		scom_t st = tp;
+
+		switch (scom_thdr_ttf(st)) {
+			size_t bsz;
+		case SSNP_FLAVOUR: {
+			void *nex;
+			uint32_t tmp[2];
+			struct ssnap_s *snpb;
+			struct ssnap_s *snpa;
+
+			bsz = sizeof(struct ssnap_s);
+			nex = DATA(tp, bsz);
+			if (scom_thdr_ttf(nex) != SSNP_FLAVOUR) {
+				goto condens;
+			}
+			/* same time stamps? */
+			tmp[0] = scom_thdr_sec(tp);
+			tmp[1] = scom_thdr_sec(nex);
+			if (tmp[0] != tmp[1]) {
+				goto condens;
+			}
+			/* same milli-seconds */
+			tmp[0] = scom_thdr_msec(tp);
+			tmp[1] = scom_thdr_msec(nex);
+			if (tmp[0] != tmp[1]) {
+				goto condens;
+			}
+
+			/* otherwise, check the table indices for equality */
+			tmp[0] = scom_thdr_tblidx(tp);
+			tmp[1] = scom_thdr_tblidx(nex);
+			if (tmp[0] != tmp[1]) {
+				goto condens;
+			}
+			/* two snaps, same index, check if we can compress */
+			if ((snpb = (void*)tp)->ap == 0 &&
+			    (snpa = (void*)nex)->bp == 0 ||
+			    (snpb = (void*)nex)->ap == 0 &&
+			    (snpa = (void*)tp)->bp == 0) {
+				/* and we can ... */
+				snpb->ap = snpa->ap;
+				snpb->aq = snpa->aq;
+				if (snpb->tvpr == 0) {
+					snpb->tvpr = snpa->tvpr;
+					snpb->tq = snpa->tq;
+				}
+				/* step the result counter */
+				res++;
+				/* copy the candle to the target position */
+				memmove(xp, snpb, sizeof(*snpb));
+				tp = DATA(nex, bsz);
+				xp = DATA(xp, bsz);
+				break;
+			}
+			goto condens;
+		}
+		default:
+			bsz = scom_thdr_size(tp);
+		condens:
+			if (xp < tp) {
+				memcpy(xp, tp, bsz);
+			}
+			tp = DATA(tp, bsz);
+			xp = DATA(xp, bsz);
+		}
+	}
+	if (res > 0) {
+		/* shrink tpc->tidx */
+		tpc->tidx -= res * sizeof(struct ssnap_s);
+	}
+	return res;
+}
+
 DEFUN void
 tpc_sort(utetpc_t tpc)
 {
@@ -641,6 +726,8 @@ tpc_sort(utetpc_t tpc)
 		/* munmap()ing is the same in either case */
 		munmap(tgt, tpc->tpsz);
 	}
+	/* tilman compression now, this may reduce the number of ticks */
+	tilman_comp(tpc);
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
 	return;

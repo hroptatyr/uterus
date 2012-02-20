@@ -199,6 +199,20 @@ scdl_set_tblidx(scdl_t c, uint16_t i)
 	return;
 }
 
+
+static inline uint16_t
+ssnap_tblidx(const_ssnap_t c)
+{
+	return scom_thdr_tblidx(c->hdr);
+}
+
+static inline void
+ssnap_set_tblidx(ssnap_t c, uint16_t i)
+{
+	scom_thdr_set_tblidx(c->hdr, i);
+	return;
+}
+
 
 /* inlines */
 static inline void

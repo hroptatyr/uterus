@@ -70,13 +70,13 @@ static ute_dso_t pr_dso;
 static ssize_t
 (*find_printer(const char *opt))(pr_ctx_t, scom_t)
 {
-	ute_dso_sym_t pr_sym;
+	ute_dso_sym_t res;
 	if ((pr_dso = open_aux(opt)) == NULL) {
 		return NULL;
-	} else if ((pr_sym = find_sym(pr_dso, "pr")) == NULL) {
+	} else if ((res = find_sym(pr_dso, "pr")) == NULL) {
 		return NULL;
 	}
-	return (ssize_t(*)(pr_ctx_t, scom_t))pr_sym;
+	return (ssize_t(*)(pr_ctx_t, scom_t))res;
 }
 
 static void
@@ -93,18 +93,18 @@ static int
 print_mudem(const char *fname, void *UNUSED(clo))
 {
 	static const char nono[] = "ute";
-	ssize_t(*pr_sym)(pr_ctx_t, scom_t);
+	ssize_t(*prf)(pr_ctx_t, scom_t);
 
 	/* basename-ify */
 	if ((fname = strrchr(fname, '/'))) {
 		fname++;
 	}
 	/* check for the forbidden words */
-	if (!strstr(fname, nono) && (pr_sym = find_printer(fname))) {
+	if (!strstr(fname, nono) && (prf = find_printer(fname))) {
 		putchar('*');
 		putchar(' ');
 		puts(fname);
-		unfind_printer(pr_sym);
+		unfind_printer(prf);
 	}
 	return 0;
 }

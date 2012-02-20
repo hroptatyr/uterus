@@ -70,13 +70,13 @@ static ute_dso_t pr_dso;
 static ssize_t
 (*find_printer(const char *opt))(pr_ctx_t, scom_t)
 {
-	ute_dso_sym_t pr_sym;
+	ute_dso_sym_t res;
 	if ((pr_dso = open_aux(opt)) == NULL) {
 		return NULL;
-	} else if ((pr_sym = find_sym(pr_dso, "pr")) == NULL) {
+	} else if ((res = find_sym(pr_dso, "pr")) == NULL) {
 		return NULL;
 	}
-	return (ssize_t(*)(pr_ctx_t, scom_t))pr_sym;
+	return (ssize_t(*)(pr_ctx_t, scom_t))res;
 }
 
 static void
@@ -93,18 +93,18 @@ static int
 print_mudem(const char *fname, void *UNUSED(clo))
 {
 	static const char nono[] = "ute";
-	ssize_t(*pr_sym)(pr_ctx_t, scom_t);
+	ssize_t(*prf)(pr_ctx_t, scom_t);
 
 	/* basename-ify */
 	if ((fname = strrchr(fname, '/'))) {
 		fname++;
 	}
 	/* check for the forbidden words */
-	if (!strstr(fname, nono) && (pr_sym = find_printer(fname))) {
+	if (!strstr(fname, nono) && (prf = find_printer(fname))) {
 		putchar('*');
 		putchar(' ');
 		puts(fname);
-		unfind_printer(pr_sym);
+		unfind_printer(prf);
 	}
 	return 0;
 }
@@ -118,6 +118,28 @@ print_mudems(void)
 
 	puts("Supported formats:");
 	trav_dso(print_mudem, NULL);
+	return;
+}
+
+static void
+pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
+{
+	void *hdl;
+
+	if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
+		return;
+	}
+	/* otherwise print all them ticks */
+	ctx->uctx = hdl;
+	for (size_t i = 0; i < ute_nticks(hdl);) {
+		scom_t ti = ute_seek(hdl, i);
+		if (ti) {
+			prf(ctx, ti);
+		}
+		i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
+	}
+	/* oh right, close the handle */
+	ute_close(hdl);
 	return;
 }
 
@@ -201,24 +223,20 @@ main(int argc, char *argv[])
 		}
 	}
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *f = argi->inputs[j];
-		void *hdl;
-
-		if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
-			continue;
+	if (argi->inputs_num == 0 && !isatty(STDIN_FILENO)) {
+		/* use names on stdin */
+		char *ln = NULL;
+		size_t lnsz = 0U;
+		ssize_t llen;
+		while ((llen = getdelim(&ln, &lnsz, '\n', stdin)) > 1) {
+			ln[llen - 1] = '\0';
+			pr1(ctx, ln, prf);
 		}
-		/* otherwise print all them ticks */
-		ctx->uctx = hdl;
-		for (size_t i = 0; i < ute_nticks(hdl);) {
-			scom_t ti = ute_seek(hdl, i);
-			if (ti) {
-				prf(ctx, ti);
-			}
-			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
+		free(ln);
+	} else {
+		for (unsigned int j = 0; j < argi->inputs_num; j++) {
+			pr1(ctx, argi->inputs[j], prf);
 		}
-		/* oh right, close the handle */
-		ute_close(hdl);
 	}
 
 	/* check and call finaliser if any */

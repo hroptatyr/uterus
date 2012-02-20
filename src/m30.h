@@ -152,6 +152,13 @@ static const double ffff_m30_d_denoms[] = {
 	/*10->*/1., /*11->*/10000.,
 };
 
+#if defined FPMATH_NO_SSE
+static const double ffff_m30_d_denoms_reci[] = {
+	/*00*/100000000., /*01*/10000,
+	/*10*/1., /*11*/0.0001,
+};
+#endif	/* FPMATH_NO_SSE */
+
 static const double ffff_m30_d_ubounds[] = {
 	/*00->*/5.36870912, /*01->*/53687.0912,
 	/*10->*/536870912., /*11->*/5368709120000.,
@@ -162,6 +169,27 @@ ffff_m30_d(m30_t m)
 {
 	return (double)m.mant * ffff_m30_d_denoms[m.expo];
 }
+
+#if defined FPMATH_NO_SSE
+static inline int32_t __attribute__((pure))
+d2int32(double d)
+{
+	int32_t res;
+	__asm__ volatile(
+		"fld %1;"
+		"fistpl %0;"
+		: "=m" (res)
+		: "m" (d)
+		);
+	return res;
+}
+#else  /* !FPMATH_NO_SSE */
+static inline int32_t __attribute__((pure))
+d2int32(double d)
+{
+	return (int32_t)d;
+}
+#endif	/* FPMATH_NO_SSE */
 
 static inline m30_t __attribute__((always_inline))
 ffff_m30_get_d(double d)
@@ -177,7 +205,7 @@ ffff_m30_get_d(double d)
 		}
 	}
 	res.expo = i;
-	res.mant = (int32_t)(d / ffff_m30_d_denoms[i]);
+	res.mant = d2int32(d / ffff_m30_d_denoms[i]);
 	return res;
 }
 

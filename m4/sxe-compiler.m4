@@ -221,6 +221,13 @@ AC_DEFUN([SXE_FEATFLAGS], [dnl
 	SXE_CHECK_COMPILER_FLAGS([-nopie],
 		[featflags="$featflags -nopie"])
 
+	## it's utterly helpful to get the sse2 unit up
+	SXE_CHECK_COMPILER_FLAGS([-msse2], [dnl
+		## sse2 is the cure
+		featflags="$featflags -msse2"], [dnl
+		## oh bugger
+		AC_DEFINE([FPMATH_NO_SSE], [1], [no sse2 support for floats])])
+
 	## icc and gcc related
 	## check if some stuff can be staticalised
 	## actually requires SXE_WARNFLAGS so warnings would be disabled

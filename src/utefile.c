@@ -118,26 +118,36 @@ ute_extend(utectx_t ctx, ssize_t sz)
 	return true;
 }
 
-/* header caching */
-static void
+/* header caching, also probing */
+static int
 cache_hdr(utectx_t ctx)
 {
 	/* we just use max size here */
-	size_t sz = sizeof(struct utehdr2_s);
-	void *res;
+	const size_t sz = sizeof(struct utehdr2_s);
+	struct utehdr2_s *res;
 	int pflags = __pflags(ctx);
 
 	/* just map the first sizeof(struct bla) bytes */
 	res = mmap(NULL, sz, pflags, MAP_SHARED, ctx->fd, 0);
-	if (LIKELY(res != MAP_FAILED)) {
-		/* assign the header */
-		ctx->hdrp = res;
-		ctx->slut_sz = ctx->hdrp->slut_sz;
-	} else {
-		ctx->hdrp = NULL;
-		ctx->slut_sz = 0;
+	if (UNLIKELY(res == MAP_FAILED)) {
+		/* it failed, it failed, who cares why */
+		goto err_out;
 	}
-	return;
+	/* assign the header ... */
+	ctx->slut_sz = (ctx->hdrp = res)->slut_sz;
+	/* ... and take a probe, if it's not for creation */
+	if (pflags & (UO_CREAT | UO_TRUNC)) {
+		/* don't bother checking the header */
+		return 0;
+	} else if (!memcmp(res->magic, "UTE+", sizeof(res->magic))) {
+		/* perfect */
+		return 0;
+	}
+	/* otherwise something's fucked */
+err_out:
+	ctx->hdrp = NULL;
+	ctx->slut_sz = 0;
+	return -1;
 }
 
 static void

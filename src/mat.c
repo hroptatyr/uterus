@@ -237,10 +237,12 @@ static const struct {
 		 .flags = {
 			  .dty = miUINT32,
 			  .flgsz = 8,
+#if defined HAVE_ANON_STRUCTS
 			  .complex = 0,
 			  .global = 0,
 			  .logical = 0,
 			  .class = mxDOUBLE_CLASS,
+#endif	/* HAVE_ANON_STRUCTS */
 		  },
 		 .dim = {
 			  .dty = miINT32,
@@ -264,6 +266,12 @@ get_mat_arr_hdr(mctx_t ctx)
 
 	if (arr->dathdr.dty != miMATRIX) {
 		memcpy(res, &__dflt, sizeof(__dflt));
+#if !defined HAVE_ANON_STRUCTS
+		arr->flags.complex = 0;
+		arr->flags.global = 0;
+		arr->flags.logical = 0;
+		arr->flags.class = mxDOUBLE_CLASS;
+#endif	/* HAVE_ANON_STRUCTS */
 	}
 	return arr;
 }

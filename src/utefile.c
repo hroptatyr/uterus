@@ -170,7 +170,7 @@ creat_hdr(utectx_t ctx)
 	/* trunc to sz */
 	ute_trunc(ctx, sz);
 	/* cache the header */
-	cache_hdr(ctx);
+	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
 	if (LIKELY(ctx->hdrp != NULL)) {
 		memset((void*)ctx->hdrp, 0, sz);
@@ -488,6 +488,17 @@ make_utectx(const char *fn, int fd, int oflags)
 	/* flags used to open this file */
 	res->oflags = (uint16_t)oflags;
 
+	if ((oflags & UO_TRUNC) ||
+	    (st.st_size == 0 && (oflags & UO_CREAT))) {
+		/* user requested truncation, or creation */
+		creat_hdr(res);
+	} else if (res->fsz > 0 && cache_hdr(res) < 0) {
+		/* cache_hdr() does probing for us, being < 0 means
+		 * it's probably fucked */
+		free(res);
+		return NULL;
+	}
+	/* to avoid more complicated free'ing strdup strings here */
 	if (!(oflags & O_EXCL)) {
 		/* save a copy of the file name */
 		res->fname = strdup(fn);
@@ -495,14 +506,7 @@ make_utectx(const char *fn, int fd, int oflags)
 		/* same but the name was already malloc'd */
 		res->fname = snodup(fn);
 	}
-	if ((oflags & UO_TRUNC) ||
-	    (st.st_size == 0 && (oflags & UO_CREAT))) {
-		/* user requested truncation, or creation */
-		creat_hdr(res);
-	} else if (res->fsz > 0) {
-		/* no truncation requested and file size is not 0 */
-		cache_hdr(res);
-	}
+
 	/* initialise the rest */
 	ute_init(res);
 	/* initialise the tpc session */

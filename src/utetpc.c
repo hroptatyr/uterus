@@ -178,7 +178,9 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 typedef union __attribute__((transparent_union)) {
 	uint64_t u;
 	struct {
-		uint32_t idx:22;
+		/* nearly scommon */
+		uint32_t ttf:6;
+		uint32_t idx:16;
 		uint32_t msec:10;
 		uint32_t sec:32;
 	};
@@ -368,12 +370,14 @@ make_scidx(scom_t t, sidx_t idx)
 		.sec = scom_thdr_sec(t),
 		.msec = scom_thdr_msec(t),
 		.idx = idx,
+		.ttf = scom_thdr_ttf(t),
 	};
 #else  /* !HAVE_ANON_STRUCTS */
 	scidx_t res;
 	res.sec = scom_thdr_sec(t);
 	res.msec = scom_thdr_msec(t);
 	res.idx = idx;
+	res.ttf = scom_thdr_ttf(t);
 #endif	/* HAVE_ANON_STRUCTS */
 	return res;
 }

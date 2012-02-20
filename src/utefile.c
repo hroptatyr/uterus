@@ -136,7 +136,7 @@ cache_hdr(utectx_t ctx)
 	/* assign the header ... */
 	ctx->slut_sz = (ctx->hdrp = res)->slut_sz;
 	/* ... and take a probe, if it's not for creation */
-	if (pflags & (UO_CREAT | UO_TRUNC)) {
+	if (ctx->oflags & (UO_CREAT | UO_TRUNC)) {
 		/* don't bother checking the header */
 		return 0;
 	} else if (!memcmp(res->magic, "UTE+", sizeof(res->magic))) {

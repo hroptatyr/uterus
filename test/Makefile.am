@@ -24,4 +24,7 @@ TESTS += print.2.ut
 EXTRA_DIST += print.a.ute
 EXTRA_DIST += print.b.ute
 
+TESTS += shnot.1.ut
+TESTS += shnot.2.ut
+
 ## Makefile.am ends here

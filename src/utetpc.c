@@ -626,8 +626,10 @@ tilman_comp(utetpc_t tpc)
 			struct ssnap_s *snpa;
 
 			bsz = sizeof(struct ssnap_s);
-			nex = DATA(tp, bsz);
-			if (scom_thdr_ttf(nex) != SSNP_FLAVOUR) {
+			if (UNLIKELY((nex = DATA(tp, bsz)) >= ep)) {
+				/* best to fuck off */
+				goto condens;
+			} else if (scom_thdr_ttf(nex) != SSNP_FLAVOUR) {
 				goto condens;
 			}
 			/* same time stamps? */

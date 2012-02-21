@@ -235,20 +235,10 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 	time_t t2 = scom_thdr_sec(t);
 
 	if (UNLIKELY(t1 == 0)) {
-		/* t's time becomes the bucket time
-		 * well the next aligned stamp of t does, this is not strictly
-		 * correct but necessary to produce equally-sized candles */
-		if (LIKELY(!cdl_snp_p(t) || t2 != aligned_stamp(ctx, t2))) {
-			t1 = next_aligned_stamp(ctx, t2);
-		} else {
-			/* in the candle/snap case we allow the first time to
-			 * be the bucket time already because they represent
-			 * spans of times already */
-			t1 = t2;
-		}
-		set_buckets_time(ctx->bkt, t1);
-	}
-	if (UNLIKELY(cdl_snp_p(t))) {
+		/* make sure we enter the branch for new candles to
+		 * set the bucket time (for the first time) */
+		return true;
+	} else if (UNLIKELY(cdl_snp_p(t))) {
 		/* if a candle or a snap allow on-the-dot stamps too */
 		return t2 > t1;
 	}
@@ -313,10 +303,23 @@ static void
 check_candle(shnot_ctx_t ctx, scom_t t)
 {
 	if (UNLIKELY(new_candle_p(ctx, t))) {
-		time_t bkt_ts = get_buckets_time(ctx->bkt);
-		time_t new_ts = next_stamp(ctx, bkt_ts);
+		time_t tts = scom_thdr_sec(t);
+		time_t new_ts;
+
+		/* print what we've got */
 		new_candle(ctx);
+
+		/* determine and implant new bucket time */
+		if (LIKELY(!cdl_snp_p(t) || tts != aligned_stamp(ctx, tts))) {
+			new_ts = next_aligned_stamp(ctx, tts);
+		} else {
+			/* in the candle/snap case we allow the first time to
+			 * be the bucket time already because they represent
+			 * spans of times already */
+			new_ts = tts;
+		}
 		set_buckets_time(ctx->bkt, new_ts);
+		/* also rinse the buckets */
 		bkts_cleanse(ctx->bkt);
 	}
 	return;

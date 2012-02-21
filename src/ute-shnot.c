@@ -216,7 +216,6 @@ next_stamp(shnot_ctx_t ctx, time_t ts)
 }
 
 static inline time_t
-__attribute__((unused))
 next_aligned_stamp(shnot_ctx_t ctx, time_t ts)
 {
 	return next_stamp(ctx, aligned_stamp(ctx, ts));

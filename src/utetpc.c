@@ -142,11 +142,12 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 	if (UNLIKELY(skey < tpc->last)) {
 		set_tpc_unsorted(tpc);
 	}
-	tpc->last = skey;
 	/* check if the whole file needs sorting (merging) */
 	if (UNLIKELY(skey < tpc->lvtd /* largest value to-date */)) {
 		set_tpc_needmrg(tpc);
+		tpc->lvtd = skey;
 	}
+	tpc->last = skey;
 	return;
 }
 

@@ -54,15 +54,6 @@
 
 
 /* aux */
-static __attribute__((unused)) int
-hdr_version(utehdr_t hdr)
-{
-	if (memcmp(hdr->magic, "UTE+", 4)) {
-		return 0;
-	}
-	return (int)hdr->version[3];
-}
-
 static char*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {

@@ -74,7 +74,6 @@ header_HEADERS += m30.h m62.h
 libuterus_la_SOURCES =
 EXTRA_libuterus_la_SOURCES =
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
-libuterus_la_SOURCES += secu.h
 libuterus_la_SOURCES += mem.h
 libuterus_la_SOURCES += strptime.c
 libuterus_la_SOURCES += strftime.c

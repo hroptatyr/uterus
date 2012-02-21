@@ -46,7 +46,6 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
-#include "secu.h"
 #include "date.h"
 #include "utefile.h"
 /* for public demux (print) apis, muxing isn't possible yet */
@@ -76,30 +75,7 @@
 #define MAX_LINE_LEN	512
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
-/* 'nother type extension */
-#define NSYMS	(16384)
-struct metrsymtbl_s {
-	/* fuck ugly, this points into kernel space */
-	utehdr_t st;
-	/* caches */
-	m30_t tra[NSYMS];
-	m30_t tsz[NSYMS];
-	m30_t bid[NSYMS];
-	m30_t bsz[NSYMS];
-	m30_t ask[NSYMS];
-	m30_t asz[NSYMS];
-};
-
 
-/* convenience macroes for the additional tables */
-#define SYMTBL_SEC	(symtbl.st->sec)
-#define SYMTBL_TRA	(symtbl.tra)
-#define SYMTBL_TSZ	(symtbl.tsz)
-#define SYMTBL_BID	(symtbl.bid)
-#define SYMTBL_BSZ	(symtbl.bsz)
-#define SYMTBL_ASK	(symtbl.ask)
-#define SYMTBL_ASZ	(symtbl.asz)
-
 #if defined USE_DEBUGGING_ASSERTIONS
 static __attribute__((unused)) void
 fputn(FILE *whither, const char *p, size_t n)

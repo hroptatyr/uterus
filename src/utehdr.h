@@ -1,10 +1,10 @@
 /*** utehdr.h -- header handling for ute files
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2009 - 2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of unserding.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,33 +40,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "secu.h"
 
-/**
- * Maximum size of an ute header in file mode. */
-#define UTEHDR_MAX_SIZE	(4096)
-#define UTEHDR_MAX_SECS	(UTEHDR_MAX_SIZE / sizeof(su_secu_t))
-#define UTEHDR_MAX_SYMS	(UTEHDR_MAX_SECS / 2)
-#define UTEHDR_SYMLEN	(UTEHDR_MAX_SIZE / UTEHDR_MAX_SYMS)
-
-typedef const struct utehdr_s *utehdr_t;
 typedef const struct utehdr2_s *utehdr2_t;
-
-/* SoA */
-struct utehdr_s {
-	union {
-		struct {
-			char magic[4];
-			char version[4];
-			uint32_t flags;
-			uint32_t ploff;
-		};
-#define UTEHDR_FIRST_SECIDX	2
-		su_secu_t sec[UTEHDR_MAX_SECS];
-#define UTEHDR_FIRST_SYMIDX	1
-		char sym[UTEHDR_MAX_SYMS][UTEHDR_SYMLEN];
-	};
-};
 
 #define UTEHDR_FLAG_SYMTBL	1
 #define UTEHDR_FLAG_ORDERED	2
@@ -77,83 +52,13 @@ struct utehdr2_s {
 	char version[4];
 	uint32_t flags;
 	uint32_t ploff;
-	/* slut info, o:16 l:8  */
+	/* slut info, off:16 len:8  */
 	uint32_t slut_sz;
 	uint16_t slut_nsyms;
 	uint16_t slut_version;
-	/* bollocks, o:24, l:8 */
+	/* bollocks, off:24, len:8 */
 	uint32_t dummy[2];
 	char pad[4096 - 32];
 };
-
-
-/* file header predicates
- * we deliberately provide no setters here as most of the time
- * the header is in kernel space */
-static inline size_t
-utehdr_payload_offset(utehdr_t fhdr)
-{
-	return fhdr->ploff;
-}
-
-static inline bool
-utehdr_symtbl_p(utehdr_t fhdr)
-{
-	return (fhdr->flags & UTEHDR_FLAG_SYMTBL) != 0;
-}
-
-static inline void
-utehdr_set_symtbl(struct utehdr_s *fhdr)
-{
-	fhdr->flags |= UTEHDR_FLAG_SYMTBL;
-	return;
-}
-
-static inline void
-utehdr_unset_symtbl(struct utehdr_s *fhdr)
-{
-	fhdr->flags &= ~UTEHDR_FLAG_SYMTBL;
-	return;
-}
-
-static inline bool
-utehdr_ordered_p(utehdr_t fhdr)
-{
-	return (fhdr->flags & UTEHDR_FLAG_ORDERED) != 0;
-}
-
-static inline void
-utehdr_set_ordered(struct utehdr_s *fhdr)
-{
-	fhdr->flags |= UTEHDR_FLAG_ORDERED;
-	return;
-}
-
-static inline void
-utehdr_unset_ordered(struct utehdr_s *fhdr)
-{
-	fhdr->flags &= ~UTEHDR_FLAG_ORDERED;
-	return;
-}
-
-static inline bool
-utehdr_trngtbl_p(utehdr_t fhdr)
-{
-	return (fhdr->flags & UTEHDR_FLAG_TRNGTBL) != 0;
-}
-
-static inline void
-utehdr_set_trngtbl(struct utehdr_s *fhdr)
-{
-	fhdr->flags |= UTEHDR_FLAG_TRNGTBL;
-	return;
-}
-
-static inline void
-utehdr_unset_trngtbl(struct utehdr_s *fhdr)
-{
-	fhdr->flags &= ~UTEHDR_FLAG_TRNGTBL;
-	return;
-}
 
 #endif	/* INCLUDED_utehdr_h_ */

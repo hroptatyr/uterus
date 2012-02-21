@@ -50,19 +50,10 @@
 /* only tick size we support atm */
 #include "sl1t.h"
 
-#define SMALLEST_LVTD	(0x8000000 << 10)
+#define SMALLEST_LVTD	(0)
 
 
 /* aux */
-static __attribute__((unused)) int
-hdr_version(utehdr_t hdr)
-{
-	if (memcmp(hdr->magic, "UTE+", 4)) {
-		return 0;
-	}
-	return (int)hdr->version[3];
-}
-
 static char*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
@@ -256,17 +247,10 @@ ute_seek(utectx_t ctx, sidx_t i)
 static void
 store_lvtd(utectx_t ctx)
 {
-	scom_t t;
-	uint64_t sk;
-
-	if (tpc_size(ctx->tpc) > 0) {
-		t = tpc_last_scom(ctx->tpc);
-		sk = tick_sortkey(t);
-		ctx->lvtd = sk;
-	} else {
-		ctx->lvtd = SMALLEST_LVTD;
+	if (tpc_size(ctx->tpc) > 0 && ctx->tpc->last > ctx->lvtd) {
+		ctx->lvtd = ctx->tpc->last;
+		printf("new lvtd %llu\n", ctx->lvtd);
 	}
-	ctx->tpc->last = ctx->lvtd;
 	ctx->tpc->lvtd = ctx->lvtd;
 	return;
 }

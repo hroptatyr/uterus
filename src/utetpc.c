@@ -142,11 +142,12 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 	if (UNLIKELY(skey < tpc->last)) {
 		set_tpc_unsorted(tpc);
 	}
-	tpc->last = skey;
 	/* check if the whole file needs sorting (merging) */
 	if (UNLIKELY(skey < tpc->lvtd /* largest value to-date */)) {
 		set_tpc_needmrg(tpc);
+		tpc->lvtd = skey;
 	}
+	tpc->last = skey;
 	return;
 }
 
@@ -607,7 +608,7 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
 	return;
 }
 
-static ssize_t
+DEFUN ssize_t
 tilman_comp(utetpc_t tpc)
 {
 	ssize_t res = 0;
@@ -626,8 +627,10 @@ tilman_comp(utetpc_t tpc)
 			struct ssnap_s *snpa;
 
 			bsz = sizeof(struct ssnap_s);
-			nex = DATA(tp, bsz);
-			if (scom_thdr_ttf(nex) != SSNP_FLAVOUR) {
+			if (UNLIKELY((nex = DATA(tp, bsz)) >= ep)) {
+				/* best to fuck off */
+				goto condens;
+			} else if (scom_thdr_ttf(nex) != SSNP_FLAVOUR) {
 				goto condens;
 			}
 			/* same time stamps? */
@@ -650,10 +653,10 @@ tilman_comp(utetpc_t tpc)
 				goto condens;
 			}
 			/* two snaps, same index, check if we can compress */
-			if ((snpb = (void*)tp)->ap == 0 &&
-			    (snpa = (void*)nex)->bp == 0 ||
-			    (snpb = (void*)nex)->ap == 0 &&
-			    (snpa = (void*)tp)->bp == 0) {
+			if (((snpb = (void*)tp)->ap == 0 &&
+			     (snpa = (void*)nex)->bp == 0) ||
+			    ((snpb = (void*)nex)->ap == 0 &&
+			     (snpa = (void*)tp)->bp == 0)) {
 				/* and we can ... */
 				snpb->ap = snpa->ap;
 				snpb->aq = snpa->aq;
@@ -726,8 +729,6 @@ tpc_sort(utetpc_t tpc)
 		/* munmap()ing is the same in either case */
 		munmap(tgt, tpc->tpsz);
 	}
-	/* tilman compression now, this may reduce the number of ticks */
-	tilman_comp(tpc);
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
 	return;

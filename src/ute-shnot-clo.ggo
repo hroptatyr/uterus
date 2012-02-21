@@ -4,6 +4,10 @@ usage "ute shnot [OPTION]... FILEs..."
 description "Draw market snapshots from given FILEs.
 A snapshot at a time T comprises the quotes that last occurred before T."
 
+option "output" o
+	"Write result to specified output file"
+	string typestr="FILE" optional
+
 option "interval" i
 	"Make a snapshot every SECS seconds (default: 300)"
 	int typestr="SECS" optional

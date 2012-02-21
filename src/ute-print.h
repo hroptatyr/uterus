@@ -145,9 +145,11 @@ static inline ssize_t
 print_tick_sym(pr_ctx_t pctx, scom_t st)
 {
 	uint16_t si = scom_thdr_tblidx(st);
-	ssize_t res;
+	ssize_t res = 0;
 
-	pctx->bsz += res = pr_sym(pctx->uctx, pctx->buf, si);
+	if (LIKELY(pctx->uctx != NULL)) {
+		pctx->bsz += res = pr_sym(pctx->uctx, pctx->buf, si);
+	}
 	return res;
 }
 

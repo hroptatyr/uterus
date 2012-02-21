@@ -460,6 +460,10 @@ main(int argc, char *argv[])
 	}
 
 	/* set up our option struct, just to decouple from gengetopt's struct */
+	if (argi->output_given) {
+		opt->outfile = argi->output_arg;
+	}
+
 	if (argi->zone_given) {
 		opt->z = zif_read_inst(argi->zone_arg);
 	}

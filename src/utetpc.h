@@ -103,7 +103,7 @@ tpc_sorted_p(utetpc_t tpc)
 static inline bool
 tpc_needmrg_p(utetpc_t tpc)
 {
-	return (tpc->flags & TPC_FL_NEEDMRG) == 1;
+	return (tpc->flags & TPC_FL_NEEDMRG) != 0;
 }
 
 DECLF void make_tpc(utetpc_t tpc, size_t nticks, size_t tsz);

@@ -608,7 +608,7 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
 	return;
 }
 
-static ssize_t
+DEFUN ssize_t
 tilman_comp(utetpc_t tpc)
 {
 	ssize_t res = 0;
@@ -729,8 +729,6 @@ tpc_sort(utetpc_t tpc)
 		/* munmap()ing is the same in either case */
 		munmap(tgt, tpc->tpsz);
 	}
-	/* tilman compression now, this may reduce the number of ticks */
-	tilman_comp(tpc);
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
 	return;

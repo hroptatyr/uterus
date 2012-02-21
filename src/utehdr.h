@@ -1,10 +1,10 @@
 /*** utehdr.h -- header handling for ute files
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2009 - 2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of unserding.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,11 +77,11 @@ struct utehdr2_s {
 	char version[4];
 	uint32_t flags;
 	uint32_t ploff;
-	/* slut info, o:16 l:8  */
+	/* slut info, off:16 len:8  */
 	uint32_t slut_sz;
 	uint16_t slut_nsyms;
 	uint16_t slut_version;
-	/* bollocks, o:24, l:8 */
+	/* bollocks, off:24, len:8 */
 	uint32_t dummy[2];
 	char pad[4096 - 32];
 };

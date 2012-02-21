@@ -143,6 +143,29 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 	return;
 }
 
+static ssize_t
+rdpg(char *restrict tgt, size_t tsz, int fd)
+{
+	ssize_t tot = 0;
+
+	for (ssize_t n; (n = read(fd, tgt + tot, tsz - tot)) > 0; tot += n);
+	return tot;
+}
+
+static ssize_t
+prpg(pr_ctx_t ctx, char *tpg, size_t tsz, ssize_t(*prf)(pr_ctx_t, scom_t))
+{
+	char *eot = tpg + tsz;
+	ssize_t res = 0;
+
+	while (tpg < eot) {
+		scom_t ti = (void*)tpg;
+		prf(ctx, ti);
+		tpg += scom_thdr_size(ti);
+	}
+	return res;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -224,15 +247,30 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->inputs_num == 0 && !isatty(STDIN_FILENO)) {
-		/* use names on stdin */
-		char *ln = NULL;
-		size_t lnsz = 0U;
-		ssize_t llen;
-		while ((llen = getdelim(&ln, &lnsz, '\n', stdin)) > 1) {
-			ln[llen - 1] = '\0';
-			pr1(ctx, ln, prf);
+		/* operate on pages */
+		char pg[4096];
+		/* slut size */
+		size_t slsz;
+		ssize_t nrd;
+
+		/* first page is ute header, just read him off */
+		if (rdpg(pg, sizeof(pg), STDIN_FILENO) < (ssize_t)sizeof(pg)) {
+			/* oh oh oh, do nothing, aye? */
+			goto fina;
+		} else if (memcmp(pg, "UTE+", 4)) {
+			/* not the ute header, so fuck of too? */
+			goto fina;
 		}
-		free(ln);
+		/* otherwise try our harderst */
+		slsz = ((utehdr2_t)pg)->slut_sz;
+		while ((nrd = rdpg(pg, 4096, STDIN_FILENO)) > 0) {
+			if (UNLIKELY((size_t)nrd < sizeof(pg))) {
+				/* last page then? */
+				nrd -= slsz;
+			}
+			prpg(ctx, pg, nrd, prf);
+		}
+
 	} else {
 		for (unsigned int j = 0; j < argi->inputs_num; j++) {
 			pr1(ctx, argi->inputs[j], prf);
@@ -240,6 +278,7 @@ main(int argc, char *argv[])
 	}
 
 	/* check and call finaliser if any */
+fina:
 	{
 		void(*finif)(pr_ctx_t);
 		if ((finif = (void(*)(pr_ctx_t))find_sym(pr_dso, "fini"))) {

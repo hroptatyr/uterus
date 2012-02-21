@@ -50,7 +50,7 @@
 /* only tick size we support atm */
 #include "sl1t.h"
 
-#define SMALLEST_LVTD	(0x8000000 << 10)
+#define SMALLEST_LVTD	(0)
 
 
 /* aux */

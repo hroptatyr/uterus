@@ -216,10 +216,16 @@ next_stamp(shnot_ctx_t ctx, time_t ts)
 }
 
 static inline time_t
-__attribute__((unused))
 next_aligned_stamp(shnot_ctx_t ctx, time_t ts)
 {
 	return next_stamp(ctx, aligned_stamp(ctx, ts));
+}
+
+static inline bool
+cdl_snp_p(scom_t t)
+{
+	return (scom_thdr_ttf(t) & SCDL_FLAVOUR) ||
+		(scom_thdr_ttf(t) & SSNP_FLAVOUR);
 }
 
 static inline bool
@@ -227,20 +233,27 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 {
 	time_t t1 = get_buckets_time(ctx->bkt);
 	time_t t2 = scom_thdr_sec(t);
-	time_t t3 = aligned_stamp(ctx, t2);
 
 	if (UNLIKELY(t1 == 0)) {
 		/* t's time becomes the bucket time
-		 * well the aligned stamp of t does, this is not strictly
+		 * well the next aligned stamp of t does, this is not strictly
 		 * correct but necessary to produce equally-sized candles */
-		set_buckets_time(ctx->bkt, t3);
-		return false;
-	} else if (UNLIKELY(scom_thdr_ttf(t) >= SCOM_FLAG_LM)) {
+		if (LIKELY(!cdl_snp_p(t) || t2 != aligned_stamp(ctx, t2))) {
+			t1 = next_aligned_stamp(ctx, t2);
+		} else {
+			/* in the candle/snap case we allow the first time to
+			 * be the bucket time already because they represent
+			 * spans of times already */
+			t1 = t2;
+		}
+		set_buckets_time(ctx->bkt, t1);
+	}
+	if (UNLIKELY(cdl_snp_p(t))) {
 		/* if a candle or a snap allow on-the-dot stamps too */
-		return t1 < t3 && t2 > t3;
+		return t2 > t1;
 	}
 	/* if it's a genuine tick be strict about the times */
-	return t1 < t3;
+	return t2 >= t1;
 }
 
 static uint16_t
@@ -259,6 +272,7 @@ write_snap(shnot_ctx_t ctx, uint16_t cidx)
 	xsnap_t xn;
 	ssnap_t sn;
 	uint16_t nidx;
+	time_t ts;
 
 	if (xsnap_empty_p(ctx->bkt->snap + cidx)) {
 		return;
@@ -266,8 +280,9 @@ write_snap(shnot_ctx_t ctx, uint16_t cidx)
 
 	sn = (xn = ctx->bkt->snap + cidx)->sn;
 	nidx = copy_sym(ctx, cidx);
+	ts = get_buckets_time(ctx->bkt);
 	scom_thdr_set_tblidx(sn->hdr, nidx);
-	scom_thdr_set_sec(sn->hdr, ctx->bkt->cur_ts + ctx->opts->interval);
+	scom_thdr_set_sec(sn->hdr, ts);
 	scom_thdr_set_msec(sn->hdr, 0);
 	scom_thdr_set_ttf(sn->hdr, SSNP_FLAVOUR);
 
@@ -298,7 +313,8 @@ static void
 check_candle(shnot_ctx_t ctx, scom_t t)
 {
 	if (UNLIKELY(new_candle_p(ctx, t))) {
-		time_t new_ts = aligned_stamp(ctx, scom_thdr_sec(t));
+		time_t bkt_ts = get_buckets_time(ctx->bkt);
+		time_t new_ts = next_stamp(ctx, bkt_ts);
 		new_candle(ctx);
 		set_buckets_time(ctx->bkt, new_ts);
 		bkts_cleanse(ctx->bkt);

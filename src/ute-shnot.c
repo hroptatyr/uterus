@@ -250,10 +250,10 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 	}
 	if (UNLIKELY(cdl_snp_p(t))) {
 		/* if a candle or a snap allow on-the-dot stamps too */
-		return t2 <= t1;
+		return t2 > t1;
 	}
 	/* if it's a genuine tick be strict about the times */
-	return t2 < t1;
+	return t2 >= t1;
 }
 
 static uint16_t

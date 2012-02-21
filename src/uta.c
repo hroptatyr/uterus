@@ -46,7 +46,6 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
-#include "secu.h"
 #include "date.h"
 #include "utefile.h"
 /* for public demux (print) apis, muxing isn't possible yet */

@@ -43,7 +43,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <string.h>
-#include "secu.h"
 #include "utehdr.h"
 
 /* nothing here yet */

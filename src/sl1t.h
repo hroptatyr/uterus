@@ -45,7 +45,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "secu.h"
 #include "scommon.h"
 #include "utehdr.h"
 

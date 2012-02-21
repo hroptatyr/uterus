@@ -77,11 +77,11 @@ struct utehdr2_s {
 	char version[4];
 	uint32_t flags;
 	uint32_t ploff;
-	/* slut info, o:16 l:8  */
+	/* slut info, off:16 len:8  */
 	uint32_t slut_sz;
 	uint16_t slut_nsyms;
 	uint16_t slut_version;
-	/* bollocks, o:24, l:8 */
+	/* bollocks, off:24, len:8 */
 	uint32_t dummy[2];
 	char pad[4096 - 32];
 };

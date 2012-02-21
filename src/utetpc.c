@@ -650,10 +650,10 @@ tilman_comp(utetpc_t tpc)
 				goto condens;
 			}
 			/* two snaps, same index, check if we can compress */
-			if ((snpb = (void*)tp)->ap == 0 &&
-			    (snpa = (void*)nex)->bp == 0 ||
-			    (snpb = (void*)nex)->ap == 0 &&
-			    (snpa = (void*)tp)->bp == 0) {
+			if (((snpb = (void*)tp)->ap == 0 &&
+			     (snpa = (void*)nex)->bp == 0) ||
+			    ((snpb = (void*)nex)->ap == 0 &&
+			     (snpa = (void*)tp)->bp == 0)) {
 				/* and we can ... */
 				snpb->ap = snpa->ap;
 				snpb->aq = snpa->aq;

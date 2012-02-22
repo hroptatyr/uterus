@@ -50,6 +50,8 @@
 /* only tick size we support atm */
 #include "sl1t.h"
 
+#define countof(x)	(sizeof(x) / sizeof(*x))
+
 #define SMALLEST_LVTD	(0)
 
 static const char ute_vers[][8] = {
@@ -710,6 +712,20 @@ const char*
 ute_fn(utectx_t ctx)
 {
 	return ctx->fname;
+}
+
+ute_ver_t
+ute_version(utectx_t ctx)
+{
+/* return the number of symbols tracked in the ute file */
+	const size_t vsz = sizeof(ute_vers[0]);
+	for (size_t i = countof(ute_vers); --i > 0; ) {
+		const char *ver = ute_vers[i];
+		if (memcmp(ctx->hdrp->magic, ver, vsz) == 0) {
+			return (ute_ver_t)(i);
+		}
+	}
+	return UTE_VERSION_UNK;
 }
 
 /* utefile.c ends here */

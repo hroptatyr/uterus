@@ -45,6 +45,9 @@
 #include <string.h>
 #include "utetpc.h"
 
+/* we're just as good as rudi, aren't we? */
+#include <assert.h>
+
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
 #endif	/* !UNUSED */
@@ -176,16 +179,7 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 /* union based scidx
  * order in the struct part is important as we need this to compare
  * two such things for sorting; go from least significant to most */
-typedef union __attribute__((transparent_union)) {
-	uint64_t u;
-	struct {
-		/* nearly scommon */
-		uint32_t ttf:6;
-		uint32_t idx:16;
-		uint32_t msec:10;
-		uint32_t sec:32;
-	};
-} scidx_t;
+/* scidx_t is now part of scommon.h */
 
 /* special version of ilog that works for inputs up to 256 */
 static inline size_t __attribute__((const))
@@ -364,7 +358,7 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 }
 
 static inline scidx_t
-make_scidx(scom_t t, sidx_t idx)
+fake_scidx(scom_t t, uint16_t idx)
 {
 #if defined HAVE_ANON_STRUCTS
 	scidx_t res = {
@@ -383,10 +377,10 @@ make_scidx(scom_t t, sidx_t idx)
 	return res;
 }
 
-static inline uint32_t
+static inline uint16_t
 scidx_idx(scidx_t sci)
 {
-	return sci.idx;
+	return (uint16_t)sci.idx;
 }
 
 #define min(x, y)	(x < y ? x : y)
@@ -498,7 +492,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 	for (size_t i = 0; i < m; j++) {
 		size_t bsz = scom_thdr_size(p);
 
-		scp[j] = make_scidx(p, i);
+		scp[j] = fake_scidx(p, i);
 		p = DATCA(p, bsz);
 		/* maybe it's faster to use a hard-coded satsz here? */
 		i += bsz / sizeof(struct sl1t_s);
@@ -605,6 +599,56 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
 	}
 	/* possibly ntleft ticks stuck */
 	memcpy(tp, npl, ntleft * tsz);
+	return;
+}
+
+
+/* public funs */
+#include "utefile-private.h"
+DEFUN void
+merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
+{
+/* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
+	void *tp = DATA(tgt->data, tgt->idx * tgt->tsz);
+	void *eot = DATA(tgt->data, tgt->mpsz);
+	void *sp = DATA(src->data, src->idx * src->tsz);
+	void *eos = DATA(src->data, src->mpsz);
+	void *rp = swp->tp;
+	void *eor = DATA(swp->tp, swp->tidx);
+
+	while (tp < eot && sp < eos && rp < eor) {
+		if (AS_SCOM(sp)->u <= AS_SCOM(rp)->u) {
+			/* copy the src */
+			size_t ssz = scom_thdr_size(sp);
+			memcpy(tp, sp, ssz);
+			sp = DATA(sp, ssz);
+			tp = DATA(tp, ssz);
+		} else {
+			/* copy from swap */
+			size_t rsz = scom_thdr_size(rp);
+			memcpy(tp, rp, rsz);
+			rp = DATA(rp, rsz);
+			tp = DATA(tp, rsz);
+		}
+	}
+	assert(DATD(eos, sp) <= DATD(rp, swp->tp));
+	assert(tp == eot);
+	/* copy left-overs to swp */
+	{
+		size_t sleft_sz = DATD(eos, sp);
+		size_t rleft_sz = DATD(eor, rp);
+		size_t gapsz = DATD(rp, DATA(swp->tp, sleft_sz));
+
+		memcpy(swp->tp, sp, sleft_sz);
+		/* and close the gap */
+		if (gapsz > 0) {
+			memmove(DATA(swp->tp, sleft_sz), rp, rleft_sz);
+			/* adapt the tidx */
+			swp->tidx -= gapsz;
+		}
+	}
+	/* adapt tgt idx */
+	tgt->idx = DATD(tp, tgt->data) / tgt->tsz;
 	return;
 }
 

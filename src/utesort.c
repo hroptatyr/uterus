@@ -169,6 +169,12 @@ __strat_cb(it_node_t itnd, void *clo)
 	return;
 }
 
+static inline size_t
+min_size_t(size_t x, size_t y)
+{
+	return x < y ? x : y;
+}
+
 static void
 load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 {

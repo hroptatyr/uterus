@@ -46,6 +46,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 typedef struct time_range_s *time_range_t;
+typedef union scom_thdr_u scidx_t;
 typedef union scom_thdr_u *scom_thdr_t;
 #define AS_SCOM_THDR(x)		((scom_thdr_t)(x))
 typedef const union scom_thdr_u *scom_t;
@@ -344,6 +345,14 @@ scom_promote_v01(scom_thdr_t tgt, scom_t t)
 #endif	/* !HAVE_ANON_STRUCTS || 1 */
 	*tgt = res;
 	return;
+}
+
+static inline scidx_t
+make_scidx(scom_t t)
+{
+	scidx_t res;
+	res.u = t->u;
+	return res;
 }
 
 #ifdef __cplusplus

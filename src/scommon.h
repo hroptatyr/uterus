@@ -47,7 +47,7 @@ extern "C" {
 
 typedef struct time_range_s *time_range_t;
 typedef union scom_thdr_u *scom_thdr_t;
-#define AS_SCOM_THDR_T(x)	((scom_thdr_t)(x))
+#define AS_SCOM_THDR(x)		((scom_thdr_t)(x))
 typedef const union scom_thdr_u *scom_t;
 #define AS_SCOM(x)		((scom_t)(x))
 

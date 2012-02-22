@@ -329,6 +329,23 @@ scom_thdr_size(scom_t t)
 }
 #endif	/* __STRUCT_SL1T_S_DEFINED && __STRUCT_SCDL_S_DEFINED */
 
+
+/* promotion for ute versions */
+static inline void
+scom_promote_v01(scom_thdr_t tgt, scom_t t)
+{
+/* given a v01 scom T return the current version's idea of the scom in TGT */
+	union scom_thdr_u res;
+#if !defined HAVE_ANON_STRUCTS || 1
+	res.sec = t->v01.sec;
+	res.msec = t->v01.msec;
+	res.idx = t->v01.idx;
+	res.ttf = t->v01.ttf;
+#endif	/* !HAVE_ANON_STRUCTS || 1 */
+	*tgt = res;
+	return;
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -133,9 +133,7 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 	ctx->uctx = hdl;
 	for (size_t i = 0; i < ute_nticks(hdl);) {
 		scom_t ti = ute_seek(hdl, i);
-		if (ti) {
-			prf(ctx, ti);
-		}
+		prf(ctx, ti);
 		i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
 	}
 	/* oh right, close the handle */

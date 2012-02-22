@@ -135,12 +135,6 @@ ute_npages(utectx_t ctx)
 	return nt / UTE_BLKSZ(ctx) + (nt % UTE_BLKSZ(ctx) ? 1 : 0);
 }
 
-static inline size_t
-min_size_t(size_t x, size_t y)
-{
-	return x < y ? x : y;
-}
-
 static inline uint32_t
 page_of_index(utectx_t ctx, sidx_t i)
 {

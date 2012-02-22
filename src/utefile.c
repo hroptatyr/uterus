@@ -747,18 +747,19 @@ ute_close(utectx_t ctx)
 void
 ute_flush(utectx_t ctx)
 {
-	if (tpc_active_p(ctx->tpc)) {
-		/* also sort and diskify the currently active tpc */
-		if (!tpc_sorted_p(ctx->tpc)) {
-			tpc_sort(ctx->tpc);
-		}
-		if (tpc_needmrg_p(ctx->tpc)) {
-			/* special case when the page cache has detected
-			 * a major violation */
-			ute_set_unsorted(ctx);
-		}
-		flush_tpc(ctx);
+	if (!tpc_active_p(ctx->tpc)) {
+		return;
 	}
+	/* also sort and diskify the currently active tpc */
+	if (!tpc_sorted_p(ctx->tpc)) {
+		tpc_sort(ctx->tpc);
+	}
+	if (tpc_needmrg_p(ctx->tpc)) {
+		/* special case when the page cache has detected
+		 * a major violation */
+		merge_tpc(ctx, ctx->tpc);
+	}
+	flush_tpc(ctx);
 	return;
 }
 

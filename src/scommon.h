@@ -46,9 +46,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 typedef struct time_range_s *time_range_t;
-typedef struct scom_thdr_s *scom_thdr_t;
-#define AS_SCOM_THDR_T(x)	((scom_thdr_t)(x))
-typedef const struct scom_thdr_s *scom_t;
+typedef union scom_thdr_u *scom_thdr_t;
+#define AS_SCOM_THDR(x)		((scom_thdr_t)(x))
+typedef const union scom_thdr_u *scom_t;
 #define AS_SCOM(x)		((scom_t)(x))
 
 /* this time baloney belongs to somewhere else */
@@ -67,16 +67,33 @@ struct time_range_s {
 	uint32_t hi;
 };
 
-struct scom_thdr_s {
-	/* +64 */
-	uint32_t sec;
-	/* millisecs is the standard these days */
-	uint16_t msec:10;
-	/* flags and shite */
-	uint16_t ttf:6;
-	/* an index back into the symtbl */
-	uint16_t tblidx:16;
-} __attribute__((packed));
+union scom_thdr_u {
+	uint64_t u;
+	/* struct in order of significance */
+	struct {
+		/* +64 */
+		uint32_t sec;
+		/* tick type and flags */
+		uint32_t ttf:6;
+		/* an index back into the symtbl */
+		uint32_t idx:16;
+		/* millisecs is the standard these days */
+		uint32_t msec:10;
+	} __attribute__((packed));
+
+	/* seeing as that we're a union now ...
+	 * stuff this thing with the 0.1 version of the header */
+	struct {
+		/* +64 */
+		uint32_t sec;
+		/* millisecs is the standard these days */
+		uint16_t msec:10;
+		/* tick type and flags */
+		uint16_t ttf:6;
+		/* an index back into the symtbl */
+		uint16_t idx;
+	} __attribute__((packed)) v01;
+} __attribute__((transparent_union));
 
 
 /* accessors */
@@ -97,7 +114,7 @@ static inline __attribute__((pure)) uint16_t
 scom_thdr_msec(scom_t h)
 {
 /* we ought to cleanse this one, there are special values for the msec slot */
-	return h->msec;
+	return (uint16_t)h->msec;
 }
 
 static inline void
@@ -111,13 +128,13 @@ scom_thdr_set_msec(scom_thdr_t h, uint16_t msec)
 static inline __attribute__((pure)) uint16_t
 scom_thdr_tblidx(scom_t h)
 {
-	return h->tblidx;
+	return (uint16_t)h->idx;
 }
 
 static inline void
 scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 {
-	h->tblidx = idx;
+	h->idx = idx;
 	return;
 }
 
@@ -155,7 +172,7 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 static inline __attribute__((pure)) uint16_t
 scom_thdr_ttf(scom_t h)
 {
-	return h->ttf;
+	return (uint16_t)h->ttf;
 }
 
 static inline void
@@ -311,6 +328,23 @@ scom_thdr_size(scom_t t)
 	}
 }
 #endif	/* __STRUCT_SL1T_S_DEFINED && __STRUCT_SCDL_S_DEFINED */
+
+
+/* promotion for ute versions */
+static inline void
+scom_promote_v01(scom_thdr_t tgt, scom_t t)
+{
+/* given a v01 scom T return the current version's idea of the scom in TGT */
+	union scom_thdr_u res;
+#if !defined HAVE_ANON_STRUCTS || 1
+	res.sec = t->v01.sec;
+	res.msec = t->v01.msec;
+	res.idx = t->v01.idx;
+	res.ttf = t->v01.ttf;
+#endif	/* !HAVE_ANON_STRUCTS || 1 */
+	*tgt = res;
+	return;
+}
 
 #ifdef __cplusplus
 }

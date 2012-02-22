@@ -249,7 +249,6 @@ store_lvtd(utectx_t ctx)
 {
 	if (tpc_size(ctx->tpc) > 0 && ctx->tpc->last > ctx->lvtd) {
 		ctx->lvtd = ctx->tpc->last;
-		printf("new lvtd %llu\n", ctx->lvtd);
 	}
 	ctx->tpc->lvtd = ctx->lvtd;
 	return;

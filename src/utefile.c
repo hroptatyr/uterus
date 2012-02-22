@@ -363,6 +363,130 @@ out:
 	return;
 }
 
+
+/* tpc glue */
+static inline void
+unset_tpc_needmrg(utetpc_t tpc)
+{
+	tpc->flags &= ~TPC_FL_NEEDMRG;
+	return;
+}
+
+#define DATA(p, i)	((void*)(((char*)(p)) + (i)))
+#define DATD(p, q)	((size_t)(((const char*)(p)) - ((const char*)(q))))
+#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
+
+static void*
+algn_tick(void *tp, void *botp)
+{
+	const size_t probsz = sizeof(struct sl1t_s);
+	void *prob;
+
+	/* check tp - probsz */
+	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
+		return tp;
+	} else if (scom_thdr_ttf(prob) & SCOM_FLAG_LM) {
+		return prob;
+	}
+	return tp;
+}
+
+static void*
+find_scidx(uteseek_t sk, scidx_t key)
+{
+/* find a pointer into SK's data with the first tick that's bigger than KEY
+ * or NULL otherwise, use a binary search */
+	const size_t probsz = sizeof(struct sl1t_s);
+	void *eosp = DATA(sk->data, sk->mpsz);
+	void *sp;
+
+	/* try the tail first */
+	sp = algn_tick(DATA(sk->data, sk->mpsz - probsz), sk->data);
+	if (make_scidx(sp).u > key.u) {
+		goto binsrch;
+	}
+	return NULL;
+binsrch:
+	/* try the middle */
+	for (void *bosp = sk->data; bosp < eosp; ) {
+		size_t off = ALGN(struct sl1t_s, DATD(eosp, bosp) / 2);
+
+		sp = algn_tick(DATA(bosp, off), sk->data);
+		if (make_scidx(sp).u > key.u) {
+			/* left half */
+			eosp = sp;
+		} else if (sp == bosp) {
+			sp = eosp;
+			break;
+		} else {
+			/* right half */
+			bosp = sp;
+		}
+	}
+	/* must be the offending tick */
+	return sp;
+}
+
+static void
+merge_tpc(utectx_t ctx, utetpc_t tpc)
+{
+/* assume all tick pages in CTX are sorted except for TPC
+ * now merge-sort those with TPC */
+	size_t npg = ute_npages(ctx);
+	struct uteseek_s sk[2];
+	/* offending ticks */
+	void *sp;
+	/* page indicator */
+	size_t pg;
+	/* index keys */
+	scidx_t ti;
+
+	/* set up seeker through tpc */
+	ti = make_scidx(AS_SCOM(tpc->tp));
+
+	for (pg = 0; pg < npg; pg++) {
+		/* seek to the i-th page */
+		seek_page(sk, ctx, pg);
+		/* use bin-srch to find an offending tick */
+		if ((sp = find_scidx(sk, ti))) {
+			goto mrg;
+		}
+		/* no need for this page */
+		flush_seek(sk);
+	}
+	return;
+
+mrg:
+	/* update seek */
+	sk->idx = DATD(sp, sk->data) / sk->tsz;
+	/* get a temporary tpc page (where the merges go) */
+	seek_tmppage(sk + 1, ctx, pg);
+	sk[1].idx = sk->idx;
+	memcpy(sk[1].data, sk[0].data, sk->idx * sk->tsz);
+
+	do {
+		merge_2tpc(sk + 1, sk + 0, tpc);
+		/* tpc might have become unsorted, sort it now */
+		tpc_sort(tpc);
+		/* copy the tmp page back */
+		memcpy(sk[0].data, sk[1].data, sk[1].idx * sk[1].tsz);
+		/* after this, sk[0] will be empty and we can proceed
+		 * with another seek/page */
+		flush_seek(sk);
+
+		/* next page now */
+		if (++pg < npg) {
+			seek_page(sk, ctx, pg);
+		} else {
+			break;
+		}
+	} while (1);
+
+	/* unset the need merge flag */
+	unset_tpc_needmrg(tpc);	
+	return;
+}
+
 static void
 load_last_tpc(utectx_t ctx)
 {

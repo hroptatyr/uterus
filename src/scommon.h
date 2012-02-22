@@ -46,9 +46,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 typedef struct time_range_s *time_range_t;
-typedef struct scom_thdr_s *scom_thdr_t;
+typedef union scom_thdr_u *scom_thdr_t;
 #define AS_SCOM_THDR_T(x)	((scom_thdr_t)(x))
-typedef const struct scom_thdr_s *scom_t;
+typedef const union scom_thdr_u *scom_t;
 #define AS_SCOM(x)		((scom_t)(x))
 
 /* this time baloney belongs to somewhere else */
@@ -67,16 +67,20 @@ struct time_range_s {
 	uint32_t hi;
 };
 
-struct scom_thdr_s {
-	/* +64 */
-	uint32_t sec;
-	/* millisecs is the standard these days */
-	uint16_t msec:10;
-	/* flags and shite */
-	uint16_t ttf:6;
-	/* an index back into the symtbl */
-	uint16_t tblidx:16;
-} __attribute__((packed));
+union scom_thdr_u {
+	uint64_t u;
+	/* struct in order of significance */
+	struct {
+		/* +64 */
+		uint32_t sec;
+		/* tick type and flags */
+		uint32_t ttf:6;
+		/* an index back into the symtbl */
+		uint32_t tblidx:16;
+		/* millisecs is the standard these days */
+		uint32_t msec:10;
+	} __attribute__((packed));
+} __attribute__((transparent_union));
 
 
 /* accessors */
@@ -97,7 +101,7 @@ static inline __attribute__((pure)) uint16_t
 scom_thdr_msec(scom_t h)
 {
 /* we ought to cleanse this one, there are special values for the msec slot */
-	return h->msec;
+	return (uint16_t)h->msec;
 }
 
 static inline void
@@ -111,7 +115,7 @@ scom_thdr_set_msec(scom_thdr_t h, uint16_t msec)
 static inline __attribute__((pure)) uint16_t
 scom_thdr_tblidx(scom_t h)
 {
-	return h->tblidx;
+	return (uint16_t)h->tblidx;
 }
 
 static inline void
@@ -155,7 +159,7 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 static inline __attribute__((pure)) uint16_t
 scom_thdr_ttf(scom_t h)
 {
-	return h->ttf;
+	return (uint16_t)h->ttf;
 }
 
 static inline void

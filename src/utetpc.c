@@ -176,16 +176,7 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 /* union based scidx
  * order in the struct part is important as we need this to compare
  * two such things for sorting; go from least significant to most */
-typedef union __attribute__((transparent_union)) {
-	uint64_t u;
-	struct {
-		/* nearly scommon */
-		uint32_t ttf:6;
-		uint32_t idx:16;
-		uint32_t msec:10;
-		uint32_t sec:32;
-	};
-} scidx_t;
+/* scidx_t is now part of scommon.h */
 
 /* special version of ilog that works for inputs up to 256 */
 static inline size_t __attribute__((const))
@@ -364,7 +355,7 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 }
 
 static inline scidx_t
-make_scidx(scom_t t, sidx_t idx)
+fake_scidx(scom_t t, uint16_t idx)
 {
 #if defined HAVE_ANON_STRUCTS
 	scidx_t res = {
@@ -383,10 +374,10 @@ make_scidx(scom_t t, sidx_t idx)
 	return res;
 }
 
-static inline uint32_t
+static inline uint16_t
 scidx_idx(scidx_t sci)
 {
-	return sci.idx;
+	return (uint16_t)sci.idx;
 }
 
 #define min(x, y)	(x < y ? x : y)
@@ -498,7 +489,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 	for (size_t i = 0; i < m; j++) {
 		size_t bsz = scom_thdr_size(p);
 
-		scp[j] = make_scidx(p, i);
+		scp[j] = fake_scidx(p, i);
 		p = DATCA(p, bsz);
 		/* maybe it's faster to use a hard-coded satsz here? */
 		i += bsz / sizeof(struct sl1t_s);

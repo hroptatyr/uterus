@@ -223,6 +223,27 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 }
 
 static void
+seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
+{
+	const int MAP_MEM = MAP_SHARED | MAP_ANONYMOUS;
+	const int PROT_MEM = PROT_READ | PROT_WRITE;
+	size_t psz = page_size(ctx, pg);
+	void *tmp;
+
+	/* create a new seek */
+	tmp = mmap(NULL, psz, PROT_MEM, MAP_MEM, 0, 0);
+	if (UNLIKELY(tmp == MAP_FAILED)) {
+		return;
+	}
+	sk->data = tmp;
+	sk->idx = 0;
+	sk->mpsz = psz;
+	sk->tsz = sizeof(struct sl1t_s);
+	sk->page = pg;
+	return;
+}
+
+static void
 reseek(utectx_t ctx, sidx_t i)
 {
 	uint32_t p = page_of_index(ctx, i);

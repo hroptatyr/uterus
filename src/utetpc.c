@@ -45,6 +45,9 @@
 #include <string.h>
 #include "utetpc.h"
 
+/* we're just as good as rudi, aren't we? */
+#include <assert.h>
+
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
 #endif	/* !UNUSED */
@@ -596,6 +599,56 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
 	}
 	/* possibly ntleft ticks stuck */
 	memcpy(tp, npl, ntleft * tsz);
+	return;
+}
+
+
+/* public funs */
+#include "utefile-private.h"
+DEFUN void
+merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
+{
+/* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
+	void *tp = DATA(tgt->data, tgt->idx * tgt->tsz);
+	void *eot = DATA(tgt->data, tgt->mpsz);
+	void *sp = DATA(src->data, src->idx * src->tsz);
+	void *eos = DATA(src->data, src->mpsz);
+	void *rp = swp->tp;
+	void *eor = DATA(swp->tp, swp->tidx);
+
+	while (tp < eot && sp < eos && rp < eor) {
+		if (AS_SCOM(sp)->u <= AS_SCOM(rp)->u) {
+			/* copy the src */
+			size_t ssz = scom_thdr_size(sp);
+			memcpy(tp, sp, ssz);
+			sp = DATA(sp, ssz);
+			tp = DATA(tp, ssz);
+		} else {
+			/* copy from swap */
+			size_t rsz = scom_thdr_size(rp);
+			memcpy(tp, rp, rsz);
+			rp = DATA(rp, rsz);
+			tp = DATA(tp, rsz);
+		}
+	}
+	assert(DATD(eos, sp) <= DATD(rp, swp->tp));
+	assert(tp == eot);
+	/* copy left-overs to swp */
+	{
+		size_t sleft_sz = DATD(eos, sp);
+		size_t rleft_sz = DATD(eor, rp);
+		size_t gapsz = DATD(rp, DATA(swp->tp, sleft_sz));
+
+		memcpy(swp->tp, sp, sleft_sz);
+		/* and close the gap */
+		if (gapsz > 0) {
+			memmove(DATA(swp->tp, sleft_sz), rp, rleft_sz);
+			/* adapt the tidx */
+			swp->tidx -= gapsz;
+		}
+	}
+	/* adapt tgt idx */
+	tgt->idx = DATD(tp, tgt->data) / tgt->tsz;
 	return;
 }
 

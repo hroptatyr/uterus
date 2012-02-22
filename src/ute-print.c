@@ -131,12 +131,31 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 	}
 	/* otherwise print all them ticks */
 	ctx->uctx = hdl;
-	for (size_t i = 0; i < ute_nticks(hdl);) {
-		scom_t ti = ute_seek(hdl, i);
-		if (ti) {
-			prf(ctx, ti);
+	/* check for ute version */
+	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
+		/* we need to flip the ti */
+		for (size_t i = 0; i < ute_nticks(hdl);) {
+			char buf[64];
+			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
+			scom_t ti = ute_seek(hdl, i);
+			size_t tsz;
+
+			/* promote the old header, copy to tmp buffer BUF */
+			scom_promote_v01(nu_ti, ti);
+			tsz = scom_thdr_size(nu_ti);
+			/* copy the rest of the tick into the buffer */
+			memcpy(buf + sizeof(*nu_ti), ti + 1, tsz - sizeof(*ti));
+			/* now to what we always do */
+			prf(ctx, nu_ti);
+			i += tsz / sizeof(struct sl1t_s);
 		}
-		i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
+	} else {
+		/* no flips in this one */
+		for (size_t i = 0; i < ute_nticks(hdl);) {
+			scom_t ti = ute_seek(hdl, i);
+			prf(ctx, ti);
+			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
+		}
 	}
 	/* oh right, close the handle */
 	ute_close(hdl);

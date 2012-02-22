@@ -50,7 +50,15 @@
 /* only tick size we support atm */
 #include "sl1t.h"
 
+#define countof(x)	(sizeof(x) / sizeof(*x))
+
 #define SMALLEST_LVTD	(0)
+
+static const char ute_vers[][8] = {
+	"UTE+v0.0",
+	"UTE+v0.1",
+	"UTE+v0.2",
+};
 
 
 /* aux */
@@ -155,7 +163,6 @@ close_hdr(utectx_t ctx)
 static void
 creat_hdr(utectx_t ctx)
 {
-	static const char stdhdr[] = "UTE+v0.1";
 	size_t sz = sizeof(struct utehdr2_s);
 
 	/* trunc to sz */
@@ -164,8 +171,10 @@ creat_hdr(utectx_t ctx)
 	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
 	if (LIKELY(ctx->hdrp != NULL)) {
+		const char *ver = ute_vers[UTE_VERSION_02];
+		const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
 		memset((void*)ctx->hdrp, 0, sz);
-		memcpy((void*)ctx->hdrp, stdhdr, 8);
+		memcpy((void*)ctx->hdrp, ver, vsz);
 	}
 	/* file creation means new slut */
 	ctx->slut_sz = 0;
@@ -214,6 +223,27 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 }
 
 static void
+seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
+{
+	const int MAP_MEM = MAP_SHARED | MAP_ANONYMOUS;
+	const int PROT_MEM = PROT_READ | PROT_WRITE;
+	size_t psz = page_size(ctx, pg);
+	void *tmp;
+
+	/* create a new seek */
+	tmp = mmap(NULL, psz, PROT_MEM, MAP_MEM, 0, 0);
+	if (UNLIKELY(tmp == MAP_FAILED)) {
+		return;
+	}
+	sk->data = tmp;
+	sk->idx = 0;
+	sk->mpsz = psz;
+	sk->tsz = sizeof(struct sl1t_s);
+	sk->page = pg;
+	return;
+}
+
+static void
 reseek(utectx_t ctx, sidx_t i)
 {
 	uint32_t p = page_of_index(ctx, i);
@@ -249,7 +279,6 @@ store_lvtd(utectx_t ctx)
 {
 	if (tpc_size(ctx->tpc) > 0 && ctx->tpc->last > ctx->lvtd) {
 		ctx->lvtd = ctx->tpc->last;
-		printf("new lvtd %llu\n", ctx->lvtd);
 	}
 	ctx->tpc->lvtd = ctx->lvtd;
 	return;
@@ -334,8 +363,132 @@ out:
 	return;
 }
 
+
+/* tpc glue */
+static inline void
+unset_tpc_needmrg(utetpc_t tpc)
+{
+	tpc->flags &= ~TPC_FL_NEEDMRG;
+	return;
+}
+
+#define DATA(p, i)	((void*)(((char*)(p)) + (i)))
+#define DATD(p, q)	((size_t)(((const char*)(p)) - ((const char*)(q))))
+#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
+
+static void*
+algn_tick(void *tp, void *botp)
+{
+	const size_t probsz = sizeof(struct sl1t_s);
+	void *prob;
+
+	/* check tp - probsz */
+	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
+		return tp;
+	} else if (scom_thdr_ttf(prob) & SCOM_FLAG_LM) {
+		return prob;
+	}
+	return tp;
+}
+
+static void*
+find_scidx(uteseek_t sk, scidx_t key)
+{
+/* find a pointer into SK's data with the first tick that's bigger than KEY
+ * or NULL otherwise, use a binary search */
+	const size_t probsz = sizeof(struct sl1t_s);
+	void *eosp = DATA(sk->data, sk->mpsz);
+	void *sp;
+
+	/* try the tail first */
+	sp = algn_tick(DATA(sk->data, sk->mpsz - probsz), sk->data);
+	if (make_scidx(sp).u > key.u) {
+		goto binsrch;
+	}
+	return NULL;
+binsrch:
+	/* try the middle */
+	for (void *bosp = sk->data; bosp < eosp; ) {
+		size_t off = ALGN(struct sl1t_s, DATD(eosp, bosp) / 2);
+
+		sp = algn_tick(DATA(bosp, off), sk->data);
+		if (make_scidx(sp).u > key.u) {
+			/* left half */
+			eosp = sp;
+		} else if (sp == bosp) {
+			sp = eosp;
+			break;
+		} else {
+			/* right half */
+			bosp = sp;
+		}
+	}
+	/* must be the offending tick */
+	return sp;
+}
+
 static void
-load_tpc(utectx_t ctx)
+merge_tpc(utectx_t ctx, utetpc_t tpc)
+{
+/* assume all tick pages in CTX are sorted except for TPC
+ * now merge-sort those with TPC */
+	size_t npg = ute_npages(ctx);
+	struct uteseek_s sk[2];
+	/* offending ticks */
+	void *sp;
+	/* page indicator */
+	size_t pg;
+	/* index keys */
+	scidx_t ti;
+
+	/* set up seeker through tpc */
+	ti = make_scidx(AS_SCOM(tpc->tp));
+
+	for (pg = 0; pg < npg; pg++) {
+		/* seek to the i-th page */
+		seek_page(sk, ctx, pg);
+		/* use bin-srch to find an offending tick */
+		if ((sp = find_scidx(sk, ti))) {
+			goto mrg;
+		}
+		/* no need for this page */
+		flush_seek(sk);
+	}
+	return;
+
+mrg:
+	/* update seek */
+	sk->idx = DATD(sp, sk->data) / sk->tsz;
+	/* get a temporary tpc page (where the merges go) */
+	seek_tmppage(sk + 1, ctx, pg);
+	sk[1].idx = sk->idx;
+	memcpy(sk[1].data, sk[0].data, sk->idx * sk->tsz);
+
+	do {
+		merge_2tpc(sk + 1, sk + 0, tpc);
+		/* tpc might have become unsorted, sort it now */
+		tpc_sort(tpc);
+		/* copy the tmp page back */
+		memcpy(sk[0].data, sk[1].data, sk[1].idx * sk[1].tsz);
+		/* after this, sk[0] will be empty and we can proceed
+		 * with another seek/page */
+		flush_seek(sk);
+
+		/* next page now */
+		if (++pg < npg) {
+			seek_page(sk, ctx, pg);
+		} else {
+			break;
+		}
+	} while (1);
+
+	/* unset the need merge flag */
+	unset_tpc_needmrg(tpc);	
+	return;
+}
+
+static void
+load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file
  * accordingly, this is in a way a reverse flush_tpc() */
@@ -368,6 +521,7 @@ load_tpc(utectx_t ctx)
 	return;
 }
 
+
 static char*
 mmap_slut(utectx_t ctx)
 {
@@ -507,7 +661,7 @@ make_utectx(const char *fn, int fd, int oflags)
 		 * the file accordingly */
 		load_slut(res);
 		/* load the last page as tpc */
-		load_tpc(res);
+		load_last_tpc(res);
 	}
 	return res;
 }
@@ -593,18 +747,19 @@ ute_close(utectx_t ctx)
 void
 ute_flush(utectx_t ctx)
 {
-	if (tpc_active_p(ctx->tpc)) {
-		/* also sort and diskify the currently active tpc */
-		if (!tpc_sorted_p(ctx->tpc)) {
-			tpc_sort(ctx->tpc);
-		}
-		if (tpc_needmrg_p(ctx->tpc)) {
-			/* special case when the page cache has detected
-			 * a major violation */
-			ute_set_unsorted(ctx);
-		}
-		flush_tpc(ctx);
+	if (!tpc_active_p(ctx->tpc)) {
+		return;
 	}
+	/* also sort and diskify the currently active tpc */
+	if (!tpc_sorted_p(ctx->tpc)) {
+		tpc_sort(ctx->tpc);
+	}
+	if (tpc_needmrg_p(ctx->tpc)) {
+		/* special case when the page cache has detected
+		 * a major violation */
+		merge_tpc(ctx, ctx->tpc);
+	}
+	flush_tpc(ctx);
 	return;
 }
 
@@ -704,6 +859,20 @@ const char*
 ute_fn(utectx_t ctx)
 {
 	return ctx->fname;
+}
+
+ute_ver_t
+ute_version(utectx_t ctx)
+{
+/* return the number of symbols tracked in the ute file */
+	const size_t vsz = sizeof(ute_vers[0]);
+	for (size_t i = countof(ute_vers); --i > 0; ) {
+		const char *ver = ute_vers[i];
+		if (memcmp(ctx->hdrp->magic, ver, vsz) == 0) {
+			return (ute_ver_t)(i);
+		}
+	}
+	return UTE_VERSION_UNK;
 }
 
 /* utefile.c ends here */

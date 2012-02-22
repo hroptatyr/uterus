@@ -174,12 +174,11 @@ pr(pr_ctx_t pctx, scom_t st)
 	*p++ = '\t';
 	p += pr_tsmstz(p, sec, msec, NULL, 'T');
 	*p++ = '\t';
-	/* tick type */
-	p += sprintf(p, "%x", ttf);
-	*p++ = '\t';
 	/* index into the sym table */
 	p += sprintf(p, "%x", scom_thdr_tblidx(st));
-	/* sequence is always 0 */
+	*p++ = '\t';
+	/* tick type */
+	p += sprintf(p, "%x", ttf);
 	*p++ = '\t';
 	switch (ttf) {
 		const_sl1t_t l1t;

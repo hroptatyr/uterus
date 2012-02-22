@@ -57,7 +57,7 @@ typedef const struct sl1t_s *const_sl1t_t;
 
 struct sl1t_s {
 	/* +sizeof(su_sl1t_hdr_s) */
-	struct scom_thdr_s hdr[1];
+	union scom_thdr_u hdr[1];
 	/* +32*2 = +64*1 */
 	union {
 		uint32_t v[2];
@@ -86,7 +86,7 @@ struct sl1t_s {
 /* link mode structure */
 struct sl1t_lm_s {
 	/* +sizeof(su_sl1t_hdr_s) */
-	struct scom_thdr_s p1;
+	union scom_thdr_u p1;
 	union {
 		uint32_t v[6];
 		uint64_t w[3];

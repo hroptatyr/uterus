@@ -60,6 +60,7 @@ typedef size_t sidx_t;
 #endif	/* !LIKELY */
 
 typedef struct utetpc_s *utetpc_t;
+typedef struct uteseek_s *uteseek_t;
 
 struct utetpc_s {
 	char *tp;
@@ -115,6 +116,10 @@ DECLF void tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz);
 
 /* temporary */
 DECLF void tpc_sort(utetpc_t);
+
+/**
+ * Merge ticks from SRC and SWP into TGT and leave left-overs in SWP. */
+DECLF void merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp);
 
 /* (de)initialiser */
 DECLF void init_tpc(void);

@@ -65,7 +65,7 @@ typedef const struct sbatcdl_s *const_sbatcdl_t;
 
 /* always clear your candles before using them */
 struct scdl_s {
-	struct scom_thdr_s hdr[1];
+	union scom_thdr_u hdr[1];
 	union {
 		uint32_t v[6];
 		uint64_t w[3];
@@ -88,7 +88,7 @@ struct scdl_s {
 /**
  * Snaps are useful for tools like the trading engine. */
 struct ssnap_s {
-	struct scom_thdr_s hdr[1];
+	union scom_thdr_u hdr[1];
 	union {
 		uint32_t v[6];
 		uint64_t w[3];
@@ -107,7 +107,7 @@ struct ssnap_s {
 /**
  * BAT-OHLC,V candles, 4 sl1ts wide. */
 struct sbatcdl_s {
-	struct scom_thdr_s hdr[1];
+	union scom_thdr_u hdr[1];
 	union {
 		uint32_t v[14];
 		uint64_t w[7];

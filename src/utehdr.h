@@ -61,4 +61,10 @@ struct utehdr2_s {
 	char pad[4096 - 32];
 };
 
+typedef enum {
+	UTE_VERSION_UNK,
+	UTE_VERSION_01,
+	UTE_VERSION_02,
+} ute_ver_t;
+
 #endif	/* INCLUDED_utehdr_h_ */

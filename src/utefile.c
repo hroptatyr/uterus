@@ -364,7 +364,7 @@ out:
 }
 
 static void
-load_tpc(utectx_t ctx)
+load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file
  * accordingly, this is in a way a reverse flush_tpc() */
@@ -397,6 +397,7 @@ load_tpc(utectx_t ctx)
 	return;
 }
 
+
 static char*
 mmap_slut(utectx_t ctx)
 {
@@ -536,7 +537,7 @@ make_utectx(const char *fn, int fd, int oflags)
 		 * the file accordingly */
 		load_slut(res);
 		/* load the last page as tpc */
-		load_tpc(res);
+		load_last_tpc(res);
 	}
 	return res;
 }

@@ -1,13 +1,13 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/print.b.ute"
+INFILE="${srcdir}/print.d.ute"
 OUTFILE="testload.ute"
 CMDLINE="shnot -i 1 -o '${OUTFILE}' '${INFILE}'"
 
 ## STDIN
  
 ## STDOUT
-OUTFILE_SHA1="256114b9cd9bd52c985678ebb534e40af4d07eac"
+OUTFILE_SHA1="db641dca41ab5739bd362710aea98399b7561552"
 
 ## shnot.2.ut ends here

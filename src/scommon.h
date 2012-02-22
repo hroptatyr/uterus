@@ -80,6 +80,19 @@ union scom_thdr_u {
 		/* millisecs is the standard these days */
 		uint32_t msec:10;
 	} __attribute__((packed));
+
+	/* seeing as that we're a union now ...
+	 * stuff this thing with the 0.1 version of the header */
+	struct {
+		/* +64 */
+		uint32_t sec;
+		/* millisecs is the standard these days */
+		uint16_t msec:10;
+		/* tick type and flags */
+		uint16_t ttf:6;
+		/* an index back into the symtbl */
+		uint16_t tblidx;
+	} __attribute__((packed)) v01;
 } __attribute__((transparent_union));
 
 

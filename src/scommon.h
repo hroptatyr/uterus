@@ -76,7 +76,7 @@ union scom_thdr_u {
 		/* tick type and flags */
 		uint32_t ttf:6;
 		/* an index back into the symtbl */
-		uint32_t tblidx:16;
+		uint32_t idx:16;
 		/* millisecs is the standard these days */
 		uint32_t msec:10;
 	} __attribute__((packed));
@@ -91,7 +91,7 @@ union scom_thdr_u {
 		/* tick type and flags */
 		uint16_t ttf:6;
 		/* an index back into the symtbl */
-		uint16_t tblidx;
+		uint16_t idx;
 	} __attribute__((packed)) v01;
 } __attribute__((transparent_union));
 
@@ -128,13 +128,13 @@ scom_thdr_set_msec(scom_thdr_t h, uint16_t msec)
 static inline __attribute__((pure)) uint16_t
 scom_thdr_tblidx(scom_t h)
 {
-	return (uint16_t)h->tblidx;
+	return (uint16_t)h->idx;
 }
 
 static inline void
 scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 {
-	h->tblidx = idx;
+	h->idx = idx;
 	return;
 }
 

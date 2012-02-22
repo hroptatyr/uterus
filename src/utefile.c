@@ -52,6 +52,12 @@
 
 #define SMALLEST_LVTD	(0)
 
+static const char ute_vers[][8] = {
+	"UTE+v0.0",
+	"UTE+v0.1",
+	"UTE+v0.2",
+};
+
 
 /* aux */
 static char*
@@ -155,7 +161,6 @@ close_hdr(utectx_t ctx)
 static void
 creat_hdr(utectx_t ctx)
 {
-	static const char stdhdr[] = "UTE+v0.1";
 	size_t sz = sizeof(struct utehdr2_s);
 
 	/* trunc to sz */
@@ -164,8 +169,10 @@ creat_hdr(utectx_t ctx)
 	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
 	if (LIKELY(ctx->hdrp != NULL)) {
+		const char *ver = ute_vers[UTE_VERSION_02];
+		const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
 		memset((void*)ctx->hdrp, 0, sz);
-		memcpy((void*)ctx->hdrp, stdhdr, 8);
+		memcpy((void*)ctx->hdrp, ver, vsz);
 	}
 	/* file creation means new slut */
 	ctx->slut_sz = 0;

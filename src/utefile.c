@@ -392,25 +392,24 @@ mrg:
 	/* get a temporary tpc page (where the merges go) */
 	seek_tmppage(sk + 1, ctx, pg);
 	sk[1].si = sk->si;
-	memcpy(sk[1].sp, sk[0].sp, sk->si);
+	memcpy(sk[1].sp, sk[0].sp, sk->si * sizeof(*sk->sp));
 
 	do {
 		merge_2tpc(sk + 1, sk + 0, tpc);
 		/* tpc might have become unsorted, sort it now */
 		tpc_sort(tpc);
 		/* copy the tmp page back */
-		memcpy(sk[0].sp, sk[1].sp, sk[1].si);
+		memcpy(sk[0].sp, sk[1].sp, sk[1].si * sizeof(*sk->sp));
 		/* after this, sk[0] will be empty and we can proceed
 		 * with another seek/page */
 		flush_seek(sk);
-
-		/* next page now */
-		if (++pg < npg) {
-			seek_page(sk, ctx, pg);
-		} else {
-			break;
-		}
-	} while (1);
+	} while (++pg < npg && (
+			 /* load next page */
+			 seek_page(sk, ctx, pg),
+			 /* reset the tmp page counters */
+			 sk[1].si = 0,
+			 1
+			 ));
 
 	/* flush the tmp seek too */
 	flush_seek(sk + 1);

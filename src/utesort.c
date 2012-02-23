@@ -290,7 +290,7 @@ step_run(struct uteseek_s *sks, unsigned int run, strat_t str)
 /* advance the pointer in the RUN-th run and fetch new stuff if need be */
 	strat_node_t curnd = str->last;
 
-	if ((sks[run].idx += sks[run].tsz) >= sks[run].mpsz) {
+	if ((sks[run].idx += tpc_tsz) >= sks[run].mpsz) {
 		/* reget shit, for now we just stall this run */
 		sks[run].idx = sks[run].mpsz;
 #if 0

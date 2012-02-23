@@ -98,11 +98,11 @@ free_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		/* seek points to something => munmap first */
-		munmap(tpc->tp, tpc->tpsz);
+		munmap(tpc->sk.sp, tpc->sk.sz);
 	}
-	tpc->tidx = -1;
-	tpc->tpsz = 0;
-	tpc->tp = NULL;
+	tpc->sk.si = -1;
+	tpc->sk.sz = 0;
+	tpc->sk.sp = NULL;
 	return;
 }
 
@@ -110,7 +110,7 @@ DEFUN void
 clear_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
-		tpc->tidx = 0;
+		tpc->sk.si = 0;
 	}
 	return;
 }
@@ -118,14 +118,15 @@ clear_tpc(utetpc_t tpc)
 DEFUN void
 tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 {
+/* supports variadic ticks */
 	uint64_t skey = tick_sortkey(t);
 
-	if (UNLIKELY(tpc->tidx >= tpc->tpsz)) {
+	if (UNLIKELY(tpc_full_p(tpc))) {
 		return;
 	}
-	memcpy(tpc->tp + tpc->tidx, t, tsz);
+	memcpy(tpc->sk.sp + tpc->sk.si, t, tsz);
 	/* just add the total byte size as passed on */
-	tpc->tidx += tsz;
+	tpc->sk.si += tsz / sizeof(*tpc->sk.sp);
 
 	/* maybe mark the whole shebang as unsorted */
 	if (UNLIKELY(skey < tpc->last)) {
@@ -469,7 +470,7 @@ merge_all(size_t nticks)
 }
 
 static scidx_t*
-idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
+idxsort(scom_t p, size_t nticks)
 {
 	scidx_t *scp = get_scratch();
 	size_t m = min(nticks, IDXSORT_SIZE);
@@ -480,8 +481,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 
 		scp[j] = fake_scidx(p, i);
 		p = DATCA(p, bsz);
-		/* maybe it's faster to use a hard-coded satsz here? */
-		i += bsz / sizeof(struct sl1t_s);
+		i += bsz / sizeof(struct sndwch_s);
 	}
 	/* reuse m to compute the next 2-power */
 	m = __ilog2_ceil(j);
@@ -500,7 +500,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 }
 
 static void
-collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
+collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks)
 {
 	/* skip 0 idxs first */
 	size_t j;
@@ -509,12 +509,12 @@ collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
 
 	for (size_t i = 0; i < nticks; j++) {
 		sidx_t idx = scidx_idx(idxa[j]);
-		const void *s = DATCI(src, idx, tsz);
+		const void *s = DATCI(src, idx, sizeof(struct sndwch_s));
 		size_t bsz = scom_thdr_size(s);
 
 		memcpy(tgt, s, bsz);
 		tgt = DATA(tgt, bsz);
-		i += bsz / sizeof(struct sl1t_s);
+		i += bsz / sizeof(struct sndwch_s);
 	}
 	return;
 }
@@ -523,12 +523,11 @@ static void*
 merge_bup(
 	void *tgt,
 	const void *srcl, size_t nticksl,
-	const void *srcr, size_t nticksr,
-	size_t tsz)
+	const void *srcr, size_t nticksr)
 {
 /* merge left source SRCL and right source SRCR into tgt. */
-	const void *elp = DATCI(srcl, nticksl, tsz);
-	const void *erp = DATCI(srcr, nticksr, tsz);
+	const void *elp = DATCI(srcl, nticksl, sizeof(struct sndwch_s));
+	const void *erp = DATCI(srcr, nticksr, sizeof(struct sndwch_s));
 
 	while (srcl < elp && srcr < erp) {
 		uint64_t sl = ((const uint64_t*)srcl)[0];
@@ -567,24 +566,24 @@ merge_bup(
 }
 
 static void
-bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
+bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
 {
 	void *tp = tgt;
 	void *npl = src;
-	void *npr = DATI(src, rsz, tsz);
+	void *npr = DATI(src, rsz, sizeof(struct sndwch_s));
 
 	/* do i really need both npl and npr? */
 	while (ntleft > rsz) {
 		size_t ntr = min_size_t(ntleft, 2 * rsz);
 		/* there's both a left and a right side */
-		tp = merge_bup(tp, npl, rsz, npr, ntr - rsz, tsz);
+		tp = merge_bup(tp, npl, rsz, npr, ntr - rsz);
 		/* step down counters and step up pointers */
-		npl = DATI(npl, 2 * rsz, tsz);
-		npr = DATI(npr, 2 * rsz, tsz);
+		npl = DATI(npl, 2 * rsz, sizeof(struct sndwch_s));
+		npr = DATI(npr, 2 * rsz, sizeof(struct sndwch_s));
 		ntleft -= ntr;
 	}
 	/* possibly ntleft ticks stuck */
-	memcpy(tp, npl, ntleft * tsz);
+	memcpy(tp, npl, ntleft * sizeof(struct sndwch_s));
 	return;
 }
 
@@ -595,12 +594,12 @@ DEFUN void
 merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {
 /* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
-	void *tp = DATA(tgt->data, tgt->idx);
-	void *eot = DATA(tgt->data, tgt->mpsz);
-	void *sp = DATA(src->data, src->idx);
-	void *eos = DATA(src->data, src->mpsz);
-	void *rp = swp->tp;
-	void *eor = DATA(swp->tp, swp->tidx);
+	void *tp = tgt->sp + tgt->si;
+	void *eot = DATA(tgt->sp, tgt->sz);
+	void *sp = src->sp + src->si;
+	void *eos = DATA(src->sp, src->sz);
+	void *rp = swp->sk.sp;
+	void *eor = swp->sk.sp + swp->sk.si;
 
 	while (tp < eot && sp < eos && rp < eor) {
 		if (AS_SCOM(sp)->u <= AS_SCOM(rp)->u) {
@@ -617,24 +616,24 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 			tp = DATA(tp, rsz);
 		}
 	}
-	assert(DATD(eos, sp) <= DATD(rp, swp->tp));
+	assert(DATD(eos, sp) <= DATD(rp, swp->sk.sp));
 	assert(tp == eot);
 	/* copy left-overs to swp */
 	{
 		size_t sleft_sz = DATD(eos, sp);
 		size_t rleft_sz = DATD(eor, rp);
-		size_t gapsz = DATD(rp, DATA(swp->tp, sleft_sz));
+		size_t gapsz = DATD(rp, DATA(swp->sk.sp, sleft_sz));
 
-		memcpy(swp->tp, sp, sleft_sz);
+		memcpy(swp->sk.sp, sp, sleft_sz);
 		/* and close the gap */
 		if (gapsz > 0) {
-			memmove(DATA(swp->tp, sleft_sz), rp, rleft_sz);
+			memmove(DATA(swp->sk.sp, sleft_sz), rp, rleft_sz);
 			/* adapt the tidx */
-			swp->tidx -= gapsz;
+			swp->sk.si -= gapsz / sizeof(*swp->sk.sp);
 		}
 	}
 	/* adapt tgt idx */
-	tgt->idx = DATD(tp, tgt->data) / tpc_tsz;
+	tgt->si = DATD(tp, tgt->sp) / sizeof(*tgt->sp);
 	return;
 }
 
@@ -643,9 +642,9 @@ tilman_comp(utetpc_t tpc)
 {
 	ssize_t res = 0;
 	/* sink */
-	void *xp = tpc->tp;
+	void *xp = tpc->sk.sp;
 
-	for (void *tp = xp, *ep = DATA(tp, tpc->tidx); tp < ep; ) {
+	for (void *tp = xp, *ep = tpc->sk.sp + tpc->sk.si; tp < ep; ) {
 		scom_t st = tp;
 
 		switch (scom_thdr_ttf(st)) {
@@ -715,8 +714,9 @@ tilman_comp(utetpc_t tpc)
 		}
 	}
 	if (res > 0) {
-		/* shrink tpc->tidx */
-		tpc->tidx -= res * sizeof(struct ssnap_s);
+		/* shrink tick index */
+		const size_t mul = sizeof(struct ssnap_s) / sizeof(*tpc->sk.sp);
+		tpc->sk.si -= res * mul;
 	}
 	return res;
 }
@@ -725,39 +725,42 @@ DEFUN void
 tpc_sort(utetpc_t tpc)
 {
 /* simplified merge sort */
+	const size_t tpc_tsz = sizeof(*tpc->sk.sp);
 	void *new;
 
 	/* get us another map */
-	new = mmap(NULL, tpc->tpsz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, tpc->sk.sz, PROT_MEM, MAP_MEM, -1, 0);
 
-	for (void *tp = tpc->tp, *np = new,
-		     *ep = DATA(tp, tpc->tidx); tp < ep; ) {
+	for (void *tp = tpc->sk.sp,
+		     *np = new,
+		     *ep = tpc->sk.sp + tpc->sk.si;
+	     tp < ep; ) {
 		size_t ntleft = DATDI(ep, tp, tpc_tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
-		scidx_t *scp = idxsort(tp, tpc_tsz, nticks);
+		scidx_t *scp = idxsort(tp, nticks);
 
-		collate(np, tp, scp, nticks, tpc_tsz);
+		collate(np, tp, scp, nticks);
 		tp = DATI(tp, nticks, tpc_tsz);
 		np = DATI(np, nticks, tpc_tsz);
 	}
 	/* now in NEW there's sorted pages consisting of 256 ticks each
 	 * we now use a bottom-up merge step */
 	{
-		void *tgt = tpc->tp;
+		void *tgt = tpc->sk.sp;
 		void *src = new;
-		for (size_t rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
+		for (size_t rsz = 256; tpc->sk.si > rsz; rsz *= 2) {
 			void *tmp;
-			bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc_tsz);
+			bup_round(tgt, src, rsz, tpc->sk.si);
 			/* swap the roles of src and tgt */
 			tmp = tgt, tgt = src, src = tmp;
 		}
-		if (tpc->tp == tgt) {
+		if (tpc->sk.sp == tgt) {
 			/* oh, we were about to copy shit into tgt, so
 			 * munmap tpc->tp and install the new vector */
-			tpc->tp = src;
+			tpc->sk.sp = src;
 		}
 		/* munmap()ing is the same in either case */
-		munmap(tgt, tpc->tpsz);
+		munmap(tgt, tpc->sk.sz);
 	}
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);

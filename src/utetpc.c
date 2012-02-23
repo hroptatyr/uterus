@@ -878,6 +878,8 @@ tpc_sort(utetpc_t tpc)
 	}
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
+	/* update last key */
+	tpc->last = tpc_last_scom(tpc)->u;
 	return;
 }
 

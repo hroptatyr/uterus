@@ -412,6 +412,8 @@ mrg:
 		}
 	} while (1);
 
+	/* flush the tmp seek too */
+	flush_seek(sk + 1);
 	/* unset the need merge flag */
 	unset_tpc_needmrg(tpc);	
 	return;

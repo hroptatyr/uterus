@@ -51,10 +51,6 @@
 # define DECLF	extern
 #endif	/* STATIC_GUTS */
 
-#if !defined SIDX_T
-typedef size_t sidx_t;
-# define SIDX_T
-#endif	/* !SIDX_T */
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
@@ -62,15 +58,21 @@ typedef size_t sidx_t;
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
 
-#define tpc_tsz		(2 * sizeof(scidx_t))
+struct uteseek_s {
+	/** index into data (in sandwiches) */
+	sidx_t si;
+	/** total alloc'd size of the page (in bytes) */
+	size_t sz;
+	/** the actual page data */
+	struct sndwch_s *sp;
+	/** page we're on */
+	sidx_t pg:48;
+	/** general page flags */
+	uint64_t fl:8;
+};
 
 struct utetpc_s {
-	char *tp;
-	sidx_t tidx;
-	size_t tpsz;
-	uint64_t flags:8;
-	/* padding */
-	uint64_t:56;
+	struct uteseek_s sk;
 	/* this used to indicate the last seen value in the tick page
 	 * however we only have to guarantee that ALL values in the
 	 * current tick page cache are larger than the largest of the
@@ -85,19 +87,34 @@ struct utetpc_s {
 static inline bool
 tpc_active_p(utetpc_t tpc)
 {
-	return tpc->tpsz > 0;
+	return tpc->sk.sz > 0;
+}
+
+static inline bool
+tpc_has_ticks_p(utetpc_t tpc)
+{
+	return tpc->sk.si > 0;
 }
 
 static inline bool
 tpc_full_p(utetpc_t tpc)
 {
-	return tpc->tidx >= tpc->tpsz;
+	return tpc->sk.si >= tpc->sk.sz / sizeof(*tpc->sk.sp);
 }
 
+/**
+ * Return non-false if all ticks in the page are sorted. */
 static inline bool
 tpc_sorted_p(utetpc_t tpc)
 {
-	return (tpc->flags & TPC_FL_UNSORTED) == 0;
+	return (tpc->sk.fl & TPC_FL_UNSORTED) == 0;
+}
+
+static inline void
+unset_tpc_unsorted(utetpc_t tpc)
+{
+	tpc->sk.fl &= ~TPC_FL_UNSORTED;
+	return;
 }
 
 /**
@@ -106,10 +123,19 @@ tpc_sorted_p(utetpc_t tpc)
 static inline bool
 tpc_needmrg_p(utetpc_t tpc)
 {
-	return (tpc->flags & TPC_FL_NEEDMRG) != 0;
+	return (tpc->sk.fl & TPC_FL_NEEDMRG) != 0;
 }
 
-DECLF void make_tpc(utetpc_t tpc, size_t nticks, size_t tsz);
+static inline void
+unset_tpc_needmrg(utetpc_t tpc)
+{
+	tpc->sk.fl &= ~TPC_FL_NEEDMRG;
+	return;
+}
+
+
+/* public funs */
+DECLF void make_tpc(utetpc_t tpc, size_t nsndwchs);
 DECLF void free_tpc(utetpc_t tpc);
 /**
  * Clear the current page cache. */
@@ -130,17 +156,9 @@ DECLF void fini_tpc(void);
 /**
  * Return the number of bytes in the page cache TPC. */
 static inline size_t
-tpc_size(utetpc_t tpc)
+tpc_byte_size(utetpc_t tpc)
 {
-	return tpc->tidx;
-}
-
-/**
- * Return the number of ticks in the page cache TPC. */
-static inline size_t
-tpc_nticks(utetpc_t tpc)
-{
-	return tpc_size(tpc) / tpc_tsz;
+	return tpc->sk.si * sizeof(*tpc->sk.sp);
 }
 
 /**
@@ -148,15 +166,7 @@ tpc_nticks(utetpc_t tpc)
 static inline size_t
 tpc_max_size(utetpc_t tpc)
 {
-	return tpc->tpsz;
-}
-
-/**
- * Return the maximum number of ticks that can be stored in the TPC. */
-static inline size_t
-tpc_max_nticks(utetpc_t tpc)
-{
-	return tpc_max_size(tpc) / tpc_tsz;
+	return tpc->sk.sz;
 }
 
 static inline uint64_t
@@ -167,23 +177,32 @@ tick_sortkey(scom_t t)
 }
 
 static inline scom_t
+tpc_first_scom(utetpc_t tpc)
+{
+	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
+		return NULL;
+	}
+	return AS_SCOM(tpc->sk.sp);
+}
+
+static inline scom_t
 tpc_last_scom(utetpc_t tpc)
 {
-	scom_t res = (void*)((char*)tpc->tp + tpc_size(tpc) - tpc_tsz);
-	return res;
+/* alignment issues in here! */
+	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
+		return NULL;
+	}
+	return AS_SCOM(tpc->sk.sp + tpc->sk.si - 1);
 }
 
 /* like tpc_last_scom() but for random access */
 static inline scom_t
 tpc_get_scom(utetpc_t tpc, sidx_t i)
 {
-	scom_t res;
-
-	if (UNLIKELY(i > tpc_size(tpc) / tpc_tsz)) {
+	if (UNLIKELY(i > tpc->sk.si)) {
 		return NULL;
 	}
-	res = (void*)((char*)tpc->tp + i * tpc_tsz);
-	return res;
+	return AS_SCOM(tpc->sk.sp + i);
 }
 
 #endif	/* INCLUDED_utetpc_h_ */

@@ -647,7 +647,7 @@ algn_tick(uteseek_t sk, sidx_t ix)
 
 /* could be public */
 static struct sndwch_s*
-seek_last_scom(uteseek_t sk)
+seek_last_sndwch(uteseek_t sk)
 {
 	const size_t probsz = sizeof(*sk->sp);
 
@@ -669,13 +669,23 @@ tpc_last_scom(utetpc_t tpc)
 }
 
 DEFUN scom_t
+seek_last_scom(uteseek_t sk)
+{
+	typeof(sk->sp) sp = seek_last_sndwch(sk);
+	if (UNLIKELY(sp == NULL)) {
+		return NULL;
+	}
+	return AS_SCOM(sp);
+}
+
+DEFUN scom_t
 seek_key(uteseek_t sk, scidx_t key)
 {
 /* use a binary search and also set SK's si accordingly */
 	typeof(sk->sp) sp;
 
 	/* try the tail first */
-	if (UNLIKELY((sp = seek_last_scom(sk)) == NULL)) {
+	if (UNLIKELY((sp = seek_last_sndwch(sk)) == NULL)) {
 		return NULL;
 	} else if (LIKELY(make_scidx(AS_SCOM(sp)).u <= key.u)) {
 		return NULL;

@@ -200,4 +200,8 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 	return AS_SCOM(tpc->sk.sp + i);
 }
 
+/**
+ * Return the last tick in a sought page. */
+DECLF scom_t seek_last_scom(uteseek_t sk);
+
 #endif	/* INCLUDED_utetpc_h_ */

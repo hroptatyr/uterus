@@ -654,7 +654,7 @@ seek_last_sndwch(uteseek_t sk)
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
 	}
-	return sk->sp + algn_tick(sk, sk->sz / probsz);
+	return sk->sp + algn_tick(sk, sk->sz / probsz - 1);
 }
 
 

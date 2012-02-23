@@ -276,7 +276,7 @@ store_lvtd(utectx_t ctx)
 	if (tpc_has_ticks_p(ctx->tpc) && ctx->tpc->last > ctx->lvtd) {
 		ctx->lvtd = ctx->tpc->last;
 	}
-	ctx->tpc->lvtd = ctx->lvtd;
+	ctx->tpc->least = ctx->lvtd;
 	return;
 }
 

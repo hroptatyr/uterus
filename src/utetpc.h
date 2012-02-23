@@ -78,7 +78,9 @@ struct utetpc_s {
 	 * current tick page cache are larger than the largest of the
 	 * written pages. */
 	uint64_t last;
-	uint64_t lvtd;
+	/** any key must be at least this, after the instantiation of a
+	 * tpc this will point to the largest key that has been flushed */
+	uint64_t least;
 } __attribute__((packed));
 
 #define TPC_FL_UNSORTED		0x01

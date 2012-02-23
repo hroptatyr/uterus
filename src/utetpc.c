@@ -587,9 +587,33 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
 	return;
 }
 
+static void*
+algn_tick(void *tp, void *botp)
+{
+	const size_t probsz = sizeof(struct sndwch_s);
+	void *prob;
+
+	/* check tp - probsz */
+	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
+		return tp;
+	} else if (UNLIKELY(scom_thdr_ttf(prob) & SCOM_FLAG_LM)) {
+		return prob;
+	}
+	return tp;
+}
+
 
 /* public funs */
 #include "utefile-private.h"
+DEFUN scom_t
+tpc_last_scom(utetpc_t tpc)
+{
+	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
+		return NULL;
+	}
+	return AS_SCOM(algn_tick(tpc->sk.sp + tpc->sk.si - 1, tpc->sk.sp));
+}
+
 DEFUN void
 merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {

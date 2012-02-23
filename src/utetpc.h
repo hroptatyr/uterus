@@ -176,6 +176,8 @@ tick_sortkey(scom_t t)
 	return t->u;
 }
 
+/**
+ * Return the first tick in TPC. */
 static inline scom_t
 tpc_first_scom(utetpc_t tpc)
 {
@@ -185,15 +187,9 @@ tpc_first_scom(utetpc_t tpc)
 	return AS_SCOM(tpc->sk.sp);
 }
 
-static inline scom_t
-tpc_last_scom(utetpc_t tpc)
-{
-/* alignment issues in here! */
-	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
-		return NULL;
-	}
-	return AS_SCOM(tpc->sk.sp + tpc->sk.si - 1);
-}
+/**
+ * Return the last tick in TPC. */
+DECLF scom_t tpc_last_scom(utetpc_t tpc);
 
 /* like tpc_last_scom() but for random access */
 static inline scom_t

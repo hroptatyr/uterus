@@ -62,18 +62,20 @@ typedef size_t sidx_t;
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
 
+#define tpc_tsz		(2 * sizeof(scidx_t))
+
 struct utetpc_s {
 	char *tp;
 	sidx_t tidx;
 	size_t tpsz;
-	/* size of one tick */
-	uint64_t tsz:8;
 	uint64_t flags:8;
+	/* padding */
+	uint64_t:56;
 	/* this used to indicate the last seen value in the tick page
 	 * however we only have to guarantee that ALL values in the
 	 * current tick page cache are larger than the largest of the
 	 * written pages. */
-	uint64_t last:48;
+	uint64_t last;
 	uint64_t lvtd;
 } __attribute__((packed));
 
@@ -138,7 +140,7 @@ tpc_size(utetpc_t tpc)
 static inline size_t
 tpc_nticks(utetpc_t tpc)
 {
-	return tpc_size(tpc) / tpc->tsz;
+	return tpc_size(tpc) / tpc_tsz;
 }
 
 /**
@@ -154,25 +156,20 @@ tpc_max_size(utetpc_t tpc)
 static inline size_t
 tpc_max_nticks(utetpc_t tpc)
 {
-	return tpc_max_size(tpc) / tpc->tsz;
+	return tpc_max_size(tpc) / tpc_tsz;
 }
 
 static inline uint64_t
 tick_sortkey(scom_t t)
 {
-	int64_t s = scom_thdr_sec(t);
-	uint64_t ms = scom_thdr_msec(t);
-	uint64_t res = s << 10;
-	if (UNLIKELY(ms > SCOM_MSEC_VALI)) {
-		return res;
-	}
-	return res | ms;
+	/* using scom v0.2 now */
+	return t->u;
 }
 
 static inline scom_t
 tpc_last_scom(utetpc_t tpc)
 {
-	scom_t res = (void*)((char*)tpc->tp + tpc_size(tpc) - tpc->tsz);
+	scom_t res = (void*)((char*)tpc->tp + tpc_size(tpc) - tpc_tsz);
 	return res;
 }
 
@@ -182,10 +179,10 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 {
 	scom_t res;
 
-	if (UNLIKELY(i > tpc_size(tpc) / tpc->tsz)) {
+	if (UNLIKELY(i > tpc_size(tpc) / tpc_tsz)) {
 		return NULL;
 	}
-	res = (void*)((char*)tpc->tp + i * tpc->tsz);
+	res = (void*)((char*)tpc->tp + i * tpc_tsz);
 	return res;
 }
 

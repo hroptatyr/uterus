@@ -276,7 +276,7 @@ store_lvtd(utectx_t ctx)
 	if (tpc_has_ticks_p(ctx->tpc) && ctx->tpc->last > ctx->lvtd) {
 		ctx->lvtd = ctx->tpc->last;
 	}
-	ctx->tpc->lvtd = ctx->lvtd;
+	ctx->tpc->least = ctx->lvtd;
 	return;
 }
 
@@ -361,61 +361,6 @@ out:
 
 
 /* tpc glue */
-#define DATA(p, i)	((void*)(((char*)(p)) + (i)))
-#define DATD(p, q)	((size_t)(((const char*)(p)) - ((const char*)(q))))
-#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
-
-static void*
-algn_tick(void *tp, void *botp)
-{
-	const size_t probsz = sizeof(struct sl1t_s);
-	void *prob;
-
-	/* check tp - probsz */
-	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
-		return tp;
-	} else if (scom_thdr_ttf(prob) & SCOM_FLAG_LM) {
-		return prob;
-	}
-	return tp;
-}
-
-static void*
-find_scidx(uteseek_t sk, scidx_t key)
-{
-/* find a pointer into SK's data with the first tick that's bigger than KEY
- * or NULL otherwise, use a binary search */
-	const size_t probsz = sizeof(*sk->sp);
-	void *eosp = DATA(sk->sp, sk->sz);
-	void *sp;
-
-	/* try the tail first */
-	sp = algn_tick(DATA(sk->sp, sk->sz - probsz), sk->sp);
-	if (make_scidx(sp).u > key.u) {
-		goto binsrch;
-	}
-	return NULL;
-binsrch:
-	/* try the middle */
-	for (void *bosp = sk->sp; bosp < eosp; ) {
-		size_t off = ALGN(*sk->sp, DATD(eosp, bosp) / 2);
-
-		sp = algn_tick(DATA(bosp, off), sk->sp);
-		if (make_scidx(sp).u > key.u) {
-			/* left half */
-			eosp = sp;
-		} else if (sp == bosp) {
-			sp = eosp;
-			break;
-		} else {
-			/* right half */
-			bosp = sp;
-		}
-	}
-	/* must be the offending tick */
-	return sp;
-}
-
 static void
 merge_tpc(utectx_t ctx, utetpc_t tpc)
 {
@@ -423,8 +368,6 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
  * now merge-sort those with TPC */
 	size_t npg = ute_npages(ctx);
 	struct uteseek_s sk[2];
-	/* offending ticks */
-	typeof(sk->sp) sp;
 	/* page indicator */
 	size_t pg;
 	/* index keys */
@@ -437,7 +380,7 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 		/* seek to the i-th page */
 		seek_page(sk, ctx, pg);
 		/* use bin-srch to find an offending tick */
-		if ((sp = find_scidx(sk, ti))) {
+		if (seek_key(sk, ti)) {
 			goto mrg;
 		}
 		/* no need for this page */
@@ -446,33 +389,36 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 	return;
 
 mrg:
-	/* update seek */
-	sk->si = sp - sk->sp;
 	/* get a temporary tpc page (where the merges go) */
 	seek_tmppage(sk + 1, ctx, pg);
 	sk[1].si = sk->si;
-	memcpy(sk[1].sp, sk[0].sp, sk->si);
+	memcpy(sk[1].sp, sk[0].sp, sk->si * sizeof(*sk->sp));
 
 	do {
 		merge_2tpc(sk + 1, sk + 0, tpc);
 		/* tpc might have become unsorted, sort it now */
 		tpc_sort(tpc);
 		/* copy the tmp page back */
-		memcpy(sk[0].sp, sk[1].sp, sk[1].si);
+		memcpy(sk[0].sp, sk[1].sp, sk[1].si * sizeof(*sk->sp));
 		/* after this, sk[0] will be empty and we can proceed
 		 * with another seek/page */
 		flush_seek(sk);
-
-		/* next page now */
-		if (++pg < npg) {
-			seek_page(sk, ctx, pg);
-		} else {
-			break;
-		}
-	} while (1);
-
+	} while (++pg < npg && (
+			 /* load next page */
+			 seek_page(sk, ctx, pg),
+			 /* reset the tmp page counters */
+			 sk[1].si = 0,
+			 1
+			 ));
+	/* update ctx's lvtd and tpc's least */
+	{
+		scom_t last = seek_last_scom(sk + 1);
+		tpc->least = ctx->lvtd = last->u;
+	}
+	/* flush the tmp seek too */
+	flush_seek(sk + 1);
 	/* unset the need merge flag */
-	unset_tpc_needmrg(tpc);	
+	unset_tpc_needmrg(tpc);
 	return;
 }
 

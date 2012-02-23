@@ -76,6 +76,13 @@ set_tpc_needmrg(utetpc_t tpc)
 	return;
 }
 
+static inline uint64_t
+tick_sortkey(scom_t t)
+{
+	/* using scom v0.2 now */
+	return t->u;
+}
+
 /* calloc like signature */
 DEFUN void
 make_tpc(utetpc_t tpc, size_t nsndwchs)
@@ -133,9 +140,10 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 		set_tpc_unsorted(tpc);
 	}
 	/* check if the whole file needs sorting (merging) */
-	if (UNLIKELY(skey < tpc->lvtd /* largest value to-date */)) {
+	if (UNLIKELY(skey < tpc->least)) {
+		/* found a key that's smaller than what has been flushed */
 		set_tpc_needmrg(tpc);
-		tpc->lvtd = skey;
+		tpc->least = skey;
 	}
 	tpc->last = skey;
 	return;
@@ -153,6 +161,7 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 #define DATI(p, i, sz)	((void*)(((char*)(p)) + (i) * (sz)))
 #define DATCI(p, i, sz)	((const void*)(((const char*)(p)) + (i) * (sz)))
 #define KEYI(p, i, sz)	(*((int32_t*)DATI(p, i, sz)))
+#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
 #define PERM(a, b, c, d)			\
 	(uint8_t)(				\
 		(a & 0x3) |			\
@@ -587,9 +596,123 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
 	return;
 }
 
+static bool
+scom_lm_p(scom_t t)
+{
+	uint16_t ttf = scom_thdr_ttf(t);
+	return ttf >= SCOM_FLAG_LM && ttf < SCOM_FLAG_L2M;
+}
+
+static bool
+scom_simple_p(scom_t t)
+{
+	uint16_t ttf = scom_thdr_ttf(t);
+	return ttf < SCOM_FLAG_LM;
+}
+
+static sidx_t
+algn_tick(uteseek_t sk, sidx_t ix)
+{
+/* align a tick referenced by sandwich count, this assumes sorted pages */
+	const scom_t bop = AS_SCOM(sk->sp);
+
+	if (UNLIKELY(ix == 0)) {
+		/* the 0-th tick is aligned trivially */
+		return 0;
+	}
+	/* we take probes left and right of TP, and we check that
+	 * - the scom sizes match
+	 * - the scom orders match */
+
+	/* first assume everything's alright */
+	for (scom_t tp; (tp = AS_SCOM(sk->sp + ix)) > bop; ix--) {
+		scom_t p = AS_SCOM(sk->sp + ix - 1);
+
+		if (p->u <= tp->u) {
+			/* yay! */
+			if (scom_simple_p(p)) {
+				return ix;
+			}
+			/* means, linked mode, go back a bit */
+			if (UNLIKELY((p = AS_SCOM(sk->sp + ix - 2)) < bop)) {
+				return ix;
+			} else if (p->u <= tp->u && scom_lm_p(p)) {
+				/* everything still perfect */
+				return ix;
+			}
+		}
+	}
+	return ix;
+}
+
+/* could be public */
+static struct sndwch_s*
+seek_last_sndwch(uteseek_t sk)
+{
+	const size_t probsz = sizeof(*sk->sp);
+
+	if (UNLIKELY(sk->sp == NULL)) {
+		return NULL;
+	}
+	return sk->sp + algn_tick(sk, sk->sz / probsz - 1);
+}
+
 
 /* public funs */
-#include "utefile-private.h"
+DEFUN scom_t
+tpc_last_scom(utetpc_t tpc)
+{
+	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
+		return NULL;
+	}
+	return AS_SCOM(tpc->sk.sp + algn_tick(&tpc->sk, tpc->sk.si - 1));
+}
+
+DEFUN scom_t
+seek_last_scom(uteseek_t sk)
+{
+	typeof(sk->sp) sp = seek_last_sndwch(sk);
+	if (UNLIKELY(sp == NULL)) {
+		return NULL;
+	}
+	return AS_SCOM(sp);
+}
+
+DEFUN scom_t
+seek_key(uteseek_t sk, scidx_t key)
+{
+/* use a binary search and also set SK's si accordingly */
+	typeof(sk->sp) sp;
+
+	/* try the tail first */
+	if (UNLIKELY((sp = seek_last_sndwch(sk)) == NULL)) {
+		return NULL;
+	} else if (LIKELY(make_scidx(AS_SCOM(sp)).u <= key.u)) {
+		return NULL;
+	}
+
+	/* binsrch, try the middle */
+	for (typeof(sp) bosp = sk->sp,
+		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
+		sidx_t ix = (eosp - bosp) / 2;
+
+		sp = bosp + algn_tick(sk, bosp - sk->sp + ix);
+		if (make_scidx(AS_SCOM(sp)).u > key.u) {
+			/* left half */
+			eosp = sp;
+		} else if (sp == bosp) {
+			sp = eosp;
+			break;
+		} else {
+			/* right half */
+			bosp = sp;
+		}
+	}
+	/* must be the offending tick, update index and return */
+	sk->si = sp - sk->sp;
+	return AS_SCOM(sp);
+}
+
 DEFUN void
 merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {
@@ -627,13 +750,14 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 		memcpy(swp->sk.sp, sp, sleft_sz);
 		/* and close the gap */
 		if (gapsz > 0) {
+			printf("GAP %zu\n", gapsz);
 			memmove(DATA(swp->sk.sp, sleft_sz), rp, rleft_sz);
 			/* adapt the tidx */
 			swp->sk.si -= gapsz / sizeof(*swp->sk.sp);
 		}
 	}
-	/* adapt tgt idx */
-	tgt->si = DATD(tp, tgt->sp) / sizeof(*tgt->sp);
+	/* adapt tgt idx, according to the assertion, that's quite simple */
+	tgt->si = tgt->sz / sizeof(*tgt->sp);
 	return;
 }
 
@@ -764,6 +888,8 @@ tpc_sort(utetpc_t tpc)
 	}
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
+	/* update last key */
+	tpc->last = tpc_last_scom(tpc)->u;
 	return;
 }
 

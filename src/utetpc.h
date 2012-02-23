@@ -78,7 +78,9 @@ struct utetpc_s {
 	 * current tick page cache are larger than the largest of the
 	 * written pages. */
 	uint64_t last;
-	uint64_t lvtd;
+	/** any key must be at least this, after the instantiation of a
+	 * tpc this will point to the largest key that has been flushed */
+	uint64_t least;
 } __attribute__((packed));
 
 #define TPC_FL_UNSORTED		0x01
@@ -149,6 +151,10 @@ DECLF void tpc_sort(utetpc_t);
  * Merge ticks from SRC and SWP into TGT and leave left-overs in SWP. */
 DECLF void merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp);
 
+/**
+ * In SK seek to the first tick that's >= KEY, or return NULL. */
+DECLF scom_t seek_key(uteseek_t sk, scidx_t key);
+
 /* (de)initialiser */
 DECLF void init_tpc(void);
 DECLF void fini_tpc(void);
@@ -169,13 +175,8 @@ tpc_max_size(utetpc_t tpc)
 	return tpc->sk.sz;
 }
 
-static inline uint64_t
-tick_sortkey(scom_t t)
-{
-	/* using scom v0.2 now */
-	return t->u;
-}
-
+/**
+ * Return the first tick in TPC. */
 static inline scom_t
 tpc_first_scom(utetpc_t tpc)
 {
@@ -185,15 +186,9 @@ tpc_first_scom(utetpc_t tpc)
 	return AS_SCOM(tpc->sk.sp);
 }
 
-static inline scom_t
-tpc_last_scom(utetpc_t tpc)
-{
-/* alignment issues in here! */
-	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
-		return NULL;
-	}
-	return AS_SCOM(tpc->sk.sp + tpc->sk.si - 1);
-}
+/**
+ * Return the last tick in TPC. */
+DECLF scom_t tpc_last_scom(utetpc_t tpc);
 
 /* like tpc_last_scom() but for random access */
 static inline scom_t
@@ -204,5 +199,9 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 	}
 	return AS_SCOM(tpc->sk.sp + i);
 }
+
+/**
+ * Return the last tick in a sought page. */
+DECLF scom_t seek_last_scom(uteseek_t sk);
 
 #endif	/* INCLUDED_utetpc_h_ */

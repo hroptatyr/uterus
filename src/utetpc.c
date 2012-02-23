@@ -604,7 +604,6 @@ algn_tick(void *tp, void *botp)
 
 
 /* public funs */
-#include "utefile-private.h"
 DEFUN scom_t
 tpc_last_scom(utetpc_t tpc)
 {

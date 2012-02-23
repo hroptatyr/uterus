@@ -192,7 +192,6 @@ flush_seek(uteseek_t sk)
 	sk->idx = -1;
 	sk->mpsz = 0;
 	sk->data = NULL;
-	sk->tsz = 0;
 	sk->page = -1U;
 	return;
 }
@@ -217,7 +216,6 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->data = tmp;
 	sk->idx = 0;
 	sk->mpsz = psz;
-	sk->tsz = sizeof(struct sl1t_s);
 	sk->page = pg;
 	return;
 }
@@ -238,7 +236,6 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->data = tmp;
 	sk->idx = 0;
 	sk->mpsz = psz;
-	sk->tsz = sizeof(struct sl1t_s);
 	sk->page = pg;
 	return;
 }
@@ -271,7 +268,7 @@ ute_seek(utectx_t ctx, sidx_t i)
 		reseek(ctx, i);
 	}
 	o = offset_of_index(ctx, i);
-	return (scom_t)((char*)ctx->seek->data + o * ctx->seek->tsz);
+	return (scom_t)((char*)ctx->seek->data + o * tpc_tsz);
 }
 
 static void
@@ -458,18 +455,18 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 
 mrg:
 	/* update seek */
-	sk->idx = DATD(sp, sk->data) / sk->tsz;
+	sk->idx = DATD(sp, sk->data);
 	/* get a temporary tpc page (where the merges go) */
 	seek_tmppage(sk + 1, ctx, pg);
 	sk[1].idx = sk->idx;
-	memcpy(sk[1].data, sk[0].data, sk->idx * sk->tsz);
+	memcpy(sk[1].data, sk[0].data, sk->idx);
 
 	do {
 		merge_2tpc(sk + 1, sk + 0, tpc);
 		/* tpc might have become unsorted, sort it now */
 		tpc_sort(tpc);
 		/* copy the tmp page back */
-		memcpy(sk[0].data, sk[1].data, sk[1].idx * sk[1].tsz);
+		memcpy(sk[0].data, sk[1].data, sk[1].idx);
 		/* after this, sk[0] will be empty and we can proceed
 		 * with another seek/page */
 		flush_seek(sk);
@@ -823,18 +820,18 @@ ute_tick(utectx_t ctx, scom_t *tgt, sidx_t i)
 	scom_t p = ute_seek(ctx, i);
 	if (LIKELY(p != NULL)) {
 		*tgt = p;
-		return ctx->seek->tsz;
+		return tpc_tsz;
 	}
 	return 0;
 }
 
 size_t
-ute_tick2(utectx_t ctx, void *tgt, size_t UNUSED(tsz), sidx_t i)
+ute_tick2(utectx_t ctx, void *tgt, size_t tsz, sidx_t i)
 {
 	scom_t p = ute_seek(ctx, i);
 	if (LIKELY(p != NULL)) {
-		memcpy(tgt, p, ctx->seek->tsz);
-		return ctx->seek->tsz;
+		memcpy(tgt, p, tsz);
+		return tpc_tsz;
 	}
 	return 0;
 }

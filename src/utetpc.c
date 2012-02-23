@@ -98,11 +98,9 @@ make_tpc(utetpc_t tpc, size_t nticks, size_t tsz)
 	if (LIKELY(tpc->tp != MAP_FAILED)) {
 		tpc->tpsz = sz;
 		tpc->tidx = 0;
-		tpc->tsz = tsz;
 	} else {
 		tpc->tpsz = 0;
 		tpc->tidx = -1;
-		tpc->tsz = 0;
 	}
 	return;
 }
@@ -648,7 +646,7 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 		}
 	}
 	/* adapt tgt idx */
-	tgt->idx = DATD(tp, tgt->data) / tgt->tsz;
+	tgt->idx = DATD(tp, tgt->data) / tpc_tsz;
 	return;
 }
 
@@ -746,13 +744,13 @@ tpc_sort(utetpc_t tpc)
 
 	for (void *tp = tpc->tp, *np = new,
 		     *ep = DATA(tp, tpc->tidx); tp < ep; ) {
-		size_t ntleft = DATDI(ep, tp, tpc->tsz);
+		size_t ntleft = DATDI(ep, tp, tpc_tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
-		scidx_t *scp = idxsort(tp, tpc->tsz, nticks);
+		scidx_t *scp = idxsort(tp, tpc_tsz, nticks);
 
-		collate(np, tp, scp, nticks, tpc->tsz);
-		tp = DATI(tp, nticks, tpc->tsz);
-		np = DATI(np, nticks, tpc->tsz);
+		collate(np, tp, scp, nticks, tpc_tsz);
+		tp = DATI(tp, nticks, tpc_tsz);
+		np = DATI(np, nticks, tpc_tsz);
 	}
 	/* now in NEW there's sorted pages consisting of 256 ticks each
 	 * we now use a bottom-up merge step */
@@ -761,7 +759,7 @@ tpc_sort(utetpc_t tpc)
 		void *src = new;
 		for (size_t rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
 			void *tmp;
-			bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc->tsz);
+			bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc_tsz);
 			/* swap the roles of src and tgt */
 			tmp = tgt, tgt = src, src = tmp;
 		}

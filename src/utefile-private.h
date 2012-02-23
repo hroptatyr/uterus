@@ -70,13 +70,14 @@ typedef size_t sidx_t;
 #include "uteslut.h"
 
 struct uteseek_s {
+	/** index into data (in bytes) */
 	sidx_t idx;
+	/** total alloc'd size of the page */
 	size_t mpsz;
+	/** the actual page data */
 	char *data;
-	/* size of one tick */
-	uint32_t tsz;
-	/* page we're on */
-	uint32_t page;
+	/** page we're on */
+	sidx_t page;
 };
 
 struct utectx_s {

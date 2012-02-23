@@ -72,14 +72,14 @@ union scom_thdr_u {
 	uint64_t u;
 	/* struct in order of significance */
 	struct {
-		/* +64 */
-		uint32_t sec;
 		/* tick type and flags */
 		uint32_t ttf:6;
 		/* an index back into the symtbl */
 		uint32_t idx:16;
 		/* millisecs is the standard these days */
 		uint32_t msec:10;
+		/* +64 */
+		uint32_t sec;
 	} __attribute__((packed));
 
 	/* seeing as that we're a union now ...

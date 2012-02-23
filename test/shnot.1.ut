@@ -8,6 +8,6 @@ CMDLINE="shnot -i 60 -o '${OUTFILE}' '${INFILE}'"
 ## STDIN
  
 ## STDOUT
-OUTFILE_SHA1="5c1ab3751481d9409e88dcd8868e3913e51c3bf9"
+OUTFILE_SHA1="96906caa8ec3ceb88d700f130c4f24fb80a5ff16"
 
 ## shnot.1.ut ends here

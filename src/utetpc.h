@@ -135,7 +135,7 @@ unset_tpc_needmrg(utetpc_t tpc)
 
 
 /* public funs */
-DECLF void make_tpc(utetpc_t tpc, size_t nticks, size_t tsz);
+DECLF void make_tpc(utetpc_t tpc, size_t nsndwchs);
 DECLF void free_tpc(utetpc_t tpc);
 /**
  * Clear the current page cache. */

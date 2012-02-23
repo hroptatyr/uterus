@@ -78,16 +78,17 @@ set_tpc_needmrg(utetpc_t tpc)
 
 /* calloc like signature */
 DEFUN void
-make_tpc(utetpc_t tpc, size_t nticks, size_t tsz)
+make_tpc(utetpc_t tpc, size_t nsndwchs)
 {
-	size_t sz = nticks * tsz;
-	tpc->tp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
-	if (LIKELY(tpc->tp != MAP_FAILED)) {
-		tpc->tpsz = sz;
-		tpc->tidx = 0;
+	size_t sz = nsndwchs * sizeof(struct sndwch_s);
+
+	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
+	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
+		tpc->sk.sz = sz;
+		tpc->sk.si = 0;
 	} else {
-		tpc->tpsz = 0;
-		tpc->tidx = -1;
+		tpc->sk.sz = 0;
+		tpc->sk.si = -1;
 	}
 	return;
 }

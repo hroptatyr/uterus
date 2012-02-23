@@ -492,7 +492,7 @@ load_last_tpc(utectx_t ctx)
 	seek_page(sk, ctx, lpg - 1);
 	/* create the tpc space */
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx), sizeof(struct sndwch_s));
+		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
 	}
 	/* copy the last page */
 	memcpy(ctx->tpc->sk.sp, sk->sp, sk->sz);
@@ -761,7 +761,7 @@ ute_add_tick(utectx_t ctx, scom_t t)
 /* the big question here is if we want to allow arbitrary ticks as in
  * can T be of type scdl too? */
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx), sizeof(struct sl1t_s));
+		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
 	} else if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);

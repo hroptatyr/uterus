@@ -149,6 +149,10 @@ DECLF void tpc_sort(utetpc_t);
  * Merge ticks from SRC and SWP into TGT and leave left-overs in SWP. */
 DECLF void merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp);
 
+/**
+ * In SK seek to the first tick that's >= KEY, or return NULL. */
+DECLF scom_t seek_key(uteseek_t sk, scidx_t key);
+
 /* (de)initialiser */
 DECLF void init_tpc(void);
 DECLF void fini_tpc(void);

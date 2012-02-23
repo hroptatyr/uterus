@@ -153,6 +153,7 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 #define DATI(p, i, sz)	((void*)(((char*)(p)) + (i) * (sz)))
 #define DATCI(p, i, sz)	((const void*)(((const char*)(p)) + (i) * (sz)))
 #define KEYI(p, i, sz)	(*((int32_t*)DATI(p, i, sz)))
+#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
 #define PERM(a, b, c, d)			\
 	(uint8_t)(				\
 		(a & 0x3) |			\
@@ -611,6 +612,41 @@ tpc_last_scom(utetpc_t tpc)
 		return NULL;
 	}
 	return AS_SCOM(algn_tick(tpc->sk.sp + tpc->sk.si - 1, tpc->sk.sp));
+}
+
+DEFUN scom_t
+seek_key(uteseek_t sk, scidx_t key)
+{
+/* use a binary search and also set SK's si accordingly */
+	const size_t probsz = sizeof(*sk->sp);
+	void *eosp = DATA(sk->sp, sk->sz);
+	void *sp;
+
+	/* try the tail first */
+	sp = algn_tick(DATA(sk->sp, sk->sz - probsz), sk->sp);
+	if (make_scidx(sp).u > key.u) {
+		goto binsrch;
+	}
+	return NULL;
+binsrch:
+	/* try the middle */
+	for (void *bosp = sk->sp; bosp < eosp; ) {
+		size_t off = ALGN(*sk->sp, DATD(eosp, bosp) / 2);
+
+		sp = algn_tick(DATA(bosp, off), sk->sp);
+		if (make_scidx(sp).u > key.u) {
+			/* left half */
+			eosp = sp;
+		} else if (sp == bosp) {
+			sp = eosp;
+			break;
+		} else {
+			/* right half */
+			bosp = sp;
+		}
+	}
+	/* must be the offending tick */
+	return sp;
 }
 
 DEFUN void

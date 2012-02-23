@@ -361,61 +361,6 @@ out:
 
 
 /* tpc glue */
-#define DATA(p, i)	((void*)(((char*)(p)) + (i)))
-#define DATD(p, q)	((size_t)(((const char*)(p)) - ((const char*)(q))))
-#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
-
-static void*
-algn_tick(void *tp, void *botp)
-{
-	const size_t probsz = sizeof(struct sl1t_s);
-	void *prob;
-
-	/* check tp - probsz */
-	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
-		return tp;
-	} else if (scom_thdr_ttf(prob) & SCOM_FLAG_LM) {
-		return prob;
-	}
-	return tp;
-}
-
-static void*
-find_scidx(uteseek_t sk, scidx_t key)
-{
-/* find a pointer into SK's data with the first tick that's bigger than KEY
- * or NULL otherwise, use a binary search */
-	const size_t probsz = sizeof(*sk->sp);
-	void *eosp = DATA(sk->sp, sk->sz);
-	void *sp;
-
-	/* try the tail first */
-	sp = algn_tick(DATA(sk->sp, sk->sz - probsz), sk->sp);
-	if (make_scidx(sp).u > key.u) {
-		goto binsrch;
-	}
-	return NULL;
-binsrch:
-	/* try the middle */
-	for (void *bosp = sk->sp; bosp < eosp; ) {
-		size_t off = ALGN(*sk->sp, DATD(eosp, bosp) / 2);
-
-		sp = algn_tick(DATA(bosp, off), sk->sp);
-		if (make_scidx(sp).u > key.u) {
-			/* left half */
-			eosp = sp;
-		} else if (sp == bosp) {
-			sp = eosp;
-			break;
-		} else {
-			/* right half */
-			bosp = sp;
-		}
-	}
-	/* must be the offending tick */
-	return sp;
-}
-
 static void
 merge_tpc(utectx_t ctx, utetpc_t tpc)
 {
@@ -423,8 +368,6 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
  * now merge-sort those with TPC */
 	size_t npg = ute_npages(ctx);
 	struct uteseek_s sk[2];
-	/* offending ticks */
-	typeof(sk->sp) sp;
 	/* page indicator */
 	size_t pg;
 	/* index keys */
@@ -437,7 +380,7 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 		/* seek to the i-th page */
 		seek_page(sk, ctx, pg);
 		/* use bin-srch to find an offending tick */
-		if ((sp = find_scidx(sk, ti))) {
+		if (seek_key(sk, ti)) {
 			goto mrg;
 		}
 		/* no need for this page */
@@ -446,8 +389,6 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 	return;
 
 mrg:
-	/* update seek */
-	sk->si = sp - sk->sp;
 	/* get a temporary tpc page (where the merges go) */
 	seek_tmppage(sk + 1, ctx, pg);
 	sk[1].si = sk->si;

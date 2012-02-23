@@ -588,19 +588,53 @@ bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
 	return;
 }
 
-static void*
-algn_tick(void *tp, void *botp)
+static bool
+scom_lm_p(scom_t t)
 {
-	const size_t probsz = sizeof(struct sndwch_s);
-	void *prob;
+	uint16_t ttf = scom_thdr_ttf(t);
+	return ttf >= SCOM_FLAG_LM && ttf < SCOM_FLAG_L2M;
+}
 
-	/* check tp - probsz */
-	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
-		return tp;
-	} else if (UNLIKELY(scom_thdr_ttf(prob) & SCOM_FLAG_LM)) {
-		return prob;
+static bool
+scom_simple_p(scom_t t)
+{
+	uint16_t ttf = scom_thdr_ttf(t);
+	return ttf < SCOM_FLAG_LM;
+}
+
+static sidx_t
+algn_tick(uteseek_t sk, sidx_t ix)
+{
+/* align a tick referenced by sandwich count, this assumes sorted pages */
+	const scom_t bop = AS_SCOM(sk->sp);
+
+	if (UNLIKELY(ix == 0)) {
+		/* the 0-th tick is aligned trivially */
+		return 0;
 	}
-	return tp;
+	/* we take probes left and right of TP, and we check that
+	 * - the scom sizes match
+	 * - the scom orders match */
+
+	/* first assume everything's alright */
+	for (scom_t tp; (tp = AS_SCOM(sk->sp + ix)) > bop; ix--) {
+		scom_t p = AS_SCOM(sk->sp + ix - 1);
+
+		if (p->u <= tp->u) {
+			/* yay! */
+			if (scom_simple_p(p)) {
+				return ix;
+			}
+			/* means, linked mode, go back a bit */
+			if (UNLIKELY((p = AS_SCOM(sk->sp + ix - 2)) < bop)) {
+				return ix;
+			} else if (p->u <= tp->u && scom_lm_p(p)) {
+				/* everything still perfect */
+				return ix;
+			}
+		}
+	}
+	return ix;
 }
 
 /* could be public */
@@ -612,7 +646,7 @@ seek_last_scom(uteseek_t sk)
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
 	}
-	return algn_tick(DATA(sk->sp, sk->sz - probsz), sk->sp);
+	return sk->sp + algn_tick(sk, sk->sz / probsz);
 }
 
 
@@ -623,7 +657,7 @@ tpc_last_scom(utetpc_t tpc)
 	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
 		return NULL;
 	}
-	return AS_SCOM(algn_tick(tpc->sk.sp + tpc->sk.si - 1, tpc->sk.sp));
+	return AS_SCOM(tpc->sk.sp + algn_tick(&tpc->sk, tpc->sk.si - 1));
 }
 
 DEFUN scom_t
@@ -644,7 +678,7 @@ seek_key(uteseek_t sk, scidx_t key)
 		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
 		sidx_t ix = (eosp - bosp) / 2;
 
-		sp = algn_tick(bosp + ix, bosp);
+		sp = bosp + algn_tick(sk, bosp - sk->sp + ix);
 		if (make_scidx(AS_SCOM(sp)).u > key.u) {
 			/* left half */
 			eosp = sp;

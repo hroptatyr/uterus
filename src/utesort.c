@@ -214,11 +214,10 @@ sort_strat(utectx_t ctx)
 
 		/* obtain intervals */
 		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
-			scom_t sb = (const void*)sks[i].data;
+			scom_t sb = (const void*)sks[i].sp;
 			uint32_t sbs = scom_thdr_sec(sb);
 			//uint16_t sbms = scom_thdr_msec(sb);
-			scom_t se = (const void*)
-				(sks[i].data + sks[i].mpsz - 16);
+			scom_t se = (const void*)(sks[i].sp + sks[i].sz - 16);
 			uint32_t ses = scom_thdr_sec(se);
 			//uint16_t sems = scom_thdr_msec(se);
 
@@ -269,10 +268,10 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 		uint16_t ms;
 		uint32_t pg = curnd->pgs[i];
 
-		if (sks[pg].idx >= sks[pg].mpsz) {
+		if (sks[pg].si >= sks[pg].sz) {
 			continue;
 		}
-		sh = (void*)(sks[pg].data + sks[pg].idx);
+		sh = (void*)(sks[pg].sp + sks[pg].si);
 		s = scom_thdr_sec(sh);
 		ms = scom_thdr_msec(sh);
 		if (s < mins || (s == mins && ms < minms)) {
@@ -290,9 +289,9 @@ step_run(struct uteseek_s *sks, unsigned int run, strat_t str)
 /* advance the pointer in the RUN-th run and fetch new stuff if need be */
 	strat_node_t curnd = str->last;
 
-	if ((sks[run].idx += sks[run].tsz) >= sks[run].mpsz) {
+	if ((sks[run].si += sizeof(struct sndwch_s)) >= sks[run].sz) {
 		/* reget shit, for now we just stall this run */
-		sks[run].idx = sks[run].mpsz;
+		sks[run].si = sks[run].sz;
 #if 0
 /* debug */
 		printf("run %d out of ticks\n", run);
@@ -342,7 +341,7 @@ ute_sort(utectx_t ctx)
 	str->last = str->first;
 	/* ALL-way merge */
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
-		void *p = (void*)(sks[j].data + sks[j].idx);
+		void *p = (void*)(sks[j].sp + sks[j].si);
 
 		/* add that bloke */
 		ute_add_tick(hdl, p);

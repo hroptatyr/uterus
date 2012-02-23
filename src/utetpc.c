@@ -61,48 +61,41 @@
 #define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 
+/* why aren't these in the header file? */
 static inline void
 set_tpc_unsorted(utetpc_t tpc)
 {
-	tpc->flags |= TPC_FL_UNSORTED;
-	return;
-}
-
-static inline void
-unset_tpc_unsorted(utetpc_t tpc)
-{
-	tpc->flags &= ~TPC_FL_UNSORTED;
+	tpc->sk.fl |= TPC_FL_UNSORTED;
 	return;
 }
 
 static inline void
 set_tpc_needmrg(utetpc_t tpc)
 {
-	tpc->flags |= TPC_FL_NEEDMRG;
+	tpc->sk.fl |= TPC_FL_NEEDMRG;
 	return;
 }
 
-static inline __attribute__((unused)) void
-unset_tpc_needmrg(utetpc_t tpc)
+static inline uint64_t
+tick_sortkey(scom_t t)
 {
-	tpc->flags &= ~TPC_FL_NEEDMRG;
-	return;
+	/* using scom v0.2 now */
+	return t->u;
 }
 
 /* calloc like signature */
 DEFUN void
-make_tpc(utetpc_t tpc, size_t nticks, size_t tsz)
+make_tpc(utetpc_t tpc, size_t nsndwchs)
 {
-	size_t sz = nticks * tsz;
-	tpc->tp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
-	if (LIKELY(tpc->tp != MAP_FAILED)) {
-		tpc->tpsz = sz;
-		tpc->tidx = 0;
-		tpc->tsz = tsz;
+	size_t sz = nsndwchs * sizeof(struct sndwch_s);
+
+	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
+	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
+		tpc->sk.sz = sz;
+		tpc->sk.si = 0;
 	} else {
-		tpc->tpsz = 0;
-		tpc->tidx = -1;
-		tpc->tsz = 0;
+		tpc->sk.sz = 0;
+		tpc->sk.si = -1;
 	}
 	return;
 }
@@ -112,11 +105,11 @@ free_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		/* seek points to something => munmap first */
-		munmap(tpc->tp, tpc->tpsz);
+		munmap(tpc->sk.sp, tpc->sk.sz);
 	}
-	tpc->tidx = -1;
-	tpc->tpsz = 0;
-	tpc->tp = NULL;
+	tpc->sk.si = -1;
+	tpc->sk.sz = 0;
+	tpc->sk.sp = NULL;
 	return;
 }
 
@@ -124,7 +117,7 @@ DEFUN void
 clear_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
-		tpc->tidx = 0;
+		tpc->sk.si = 0;
 	}
 	return;
 }
@@ -132,23 +125,25 @@ clear_tpc(utetpc_t tpc)
 DEFUN void
 tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 {
+/* supports variadic ticks */
 	uint64_t skey = tick_sortkey(t);
 
-	if (UNLIKELY(tpc->tidx >= tpc->tpsz)) {
+	if (UNLIKELY(tpc_full_p(tpc))) {
 		return;
 	}
-	memcpy(tpc->tp + tpc->tidx, t, tsz);
+	memcpy(tpc->sk.sp + tpc->sk.si, t, tsz);
 	/* just add the total byte size as passed on */
-	tpc->tidx += tsz;
+	tpc->sk.si += tsz / sizeof(*tpc->sk.sp);
 
 	/* maybe mark the whole shebang as unsorted */
 	if (UNLIKELY(skey < tpc->last)) {
 		set_tpc_unsorted(tpc);
 	}
 	/* check if the whole file needs sorting (merging) */
-	if (UNLIKELY(skey < tpc->lvtd /* largest value to-date */)) {
+	if (UNLIKELY(skey < tpc->least)) {
+		/* found a key that's smaller than what has been flushed */
 		set_tpc_needmrg(tpc);
-		tpc->lvtd = skey;
+		tpc->least = skey;
 	}
 	tpc->last = skey;
 	return;
@@ -166,6 +161,7 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 #define DATI(p, i, sz)	((void*)(((char*)(p)) + (i) * (sz)))
 #define DATCI(p, i, sz)	((const void*)(((const char*)(p)) + (i) * (sz)))
 #define KEYI(p, i, sz)	(*((int32_t*)DATI(p, i, sz)))
+#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
 #define PERM(a, b, c, d)			\
 	(uint8_t)(				\
 		(a & 0x3) |			\
@@ -483,7 +479,7 @@ merge_all(size_t nticks)
 }
 
 static scidx_t*
-idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
+idxsort(scom_t p, size_t nticks)
 {
 	scidx_t *scp = get_scratch();
 	size_t m = min(nticks, IDXSORT_SIZE);
@@ -494,8 +490,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 
 		scp[j] = fake_scidx(p, i);
 		p = DATCA(p, bsz);
-		/* maybe it's faster to use a hard-coded satsz here? */
-		i += bsz / sizeof(struct sl1t_s);
+		i += bsz / sizeof(struct sndwch_s);
 	}
 	/* reuse m to compute the next 2-power */
 	m = __ilog2_ceil(j);
@@ -514,7 +509,7 @@ idxsort(scom_t p, size_t UNUSED(satsz), size_t nticks)
 }
 
 static void
-collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
+collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks)
 {
 	/* skip 0 idxs first */
 	size_t j;
@@ -523,12 +518,12 @@ collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks, size_t tsz)
 
 	for (size_t i = 0; i < nticks; j++) {
 		sidx_t idx = scidx_idx(idxa[j]);
-		const void *s = DATCI(src, idx, tsz);
+		const void *s = DATCI(src, idx, sizeof(struct sndwch_s));
 		size_t bsz = scom_thdr_size(s);
 
 		memcpy(tgt, s, bsz);
 		tgt = DATA(tgt, bsz);
-		i += bsz / sizeof(struct sl1t_s);
+		i += bsz / sizeof(struct sndwch_s);
 	}
 	return;
 }
@@ -537,12 +532,11 @@ static void*
 merge_bup(
 	void *tgt,
 	const void *srcl, size_t nticksl,
-	const void *srcr, size_t nticksr,
-	size_t tsz)
+	const void *srcr, size_t nticksr)
 {
 /* merge left source SRCL and right source SRCR into tgt. */
-	const void *elp = DATCI(srcl, nticksl, tsz);
-	const void *erp = DATCI(srcr, nticksr, tsz);
+	const void *elp = DATCI(srcl, nticksl, sizeof(struct sndwch_s));
+	const void *erp = DATCI(srcr, nticksr, sizeof(struct sndwch_s));
 
 	while (srcl < elp && srcr < erp) {
 		uint64_t sl = ((const uint64_t*)srcl)[0];
@@ -581,40 +575,154 @@ merge_bup(
 }
 
 static void
-bup_round(void *tgt, void *src, size_t rsz, size_t ntleft, size_t tsz)
+bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
 {
 	void *tp = tgt;
 	void *npl = src;
-	void *npr = DATI(src, rsz, tsz);
+	void *npr = DATI(src, rsz, sizeof(struct sndwch_s));
 
 	/* do i really need both npl and npr? */
 	while (ntleft > rsz) {
 		size_t ntr = min_size_t(ntleft, 2 * rsz);
 		/* there's both a left and a right side */
-		tp = merge_bup(tp, npl, rsz, npr, ntr - rsz, tsz);
+		tp = merge_bup(tp, npl, rsz, npr, ntr - rsz);
 		/* step down counters and step up pointers */
-		npl = DATI(npl, 2 * rsz, tsz);
-		npr = DATI(npr, 2 * rsz, tsz);
+		npl = DATI(npl, 2 * rsz, sizeof(struct sndwch_s));
+		npr = DATI(npr, 2 * rsz, sizeof(struct sndwch_s));
 		ntleft -= ntr;
 	}
 	/* possibly ntleft ticks stuck */
-	memcpy(tp, npl, ntleft * tsz);
+	memcpy(tp, npl, ntleft * sizeof(struct sndwch_s));
 	return;
+}
+
+static bool
+scom_lm_p(scom_t t)
+{
+	uint16_t ttf = scom_thdr_ttf(t);
+	return ttf >= SCOM_FLAG_LM && ttf < SCOM_FLAG_L2M;
+}
+
+static bool
+scom_simple_p(scom_t t)
+{
+	uint16_t ttf = scom_thdr_ttf(t);
+	return ttf < SCOM_FLAG_LM;
+}
+
+static sidx_t
+algn_tick(uteseek_t sk, sidx_t ix)
+{
+/* align a tick referenced by sandwich count, this assumes sorted pages */
+	const scom_t bop = AS_SCOM(sk->sp);
+
+	if (UNLIKELY(ix == 0)) {
+		/* the 0-th tick is aligned trivially */
+		return 0;
+	}
+	/* we take probes left and right of TP, and we check that
+	 * - the scom sizes match
+	 * - the scom orders match */
+
+	/* first assume everything's alright */
+	for (scom_t tp; (tp = AS_SCOM(sk->sp + ix)) > bop; ix--) {
+		scom_t p = AS_SCOM(sk->sp + ix - 1);
+
+		if (p->u <= tp->u) {
+			/* yay! */
+			if (scom_simple_p(p)) {
+				return ix;
+			}
+			/* means, linked mode, go back a bit */
+			if (UNLIKELY((p = AS_SCOM(sk->sp + ix - 2)) < bop)) {
+				return ix;
+			} else if (p->u <= tp->u && scom_lm_p(p)) {
+				/* everything still perfect */
+				return ix;
+			}
+		}
+	}
+	return ix;
+}
+
+/* could be public */
+static struct sndwch_s*
+seek_last_sndwch(uteseek_t sk)
+{
+	const size_t probsz = sizeof(*sk->sp);
+
+	if (UNLIKELY(sk->sp == NULL)) {
+		return NULL;
+	}
+	return sk->sp + algn_tick(sk, sk->sz / probsz - 1);
 }
 
 
 /* public funs */
-#include "utefile-private.h"
+DEFUN scom_t
+tpc_last_scom(utetpc_t tpc)
+{
+	if (UNLIKELY(!tpc_has_ticks_p(tpc))) {
+		return NULL;
+	}
+	return AS_SCOM(tpc->sk.sp + algn_tick(&tpc->sk, tpc->sk.si - 1));
+}
+
+DEFUN scom_t
+seek_last_scom(uteseek_t sk)
+{
+	typeof(sk->sp) sp = seek_last_sndwch(sk);
+	if (UNLIKELY(sp == NULL)) {
+		return NULL;
+	}
+	return AS_SCOM(sp);
+}
+
+DEFUN scom_t
+seek_key(uteseek_t sk, scidx_t key)
+{
+/* use a binary search and also set SK's si accordingly */
+	typeof(sk->sp) sp;
+
+	/* try the tail first */
+	if (UNLIKELY((sp = seek_last_sndwch(sk)) == NULL)) {
+		return NULL;
+	} else if (LIKELY(make_scidx(AS_SCOM(sp)).u <= key.u)) {
+		return NULL;
+	}
+
+	/* binsrch, try the middle */
+	for (typeof(sp) bosp = sk->sp,
+		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
+		sidx_t ix = (eosp - bosp) / 2;
+
+		sp = bosp + algn_tick(sk, bosp - sk->sp + ix);
+		if (make_scidx(AS_SCOM(sp)).u > key.u) {
+			/* left half */
+			eosp = sp;
+		} else if (sp == bosp) {
+			sp = eosp;
+			break;
+		} else {
+			/* right half */
+			bosp = sp;
+		}
+	}
+	/* must be the offending tick, update index and return */
+	sk->si = sp - sk->sp;
+	return AS_SCOM(sp);
+}
+
 DEFUN void
 merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {
 /* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
-	void *tp = DATA(tgt->data, tgt->idx * tgt->tsz);
-	void *eot = DATA(tgt->data, tgt->mpsz);
-	void *sp = DATA(src->data, src->idx * src->tsz);
-	void *eos = DATA(src->data, src->mpsz);
-	void *rp = swp->tp;
-	void *eor = DATA(swp->tp, swp->tidx);
+	void *tp = tgt->sp + tgt->si;
+	void *eot = DATA(tgt->sp, tgt->sz);
+	void *sp = src->sp + src->si;
+	void *eos = DATA(src->sp, src->sz);
+	void *rp = swp->sk.sp;
+	void *eor = swp->sk.sp + swp->sk.si;
 
 	while (tp < eot && sp < eos && rp < eor) {
 		if (AS_SCOM(sp)->u <= AS_SCOM(rp)->u) {
@@ -631,24 +739,25 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 			tp = DATA(tp, rsz);
 		}
 	}
-	assert(DATD(eos, sp) <= DATD(rp, swp->tp));
+	assert(DATD(eos, sp) <= DATD(rp, swp->sk.sp));
 	assert(tp == eot);
 	/* copy left-overs to swp */
 	{
 		size_t sleft_sz = DATD(eos, sp);
 		size_t rleft_sz = DATD(eor, rp);
-		size_t gapsz = DATD(rp, DATA(swp->tp, sleft_sz));
+		size_t gapsz = DATD(rp, DATA(swp->sk.sp, sleft_sz));
 
-		memcpy(swp->tp, sp, sleft_sz);
+		memcpy(swp->sk.sp, sp, sleft_sz);
 		/* and close the gap */
 		if (gapsz > 0) {
-			memmove(DATA(swp->tp, sleft_sz), rp, rleft_sz);
+			printf("GAP %zu\n", gapsz);
+			memmove(DATA(swp->sk.sp, sleft_sz), rp, rleft_sz);
 			/* adapt the tidx */
-			swp->tidx -= gapsz;
+			swp->sk.si -= gapsz / sizeof(*swp->sk.sp);
 		}
 	}
-	/* adapt tgt idx */
-	tgt->idx = DATD(tp, tgt->data) / tgt->tsz;
+	/* adapt tgt idx, according to the assertion, that's quite simple */
+	tgt->si = tgt->sz / sizeof(*tgt->sp);
 	return;
 }
 
@@ -657,9 +766,9 @@ tilman_comp(utetpc_t tpc)
 {
 	ssize_t res = 0;
 	/* sink */
-	void *xp = tpc->tp;
+	void *xp = tpc->sk.sp;
 
-	for (void *tp = xp, *ep = DATA(tp, tpc->tidx); tp < ep; ) {
+	for (void *tp = xp, *ep = tpc->sk.sp + tpc->sk.si; tp < ep; ) {
 		scom_t st = tp;
 
 		switch (scom_thdr_ttf(st)) {
@@ -729,8 +838,9 @@ tilman_comp(utetpc_t tpc)
 		}
 	}
 	if (res > 0) {
-		/* shrink tpc->tidx */
-		tpc->tidx -= res * sizeof(struct ssnap_s);
+		/* shrink tick index */
+		const size_t mul = sizeof(struct ssnap_s) / sizeof(*tpc->sk.sp);
+		tpc->sk.si -= res * mul;
 	}
 	return res;
 }
@@ -739,42 +849,47 @@ DEFUN void
 tpc_sort(utetpc_t tpc)
 {
 /* simplified merge sort */
+	const size_t tpc_tsz = sizeof(*tpc->sk.sp);
 	void *new;
 
 	/* get us another map */
-	new = mmap(NULL, tpc->tpsz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, tpc->sk.sz, PROT_MEM, MAP_MEM, -1, 0);
 
-	for (void *tp = tpc->tp, *np = new,
-		     *ep = DATA(tp, tpc->tidx); tp < ep; ) {
-		size_t ntleft = DATDI(ep, tp, tpc->tsz);
+	for (void *tp = tpc->sk.sp,
+		     *np = new,
+		     *ep = tpc->sk.sp + tpc->sk.si;
+	     tp < ep; ) {
+		size_t ntleft = DATDI(ep, tp, tpc_tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
-		scidx_t *scp = idxsort(tp, tpc->tsz, nticks);
+		scidx_t *scp = idxsort(tp, nticks);
 
-		collate(np, tp, scp, nticks, tpc->tsz);
-		tp = DATI(tp, nticks, tpc->tsz);
-		np = DATI(np, nticks, tpc->tsz);
+		collate(np, tp, scp, nticks);
+		tp = DATI(tp, nticks, tpc_tsz);
+		np = DATI(np, nticks, tpc_tsz);
 	}
 	/* now in NEW there's sorted pages consisting of 256 ticks each
 	 * we now use a bottom-up merge step */
 	{
-		void *tgt = tpc->tp;
+		void *tgt = tpc->sk.sp;
 		void *src = new;
-		for (size_t rsz = 256; tpc_nticks(tpc) > rsz; rsz *= 2) {
+		for (size_t rsz = 256; tpc->sk.si > rsz; rsz *= 2) {
 			void *tmp;
-			bup_round(tgt, src, rsz, tpc_nticks(tpc), tpc->tsz);
+			bup_round(tgt, src, rsz, tpc->sk.si);
 			/* swap the roles of src and tgt */
 			tmp = tgt, tgt = src, src = tmp;
 		}
-		if (tpc->tp == tgt) {
+		if (tpc->sk.sp == tgt) {
 			/* oh, we were about to copy shit into tgt, so
 			 * munmap tpc->tp and install the new vector */
-			tpc->tp = src;
+			tpc->sk.sp = src;
 		}
 		/* munmap()ing is the same in either case */
-		munmap(tgt, tpc->tpsz);
+		munmap(tgt, tpc->sk.sz);
 	}
 	/* set the sorted flag, i.e. unset the unsorted flag */
 	unset_tpc_unsorted(tpc);
+	/* update last key */
+	tpc->last = tpc_last_scom(tpc)->u;
 	return;
 }
 

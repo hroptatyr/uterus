@@ -47,9 +47,6 @@
 #include "utetpc.h"
 #include "mem.h"
 
-/* only tick size we support atm */
-#include "sl1t.h"
-
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
 #define SMALLEST_LVTD	(0)
@@ -185,15 +182,14 @@ creat_hdr(utectx_t ctx)
 void
 flush_seek(uteseek_t sk)
 {
-	if (sk->mpsz > 0) {
+	if (sk->sz > 0) {
 		/* seek points to something => munmap first */
-		munmap(sk->data, sk->mpsz);
+		munmap(sk->sp, sk->sz);
 	}
-	sk->idx = -1;
-	sk->mpsz = 0;
-	sk->data = NULL;
-	sk->tsz = 0;
-	sk->page = -1U;
+	sk->si = -1;
+	sk->sz = 0;
+	sk->sp = NULL;
+	sk->pg = -1;
 	return;
 }
 
@@ -214,11 +210,11 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	if (UNLIKELY(tmp == MAP_FAILED)) {
 		return;
 	}
-	sk->data = tmp;
-	sk->idx = 0;
-	sk->mpsz = psz;
-	sk->tsz = sizeof(struct sl1t_s);
-	sk->page = pg;
+	sk->sp = tmp;
+	sk->si = 0;
+	sk->sz = psz;
+	sk->pg = pg;
+	sk->fl = 0;
 	return;
 }
 
@@ -235,11 +231,11 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	if (UNLIKELY(tmp == MAP_FAILED)) {
 		return;
 	}
-	sk->data = tmp;
-	sk->idx = 0;
-	sk->mpsz = psz;
-	sk->tsz = sizeof(struct sl1t_s);
-	sk->page = pg;
+	sk->sp = tmp;
+	sk->si = 0;
+	sk->sz = psz;
+	sk->pg = pg;
+	sk->fl = 0;
 	return;
 }
 
@@ -253,7 +249,7 @@ reseek(utectx_t ctx, sidx_t i)
 	flush_seek(ctx->seek);
 	/* create a new seek */
 	seek_page(ctx->seek, ctx, p);
-	ctx->seek->idx = o;
+	ctx->seek->si = o;
 	return;
 }
 
@@ -271,16 +267,16 @@ ute_seek(utectx_t ctx, sidx_t i)
 		reseek(ctx, i);
 	}
 	o = offset_of_index(ctx, i);
-	return (scom_t)((char*)ctx->seek->data + o * ctx->seek->tsz);
+	return AS_SCOM(ctx->seek->sp + o);
 }
 
 static void
 store_lvtd(utectx_t ctx)
 {
-	if (tpc_size(ctx->tpc) > 0 && ctx->tpc->last > ctx->lvtd) {
+	if (tpc_has_ticks_p(ctx->tpc) && ctx->tpc->last > ctx->lvtd) {
 		ctx->lvtd = ctx->tpc->last;
 	}
-	ctx->tpc->lvtd = ctx->lvtd;
+	ctx->tpc->least = ctx->lvtd;
 	return;
 }
 
@@ -300,7 +296,7 @@ static void
 flush_tpc(utectx_t ctx)
 {
 	void *p;
-	size_t sz = tpc_size(ctx->tpc);
+	size_t sz = tpc_byte_size(ctx->tpc);
 	sidx_t off = ctx->fsz; 
 
 	/* extend to take SZ additional bytes */
@@ -311,7 +307,7 @@ flush_tpc(utectx_t ctx)
 	if (p == MAP_FAILED) {
 		return;
 	}
-	memcpy(p, ctx->tpc->tp, sz);
+	memcpy(p, ctx->tpc->sk.sp, sz);
 	munmap(p, sz);
 
 	/* store the largest-value-to-date */
@@ -365,68 +361,6 @@ out:
 
 
 /* tpc glue */
-static inline void
-unset_tpc_needmrg(utetpc_t tpc)
-{
-	tpc->flags &= ~TPC_FL_NEEDMRG;
-	return;
-}
-
-#define DATA(p, i)	((void*)(((char*)(p)) + (i)))
-#define DATD(p, q)	((size_t)(((const char*)(p)) - ((const char*)(q))))
-#define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
-
-static void*
-algn_tick(void *tp, void *botp)
-{
-	const size_t probsz = sizeof(struct sl1t_s);
-	void *prob;
-
-	/* check tp - probsz */
-	if (UNLIKELY((prob = DATA(tp, -probsz)) < botp)) {
-		return tp;
-	} else if (scom_thdr_ttf(prob) & SCOM_FLAG_LM) {
-		return prob;
-	}
-	return tp;
-}
-
-static void*
-find_scidx(uteseek_t sk, scidx_t key)
-{
-/* find a pointer into SK's data with the first tick that's bigger than KEY
- * or NULL otherwise, use a binary search */
-	const size_t probsz = sizeof(struct sl1t_s);
-	void *eosp = DATA(sk->data, sk->mpsz);
-	void *sp;
-
-	/* try the tail first */
-	sp = algn_tick(DATA(sk->data, sk->mpsz - probsz), sk->data);
-	if (make_scidx(sp).u > key.u) {
-		goto binsrch;
-	}
-	return NULL;
-binsrch:
-	/* try the middle */
-	for (void *bosp = sk->data; bosp < eosp; ) {
-		size_t off = ALGN(struct sl1t_s, DATD(eosp, bosp) / 2);
-
-		sp = algn_tick(DATA(bosp, off), sk->data);
-		if (make_scidx(sp).u > key.u) {
-			/* left half */
-			eosp = sp;
-		} else if (sp == bosp) {
-			sp = eosp;
-			break;
-		} else {
-			/* right half */
-			bosp = sp;
-		}
-	}
-	/* must be the offending tick */
-	return sp;
-}
-
 static void
 merge_tpc(utectx_t ctx, utetpc_t tpc)
 {
@@ -434,21 +368,19 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
  * now merge-sort those with TPC */
 	size_t npg = ute_npages(ctx);
 	struct uteseek_s sk[2];
-	/* offending ticks */
-	void *sp;
 	/* page indicator */
 	size_t pg;
 	/* index keys */
 	scidx_t ti;
 
 	/* set up seeker through tpc */
-	ti = make_scidx(AS_SCOM(tpc->tp));
+	ti = make_scidx(tpc_first_scom(tpc));
 
 	for (pg = 0; pg < npg; pg++) {
 		/* seek to the i-th page */
 		seek_page(sk, ctx, pg);
 		/* use bin-srch to find an offending tick */
-		if ((sp = find_scidx(sk, ti))) {
+		if (seek_key(sk, ti)) {
 			goto mrg;
 		}
 		/* no need for this page */
@@ -457,33 +389,36 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 	return;
 
 mrg:
-	/* update seek */
-	sk->idx = DATD(sp, sk->data) / sk->tsz;
 	/* get a temporary tpc page (where the merges go) */
 	seek_tmppage(sk + 1, ctx, pg);
-	sk[1].idx = sk->idx;
-	memcpy(sk[1].data, sk[0].data, sk->idx * sk->tsz);
+	sk[1].si = sk->si;
+	memcpy(sk[1].sp, sk[0].sp, sk->si * sizeof(*sk->sp));
 
 	do {
 		merge_2tpc(sk + 1, sk + 0, tpc);
 		/* tpc might have become unsorted, sort it now */
 		tpc_sort(tpc);
 		/* copy the tmp page back */
-		memcpy(sk[0].data, sk[1].data, sk[1].idx * sk[1].tsz);
+		memcpy(sk[0].sp, sk[1].sp, sk[1].si * sizeof(*sk->sp));
 		/* after this, sk[0] will be empty and we can proceed
 		 * with another seek/page */
 		flush_seek(sk);
-
-		/* next page now */
-		if (++pg < npg) {
-			seek_page(sk, ctx, pg);
-		} else {
-			break;
-		}
-	} while (1);
-
+	} while (++pg < npg && (
+			 /* load next page */
+			 seek_page(sk, ctx, pg),
+			 /* reset the tmp page counters */
+			 sk[1].si = 0,
+			 1
+			 ));
+	/* update ctx's lvtd and tpc's least */
+	{
+		scom_t last = seek_last_scom(sk + 1);
+		tpc->least = ctx->lvtd = last->u;
+	}
+	/* flush the tmp seek too */
+	flush_seek(sk + 1);
 	/* unset the need merge flag */
-	unset_tpc_needmrg(tpc);	
+	unset_tpc_needmrg(tpc);
 	return;
 }
 
@@ -503,12 +438,12 @@ load_last_tpc(utectx_t ctx)
 	seek_page(sk, ctx, lpg - 1);
 	/* create the tpc space */
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx), sizeof(struct sl1t_s));
+		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
 	}
 	/* copy the last page */
-	memcpy(ctx->tpc->tp, sk->data, sk->mpsz);
+	memcpy(ctx->tpc->sk.sp, sk->sp, sk->sz);
 	/* ... and set the new length */
-	ctx->tpc->tidx = sk->mpsz;
+	ctx->tpc->sk.si = sk->sz / sizeof(*sk->sp);
 	/* now munmap the seek */
 	flush_seek(sk);
 	/* also set the last and lvtd values */
@@ -517,7 +452,7 @@ load_last_tpc(utectx_t ctx)
 
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
-	ctx->fsz -= tpc_size(ctx->tpc) + ctx->slut_sz;
+	ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
 	return;
 }
 
@@ -772,7 +707,7 @@ ute_add_tick(utectx_t ctx, scom_t t)
 /* the big question here is if we want to allow arbitrary ticks as in
  * can T be of type scdl too? */
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx), sizeof(struct sl1t_s));
+		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
 	} else if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);
@@ -788,10 +723,10 @@ ute_nticks(utectx_t ctx)
 /* for the moment just use the file size and number of pages
  * plus whats in the tpc */
 	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	size_t nticks = (ctx->fsz - aux_sz) / sizeof(struct sl1t_s);
+	size_t nticks = (ctx->fsz - aux_sz) / sizeof(*ctx->tpc->sk.sp);
 	/* if there are non-flushed ticks, consider them */
 	if (tpc_active_p(ctx->tpc)) {
-		nticks += tpc_nticks(ctx->tpc);
+		nticks += ctx->tpc->sk.si;
 	}
 	return nticks;
 }
@@ -823,18 +758,18 @@ ute_tick(utectx_t ctx, scom_t *tgt, sidx_t i)
 	scom_t p = ute_seek(ctx, i);
 	if (LIKELY(p != NULL)) {
 		*tgt = p;
-		return ctx->seek->tsz;
+		return sizeof(struct sndwch_s);
 	}
 	return 0;
 }
 
 size_t
-ute_tick2(utectx_t ctx, void *tgt, size_t UNUSED(tsz), sidx_t i)
+ute_tick2(utectx_t ctx, void *tgt, size_t tsz, sidx_t i)
 {
 	scom_t p = ute_seek(ctx, i);
 	if (LIKELY(p != NULL)) {
-		memcpy(tgt, p, ctx->seek->tsz);
-		return ctx->seek->tsz;
+		memcpy(tgt, p, tsz);
+		return sizeof(struct sndwch_s);
 	}
 	return 0;
 }

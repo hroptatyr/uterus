@@ -46,10 +46,6 @@
 #endif	/* DEBUG_FLAG */
 
 typedef struct utectx_s *utectx_t;
-#if !defined SIDX_T
-typedef size_t sidx_t;
-# define SIDX_T
-#endif	/* !SIDX_T */
 
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
@@ -68,16 +64,6 @@ typedef size_t sidx_t;
 #include "utehdr.h"
 #include "utetpc.h"
 #include "uteslut.h"
-
-struct uteseek_s {
-	sidx_t idx;
-	size_t mpsz;
-	char *data;
-	/* size of one tick */
-	uint32_t tsz;
-	/* page we're on */
-	uint32_t page;
-};
 
 struct utectx_s {
 	/** file descriptor we're banging on about */
@@ -202,7 +188,7 @@ index_to_tpc_index(utectx_t ctx, sidx_t i)
 static inline bool
 index_in_seek_page_p(utectx_t ctx, sidx_t i)
 {
-	return ctx->seek->page == page_of_index(ctx, i);
+	return ctx->seek->pg == page_of_index(ctx, i);
 }
 
 static inline bool

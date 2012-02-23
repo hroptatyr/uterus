@@ -410,7 +410,11 @@ mrg:
 			 sk[1].si = 0,
 			 1
 			 ));
-
+	/* update ctx's lvtd and tpc's least */
+	{
+		scom_t last = seek_last_scom(sk + 1);
+		tpc->least = ctx->lvtd = last->u;
+	}
 	/* flush the tmp seek too */
 	flush_seek(sk + 1);
 	/* unset the need merge flag */

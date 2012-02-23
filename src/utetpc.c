@@ -607,9 +607,9 @@ DEFUN void
 merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {
 /* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
-	void *tp = DATA(tgt->data, tgt->idx * tgt->tsz);
+	void *tp = DATA(tgt->data, tgt->idx);
 	void *eot = DATA(tgt->data, tgt->mpsz);
-	void *sp = DATA(src->data, src->idx * src->tsz);
+	void *sp = DATA(src->data, src->idx);
 	void *eos = DATA(src->data, src->mpsz);
 	void *rp = swp->tp;
 	void *eor = DATA(swp->tp, swp->tidx);

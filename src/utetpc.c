@@ -76,6 +76,13 @@ set_tpc_needmrg(utetpc_t tpc)
 	return;
 }
 
+static inline uint64_t
+tick_sortkey(scom_t t)
+{
+	/* using scom v0.2 now */
+	return t->u;
+}
+
 /* calloc like signature */
 DEFUN void
 make_tpc(utetpc_t tpc, size_t nsndwchs)

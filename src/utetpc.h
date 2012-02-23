@@ -173,13 +173,6 @@ tpc_max_size(utetpc_t tpc)
 	return tpc->sk.sz;
 }
 
-static inline uint64_t
-tick_sortkey(scom_t t)
-{
-	/* using scom v0.2 now */
-	return t->u;
-}
-
 /**
  * Return the first tick in TPC. */
 static inline scom_t

@@ -380,12 +380,12 @@ algn_tick(void *tp, void *botp)
 	return tp;
 }
 
-static struct sndwch_s*
+static void*
 find_scidx(uteseek_t sk, scidx_t key)
 {
 /* find a pointer into SK's data with the first tick that's bigger than KEY
  * or NULL otherwise, use a binary search */
-	const size_t probsz = sizeof(struct sndwch_s);
+	const size_t probsz = sizeof(*sk->sp);
 	void *eosp = DATA(sk->sp, sk->sz);
 	void *sp;
 
@@ -398,7 +398,7 @@ find_scidx(uteseek_t sk, scidx_t key)
 binsrch:
 	/* try the middle */
 	for (void *bosp = sk->sp; bosp < eosp; ) {
-		size_t off = ALGN(struct sndwch_s, DATD(eosp, bosp) / 2);
+		size_t off = ALGN(*sk->sp, DATD(eosp, bosp) / 2);
 
 		sp = algn_tick(DATA(bosp, off), sk->sp);
 		if (make_scidx(sp).u > key.u) {
@@ -424,7 +424,7 @@ merge_tpc(utectx_t ctx, utetpc_t tpc)
 	size_t npg = ute_npages(ctx);
 	struct uteseek_s sk[2];
 	/* offending ticks */
-	struct sndwch_s *sp;
+	typeof(sk->sp) sp;
 	/* page indicator */
 	size_t pg;
 	/* index keys */
@@ -497,7 +497,7 @@ load_last_tpc(utectx_t ctx)
 	/* copy the last page */
 	memcpy(ctx->tpc->sk.sp, sk->sp, sk->sz);
 	/* ... and set the new length */
-	ctx->tpc->sk.si = sk->sz / sizeof(struct sndwch_s);
+	ctx->tpc->sk.si = sk->sz / sizeof(*sk->sp);
 	/* now munmap the seek */
 	flush_seek(sk);
 	/* also set the last and lvtd values */
@@ -777,7 +777,7 @@ ute_nticks(utectx_t ctx)
 /* for the moment just use the file size and number of pages
  * plus whats in the tpc */
 	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	size_t nticks = (ctx->fsz - aux_sz) / sizeof(struct sndwch_s);
+	size_t nticks = (ctx->fsz - aux_sz) / sizeof(*ctx->tpc->sk.sp);
 	/* if there are non-flushed ticks, consider them */
 	if (tpc_active_p(ctx->tpc)) {
 		nticks += ctx->tpc->sk.si;

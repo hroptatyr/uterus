@@ -69,8 +69,6 @@ typedef size_t sidx_t;
 #include "utetpc.h"
 #include "uteslut.h"
 
-typedef struct uteseek_s *uteseek_t;
-
 struct uteseek_s {
 	sidx_t idx;
 	size_t mpsz;

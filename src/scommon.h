@@ -96,6 +96,17 @@ union scom_thdr_u {
 	} __attribute__((packed)) v01;
 } __attribute__((transparent_union));
 
+/* just so nobody has to include sl1t.h to get the sandwich size */
+struct sndwch_s {
+	/** keying info */
+	uint64_t key;
+	/** satellite */
+	uint64_t sat;
+};
+
+/** an indexer type to refer to the i-th sandwich in a pile */
+typedef uint64_t sidx_t;
+
 
 /* accessors */
 static inline __attribute__((pure)) uint32_t

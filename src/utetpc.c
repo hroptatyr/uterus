@@ -61,31 +61,18 @@
 #define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 
+/* why aren't these in the header file? */
 static inline void
 set_tpc_unsorted(utetpc_t tpc)
 {
-	tpc->flags |= TPC_FL_UNSORTED;
-	return;
-}
-
-static inline void
-unset_tpc_unsorted(utetpc_t tpc)
-{
-	tpc->flags &= ~TPC_FL_UNSORTED;
+	tpc->sk.fl |= TPC_FL_UNSORTED;
 	return;
 }
 
 static inline void
 set_tpc_needmrg(utetpc_t tpc)
 {
-	tpc->flags |= TPC_FL_NEEDMRG;
-	return;
-}
-
-static inline __attribute__((unused)) void
-unset_tpc_needmrg(utetpc_t tpc)
-{
-	tpc->flags &= ~TPC_FL_NEEDMRG;
+	tpc->sk.fl |= TPC_FL_NEEDMRG;
 	return;
 }
 

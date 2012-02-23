@@ -56,11 +56,6 @@ extern "C" {
 
 #include "scommon.h"
 
-#if !defined SIDX_T
-typedef long int sidx_t;
-# define SIDX_T
-#endif	/* !SIDX_T */
-
 #if !defined INCLUDED_utefile_private_h_
 typedef void *utectx_t;
 #endif	/* INCLUDED_utefile_private_h_ */

@@ -603,6 +603,18 @@ algn_tick(void *tp, void *botp)
 	return tp;
 }
 
+/* could be public */
+static struct sndwch_s*
+seek_last_scom(uteseek_t sk)
+{
+	const size_t probsz = sizeof(*sk->sp);
+
+	if (UNLIKELY(sk->sp == NULL)) {
+		return NULL;
+	}
+	return algn_tick(DATA(sk->sp, sk->sz - probsz), sk->sp);
+}
+
 
 /* public funs */
 DEFUN scom_t
@@ -618,23 +630,22 @@ DEFUN scom_t
 seek_key(uteseek_t sk, scidx_t key)
 {
 /* use a binary search and also set SK's si accordingly */
-	const size_t probsz = sizeof(*sk->sp);
-	void *eosp = DATA(sk->sp, sk->sz);
-	void *sp;
+	typeof(sk->sp) sp;
 
 	/* try the tail first */
-	sp = algn_tick(DATA(sk->sp, sk->sz - probsz), sk->sp);
-	if (make_scidx(sp).u > key.u) {
-		goto binsrch;
+	if (UNLIKELY((sp = seek_last_scom(sk)) == NULL)) {
+		return NULL;
+	} else if (LIKELY(make_scidx(AS_SCOM(sp)).u <= key.u)) {
+		return NULL;
 	}
-	return NULL;
-binsrch:
-	/* try the middle */
-	for (void *bosp = sk->sp; bosp < eosp; ) {
-		size_t off = ALGN(*sk->sp, DATD(eosp, bosp) / 2);
 
-		sp = algn_tick(DATA(bosp, off), sk->sp);
-		if (make_scidx(sp).u > key.u) {
+	/* binsrch, try the middle */
+	for (typeof(sp) bosp = sk->sp,
+		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
+		sidx_t ix = (eosp - bosp) / 2;
+
+		sp = algn_tick(bosp + ix, bosp);
+		if (make_scidx(AS_SCOM(sp)).u > key.u) {
 			/* left half */
 			eosp = sp;
 		} else if (sp == bosp) {
@@ -645,8 +656,9 @@ binsrch:
 			bosp = sp;
 		}
 	}
-	/* must be the offending tick */
-	return sp;
+	/* must be the offending tick, update index and return */
+	sk->si = sp - sk->sp;
+	return AS_SCOM(sp);
 }
 
 DEFUN void

@@ -59,7 +59,9 @@
 
 #define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
 
-#define UDEBUG(args...)	printf(args)
+#if defined DEBUG_FLAG
+# define UDEBUG(args...)	printf(args)
+#endif	/* DEBUG_FLAG */
 
 
 /* sorter */

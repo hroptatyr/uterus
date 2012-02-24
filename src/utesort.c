@@ -345,8 +345,6 @@ ute_sort(utectx_t ctx)
 		step_run(sks, (size_t)j, str);
 	}
 
-	/* close the ute file */
-	ute_close(hdl);
 	/* dump the pages */
 	dump_runs(sks, ctx, 0, npages);
 	free(sks);

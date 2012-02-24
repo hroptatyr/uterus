@@ -157,6 +157,16 @@ close_hdr(utectx_t ctx)
 	return;
 }
 
+/* secret public function */
+void
+bump_header(struct utehdr2_s *hdr)
+{
+	const char *ver = ute_vers[UTE_VERSION_02];
+	const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
+	memcpy(hdr, ver, vsz);
+	return;
+}
+
 static void
 creat_hdr(utectx_t ctx)
 {
@@ -168,10 +178,8 @@ creat_hdr(utectx_t ctx)
 	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
 	if (LIKELY(ctx->hdrp != NULL)) {
-		const char *ver = ute_vers[UTE_VERSION_02];
-		const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
 		memset((void*)ctx->hdrp, 0, sz);
-		memcpy((void*)ctx->hdrp, ver, vsz);
+		bump_header(ctx->hdrp);
 	}
 	/* file creation means new slut */
 	ctx->slut_sz = 0;
@@ -257,8 +265,6 @@ reseek(utectx_t ctx, sidx_t i)
 scom_t
 ute_seek(utectx_t ctx, sidx_t i)
 {
-	uint32_t o;
-
 	/* wishful thinking */
 	if (UNLIKELY(index_past_eof_p(ctx, i))) {
 		sidx_t new_i = index_to_tpc_index(ctx, i);
@@ -266,8 +272,7 @@ ute_seek(utectx_t ctx, sidx_t i)
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
 		reseek(ctx, i);
 	}
-	o = offset_of_index(ctx, i);
-	return AS_SCOM(ctx->seek->sp + o);
+	return seek_get_scom(ctx->seek);
 }
 
 static void

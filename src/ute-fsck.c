@@ -56,7 +56,7 @@
 typedef struct fsck_ctx_s *fsck_ctx_t;
 
 struct fsck_ctx_s {
-	bool dry;
+	bool dryp;
 };
 
 
@@ -64,8 +64,9 @@ static void
 fsck1(fsck_ctx_t ctx, const char *fn)
 {
 	void *hdl;
+	const int fl = ctx->dryp ? UO_RDONLY : UO_RDWR;
 
-	if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
+	if ((hdl = ute_open(fn, fl)) == NULL) {
 		return;
 	}
 	/* check for ute version */
@@ -127,7 +128,11 @@ main(int argc, char *argv[])
 	}
 
 	/* copy interesting stuff into our own context */
-	ctx->dry = false;
+	if (!argi->dry_run_given) {
+		ctx->dryp = false;
+	} else {
+		ctx->dryp = true;
+	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		fsck1(ctx, argi->inputs[j]);

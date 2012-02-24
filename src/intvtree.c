@@ -46,8 +46,8 @@
 /* for thread-safe intvtrees */
 #include <pthread.h>
 
-#define MIN_KEY		INT_MIN
-#define MAX_KEY		INT_MAX
+#define MIN_KEY		LLONG_MIN
+#define MAX_KEY		LLONG_MAX
 #define NDSTK_SIZE	16
 
 typedef struct __node_s *__node_t;
@@ -56,8 +56,8 @@ struct __node_s {
 	struct it_node_s pub;
 
 	/* book-keeping */
-	int32_t max_high;
-	int32_t redp;
+	int64_t max_high;
+	bool redp;
 
 	/* tree navigation */
 	__node_t left;
@@ -328,7 +328,7 @@ itree_fixup_max_high(itree_t it, __node_t x)
 }
 
 DEFUN it_node_t
-itree_add(itree_t it, int32_t lo, int32_t hi, void *data)
+itree_add(itree_t it, int64_t lo, int64_t hi, void *data)
 {
 	__node_t x, y, res;
 
@@ -598,24 +598,24 @@ itree_del_node(itree_t it, it_node_t nd)
 static void
 it_node_print(itree_t it, __node_t in)
 {
-	printf("k=%i, h=%i, mh=%i", in->pub.lo, in->pub.hi, in->max_high);
+	printf("k=%li, h=%li, mh=%li", in->pub.lo, in->pub.hi, in->max_high);
 	fputs("  l->key=", stdout);
 	if (nil_node_p(in->left)) {
 		fputs("NULL", stdout);
 	} else {
-		printf("%i", in->left->pub.lo);
+		printf("%li", in->left->pub.lo);
 	}
 	fputs("  r->key=", stdout);
 	if (nil_node_p(in->right)) {
 		fputs("NULL", stdout);
 	} else {
-		printf("%i", in->right->pub.lo);
+		printf("%li", in->right->pub.lo);
 	}
 	fputs("  p->key=", stdout);
 	if (in->parent == itree_root_node(it)) {
 		fputs("NULL", stdout);
 	} else {
-		printf("%i", in->parent->pub.lo);
+		printf("%li", in->parent->pub.lo);
 	}
 	printf("  red=%d\n", in->redp);
 	return;
@@ -750,7 +750,7 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 
 /* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
-node_pivot_rel(__node_t n, int32_t p)
+node_pivot_rel(__node_t n, int64_t p)
 {
 	if (p < n->pub.lo) {
 		return -1;
@@ -763,7 +763,7 @@ node_pivot_rel(__node_t n, int32_t p)
 
 /* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
-tree_pivot_rel(__node_t n, int32_t p)
+tree_pivot_rel(__node_t n, int64_t p)
 {
 	if (p < n->pub.lo) {
 		return -1;
@@ -775,7 +775,7 @@ tree_pivot_rel(__node_t n, int32_t p)
 }
 
 DEFUN void
-itree_find_point_cb(itree_t it, int32_t p, it_trav_f cb, void *clo)
+itree_find_point_cb(itree_t it, int64_t p, it_trav_f cb, void *clo)
 {
 /* Find all nodes that contain P.  Call cb() for each of them. */
 	/* root node has no right child, proceed with the left one */
@@ -843,7 +843,7 @@ itree_find_point_cb(itree_t it, int32_t p, it_trav_f cb, void *clo)
 }
 
 DEFUN void
-itree_find_point_cb1(itree_t it, int32_t p, it_trav_f cb, void *clo)
+itree_find_point_cb1(itree_t it, int64_t p, it_trav_f cb, void *clo)
 {
 /* like itree_find_point() but stop after one occurrence,
  * prefer the right branch for nebulous reasons */
@@ -889,7 +889,7 @@ out:
 }
 
 DEFUN void*
-itree_find_point(itree_t it, int32_t p)
+itree_find_point(itree_t it, int64_t p)
 {
 /* like itree_find_point() but stop after one occurrence,
  * prefer the right branch for nebulous reasons */

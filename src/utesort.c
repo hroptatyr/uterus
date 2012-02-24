@@ -215,14 +215,10 @@ sort_strat(utectx_t ctx)
 
 		/* obtain intervals */
 		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
-			scom_t sb = (const void*)sks[i].sp;
-			uint32_t sbs = scom_thdr_sec(sb);
-			//uint16_t sbms = scom_thdr_msec(sb);
-			scom_t se = (const void*)(sks[i].sp + sks[i].sz - 16);
-			uint32_t ses = scom_thdr_sec(se);
-			//uint16_t sems = scom_thdr_msec(se);
+			scom_t sb = seek_first_scom(sks + i);
+			scom_t se = seek_last_scom(sks + i);
 
-			itree_add(it, sbs, ses, AS_VOID_PTR(k));
+			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}
 
 		/* finish off the seeks */
@@ -256,8 +252,7 @@ static ssize_t
 min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 {
 	ssize_t res = -1;
-	int32_t mins = INT_MAX;
-	uint16_t minms = SCOM_MSEC_VALI;
+	uint64_t min = LLONG_MAX;
 	strat_node_t curnd = str->last;
 
 	if (UNLIKELY(curnd == NULL)) {
@@ -265,36 +260,36 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 	}
 	for (size_t i = 0; i < curnd->cnt; i++) {
 		scom_t sh;
-		int32_t s;
-		uint16_t ms;
 		uint32_t pg = curnd->pgs[i];
 
-		if (sks[pg].si >= sks[pg].sz) {
+		if ((sh = seek_get_scom(sks + pg)) == NULL) {
 			continue;
-		}
-		sh = (void*)(sks[pg].sp + sks[pg].si);
-		s = scom_thdr_sec(sh);
-		ms = scom_thdr_msec(sh);
-		if (s < mins || (s == mins && ms < minms)) {
+		} else if (sh->u < min) {
 			res = pg;
-			mins = s;
-			minms = ms;
+			min = sh->u;
 		}
 	}
 	return res;
 }
 
+static bool
+seek_eof_p(uteseek_t sk)
+{
+	return sk->si * sizeof(*sk->sp) >= sk->sz;
+}
+
 static void
-step_run(struct uteseek_s *sks, unsigned int run, strat_t str)
+step_run(struct uteseek_s sks[], unsigned int run, strat_t str)
 {
 /* advance the pointer in the RUN-th run and fetch new stuff if need be */
 	strat_node_t curnd = str->last;
+	scom_t cursc = seek_get_scom(sks + run);
+	size_t tsz = scom_thdr_size(cursc);
 
-	if ((sks[run].si += sizeof(struct sndwch_s)) >= sks[run].sz) {
-		/* reget shit, for now we just stall this run */
-		sks[run].si = sks[run].sz;
-               UDEBUG("run %u out of ticks\n", run);
-		flush_seek(&sks[run]);
+	sks[run].si += tsz / sizeof(*sks->sp);
+	if (seek_eof_p(sks + run)) {
+		UDEBUG("run %u out of ticks\n", run);
+		flush_seek(sks + run);
 		/* now if we flushed the current strategy node's main page
 		 * then also switch to the next strategy node */
 		if (curnd->pg == run) {

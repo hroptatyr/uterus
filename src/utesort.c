@@ -59,6 +59,7 @@
 
 #define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
 
+#define UDEBUG(args...)	printf(args)
 
 
 /* sorter */
@@ -292,10 +293,7 @@ step_run(struct uteseek_s *sks, unsigned int run, strat_t str)
 	if ((sks[run].si += sizeof(struct sndwch_s)) >= sks[run].sz) {
 		/* reget shit, for now we just stall this run */
 		sks[run].si = sks[run].sz;
-#if 0
-/* debug */
-		printf("run %d out of ticks\n", run);
-#endif
+               UDEBUG("run %u out of ticks\n", run);
 		flush_seek(&sks[run]);
 		/* now if we flushed the current strategy node's main page
 		 * then also switch to the next strategy node */
@@ -321,15 +319,13 @@ ute_sort(utectx_t ctx)
 	 * - merge k-way, where k is the number of pages
 	 * - merge k-way n-pass, where k < #pages in multiple passes */
 	str = sort_strat(ctx);
-#if 0
-/* debug */
+
 	for (strat_node_t n = str->first; n; n = n->next) {
-		printf("page %d, considering\n", n->pg);
-		for (int i = 0; i < n->cnt; i++) {
-			printf("  page %d\n", n->pgs[i]);
+		UDEBUG("page %u, considering\n", n->pg);
+		for (uint32_t i = 0; i < n->cnt; i++) {
+			UDEBUG("  page %u\n", n->pgs[i]);
 		}
 	}
-#endif
 
 	/* let's assume we have an all-way merge */
 	sks = xnew_array(struct uteseek_s, npages);

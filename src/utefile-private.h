@@ -105,9 +105,6 @@ extern void seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg);
 extern void flush_seek(uteseek_t sk);
 
 
-/* that we need this indicates poor design */
-#include "sl1t.h"
-
 /* inlines */
 static inline size_t
 ute_npages(utectx_t ctx)
@@ -115,7 +112,7 @@ ute_npages(utectx_t ctx)
 /* oh oh oh */
 	/* metadata size */
 	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	size_t nt = (ctx->fsz - aux_sz) / sizeof(struct sl1t_s);
+	size_t nt = (ctx->fsz - aux_sz) / sizeof(*ctx->seek->sp);
 	return nt / UTE_BLKSZ(ctx) + (nt % UTE_BLKSZ(ctx) ? 1 : 0);
 }
 
@@ -144,10 +141,10 @@ page_size(utectx_t ctx, uint32_t page)
 {
 /* return the size of the PAGE-th page in CTX. */
 /* oh oh oh */
-	size_t bsz = UTE_BLKSZ(ctx);
-	size_t tsz = sizeof(struct sl1t_s);
-	size_t psz = bsz * tsz;
-	size_t tot = sizeof(struct utehdr2_s) + page * psz;
+	const size_t bsz = UTE_BLKSZ(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	const size_t psz = bsz * tsz;
+	const size_t tot = sizeof(struct utehdr2_s) + page * psz;
 	return (tot + psz) <= ctx->fsz ? psz : ctx->fsz - tot;
 }
 
@@ -156,10 +153,10 @@ page_offset(utectx_t ctx, uint32_t page)
 {
 /* return the absolute file offset of the PAGE-th page in CTX. */
 /* oh oh oh */
-	size_t bsz = UTE_BLKSZ(ctx);
-	size_t tsz = sizeof(struct sl1t_s);
-	size_t psz = bsz * tsz;
-	size_t tot = sizeof(struct utehdr2_s) + page * psz;
+	const size_t bsz = UTE_BLKSZ(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	const size_t psz = bsz * tsz;
+	const size_t tot = sizeof(struct utehdr2_s) + page * psz;
 	return tot;
 }
 
@@ -168,11 +165,11 @@ index_past_eof_p(utectx_t ctx, sidx_t i)
 {
 /* could do this in terms of page_size() */
 /* oh oh oh */
-	size_t bsz = UTE_BLKSZ(ctx);
-	size_t tsz = sizeof(struct sl1t_s);
-	uint32_t p = page_of_index(ctx, i);
-	uint32_t o = offset_of_index(ctx, i);
-	size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
+	const size_t bsz = UTE_BLKSZ(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	const uint32_t p = page_of_index(ctx, i);
+	const uint32_t o = offset_of_index(ctx, i);
+	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
 	return tot >= ctx->fsz;
 }
 
@@ -181,7 +178,7 @@ index_to_tpc_index(utectx_t ctx, sidx_t i)
 {
 /* we just assume that tpc will never have more than UTE_BLKSZ ticks */
 	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	sidx_t nticks = (ctx->fsz - aux_sz) / sizeof(struct sl1t_s);
+	sidx_t nticks = (ctx->fsz - aux_sz) / sizeof(*ctx->seek->sp);
 	return i - nticks;
 }
 

@@ -182,7 +182,7 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	size_t e = min_size_t(end_run, ute_npages(ctx));
 	for (size_t k = start_run, i = 0; k < e; i++, k++) {
 		/* set up page i */
-		seek_page(&sks[i], ctx, k);
+		seek_page(sks + i, ctx, k);
 	}
 	return;
 }
@@ -193,7 +193,7 @@ dump_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	size_t e = min_size_t(end_run, ute_npages(ctx));
 	for (size_t i = 0, k = start_run; k < e; i++, k++) {
 		/* set up page i */
-		flush_seek(&sks[i]);
+		flush_seek(sks + i);
 	}
 	return;
 }

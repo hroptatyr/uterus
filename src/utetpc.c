@@ -777,7 +777,9 @@ ssnap_compressiblep(const_ssnap_t t1, const_ssnap_t t2)
 static void
 ssnap_compress(ssnap_t tgt, const_ssnap_t s1, const_ssnap_t s2)
 {
-	struct ssnap_s tmp;
+	struct ssnap_s tmp = {
+		.hdr = s1->hdr->u
+	};
 
 	if (s1->bp) {
 		tmp.bp = s1->bp;

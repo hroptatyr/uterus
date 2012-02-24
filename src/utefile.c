@@ -157,6 +157,16 @@ close_hdr(utectx_t ctx)
 	return;
 }
 
+/* secret public function */
+void
+bump_header(struct utehdr2_s *hdr)
+{
+	const char *ver = ute_vers[UTE_VERSION_02];
+	const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
+	memcpy(hdr, ver, vsz);
+	return;
+}
+
 static void
 creat_hdr(utectx_t ctx)
 {
@@ -168,10 +178,8 @@ creat_hdr(utectx_t ctx)
 	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
 	if (LIKELY(ctx->hdrp != NULL)) {
-		const char *ver = ute_vers[UTE_VERSION_02];
-		const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
 		memset((void*)ctx->hdrp, 0, sz);
-		memcpy((void*)ctx->hdrp, ver, vsz);
+		bump_header(ctx->hdrp);
 	}
 	/* file creation means new slut */
 	ctx->slut_sz = 0;

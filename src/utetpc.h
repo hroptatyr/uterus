@@ -201,8 +201,27 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 }
 
 /**
+ * Return the first tick in SK. */
+static inline scom_t
+seek_first_scom(uteseek_t sk)
+{
+	return AS_SCOM(sk->sp);
+}
+
+/**
  * Return the last tick in a sought page. */
 DECLF scom_t seek_last_scom(uteseek_t sk);
+
+/**
+ * Return the currently sought-at scom in SK. */
+static inline scom_t
+seek_get_scom(uteseek_t sk)
+{
+	if (UNLIKELY(sk->si * sizeof(*sk->sp) >= sk->sz)) {
+		return NULL;
+	}
+	return AS_SCOM(sk->sp + sk->si);
+}
 
 /* isn't that too high level? */
 /**

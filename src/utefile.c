@@ -726,6 +726,7 @@ ute_close(utectx_t ctx)
 	if (!ute_sorted_p(ctx)) {
 		ute_prep_sort(ctx);
 		ute_sort(ctx);
+		ute_unset_unsorted(ctx);
 	}
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
@@ -756,7 +757,7 @@ ute_flush(utectx_t ctx)
 	if (tpc_needmrg_p(ctx->tpc)) {
 		/* special case when the page cache has detected
 		 * a major violation */
-		merge_tpc(ctx, ctx->tpc);
+		ute_set_unsorted(ctx);
 	}
 	flush_tpc(ctx);
 	return;

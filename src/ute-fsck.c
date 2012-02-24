@@ -142,6 +142,8 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		}
 	}
 	if (!ctx->dryp) {
+		/* update the header version */
+		bump_header(((utectx_t)hdl)->hdrp);
 		ute_flush(hdl);
 	}
 	/* oh right, close the handle */

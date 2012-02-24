@@ -332,7 +332,7 @@ ute_sort(utectx_t ctx)
 	str->last = str->first;
 	/* ALL-way merge */
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
-		void *p = (void*)(sks[j].sp + sks[j].si);
+		scom_t t = seek_get_scom(sks + j);
 
 		/* add that bloke */
 		ute_add_tick(hdl, p);

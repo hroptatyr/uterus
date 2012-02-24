@@ -724,8 +724,12 @@ ute_close(utectx_t ctx)
 	/* first make sure we write the stuff */
 	ute_flush(ctx);
 	if (!ute_sorted_p(ctx)) {
+#if 0
+/* FIXME, ute_sort() in utesort.c needs fixing for this */
 		ute_prep_sort(ctx);
 		ute_sort(ctx);
+#endif	/* 0 */
+		ute_unset_unsorted(ctx);
 	}
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
@@ -756,6 +760,8 @@ ute_flush(utectx_t ctx)
 	if (tpc_needmrg_p(ctx->tpc)) {
 		/* special case when the page cache has detected
 		 * a major violation */
+		ute_set_unsorted(ctx);
+		/* since ute_sort() doesn't work, just use merge_tcp() */
 		merge_tpc(ctx, ctx->tpc);
 	}
 	flush_tpc(ctx);

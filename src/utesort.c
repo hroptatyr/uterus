@@ -337,7 +337,7 @@ ute_sort(utectx_t ctx)
 		scom_t t = seek_get_scom(sks + j);
 
 		/* add that bloke */
-		ute_add_tick(hdl, p);
+		ute_add_tick(hdl, t);
 
 		/* step the j-th run */
 		step_run(sks, (size_t)j, str);

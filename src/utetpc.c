@@ -750,7 +750,6 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 		memcpy(swp->sk.sp, sp, sleft_sz);
 		/* and close the gap */
 		if (gapsz > 0) {
-			printf("GAP %zu\n", gapsz);
 			memmove(DATA(swp->sk.sp, sleft_sz), rp, rleft_sz);
 			/* adapt the tidx */
 			swp->sk.si -= gapsz / sizeof(*swp->sk.sp);

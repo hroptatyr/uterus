@@ -39,8 +39,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include "utefile-private.h"
 #include "utefile.h"
-
 #include "scommon.h"
 
 #if !defined UNLIKELY
@@ -60,6 +60,51 @@ struct fsck_ctx_s {
 };
 
 
+static scom_thdr_t
+tpc_get_scom_thdr(utetpc_t tpc, sidx_t i)
+{
+	if (UNLIKELY(i > tpc->sk.si)) {
+		return NULL;
+	}
+	return AS_SCOM_THDR(tpc->sk.sp + i);
+}
+
+static scom_thdr_t
+seek_get_scom_thdr(uteseek_t sk)
+{
+	if (UNLIKELY(sk->si * sizeof(*sk->sp) >= sk->sz)) {
+		return NULL;
+	}
+	return AS_SCOM_THDR(sk->sp + sk->si);
+}
+
+static void
+reseek(utectx_t ctx, sidx_t i)
+{
+	uint32_t p = page_of_index(ctx, i);
+	uint32_t o = offset_of_index(ctx, i);
+
+	/* flush the old seek */
+	flush_seek(ctx->seek);
+	/* create a new seek */
+	seek_page(ctx->seek, ctx, p);
+	ctx->seek->si = o;
+	return;
+}
+
+static scom_thdr_t
+__seek(utectx_t ctx, sidx_t i)
+{
+/* just like ute_seek() but returns a scom_thdr */
+	if (UNLIKELY(index_past_eof_p(ctx, i))) {
+		sidx_t new_i = index_to_tpc_index(ctx, i);
+		return tpc_get_scom_thdr(ctx->tpc, new_i);
+	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
+		reseek(ctx, i);
+	}
+	return seek_get_scom_thdr(ctx->seek);
+}
+
 static void
 fsck1(fsck_ctx_t ctx, const char *fn)
 {
@@ -72,26 +117,32 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
 		/* we need to flip the ti */
+		printf("file `%s' is ute format 0.1, upgrading ...\n", fn);
 		for (size_t i = 0; i < ute_nticks(hdl);) {
 			char buf[64];
 			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
-			scom_t ti = ute_seek(hdl, i);
+			scom_thdr_t ti = __seek(hdl, i);
 			size_t tsz;
 
 			/* promote the old header, copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
 			tsz = scom_thdr_size(nu_ti);
-			/* copy the rest of the tick into the buffer */
-			memcpy(buf + sizeof(*nu_ti), ti + 1, tsz - sizeof(*ti));
 			/* now to what we always do */
-			;
+			if (!ctx->dryp) {
+				/* flush back to our page ... */
+				memcpy(ti, buf, sizeof(*ti));
+			}
 			i += tsz / sizeof(struct sndwch_s);
 		}
+		printf("file `%s' upgraded\n", fn);
 	} else {
 		/* no flips in this one */
 		for (size_t i = 0; i < ute_nticks(hdl);) {
 			;
 		}
+	}
+	if (!ctx->dryp) {
+		ute_flush(hdl);
 	}
 	/* oh right, close the handle */
 	ute_close(hdl);

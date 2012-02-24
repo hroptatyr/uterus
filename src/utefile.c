@@ -257,8 +257,6 @@ reseek(utectx_t ctx, sidx_t i)
 scom_t
 ute_seek(utectx_t ctx, sidx_t i)
 {
-	uint32_t o;
-
 	/* wishful thinking */
 	if (UNLIKELY(index_past_eof_p(ctx, i))) {
 		sidx_t new_i = index_to_tpc_index(ctx, i);
@@ -266,8 +264,7 @@ ute_seek(utectx_t ctx, sidx_t i)
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
 		reseek(ctx, i);
 	}
-	o = offset_of_index(ctx, i);
-	return AS_SCOM(ctx->seek->sp + o);
+	return seek_get_scom(ctx->seek);
 }
 
 static void

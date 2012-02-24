@@ -422,6 +422,68 @@ mrg:
 	return;
 }
 
+static bool
+seek_eof_p(uteseek_t sk)
+{
+	return sk->si * sizeof(*sk->sp) >= sk->sz;
+}
+
+static void
+clone_seek(uteseek_t tgt, uteseek_t src)
+{
+	*tgt = *src;
+	return;
+}
+
+static void
+tilman_comp(utectx_t ctx)
+{
+	size_t npg = ute_npages(ctx);
+	struct uteseek_s sk[2];
+	size_t pg;
+	size_t tpg;
+
+	/* for as long there's no compressed pages, try */
+	for (pg = 0;
+	     pg < npg && (seek_page(sk, ctx, pg), tilman_1comp(sk, sk) == 0);
+	     pg++, flush_seek(sk));
+
+	/* great, either pg < npg ... */
+	if (pg >= npg) {
+		return;
+	}
+	/* ... or tilman_1comp() isn't 0 in which case sk hasn't been
+	 * flushed and pg hasn't been inc'd */
+	clone_seek(sk + 1, sk);
+	for (tpg = pg++; pg < npg; pg++) {
+		/* seek to the next page */
+		seek_page(sk, ctx, pg);
+	cont:
+		tilman_1comp(sk + 1, sk);
+		/* drain the pages properly */
+		if (seek_eof_p(sk + 1)) {
+			flush_seek(sk + 1);
+			seek_page(sk + 1, ctx, ++tpg);
+			goto cont;
+		} else if (seek_eof_p(sk)) {
+			flush_seek(sk);
+		} else {
+			/* what's going on? */
+			abort();
+		}
+	}
+	/* tpg + 1 is now the final page count, sk[1] holds the offset
+	 * trunc the file accordingly */
+	{
+		const size_t bsz = UTE_BLKSZ(ctx);
+		const size_t tsz = sizeof(*sk->sp);
+		const size_t tot = sizeof(struct utehdr2_s) +
+			(tpg * bsz + sk[1].si) * tsz;
+		ute_trunc(ctx, tot);
+	}
+	return;
+}
+
 static void
 load_last_tpc(utectx_t ctx)
 {
@@ -665,6 +727,8 @@ ute_close(utectx_t ctx)
 		ute_prep_sort(ctx);
 		ute_sort(ctx);
 	}
+	/* tilman compress the file, needs to happen after sorting */
+	tilman_comp(ctx);
 	/* serialse the slut */
 	flush_slut(ctx);
 

@@ -61,6 +61,8 @@
 
 #if defined DEBUG_FLAG
 # define UDEBUG(args...)	printf(args)
+#else  /* !DEBUG_FLAG */
+# define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
 

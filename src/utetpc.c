@@ -848,6 +848,7 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 			sp = DATA(sp, bsz);
 		}
 	}
+	sk->si = DATD(sp, sk->sp) / sizeof(*sk->sp);
 	tgt->si = DATD(tp, tgt->sp) / sizeof(*tgt->sp);
 	return res;
 }

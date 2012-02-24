@@ -1,0 +1,8 @@
+args "--unamed-opts --no-help --long-help --no-handle-error -a fsck_args_info -f fsck_parser"
+package "ute fsck"
+usage "ute fsck FILEs..."
+description "Check FILEs."
+
+option "help" h
+	"Show this help message."
+	optional

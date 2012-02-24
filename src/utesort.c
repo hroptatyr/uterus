@@ -59,6 +59,11 @@
 
 #define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
 
+#if defined DEBUG_FLAG
+# define UDEBUG(args...)	printf(args)
+#else  /* !DEBUG_FLAG */
+# define UDEBUG(args...)
+#endif	/* DEBUG_FLAG */
 
 
 /* sorter */
@@ -181,7 +186,7 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	size_t e = min_size_t(end_run, ute_npages(ctx));
 	for (size_t k = start_run, i = 0; k < e; i++, k++) {
 		/* set up page i */
-		seek_page(&sks[i], ctx, k);
+		seek_page(sks + i, ctx, k);
 	}
 	return;
 }
@@ -192,7 +197,7 @@ dump_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	size_t e = min_size_t(end_run, ute_npages(ctx));
 	for (size_t i = 0, k = start_run; k < e; i++, k++) {
 		/* set up page i */
-		flush_seek(&sks[i]);
+		flush_seek(sks + i);
 	}
 	return;
 }
@@ -214,14 +219,10 @@ sort_strat(utectx_t ctx)
 
 		/* obtain intervals */
 		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
-			scom_t sb = (const void*)sks[i].sp;
-			uint32_t sbs = scom_thdr_sec(sb);
-			//uint16_t sbms = scom_thdr_msec(sb);
-			scom_t se = (const void*)(sks[i].sp + sks[i].sz - 16);
-			uint32_t ses = scom_thdr_sec(se);
-			//uint16_t sems = scom_thdr_msec(se);
+			scom_t sb = seek_first_scom(sks + i);
+			scom_t se = seek_last_scom(sks + i);
 
-			itree_add(it, sbs, ses, AS_VOID_PTR(k));
+			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}
 
 		/* finish off the seeks */
@@ -255,8 +256,7 @@ static ssize_t
 min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 {
 	ssize_t res = -1;
-	int32_t mins = INT_MAX;
-	uint16_t minms = SCOM_MSEC_VALI;
+	uint64_t min = LLONG_MAX;
 	strat_node_t curnd = str->last;
 
 	if (UNLIKELY(curnd == NULL)) {
@@ -264,39 +264,36 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 	}
 	for (size_t i = 0; i < curnd->cnt; i++) {
 		scom_t sh;
-		int32_t s;
-		uint16_t ms;
 		uint32_t pg = curnd->pgs[i];
 
-		if (sks[pg].si >= sks[pg].sz) {
+		if ((sh = seek_get_scom(sks + pg)) == NULL) {
 			continue;
-		}
-		sh = (void*)(sks[pg].sp + sks[pg].si);
-		s = scom_thdr_sec(sh);
-		ms = scom_thdr_msec(sh);
-		if (s < mins || (s == mins && ms < minms)) {
+		} else if (sh->u < min) {
 			res = pg;
-			mins = s;
-			minms = ms;
+			min = sh->u;
 		}
 	}
 	return res;
 }
 
+static bool
+seek_eof_p(uteseek_t sk)
+{
+	return sk->si * sizeof(*sk->sp) >= sk->sz;
+}
+
 static void
-step_run(struct uteseek_s *sks, unsigned int run, strat_t str)
+step_run(struct uteseek_s sks[], unsigned int run, strat_t str)
 {
 /* advance the pointer in the RUN-th run and fetch new stuff if need be */
 	strat_node_t curnd = str->last;
+	scom_t cursc = seek_get_scom(sks + run);
+	size_t tsz = scom_thdr_size(cursc);
 
-	if ((sks[run].si += sizeof(struct sndwch_s)) >= sks[run].sz) {
-		/* reget shit, for now we just stall this run */
-		sks[run].si = sks[run].sz;
-#if 0
-/* debug */
-		printf("run %d out of ticks\n", run);
-#endif
-		flush_seek(&sks[run]);
+	sks[run].si += tsz / sizeof(*sks->sp);
+	if (seek_eof_p(sks + run)) {
+		UDEBUG("run %u out of ticks\n", run);
+		flush_seek(sks + run);
 		/* now if we flushed the current strategy node's main page
 		 * then also switch to the next strategy node */
 		if (curnd->pg == run) {
@@ -321,15 +318,13 @@ ute_sort(utectx_t ctx)
 	 * - merge k-way, where k is the number of pages
 	 * - merge k-way n-pass, where k < #pages in multiple passes */
 	str = sort_strat(ctx);
-#if 0
-/* debug */
+
 	for (strat_node_t n = str->first; n; n = n->next) {
-		printf("page %d, considering\n", n->pg);
-		for (int i = 0; i < n->cnt; i++) {
-			printf("  page %d\n", n->pgs[i]);
+		UDEBUG("page %u, considering\n", n->pg);
+		for (uint32_t i = 0; i < n->cnt; i++) {
+			UDEBUG("  page %u\n", n->pgs[i]);
 		}
 	}
-#endif
 
 	/* let's assume we have an all-way merge */
 	sks = xnew_array(struct uteseek_s, npages);
@@ -341,10 +336,10 @@ ute_sort(utectx_t ctx)
 	str->last = str->first;
 	/* ALL-way merge */
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
-		void *p = (void*)(sks[j].sp + sks[j].si);
+		scom_t t = seek_get_scom(sks + j);
 
 		/* add that bloke */
-		ute_add_tick(hdl, p);
+		ute_add_tick(hdl, t);
 
 		/* step the j-th run */
 		step_run(sks, (size_t)j, str);

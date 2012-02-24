@@ -1,10 +1,10 @@
 /*** intvtree.h -- interval trees based on red-black trees
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2009-2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of unserding.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ typedef void(*it_trav_f)(it_node_t, void *clo);
 
 /* public node structure */
 struct it_node_s {
-	int32_t lo, hi;
+	int64_t lo, hi;
 	void *data;
 };
 
@@ -76,7 +76,7 @@ DECLF void free_itree(itree_t);
  * Return the address of the satellite data page inside IT. */
 DECLF void *itree_satellite(itree_t it);
 
-DECLF it_node_t itree_add(itree_t it, int32_t lo, int32_t hi, void *data);
+DECLF it_node_t itree_add(itree_t it, int64_t lo, int64_t hi, void *data);
 DECLF void *itree_del_node(itree_t it, it_node_t z);
 DECLF void *itree_del_node_nl(itree_t it, it_node_t z);
 DECLF it_node_t itree_succ_of(itree_t it, it_node_t x);
@@ -89,13 +89,13 @@ DECLF it_node_t itree_pred_of(itree_t it, it_node_t x);
 DECLF void itree_trav_in_order(itree_t it, it_trav_f cb, void *clo);
 /**
  * Find all intervals in the itree that contain P and call CB() on them. */
-DECLF void itree_find_point_cb(itree_t, int32_t p, it_trav_f cb, void *clo);
+DECLF void itree_find_point_cb(itree_t, int64_t p, it_trav_f cb, void *clo);
 /**
  * Find an interval in the itree that contains P and call CB() on it. */
-DECLF void itree_find_point_cb1(itree_t, int32_t p, it_trav_f cb, void *clo);
+DECLF void itree_find_point_cb1(itree_t, int64_t p, it_trav_f cb, void *clo);
 /**
  * Find the first interval in IT that contains P. */
-DECLF void *itree_find_point(itree_t it, int32_t p);
+DECLF void *itree_find_point(itree_t it, int64_t p);
 
 /* subject to sudden extinction */
 DECLF void itree_print(itree_t it);

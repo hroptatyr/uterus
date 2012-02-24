@@ -760,87 +760,96 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 	return;
 }
 
-DEFUN ssize_t
-tilman_comp(utetpc_t tpc)
+static bool
+ssnap_compressiblep(const_ssnap_t t1, const_ssnap_t t2)
 {
-	ssize_t res = 0;
-	/* sink */
-	void *xp = tpc->sk.sp;
+	/* make use of the fact that snaps have no notion
+	 * of bid and ask and that scom-v0.2 is nice */
+	if (t1->hdr->u != t2->hdr->u) {
+		/* nope, time stamps or tblidx don't match */
+		return false;
+	} else if ((t1->ap || t2->bp) && (t2->ap || t1->bp)) {
+		return false;
+	}
+	return true;
+}
 
-	for (void *tp = xp, *ep = tpc->sk.sp + tpc->sk.si; tp < ep; ) {
-		scom_t st = tp;
+static void
+ssnap_compress(ssnap_t tgt, const_ssnap_t s1, const_ssnap_t s2)
+{
+	struct ssnap_s tmp = {
+		.hdr = s1->hdr->u
+	};
 
-		switch (scom_thdr_ttf(st)) {
+	if (s1->bp) {
+		tmp.bp = s1->bp;
+		tmp.bq = s1->bq;
+		tmp.ap = s2->ap;
+		tmp.aq = s2->aq;
+	} else if (s1->ap) {
+		tmp.bp = s2->bp;
+		tmp.bq = s2->bq;
+		tmp.ap = s1->ap;
+		tmp.aq = s1->aq;
+	}
+	if (s1->tvpr) {
+		tmp.tvpr = s1->tvpr;
+		tmp.tq = s1->tq;
+	} else {
+		tmp.tvpr = s2->tvpr;
+		tmp.tq = s2->tq;
+	}
+	/* copy the candle to the target position */
+	*tgt = tmp;
+	return;
+}
+
+DEFUN sidx_t
+tilman_1comp(uteseek_t tgt, uteseek_t sk)
+{
+/* we perform this on a seek as we need the ticks sorted
+ * also, this is in-situ if TGT == SK. */
+	void *tp = tgt->sp + tgt->si;
+	void *eot = DATA(tgt->sp, tgt->sz);
+	void *sp = sk->sp + sk->si;
+	void *eos = DATA(sk->sp, sk->sz);
+	sidx_t res = 0;
+
+	while (tp < eot && sp < eos) {
+		switch (scom_thdr_ttf(sp)) {
 			size_t bsz;
 		case SSNP_FLAVOUR: {
 			void *nex;
-			uint32_t tmp[2];
-			struct ssnap_s *snpb;
-			struct ssnap_s *snpa;
 
 			bsz = sizeof(struct ssnap_s);
-			if (UNLIKELY((nex = DATA(tp, bsz)) >= ep)) {
+			if (UNLIKELY((nex = DATA(sp, bsz)) >= eos)) {
 				/* best to fuck off */
 				goto condens;
-			} else if (scom_thdr_ttf(nex) != SSNP_FLAVOUR) {
+			} else if (!ssnap_compressiblep(sp, nex)) {
+				/* what a pity */
 				goto condens;
 			}
-			/* same time stamps? */
-			tmp[0] = scom_thdr_sec(tp);
-			tmp[1] = scom_thdr_sec(nex);
-			if (tmp[0] != tmp[1]) {
-				goto condens;
-			}
-			/* same milli-seconds */
-			tmp[0] = scom_thdr_msec(tp);
-			tmp[1] = scom_thdr_msec(nex);
-			if (tmp[0] != tmp[1]) {
-				goto condens;
-			}
-
-			/* otherwise, check the table indices for equality */
-			tmp[0] = scom_thdr_tblidx(tp);
-			tmp[1] = scom_thdr_tblidx(nex);
-			if (tmp[0] != tmp[1]) {
-				goto condens;
-			}
-			/* two snaps, same index, check if we can compress */
-			if (((snpb = (void*)tp)->ap == 0 &&
-			     (snpa = (void*)nex)->bp == 0) ||
-			    ((snpb = (void*)nex)->ap == 0 &&
-			     (snpa = (void*)tp)->bp == 0)) {
-				/* and we can ... */
-				snpb->ap = snpa->ap;
-				snpb->aq = snpa->aq;
-				if (snpb->tvpr == 0) {
-					snpb->tvpr = snpa->tvpr;
-					snpb->tq = snpa->tq;
-				}
-				/* step the result counter */
-				res++;
-				/* copy the candle to the target position */
-				memmove(xp, snpb, sizeof(*snpb));
-				tp = DATA(nex, bsz);
-				xp = DATA(xp, bsz);
-				break;
-			}
-			goto condens;
+			/* yay we can compress the guys */
+			ssnap_compress(tp, sp, nex);
+			/* update pointers */
+			tp = DATA(tp, bsz);
+			sp = DATA(nex, bsz);
+			/* step the result counter */
+			res++;
+			break;
 		}
 		default:
-			bsz = scom_thdr_size(tp);
+			bsz = scom_thdr_size(sp);
 		condens:
-			if (xp < tp) {
-				memcpy(xp, tp, bsz);
+			if (tp != sp) {
+				memcpy(tp, sp, bsz);
 			}
 			tp = DATA(tp, bsz);
-			xp = DATA(xp, bsz);
+			sp = DATA(sp, bsz);
 		}
 	}
-	if (res > 0) {
-		/* shrink tick index */
-		const size_t mul = sizeof(struct ssnap_s) / sizeof(*tpc->sk.sp);
-		tpc->sk.si -= res * mul;
-	}
+	sk->si = DATD(sp, sk->sp) / sizeof(*sk->sp);
+	tgt->si = DATD(tp, tgt->sp) / sizeof(*tgt->sp);
 	return res;
 }
 

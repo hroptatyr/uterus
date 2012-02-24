@@ -204,4 +204,13 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
  * Return the last tick in a sought page. */
 DECLF scom_t seek_last_scom(uteseek_t sk);
 
+/* isn't that too high level? */
+/**
+ * Perform a tilman-compression on SK and write its result to TGT.
+ * That is merge mutually exclusive neighbouring ticks into one when
+ * tick types allow for that.
+ * Return the number of compressed ticks.
+ * This compression is in-situ if TGT == SK. */
+DECLF sidx_t tilman_1comp(uteseek_t tgt, uteseek_t sk);
+
 #endif	/* INCLUDED_utetpc_h_ */

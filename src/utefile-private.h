@@ -104,6 +104,8 @@ struct utectx_s {
 extern void seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg);
 extern void flush_seek(uteseek_t sk);
 
+extern void bump_header(struct utehdr2_s *hdr);
+
 
 /* inlines */
 static inline size_t

@@ -105,14 +105,16 @@ __seek(utectx_t ctx, sidx_t i)
 	return seek_get_scom_thdr(ctx->seek);
 }
 
-static void
+static int
 fsck1(fsck_ctx_t ctx, const char *fn)
 {
 	void *hdl;
 	const int fl = ctx->dryp ? UO_RDONLY : UO_RDWR;
+	int res = 0;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
-		return;
+		fprintf(stderr, "cannot open file `%s'\n", fn);
+		return -1;
 	}
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
@@ -135,20 +137,23 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 			i += tsz / sizeof(struct sndwch_s);
 		}
 		printf("file `%s' upgraded\n", fn);
+		if (!ctx->dryp) {
+			/* update the header version */
+			bump_header(((utectx_t)hdl)->hdrp);
+			ute_flush(hdl);
+		}
+		res = -1;
 	} else {
 		/* no flips in this one */
 		for (size_t i = 0; i < ute_nticks(hdl);) {
-			;
+			scom_t ti = ute_seek(hdl, i);
+			size_t tsz = scom_thdr_size(ti);
+			i += tsz / sizeof(struct sndwch_s);
 		}
-	}
-	if (!ctx->dryp) {
-		/* update the header version */
-		bump_header(((utectx_t)hdl)->hdrp);
-		ute_flush(hdl);
 	}
 	/* oh right, close the handle */
 	ute_close(hdl);
-	return;
+	return res;
 }
 
 
@@ -188,7 +193,9 @@ main(int argc, char *argv[])
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		fsck1(ctx, argi->inputs[j]);
+		if (fsck1(ctx, argi->inputs[j]) < 0) {
+			res = 1;
+		}
 	}
 
 out:

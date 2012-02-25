@@ -119,7 +119,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
 		/* we need to flip the ti */
-		printf("file `%s' is ute format 0.1, upgrading ...\n", fn);
+		printf("file `%s' needs upgrading (ute format 0.1) ...\n", fn);
 		for (size_t i = 0; i < ute_nticks(hdl);) {
 			char buf[64];
 			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
@@ -136,11 +136,11 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 			}
 			i += tsz / sizeof(struct sndwch_s);
 		}
-		printf("file `%s' upgraded\n", fn);
 		if (!ctx->dryp) {
 			/* update the header version */
 			bump_header(((utectx_t)hdl)->hdrp);
 			ute_flush(hdl);
+			printf("file `%s' upgraded\n", fn);
 		}
 		res = -1;
 	} else {

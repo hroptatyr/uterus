@@ -110,7 +110,16 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 {
 	utectx_t hdl;
 	const int fl = ctx->dryp ? UO_RDONLY : UO_RDWR;
-	int res = 0;
+	const size_t ssz = sizeof(*hdl->seek->sp);
+	enum {
+		ISS_NO_ISSUES,
+		ISS_OLD_VER,
+		ISS_UNSORTED,
+	};
+	scidx_t last = {
+		.u = 0UL,
+	};
+	int issues = 0;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
 		fprintf(stderr, "cannot open file `%s'\n", fn);
@@ -120,12 +129,14 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
 		/* we need to flip the ti */
 		printf("file `%s' needs upgrading (ute format 0.1) ...\n", fn);
-		for (size_t i = 0; i < ute_nticks(hdl);) {
-			char buf[64];
-			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
-			scom_thdr_t ti = __seek(hdl, i);
-			size_t tsz;
+		issues |= ISS_OLD_VER;
+	}
+	for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz / ssz) {
+		char buf[64];
+		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
+		scom_thdr_t ti = __seek(hdl, i);
 
+		if (issues & ISS_OLD_VER) {
 			/* promote the old header, copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
 			tsz = scom_thdr_size(nu_ti);
@@ -134,27 +145,28 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 				/* flush back to our page ... */
 				memcpy(ti, buf, sizeof(*ti));
 			}
-			i += tsz / sizeof(struct sndwch_s);
+		} else {
+			/* everything fine so far */
+			tsz = scom_thdr_size(ti);
 		}
-		if (!ctx->dryp) {
-			/* update the header version */
-			const char *ver = hdl->hdrp->version;
-			bump_header(hdl->hdrp);
-			ute_flush(hdl);
-			printf(" ... `%s' upgraded: %s\n", fn, ver);
+
+		/* check for sortedness */
+		if (last.u > ti->u) {
+			printf("file `%s' needs sorting ...\n", fn);
+			issues |= ISS_UNSORTED;
 		}
-		res = -1;
-	} else {
-		/* no flips in this one */
-		for (size_t i = 0; i < ute_nticks(hdl);) {
-			scom_t ti = ute_seek(hdl, i);
-			size_t tsz = scom_thdr_size(ti);
-			i += tsz / sizeof(struct sndwch_s);
-		}
+		last.u = ti->u;
+	}
+	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
+		/* update the header version */
+		const char *ver = hdl->hdrp->version;
+		bump_header(hdl->hdrp);
+		ute_flush(hdl);
+		printf(" ... `%s' upgraded: %s\n", fn, ver);
 	}
 	/* oh right, close the handle */
 	ute_close(hdl);
-	return res;
+	return issues;
 }
 
 
@@ -194,7 +206,7 @@ main(int argc, char *argv[])
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		if (fsck1(ctx, argi->inputs[j]) < 0) {
+		if (fsck1(ctx, argi->inputs[j])) {
 			res = 1;
 		}
 	}

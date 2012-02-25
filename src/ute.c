@@ -117,10 +117,10 @@ Common options:\n\
 	puts("Supported commands:");
 
 	SUBCMD(help, "Print a help screen like this");
+	SUBCMD(fsck, "Check ute file for consistency");
 	SUBCMD(mux, "Generate an ute file from a tick or candle source");
 	SUBCMD(print, "Print the contents of an ute file");
 	SUBCMD(shnot, "Generate all-level snapshots from ute files");
-	//SUBCMD(sort, "Sort ute file chronologically");
 	puts("");
 	return 0;
 }

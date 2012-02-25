@@ -108,7 +108,7 @@ __seek(utectx_t ctx, sidx_t i)
 static int
 fsck1(fsck_ctx_t ctx, const char *fn)
 {
-	void *hdl;
+	utectx_t hdl;
 	const int fl = ctx->dryp ? UO_RDONLY : UO_RDWR;
 	int res = 0;
 
@@ -138,9 +138,10 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		}
 		if (!ctx->dryp) {
 			/* update the header version */
-			bump_header(((utectx_t)hdl)->hdrp);
+			const char *ver = hdl->hdrp->version;
+			bump_header(hdl->hdrp);
 			ute_flush(hdl);
-			printf("file `%s' upgraded\n", fn);
+			printf(" ... `%s' upgraded: %s\n", fn, ver);
 		}
 		res = -1;
 	} else {

@@ -16,6 +16,7 @@ BUILT_SOURCES += $(built_mans)
 built_mans =
 built_mans += ute-mux.man
 built_mans += ute-print.man
+built_mans += ute-shnot.man
 built_mans += ute-fsck.man
 
 ## help2man helpers

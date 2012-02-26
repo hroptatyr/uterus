@@ -13,6 +13,11 @@ man1_MANS += $(built_mans)
 EXTRA_DIST += author.h2m
 BUILT_SOURCES += $(built_mans)
 
+built_mans =
+built_mans += ute-mux.man
+built_mans += ute-print.man
+built_mans += ute-fsck.man
+
 ## help2man helpers
 my_bld_man = $(__bld_man_$(V))
 __bld_man_ = $(__bld_man_$(AM_DEFAULT_VERBOSITY))

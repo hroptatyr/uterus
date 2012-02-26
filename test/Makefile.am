@@ -23,6 +23,8 @@ TESTS += print.1.ut
 TESTS += print.2.ut
 EXTRA_DIST += print.a.ute
 EXTRA_DIST += print.b.ute
+EXTRA_DIST += print.c.ute
+EXTRA_DIST += print.d.ute
 
 TESTS += shnot.1.ut
 TESTS += shnot.2.ut

@@ -44,7 +44,7 @@ SUBDIRS =
 if DESCEND_LIBLTDL
 SUBDIRS += libltdl
 endif
-SUBDIRS += src test
+SUBDIRS += src info test
 
 pkgconfigdir = @libdir@/pkgconfig
 pkgconfig_DATA = libuterus.pc

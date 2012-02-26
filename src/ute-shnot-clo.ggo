@@ -4,6 +4,10 @@ usage "ute shnot [OPTION]... FILEs..."
 description "Draw market snapshots from given FILEs.
 A snapshot at a time T comprises the quotes that last occurred before T."
 
+option "help" h
+	"Show this help message."
+	optional
+
 option "output" o
 	"Write result to specified output file"
 	string typestr="FILE" optional

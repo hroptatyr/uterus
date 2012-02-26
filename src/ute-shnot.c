@@ -457,6 +457,10 @@ main(int argc, char *argv[])
 	if (shnot_parser(argc, argv, argi)) {
 		res = 1;
 		goto out;
+	} else if (argi->help_given) {
+		shnot_parser_print_help();
+		res = 0;
+		goto out;
 	}
 
 	/* set up our option struct, just to decouple from gengetopt's struct */

@@ -46,6 +46,7 @@ AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([info/Makefile])
 AC_CONFIG_FILES([test/Makefile])
 AC_OUTPUT
 

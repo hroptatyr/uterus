@@ -432,6 +432,10 @@ merge_up(perm_idx_t tgt, perm_idx_t src, int step, int max)
 	for (; i2 < ei2; i++, i2++) {
 		tgt[i] = src[i2];
 	}
+
+	for (int k = 1; k < i; k++) {
+		assert(pi_skey(tgt + k - 1) <= pi_skey(tgt + k));
+	}
 	return;
 }
 
@@ -513,6 +517,15 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 		sidx_t idx = pi_sidx(pi + j);
 		const void *s = DATCI(src, idx, sizeof(struct sndwch_s));
 		size_t bsz = scom_thdr_size(s);
+
+		if (j > 0) {
+			assert(pi_skey(pi + j - 1) <= pi_skey(pi + j));
+		}
+		if (j > 0 && pi_skey(pi + j - 1) != 0ULL) {
+			assert(AS_SCOM(DATCI(src, pi_sidx(pi + j - 1),
+					     sizeof(struct sndwch_s)))->u <=
+			       AS_SCOM(s)->u);
+		}
 
 		memcpy(tgt, s, bsz);
 		tgt = DATA(tgt, bsz);

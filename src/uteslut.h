@@ -87,6 +87,12 @@ DECLF void slut_seria(uteslut_t s, void **data, size_t *size);
 DECLF uint16_t slut_sym2idx(uteslut_t s, const char *sym);
 DECLF const char *slut_idx2sym(uteslut_t s, uint16_t idx);
 
+/* for when the index needs setting manually */
+/**
+ * Put SYM with index IDX into slut S.
+ * If for some reason the bang didn't work, return 0, otherwise IDX. */
+DECLF uint16_t slut_bang(uteslut_t s, const char *sym, uint16_t idx);
+
 /**
  * Return the number of symbols currently in the slut S. */
 static inline size_t

@@ -100,7 +100,7 @@ ffff_m62_get_d(double d);
 /**
  * Convert string S to monetary. */
 static inline m62_t __attribute__((always_inline))
-ffff_m62_get_s(char **s);
+ffff_m62_get_s(const char **s);
 
 /**
  * Represent m62 value as string. */
@@ -345,8 +345,8 @@ ffff_m62_add_mul_m30_ui64(m62_t a, m30_t b, uint64_t c)
 }
 
 #if !defined DEFINE_GORY_STUFF
-static inline m62_t __attribute__((unused))
-ffff_m62_get_s(char **s __attribute__((unused)))
+static inline m62_t
+ffff_m62_get_s(const char **s __attribute__((unused)))
 {
 	m62_t res;
 	res.v = 0;
@@ -457,12 +457,12 @@ __62_0_get_s(const char *mant, size_t n, const char *f, size_t m)
 	return res;
 }
 
-static m62_t __attribute__((unused))
-ffff_m62_get_s(char **nptr)
+static inline m62_t
+ffff_m62_get_s(const char **nptr)
 {
 	/* spray some pointers */
-	char *mant, *mend, *frac;
-	char *p;
+	const char *mant, *mend, *frac;
+	const char *p;
 	bool neg = false;
 	m62_t r62;
 

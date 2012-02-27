@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "prchunk.h"
-#include "secu.h"
 #include "date.h"
 #include "utefile.h"
 #include "sl1t.h"
@@ -41,8 +40,6 @@
 #define FLAG_INVAL	0x01
 #define FLAG_HALTED	0x02
 
-typedef char cid_t[32];
-
 typedef uint8_t symidx_t;
 typedef struct symtbl_s *symtbl_t;
 /* ariva tick lines */
@@ -52,7 +49,7 @@ typedef struct ariva_tl_s *ariva_tl_t;
  * b for bid, B for bid size and t for price stamp and T for BA stamp.
  * Made for type punning, ariva_tl_s structs are also sl1t_t's */
 struct ariva_tl_s {
-	struct scom_thdr_s t;
+	scidx_t t;
 	/* not so standard fields now */
 	struct time_sns_s rcv_stmp;
 	uint32_t offs;
@@ -80,11 +77,11 @@ struct ariva_tl_s {
 	/* just the lowest bit is used, means bad tick */
 	uint32_t flags;
 
-	cid_t cid;
+	char symbuf[64];
 };
 
 /* 'nother type extension */
-#define NSYMS	UTEHDR_MAX_SYMS
+#define NSYMS		(256)
 struct metrsymtbl_s {
 	/* caches */
 	time_t metr[NSYMS];
@@ -120,7 +117,7 @@ atl_ts_sec(const struct ariva_tl_s *l)
 static inline __attribute__((unused)) void
 atl_set_ts_sec(ariva_tl_t l, uint32_t s)
 {
-	return scom_thdr_set_sec(AS_SCOM_THDR_T(l), s);
+	return scom_thdr_set_sec(AS_SCOM_THDR(l), s);
 }
 
 static inline __attribute__((unused, pure)) uint16_t
@@ -132,13 +129,13 @@ atl_ts_msec(const struct ariva_tl_s *l)
 static inline __attribute__((unused)) void
 atl_set_ts_msec(ariva_tl_t l, uint16_t s)
 {
-	return scom_thdr_set_msec(AS_SCOM_THDR_T(l), s);
+	return scom_thdr_set_msec(AS_SCOM_THDR(l), s);
 }
 
 static inline __attribute__((unused)) void
 atl_set_ts_from_sns(ariva_tl_t l, const struct time_sns_s sns)
 {
-	scom_thdr_set_stmp_from_sns(AS_SCOM_THDR_T(l), sns);
+	scom_thdr_set_stmp_from_sns(AS_SCOM_THDR(l), sns);
 	return;
 }
 
@@ -151,7 +148,7 @@ atl_si(const struct ariva_tl_s *l)
 static inline void
 atl_set_si(ariva_tl_t l, uint16_t si)
 {
-	return scom_thdr_set_tblidx(AS_SCOM_THDR_T(l), si);
+	return scom_thdr_set_tblidx(AS_SCOM_THDR(l), si);
 }
 
 static inline uint32_t
@@ -351,12 +348,13 @@ parse_rcv_stmp(ariva_tl_t tgt, const char **cursor)
 static zif_t z = NULL;
 
 static inline time_t
-parse_time(const char *buf)
+parse_time(const char **buf)
 {
 	struct tm tm;
 
 	/* use our sped-up version */
-	ffff_strptime_ISO(buf, &tm);
+	ffff_strptime_ISO(*buf, &tm);
+	*buf += 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
 	return ffff_timelocal(&tm, z);
 }
 
@@ -391,8 +389,8 @@ parse_symbol(ariva_tl_t tgt, const char **cursor)
 		}
 	}
 	len = p - *cursor;
-	memcpy(tgt->cid, *cursor, len);
-	tgt->cid[len] = '\0';
+	memcpy(tgt->symbuf, *cursor, len);
+	tgt->symbuf[len] = '\0';
 	*cursor = p + 1;
 #undef FIDDLE3
 	return true;
@@ -469,20 +467,19 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 }
 
 static void
-parse_keyval(ariva_tl_t tgt, const char *p)
+parse_keyval(ariva_tl_t tgt, const char **p)
 {
 /* assumes tgt's si is set already */
-	switch (*p++) {
-		char *UNUSED(tmp);
+	switch (*(*p)++) {
 	case 'p':
-		tgt->p = ffff_m30_get_s(&tmp);
+		tgt->p = ffff_m30_get_s(p);
 		/* store in cache */
 		SYMTBL_TRA[atl_si(tgt)] = tgt->p;
 		/* also reset auction */
 		SYMTBL_AUCP[atl_si(tgt)] = false;
 		break;
 	case 'b':
-		tgt->b = ffff_m30_get_s(&tmp);
+		tgt->b = ffff_m30_get_s(p);
 		/* store in cache */
 		SYMTBL_BID[atl_si(tgt)] = tgt->b;
 		if (tgt->b.mant == 0) {
@@ -490,7 +487,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'a':
-		tgt->a = ffff_m30_get_s(&tmp);
+		tgt->a = ffff_m30_get_s(p);
 		/* store in cache */
 		SYMTBL_ASK[atl_si(tgt)] = tgt->a;
 		if (tgt->a.mant == 0) {
@@ -498,19 +495,19 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'k':
-		tgt->k = ffff_m30_get_s(&tmp);
+		tgt->k = ffff_m30_get_s(p);
 		/* once weve seen this, an auction is going on */
 		SYMTBL_AUCP[atl_si(tgt)] = true;
 		break;
 	case 'v':
 		/* unlike our `v' this is the vol-pri */
-		tgt->V = ffff_m62_get_s(&tmp);
+		tgt->V = ffff_m62_get_s(p);
 		break;
 	case 'P':
-		tgt->P = ffff_m30_23_get_s(&tmp);
+		tgt->P = ffff_m30_23_get_s(p);
 		break;
 	case 'B':
-		tgt->B = ffff_m30_23_get_s(&tmp);
+		tgt->B = ffff_m30_23_get_s(p);
 		/* store in cache */
 		SYMTBL_BSZ[atl_si(tgt)] = tgt->B;
 		if (tgt->B.mant == 0) {
@@ -518,7 +515,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'A':
-		tgt->A = ffff_m30_23_get_s(&tmp);
+		tgt->A = ffff_m30_23_get_s(p);
 		/* store in cache */
 		SYMTBL_ASZ[atl_si(tgt)] = tgt->A;
 		if (tgt->A.mant == 0) {
@@ -527,7 +524,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		break;
 	case 'V':
 		/* this is the volume */
-		tgt->v = ffff_m62_get_s(&tmp);
+		tgt->v = ffff_m62_get_s(p);
 		break;
 	case 'T':
 		tgt->stmp2 = parse_time(p);
@@ -537,12 +534,14 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		/* store in cache */
 		SYMTBL_METR[atl_si(tgt)] = tgt->stmp2;
 		break;
-	case 't':
+	case 't': {
 		/* price stamp */
-		atl_set_ts_sec(tgt, parse_time(p));
+		time_t stmp = parse_time(p);
+		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
-		SYMTBL_METR[atl_si(tgt)] = atl_ts_sec(tgt);
+		SYMTBL_METR[atl_si(tgt)] = stmp;
 		break;
+	}
 	case 'o':
 	case 'h':
 	case 'l':
@@ -563,13 +562,12 @@ parse_keyvals(ariva_tl_t tgt, const char *cursor)
 	const char *p = cursor;
 
 	while (true) {
-		parse_keyval(tgt, p);
+		parse_keyval(tgt, &p);
 		if (UNLIKELY(tgt->flags & FLAG_INVAL)) {
 			return false;
-		} else if (UNLIKELY((p = strchr(p, ' ')) == NULL)) {
+		} else if (UNLIKELY(*p++ != ' ')) {
 			break;
 		}
-		p++;
 	}
 
 	if (tgt->flags & FLAG_HALTED &&
@@ -604,7 +602,11 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 		return false;
 	}
 	/* lookup the symbol (or create it) */
-	atl_set_si(tl, ute_sym2idx(ctx->wrr, tl->cid));
+	{
+		uint16_t symidx = ute_sym2idx(ctx->wrr, tl->symbuf);
+		atl_set_si(tl, symidx);
+	}
+
 	/* and now parse the key value pairs */
 	if (UNLIKELY(!parse_keyvals(tl, cursor))) {
 		return false;
@@ -710,7 +712,7 @@ read_lines(mux_ctx_t ctx)
 static const char ariva_zone[] = "Europe/Berlin";
 
 void
-ariva_slab(mux_ctx_t ctx)
+mux(mux_ctx_t ctx)
 {
 	/* open our timezone definition */
 	if (ctx->opts->zone != NULL) {

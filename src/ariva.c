@@ -470,7 +470,7 @@ static void
 parse_keyval(ariva_tl_t tgt, const char **p)
 {
 /* assumes tgt's si is set already */
-	switch (*(*p++)) {
+	switch (*(*p)++) {
 	case 'p':
 		tgt->p = ffff_m30_get_s(p);
 		/* store in cache */

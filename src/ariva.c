@@ -565,10 +565,9 @@ parse_keyvals(ariva_tl_t tgt, const char *cursor)
 		parse_keyval(tgt, &p);
 		if (UNLIKELY(tgt->flags & FLAG_INVAL)) {
 			return false;
-		} else if (UNLIKELY((p = strchr(p, ' ')) == NULL)) {
+		} else if (UNLIKELY(*p++ != ' ')) {
 			break;
 		}
-		p++;
 	}
 
 	if (tgt->flags & FLAG_HALTED &&

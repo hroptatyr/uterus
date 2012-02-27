@@ -408,7 +408,7 @@ __30_0_get_s(const char *mant, const char *f, size_t m)
 	return res;
 }
 
-static m30_t __attribute__((unused))
+static inline m30_t
 ffff_m30_get_s(char **nptr)
 {
 	/* spray some pointers */

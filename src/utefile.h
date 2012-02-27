@@ -135,6 +135,11 @@ extern uint16_t ute_sym2idx(utectx_t ctx, const char *sym);
 extern const char *ute_idx2sym(utectx_t ctx, uint16_t idx);
 
 /**
+ * Associate SYM with index IDX in CTX's symbol look-up table.
+ * Return the newly or previously associated index. */
+extern uint16_t ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx);
+
+/**
  * Return the file name (if any) associated with CTX. */
 extern const char *ute_fn(utectx_t ctx);
 

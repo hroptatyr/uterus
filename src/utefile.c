@@ -271,6 +271,9 @@ ute_seek(utectx_t ctx, sidx_t i)
 		return tpc_get_scom(ctx->tpc, new_i);
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
 		reseek(ctx, i);
+	} else {
+		/* just reseek manually */
+		ctx->seek->si = offset_of_index(ctx, i);
 	}
 	return seek_get_scom(ctx->seek);
 }
@@ -863,6 +866,15 @@ const char*
 ute_idx2sym(utectx_t ctx, uint16_t idx)
 {
 	return slut_idx2sym(ctx->slut, idx);
+}
+
+uint16_t
+ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx)
+{
+	if (UNLIKELY(sym == NULL)) {
+		return 0;
+	}
+	return slut_bang(ctx->slut, sym, idx);
 }
 
 const char*

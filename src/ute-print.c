@@ -147,14 +147,14 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			memcpy(buf + sizeof(*nu_ti), ti + 1, tsz - sizeof(*ti));
 			/* now to what we always do */
 			prf(ctx, nu_ti);
-			i += tsz / sizeof(struct sl1t_s);
+			i += tsz / sizeof(struct sndwch_s);
 		}
 	} else {
 		/* no flips in this one */
 		for (size_t i = 0; i < ute_nticks(hdl);) {
 			scom_t ti = ute_seek(hdl, i);
 			prf(ctx, ti);
-			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
+			i += scom_thdr_size(ti) / sizeof(struct sndwch_s);
 		}
 	}
 	/* oh right, close the handle */

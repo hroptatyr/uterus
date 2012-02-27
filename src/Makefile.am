@@ -148,6 +148,7 @@ BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c
 uta_la_LDFLAGS = -module $(XCCLDFLAGS)
+uta_la_LIBADD = libuterus.la
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c

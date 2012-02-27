@@ -47,9 +47,12 @@
 #include <string.h>
 #include <stdio.h>
 #include "date.h"
+#include "prchunk.h"
 #include "utefile.h"
-/* for public demux (print) apis, muxing isn't possible yet */
+/* for public demux (print) apis */
 #include "ute-print.h"
+/* for public muxing */
+#include "ute-mux.h"
 
 /* so we know about ticks, candles and snapshots */
 #include "sl1t.h"
@@ -76,6 +79,167 @@
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
 
+/* muxing caps */
+/* read buffer goodies */
+static inline bool
+fetch_lines(mux_ctx_t ctx)
+{
+	return !(prchunk_fill(ctx->rdr) < 0);
+}
+
+static inline bool
+moar_ticks_p(mux_ctx_t ctx)
+{
+	return prchunk_haslinep(ctx->rdr);
+}
+
+static inline unsigned int
+hex2int(const char **cursor)
+{
+	int res = 0;
+	const char *p;
+	for (p = *cursor; *p != '\t' && *p != '\n' && *p != '|'; p++) {
+		res = (res << 4) + (*p + '0');
+	}
+	if (*p == '|') {
+		/* fast-forward to the next cell */
+		while (*p != '\t' && *p != '\n');
+	}
+	*cursor = p + 1;
+	return res;
+}
+
+static const char*
+parse_symbol(const char **cursor)
+{
+	const char *p = *cursor;
+	static char symbuf[64];
+	size_t len;
+
+	if (p[0] == '0' && p[1] == '\t') {
+		/* fuckall symbol */
+		*cursor += 2;
+		return NULL;
+	}
+
+	/* otherwise it could be a real symbol, read up to the tab */
+	if ((p = strchr(p + 1, '\t')) == NULL) {
+		/* no idea what *cursor should point to, NULL maybe? */
+		return *cursor = NULL;
+	}
+	/* copy to tmp buffer, do we need ute_sym2idx() with a len? */
+	len = p - *cursor;
+	memcpy(symbuf, *cursor, len);
+	symbuf[len] = '\0';
+	*cursor = p + 1;
+	return symbuf;
+}
+
+static int
+parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
+{
+	struct tm tm;
+	time_t stamp;
+	long int msec;
+
+	ffff_strptime(*cursor, &tm);
+	stamp = ffff_timegm(&tm);
+	*cursor += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
+	if (UNLIKELY((*cursor)[0] != '.')) {
+		return -1;
+	}
+	/* get the millisecs */
+	msec = ffff_strtol(*cursor, cursor, 0);
+
+	/* write the results to thdr */
+	scom_thdr_set_sec(thdr, stamp);
+	scom_thdr_set_msec(thdr, msec);
+	return 0;
+}
+
+static int
+read_line(mux_ctx_t ctx, struct sndwch_s *tl)
+{
+	const char *cursor;
+	char *line;
+	size_t llen;
+	/* symbol and its index */
+	const char *sym;
+	unsigned int symidx;
+	unsigned int ttf;
+
+	/* get the line, its length and set up the cursor */
+	llen = prchunk_getline(ctx->rdr, &line);
+	cursor = line;
+
+	/* symbol comes next, or `nothing' or `C-c' */
+	sym = parse_symbol(&cursor);
+
+	/* receive time stamp, always first on line */
+	if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
+		return -1;
+	}
+
+	/* next up is the sym-idx in hex */
+	symidx = hex2int(&cursor);
+	/* bang the symbol */
+	if (ute_bang_symidx(ctx->wrr, sym, (uint16_t)symidx) != symidx) {
+		/* oh bugger */
+		return -1;
+	}
+
+	/* check the tick type + flags, it's hex already */
+	ttf = hex2int(&cursor);
+
+	/* bang it all into the target tick */
+	scom_thdr_set_tblidx(AS_SCOM_THDR(tl), (uint16_t)symidx);
+	scom_thdr_set_ttf(AS_SCOM_THDR(tl), (uint16_t)ttf);
+
+	/* now on to the payload */
+	if (ttf < SCOM_FLAG_LM) {
+		/* single payload */
+		struct sl1t_s *l1 = (void*)tl;
+
+		l1->v[0] = ffff_m30_get_s(&cursor).u;
+		if (*cursor++ != '\t') {
+			return -1;
+		}
+		l1->v[1] = ffff_m30_get_s(&cursor).u;
+		if (*cursor++ != '\n') {
+			return -1;
+		}
+
+	} else if (ttf >= SCOM_FLAG_LM && ttf < SCOM_FLAG_L2M) {
+		/* double payload, at least 4 m30s(?) */
+		struct sl1t_lm_s *lm = (void*)tl;
+
+		for (size_t i = 0; i < 4; i++) {
+			lm->v[i] = ffff_m30_get_s(&cursor).u;
+			if (*cursor++ != '\t') {
+				return -1;
+			}
+		}
+		/* now come 2 generic fields, just read the hex portion */
+		lm->v[4] = hex2int(&cursor);
+		lm->v[5] = hex2int(&cursor);
+	}
+	return 0;
+}
+
+static void
+read_lines(mux_ctx_t ctx)
+{
+	while (moar_ticks_p(ctx)) {
+		struct sndwch_s buf[4];
+		if (read_line(ctx, buf)) {
+			ute_add_tick(ctx->wrr, AS_SCOM(buf));
+		}
+	}
+	return;
+}
+
+
+/* printing caps */
 #if defined USE_DEBUGGING_ASSERTIONS
 static __attribute__((unused)) void
 fputn(FILE *whither, const char *p, size_t n)
@@ -149,13 +313,18 @@ __pr_cdl(char *tgt, scom_t st)
 
 
 /* public functions, muxer and demuxer, but the muxer doesn't work yet */
-#if 0
 void
-uta_slab(mux_ctx_t ctx)
+mux(mux_ctx_t ctx)
 {
+	/* main loop */
+	ctx->rdr = init_prchunk(ctx->infd);
+	while (fetch_lines(ctx)) {
+		read_lines(ctx);
+	}
+	/* free prchunk resources */
+	free_prchunk(ctx->rdr);
 	return;
 }
-#endif	/* 0 */
 
 ssize_t
 pr(pr_ctx_t pctx, scom_t st)

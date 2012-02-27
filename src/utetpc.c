@@ -222,6 +222,13 @@ __ilog2_ceil(size_t n)
 	}
 }
 
+static void
+swap_pi(perm_idx_t p1, perm_idx_t p2)
+{
+	struct perm_idx_s tmp = *p1;
+	*p1 = *p2, *p2 = tmp;
+}
+
 static uint8_t
 pornsort_perm(struct perm_idx_s p[4])
 {
@@ -229,15 +236,11 @@ pornsort_perm(struct perm_idx_s p[4])
 
 	if (pi_skey(p + 1) < pi_skey(p + 0)) {
 		/* swap them right away? */
-		typeof(pi_skey(p)) tmp;
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 1), pi_skey(p + 1) = tmp;
+		swap_pi(p + 0, p + 1);
 	}
 	if (pi_skey(p + 3) < pi_skey(p + 2)) {
 		/* swap them right away? */
-		typeof(pi_skey(p)) tmp;
-		tmp = pi_skey(p + 2);
-		pi_skey(p + 2) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
+		swap_pi(p + 2, p + 3);
 	}
 
 	/* bit like AA-sort now, final comparison */
@@ -279,8 +282,6 @@ pornsort_perm(struct perm_idx_s p[4])
 static void
 pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 {
-	typeof(pi_skey(p)) tmp;
-
 	switch (perm) {
 	case PERM(0, 1, 2, 3):
 		/* nothing to do */
@@ -289,88 +290,75 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 	case PERM(1, 0, 2, 3):
 		/* (1,2) */
 		/* not possible given the above perm generator */
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 1), pi_skey(p + 1) = tmp;
+		abort();
 		break;
 
 	case PERM(2, 1, 0, 3):
 		/* (1,3) */
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 2), pi_skey(p + 2) = tmp;
+		swap_pi(p + 0, p + 2);
 		break;
 
 	case PERM(3, 1, 2, 0):
 		/* (1,4) */
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
+		swap_pi(p + 0, p + 3);
 		break;
 
 	case PERM(0, 2, 1, 3):
 		/* (2,3) */
-		tmp = pi_skey(p + 1);
-		pi_skey(p + 1) = pi_skey(p + 2), pi_skey(p + 2) = tmp;
+		swap_pi(p + 1, p + 2);
 		break;
 
 	case PERM(0, 3, 2, 1):
 		/* (2,4) */
-		tmp = pi_skey(p + 1);
-		pi_skey(p + 1) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
+		swap_pi(p + 1, p + 3);
 		break;
 
 	case PERM(0, 1, 3, 2):
 		/* (3,4) */
 		/* not possible with the above perm generator */
-		tmp = pi_skey(p + 2);
-		pi_skey(p + 2) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
+		abort();
 		break;
 
 	case PERM(1, 0, 3, 2):
 		/* (1,2)(3,4) */
 		/* not possible with the above perm generator */
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 1), pi_skey(p + 1) = tmp;
-		tmp = pi_skey(p + 2);
-		pi_skey(p + 2) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
+		abort();
 		break;
 
 	case PERM(2, 3, 0, 1):
 		/* (1,3)(2,4) */
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 2), pi_skey(p + 2) = tmp;
-		tmp = pi_skey(p + 1);
-		pi_skey(p + 1) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
+		swap_pi(p + 0, p + 2);
+		swap_pi(p + 1, p + 3);
 		break;
 
 	case PERM(3, 2, 1, 0):
 		/* (1,4)(2,3) */
-		tmp = pi_skey(p + 0);
-		pi_skey(p + 0) = pi_skey(p + 3), pi_skey(p + 3) = tmp;
-		tmp = pi_skey(p + 1);
-		pi_skey(p + 1) = pi_skey(p + 2), pi_skey(p + 2) = tmp;
+		swap_pi(p + 0, p + 3);
+		swap_pi(p + 1, p + 2);
 		break;
 
 	default: {
 		/* 3- and 4-cycles here */
-		typeof(pi_skey(p)) tmpa[4];
+		struct perm_idx_s tmpa[4];
 
 		if (PERMI(perm, 0) != 0) {
-			tmpa[0] = pi_skey(p + 0);
-			pi_skey(p + 0) = pi_skey(p + PERMI(perm, 0));
+			tmpa[0] = p[0];
+			p[0] = p[PERMI(perm, 0)];
 		}
 		if (PERMI(perm, 1) != 1) {
-			tmpa[1] = pi_skey(p + 1);
+			tmpa[1] = p[1];
 			/* PERMI(perm, 0) cant be 0 */
-			pi_skey(p + 1) = pi_skey(p + PERMI(perm, 1));
+			p[1] = p[PERMI(perm, 1)];
 		}
 		if (PERMI(perm, 2) != 2) {
-			tmpa[2] = pi_skey(p + 2);
-			tmpa[3] = pi_skey(p + 3);
+			tmpa[2] = p[2];
+			tmpa[3] = p[3];
 			/* PERMI(perm, 0) cant be 0 */
-			pi_skey(p + 2) = tmpa[PERMI(perm, 2)];
+			p[2] = tmpa[PERMI(perm, 2)];
 		}
 		if (PERMI(perm, 3) != 3) {
 			/* PERMI(perm, 0) cant be 0 */
-			pi_skey(p + 3) = tmpa[PERMI(perm, 3)];
+			p[3] = tmpa[PERMI(perm, 3)];
 		}
 	}
 	}

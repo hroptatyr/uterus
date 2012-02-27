@@ -251,7 +251,7 @@ read_lines(mux_ctx_t ctx)
 {
 	while (moar_ticks_p(ctx)) {
 		struct sndwch_s buf[4];
-		if (read_line(ctx, buf)) {
+		if (read_line(ctx, buf) == 0) {
 			ute_add_tick(ctx->wrr, AS_SCOM(buf));
 		}
 	}

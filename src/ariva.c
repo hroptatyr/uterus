@@ -534,12 +534,14 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 		/* store in cache */
 		SYMTBL_METR[atl_si(tgt)] = tgt->stmp2;
 		break;
-	case 't':
+	case 't': {
 		/* price stamp */
-		atl_set_ts_sec(tgt, parse_time(p));
+		time_t stmp = parse_time(p);
+		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
-		SYMTBL_METR[atl_si(tgt)] = atl_ts_sec(tgt);
+		SYMTBL_METR[atl_si(tgt)] = stmp;
 		break;
+	}
 	case 'o':
 	case 'h':
 	case 'l':

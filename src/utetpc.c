@@ -422,15 +422,15 @@ merge_up(perm_idx_t tgt, perm_idx_t src, int step, int max)
 	int i = 0;
 
 	for (; i1 < ei1 && i2 < ei2; i++) {
-		pi_skey(tgt + i) = pi_skey(src + i1) < pi_skey(src + i2)
-			? pi_skey(src + i1++)
-			: pi_skey(src + i2++);
+		tgt[i] = pi_skey(src + i1) < pi_skey(src + i2)
+			? src[i1++]
+			: src[i2++];
 	}
 	for (; i1 < ei1; i++, i1++) {
-		pi_skey(tgt + i) = pi_skey(src + i1);
+		tgt[i] = src[i1];
 	}
 	for (; i2 < ei2; i++, i2++) {
-		pi_skey(tgt + i) = pi_skey(src + i2);
+		tgt[i] = src[i2];
 	}
 	return;
 }

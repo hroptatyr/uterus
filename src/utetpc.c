@@ -710,6 +710,7 @@ seek_key(uteseek_t sk, scidx_t key)
 	}
 	/* must be the offending tick, update index and return */
 	sk->si = sp - sk->sp;
+	assert(sk->si * sizeof(*sk->sp) < sk->sz);
 	return AS_SCOM(sp);
 }
 

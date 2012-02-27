@@ -362,6 +362,10 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 		}
 	}
 	}
+	/* some assertions */
+	assert(pi_skey(p + 0) <= pi_skey(p + 1));
+	assert(pi_skey(p + 1) <= pi_skey(p + 2));
+	assert(pi_skey(p + 2) <= pi_skey(p + 3));
 	return;
 }
 

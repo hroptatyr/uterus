@@ -198,10 +198,15 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	/* receive time stamp, always first on line */
 	if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
 		return -1;
+	} else if (UNLIKELY(*cursor++ != '\t')) {
+		return -1;
 	}
 
 	/* next up is the sym-idx in hex */
 	symidx = hex2int(&cursor);
+	if (UNLIKELY(*cursor++ != '\t')) {
+		return -1;
+	}
 	/* bang the symbol */
 	if (ute_bang_symidx(ctx->wrr, sym, (uint16_t)symidx) != symidx) {
 		/* oh bugger */
@@ -210,6 +215,9 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 
 	/* check the tick type + flags, it's hex already */
 	ttf = hex2int(&cursor);
+	if (UNLIKELY(*cursor++ != '\t')) {
+		return -1;
+	}
 
 	/* bang it all into the target tick */
 	scom_thdr_set_tblidx(AS_SCOM_THDR(tl), (uint16_t)symidx);

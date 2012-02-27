@@ -162,14 +162,15 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 {
 	const char *cursor;
 	char *line;
-	size_t llen;
 	/* symbol and its index */
 	const char *sym;
 	unsigned int symidx;
 	unsigned int ttf;
 
 	/* get the line, its length and set up the cursor */
-	llen = prchunk_getline(ctx->rdr, &line);
+	if (prchunk_getline(ctx->rdr, &line) <= 0) {
+		return -1;
+	}
 	cursor = line;
 
 	/* symbol comes next, or `nothing' or `C-c' */

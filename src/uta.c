@@ -106,9 +106,13 @@ __pr_snap(char *tgt, scom_t st)
 	p += ffff_m30_s(p, (m30_t)snp->aq);
 	*p++ = '\t';
 	/* volume-weighted trade price */
+	p += sprintf(p, "%08x", snp->tvpr);
+	*p++ = '|';
 	p += ffff_m30_s(p, (m30_t)snp->tvpr);
 	*p++ = '\t';
 	/* trade quantity */
+	p += sprintf(p, "%08x", snp->tq);
+	*p++ = '|';
 	p += ffff_m30_s(p, (m30_t)snp->tq);
 	return p - tgt;
 }
@@ -132,6 +136,8 @@ __pr_cdl(char *tgt, scom_t st)
 	p += ffff_m30_s(p, (m30_t)cdl->c);
 	*p++ = '\t';
 	/* start of the candle */
+	p += sprintf(p, "%08x", cdl->sta_ts);
+	*p++ = '|';
 	p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
 	*p++ = '\t';
 	/* event count in candle, print 3 times */

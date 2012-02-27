@@ -354,7 +354,7 @@ parse_time(const char **buf)
 
 	/* use our sped-up version */
 	ffff_strptime_ISO(*buf, &tm);
-	*buf += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
+	*buf += 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
 	return ffff_timelocal(&tm, z);
 }
 

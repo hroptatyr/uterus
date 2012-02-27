@@ -136,23 +136,42 @@ parse_symbol(const char **cursor)
 }
 
 static int
+parse_zoff(const char *str, const char **on)
+{
+	long int hour_off = ffff_strtol(str, on, 0);
+	long int min_off;
+
+	if (UNLIKELY(*(*on)++ != ':')) {
+		/* just skip to the next tab or newline */
+		for (*on = str; **on != '\t' && **on != '\n'; (*on)++);
+		return 0;
+	}
+	min_off = ffff_strtol(*on, on, 0);
+	return hour_off * 3600 + hour_off >= 0 ? min_off * 60 : min_off * -60;
+}
+
+static int
 parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 {
 	struct tm tm;
 	time_t stamp;
 	long int msec;
+	int zoff;
 
 	ffff_strptime(*cursor, &tm);
 	stamp = ffff_timegm(&tm);
 	*cursor += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
-	if (UNLIKELY((*cursor)[0] != '.')) {
+	if (UNLIKELY(*(*cursor)++ != '.')) {
 		return -1;
 	}
 	/* get the millisecs */
 	msec = ffff_strtol(*cursor, cursor, 0);
 
+	/* get time zone info */
+	zoff = parse_zoff(*cursor, cursor);
+
 	/* write the results to thdr */
-	scom_thdr_set_sec(thdr, stamp);
+	scom_thdr_set_sec(thdr, stamp - zoff/*in secs*/);
 	scom_thdr_set_msec(thdr, msec);
 	return 0;
 }

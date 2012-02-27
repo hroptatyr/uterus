@@ -165,6 +165,30 @@ slut_idx2sym(uteslut_t s, uint16_t idx)
 	return itbl[idx];
 }
 
+DEFUN uint16_t
+slut_bang(uteslut_t s, const char *sym, uint16_t idx)
+{
+	uint32_t data;
+
+	if (slut_tg_get(s->stbl, sym, &data) < 0) {
+		/* great, banging will definitely succeed */
+		slut_sym_t *itbl = s->itbl;
+
+		/* check for a resize */
+		if ((data = idx) >= s->alloc_sz) {
+			resize_i2s(s);
+		}
+
+		/* store in the s2i table (trie) */
+		slut_tg_put(s->stbl, sym, data);
+		/* store in the i2s table */
+		strcpy(itbl[data], sym);
+		return idx;
+	}
+	/* otherwise just return what we've got */
+	return (uint16_t)data;
+}
+
 
 /* (de)serialiser */
 static int

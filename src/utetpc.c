@@ -694,9 +694,9 @@ seek_key(uteseek_t sk, scidx_t key)
 	/* binsrch, try the middle */
 	for (typeof(sp) bosp = sk->sp,
 		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
-		sidx_t ix = (eosp - bosp) / 2;
+		sidx_t diam = (eosp - bosp) / 2;
 
-		sp = bosp + algn_tick(sk, bosp - sk->sp + ix);
+		sp = sk->sp + algn_tick(sk, (bosp - sk->sp) + diam);
 		if (make_scidx(AS_SCOM(sp)).u > key.u) {
 			/* left half */
 			eosp = sp;

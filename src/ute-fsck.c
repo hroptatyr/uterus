@@ -101,6 +101,9 @@ __seek(utectx_t ctx, sidx_t i)
 		return tpc_get_scom_thdr(ctx->tpc, new_i);
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
 		reseek(ctx, i);
+	} else {
+		/* just seek inside the page */
+		ctx->seek->si = offset_of_index(ctx, i);
 	}
 	return seek_get_scom_thdr(ctx->seek);
 }

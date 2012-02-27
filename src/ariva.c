@@ -40,8 +40,6 @@
 #define FLAG_INVAL	0x01
 #define FLAG_HALTED	0x02
 
-typedef char cid_t[32];
-
 typedef uint8_t symidx_t;
 typedef struct symtbl_s *symtbl_t;
 /* ariva tick lines */
@@ -79,7 +77,7 @@ struct ariva_tl_s {
 	/* just the lowest bit is used, means bad tick */
 	uint32_t flags;
 
-	cid_t cid;
+	char symbuf[64];
 };
 
 /* 'nother type extension */
@@ -391,8 +389,8 @@ parse_symbol(ariva_tl_t tgt, const char **cursor)
 		}
 	}
 	len = p - *cursor;
-	memcpy(tgt->cid, *cursor, len);
-	tgt->cid[len] = '\0';
+	memcpy(tgt->symbuf, *cursor, len);
+	tgt->symbuf[len] = '\0';
 	*cursor = p + 1;
 #undef FIDDLE3
 	return true;
@@ -603,7 +601,11 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 		return false;
 	}
 	/* lookup the symbol (or create it) */
-	atl_set_si(tl, ute_sym2idx(ctx->wrr, tl->cid));
+	{
+		uint16_t symidx = ute_sym2idx(ctx->wrr, tl->symbuf);
+		atl_set_si(tl, symidx);
+	}
+
 	/* and now parse the key value pairs */
 	if (UNLIKELY(!parse_keyvals(tl, cursor))) {
 		return false;

@@ -463,11 +463,11 @@ ffff_m30_get_s(const char **nptr)
 	return r30;
 }
 
-static m30_t __attribute__((unused))
-ffff_m30_23_get_s(char **nptr)
+static inline m30_t
+ffff_m30_23_get_s(const char **nptr)
 {
 	/* spray some pointers */
-	char *mant, *mend;
+	const char *mant, *mend;
 	bool neg = false;
 	m30_t r30;
 

@@ -168,7 +168,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	unsigned int ttf;
 
 	/* get the line, its length and set up the cursor */
-	if (prchunk_getline(ctx->rdr, &line) <= 0) {
+	if (UNLIKELY(prchunk_getline(ctx->rdr, &line) <= 0)) {
 		return -1;
 	}
 	cursor = line;

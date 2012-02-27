@@ -105,7 +105,7 @@ hex2int(const char **cursor)
 		/* fast-forward to the next cell */
 		while (*p != '\t' && *p != '\n');
 	}
-	*cursor = p + 1;
+	*cursor = p;
 	return res;
 }
 

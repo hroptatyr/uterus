@@ -718,25 +718,12 @@ ute_mktemp(int oflags)
 	return make_utectx(tmpnam, resfd, oflags);
 }
 
-static void
-ute_prep_sort(utectx_t ctx)
-{
-	/* delete the file */
-	unlink(ctx->fname);
-	return;
-}
-
 void
 ute_close(utectx_t ctx)
 {
 	/* first make sure we write the stuff */
 	ute_flush(ctx);
 	if (!ute_sorted_p(ctx)) {
-#if 0
-/* FIXME, ute_sort() in utesort.c needs fixing for this */
-		ute_prep_sort(ctx);
-		ute_sort(ctx);
-#endif	/* 0 */
 		ute_unset_unsorted(ctx);
 	}
 	/* tilman compress the file, needs to happen after sorting */

@@ -158,6 +158,11 @@ ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
 mat_la_LDFLAGS = -module $(XCCLDFLAGS)
 
+ute_LTLIBRARIES += ariva.la
+ariva_la_SOURCES = ariva.c
+ariva_la_LDFLAGS = -module $(XCCLDFLAGS)
+ariva_la_LIBADD = libuterus.la
+
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 

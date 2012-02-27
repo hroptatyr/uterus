@@ -175,7 +175,9 @@ slut_bang(uteslut_t s, const char *sym, uint16_t idx)
 		slut_sym_t *itbl = s->itbl;
 
 		/* check for a resize */
-		if ((data = idx) >= s->alloc_sz) {
+		if ((data = idx) > s->nsyms) {
+			s->nsyms = data;
+		} else if (data >= s->alloc_sz) {
 			resize_i2s(s);
 		}
 

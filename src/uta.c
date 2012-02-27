@@ -99,7 +99,7 @@ hex2int(const char **cursor)
 	int res = 0;
 	const char *p;
 	for (p = *cursor; *p != '\t' && *p != '\n' && *p != '|'; p++) {
-		res = (res << 4) + (*p + '0');
+		res = (res << 4) + (*p - '0');
 	}
 	if (*p == '|') {
 		/* fast-forward to the next cell */

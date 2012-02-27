@@ -99,13 +99,13 @@ hex2int(const char **cursor)
 	int res = 0;
 	const char *p;
 	for (p = *cursor; *p != '\t' && *p != '\n' && *p != '|'; p++) {
-		res = (res << 4) + (*p + '0');
+		res = (res << 4) + (*p - '0');
 	}
 	if (*p == '|') {
 		/* fast-forward to the next cell */
 		while (*p != '\t' && *p != '\n');
 	}
-	*cursor = p + 1;
+	*cursor = p;
 	return res;
 }
 
@@ -136,23 +136,42 @@ parse_symbol(const char **cursor)
 }
 
 static int
+parse_zoff(const char *str, const char **on)
+{
+	long int hour_off = ffff_strtol(str, on, 0);
+	long int min_off;
+
+	if (UNLIKELY(*(*on)++ != ':')) {
+		/* just skip to the next tab or newline */
+		for (*on = str; **on != '\t' && **on != '\n'; (*on)++);
+		return 0;
+	}
+	min_off = ffff_strtol(*on, on, 0);
+	return hour_off * 3600 + hour_off >= 0 ? min_off * 60 : min_off * -60;
+}
+
+static int
 parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 {
 	struct tm tm;
 	time_t stamp;
 	long int msec;
+	int zoff;
 
 	ffff_strptime(*cursor, &tm);
 	stamp = ffff_timegm(&tm);
 	*cursor += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
-	if (UNLIKELY((*cursor)[0] != '.')) {
+	if (UNLIKELY(*(*cursor)++ != '.')) {
 		return -1;
 	}
 	/* get the millisecs */
 	msec = ffff_strtol(*cursor, cursor, 0);
 
+	/* get time zone info */
+	zoff = parse_zoff(*cursor, cursor);
+
 	/* write the results to thdr */
-	scom_thdr_set_sec(thdr, stamp);
+	scom_thdr_set_sec(thdr, stamp - zoff/*in secs*/);
 	scom_thdr_set_msec(thdr, msec);
 	return 0;
 }
@@ -162,14 +181,15 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 {
 	const char *cursor;
 	char *line;
-	size_t llen;
 	/* symbol and its index */
 	const char *sym;
 	unsigned int symidx;
 	unsigned int ttf;
 
 	/* get the line, its length and set up the cursor */
-	llen = prchunk_getline(ctx->rdr, &line);
+	if (UNLIKELY(prchunk_getline(ctx->rdr, &line) <= 0)) {
+		return -1;
+	}
 	cursor = line;
 
 	/* symbol comes next, or `nothing' or `C-c' */
@@ -178,10 +198,15 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	/* receive time stamp, always first on line */
 	if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
 		return -1;
+	} else if (UNLIKELY(*cursor++ != '\t')) {
+		return -1;
 	}
 
 	/* next up is the sym-idx in hex */
 	symidx = hex2int(&cursor);
+	if (UNLIKELY(*cursor++ != '\t')) {
+		return -1;
+	}
 	/* bang the symbol */
 	if (ute_bang_symidx(ctx->wrr, sym, (uint16_t)symidx) != symidx) {
 		/* oh bugger */
@@ -190,6 +215,9 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 
 	/* check the tick type + flags, it's hex already */
 	ttf = hex2int(&cursor);
+	if (UNLIKELY(*cursor++ != '\t')) {
+		return -1;
+	}
 
 	/* bang it all into the target tick */
 	scom_thdr_set_tblidx(AS_SCOM_THDR(tl), (uint16_t)symidx);
@@ -231,7 +259,7 @@ read_lines(mux_ctx_t ctx)
 {
 	while (moar_ticks_p(ctx)) {
 		struct sndwch_s buf[4];
-		if (read_line(ctx, buf)) {
+		if (read_line(ctx, buf) == 0) {
 			ute_add_tick(ctx->wrr, AS_SCOM(buf));
 		}
 	}

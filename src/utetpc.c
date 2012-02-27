@@ -61,6 +61,30 @@
 #define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 
+typedef struct perm_idx_s *perm_idx_t;
+
+struct perm_idx_s {
+	uint64_t skey;
+	sidx_t si;
+};
+
+static inline void
+put_pi(perm_idx_t p, scom_t t, sidx_t i)
+{
+	p->skey = t->u;
+	p->si = i;
+	return;
+}
+
+#define pi_skey(x)	((x)->skey)
+
+static inline sidx_t
+pi_sidx(perm_idx_t p)
+{
+	return p->si;
+}
+
+
 /* why aren't these in the header file? */
 static inline void
 set_tpc_unsorted(utetpc_t tpc)
@@ -164,7 +188,7 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 #define ALGN(t, o)	((o / sizeof(t)) * sizeof(t))
 #define PERM(a, b, c, d)			\
 	(uint8_t)(				\
-		(a & 0x3) |			\
+		(a & 0x3) << 0 |		\
 		(b & 0x3) << 2 |		\
 		(c & 0x3) << 4 |		\
 		(d & 0x3) << 6)
@@ -198,33 +222,36 @@ __ilog2_ceil(size_t n)
 	}
 }
 
+static void
+swap_pi(perm_idx_t p1, perm_idx_t p2)
+{
+	struct perm_idx_s tmp = *p1;
+	*p1 = *p2, *p2 = tmp;
+}
+
 static uint8_t
-pornsort_perm(scidx_t p[4])
+pornsort_perm(struct perm_idx_s p[4])
 {
 	uint8_t perm;
 
-	if (p[1].u < p[0].u) {
+	if (pi_skey(p + 1) < pi_skey(p + 0)) {
 		/* swap them right away? */
-		uint64_t tmp;
-		tmp = p[0].u;
-		p[0].u = p[1].u, p[1].u = tmp;
+		swap_pi(p + 0, p + 1);
 	}
-	if (p[3].u < p[2].u) {
+	if (pi_skey(p + 3) < pi_skey(p + 2)) {
 		/* swap them right away? */
-		uint64_t tmp;
-		tmp = p[2].u;
-		p[2].u = p[3].u, p[3].u = tmp;
+		swap_pi(p + 2, p + 3);
 	}
 
 	/* bit like AA-sort now, final comparison */
-	if (p[2].u < p[0].u) {
+	if (pi_skey(p + 2) < pi_skey(p + 0)) {
 		/* c first */
-		if (p[3].u < p[0].u) {
+		if (pi_skey(p + 3) < pi_skey(p + 0)) {
 			/* d next, then a, then b */
 			perm = PERM(2, 3, 0, 1);
 		} else {
 			/* a next */
-			if (p[3].u < p[1].u) {
+			if (pi_skey(p + 3) < pi_skey(p + 1)) {
 				/* d next, then b */
 				perm = PERM(2, 0, 3, 1);
 			} else {
@@ -234,9 +261,9 @@ pornsort_perm(scidx_t p[4])
 		}
 	} else {
 		/* a first */
-		if (p[2].u < p[1].u) {
+		if (pi_skey(p + 2) < pi_skey(p + 1)) {
 			/* c next */
-			if (p[3].u < p[1].u) {
+			if (pi_skey(p + 3) < pi_skey(p + 1)) {
 				/* d next, then b */
 				perm = PERM(0, 2, 3, 1);
 			} else {
@@ -253,10 +280,8 @@ pornsort_perm(scidx_t p[4])
 
 /* pornsort of 4 ticks */
 static void
-pornsort_apply(scidx_t p[4], uint8_t perm)
+pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 {
-	uint64_t tmp;
-
 	switch (perm) {
 	case PERM(0, 1, 2, 3):
 		/* nothing to do */
@@ -265,118 +290,83 @@ pornsort_apply(scidx_t p[4], uint8_t perm)
 	case PERM(1, 0, 2, 3):
 		/* (1,2) */
 		/* not possible given the above perm generator */
-		tmp = p[0].u;
-		p[0].u = p[1].u, p[1].u = tmp;
+		abort();
 		break;
 
 	case PERM(2, 1, 0, 3):
 		/* (1,3) */
-		tmp = p[0].u;
-		p[0].u = p[2].u, p[2].u = tmp;
+		swap_pi(p + 0, p + 2);
 		break;
 
 	case PERM(3, 1, 2, 0):
 		/* (1,4) */
-		tmp = p[0].u;
-		p[0].u = p[3].u, p[3].u = tmp;
+		swap_pi(p + 0, p + 3);
 		break;
 
 	case PERM(0, 2, 1, 3):
 		/* (2,3) */
-		tmp = p[1].u;
-		p[1].u = p[2].u, p[2].u = tmp;
+		swap_pi(p + 1, p + 2);
 		break;
 
 	case PERM(0, 3, 2, 1):
 		/* (2,4) */
-		tmp = p[1].u;
-		p[1].u = p[3].u, p[3].u = tmp;
+		swap_pi(p + 1, p + 3);
 		break;
 
 	case PERM(0, 1, 3, 2):
 		/* (3,4) */
 		/* not possible with the above perm generator */
-		tmp = p[2].u;
-		p[2].u = p[3].u, p[3].u = tmp;
+		abort();
 		break;
 
 	case PERM(1, 0, 3, 2):
 		/* (1,2)(3,4) */
 		/* not possible with the above perm generator */
-		tmp = p[0].u;
-		p[0].u = p[1].u, p[1].u = tmp;
-		tmp = p[2].u;
-		p[2].u = p[3].u, p[3].u = tmp;
+		abort();
 		break;
 
 	case PERM(2, 3, 0, 1):
 		/* (1,3)(2,4) */
-		tmp = p[0].u;
-		p[0].u = p[2].u, p[2].u = tmp;
-		tmp = p[1].u;
-		p[1].u = p[3].u, p[3].u = tmp;
+		swap_pi(p + 0, p + 2);
+		swap_pi(p + 1, p + 3);
 		break;
 
 	case PERM(3, 2, 1, 0):
 		/* (1,4)(2,3) */
-		tmp = p[0].u;
-		p[0].u = p[3].u, p[3].u = tmp;
-		tmp = p[1].u;
-		p[1].u = p[2].u, p[2].u = tmp;
+		swap_pi(p + 0, p + 3);
+		swap_pi(p + 1, p + 2);
 		break;
 
 	default: {
 		/* 3- and 4-cycles here */
-		uint64_t tmpa[4];
+		struct perm_idx_s tmpa[4];
 
 		if (PERMI(perm, 0) != 0) {
-			tmpa[0] = p[0].u;
-			p[0].u = p[PERMI(perm, 0)].u;
+			tmpa[0] = p[0];
+			p[0] = p[PERMI(perm, 0)];
 		}
 		if (PERMI(perm, 1) != 1) {
-			tmpa[1] = p[1].u;
+			tmpa[1] = p[1];
 			/* PERMI(perm, 0) cant be 0 */
-			p[1].u = p[PERMI(perm, 1)].u;
+			p[1] = p[PERMI(perm, 1)];
 		}
 		if (PERMI(perm, 2) != 2) {
-			tmpa[2] = p[2].u;
-			tmpa[3] = p[3].u;
+			tmpa[2] = p[2];
+			tmpa[3] = p[3];
 			/* PERMI(perm, 0) cant be 0 */
-			p[2].u = tmpa[PERMI(perm, 2)];
+			p[2] = tmpa[PERMI(perm, 2)];
 		}
 		if (PERMI(perm, 3) != 3) {
 			/* PERMI(perm, 0) cant be 0 */
-			p[3].u = tmpa[PERMI(perm, 3)];
+			p[3] = tmpa[PERMI(perm, 3)];
 		}
 	}
 	}
+	/* some assertions */
+	assert(pi_skey(p + 0) <= pi_skey(p + 1));
+	assert(pi_skey(p + 1) <= pi_skey(p + 2));
+	assert(pi_skey(p + 2) <= pi_skey(p + 3));
 	return;
-}
-
-static inline scidx_t
-fake_scidx(scom_t t, uint16_t idx)
-{
-#if defined HAVE_ANON_STRUCTS
-	scidx_t res = {
-		.sec = scom_thdr_sec(t),
-		.msec = scom_thdr_msec(t),
-		.idx = idx,
-		.ttf = scom_thdr_ttf(t),
-	};
-#else  /* !HAVE_ANON_STRUCTS */
-	scidx_t res;
-	res.sec = scom_thdr_sec(t);
-	res.msec = scom_thdr_msec(t);
-	res.idx = idx;
-	res.ttf = scom_thdr_ttf(t);
-#endif	/* HAVE_ANON_STRUCTS */
-	return res;
-}
-
-static inline uint16_t
-scidx_idx(scidx_t sci)
-{
-	return (uint16_t)sci.idx;
 }
 
 #define min(x, y)	(x < y ? x : y)
@@ -388,8 +378,8 @@ min_size_t(size_t x, size_t y)
 }
 
 /* not reentrant, fixme */
-static scidx_t *__gidx = MAP_FAILED;
-#define SCRATCH_SIZE	(IDXSORT_SIZE * 2 * sizeof(uint64_t))
+static perm_idx_t __gidx = MAP_FAILED;
+#define SCRATCH_SIZE	(IDXSORT_SIZE * 2 * sizeof(*__gidx))
 
 static void
 init_scratch(void)
@@ -400,7 +390,8 @@ init_scratch(void)
 	return;
 }
 
-static void*
+/* scratch space where sort keys and indices are stored */
+static perm_idx_t
 get_scratch(void)
 {
 /* singleton */
@@ -421,7 +412,7 @@ fini_scratch(void)
 }
 
 static void
-merge_up(scidx_t *tgt, scidx_t *src, int step, int max)
+merge_up(perm_idx_t tgt, perm_idx_t src, int step, int max)
 {
 /* bottom up merge steps, for arrays of scidx's */
 	int i1 = 0;
@@ -431,13 +422,19 @@ merge_up(scidx_t *tgt, scidx_t *src, int step, int max)
 	int i = 0;
 
 	for (; i1 < ei1 && i2 < ei2; i++) {
-		tgt[i].u = src[i1].u < src[i2].u ? src[i1++].u : src[i2++].u;
+		tgt[i] = pi_skey(src + i1) < pi_skey(src + i2)
+			? src[i1++]
+			: src[i2++];
 	}
 	for (; i1 < ei1; i++, i1++) {
-		tgt[i].u = src[i1].u;
+		tgt[i] = src[i1];
 	}
 	for (; i2 < ei2; i++, i2++) {
-		tgt[i].u = src[i2].u;
+		tgt[i] = src[i2];
+	}
+
+	for (int k = 1; k < i; k++) {
+		assert(pi_skey(tgt + k - 1) <= pi_skey(tgt + k));
 	}
 	return;
 }
@@ -445,8 +442,8 @@ merge_up(scidx_t *tgt, scidx_t *src, int step, int max)
 static void
 merge_all(size_t nticks)
 {
-	scidx_t *src = get_scratch();
-	scidx_t *tgt = src + IDXSORT_SIZE;
+	perm_idx_t src = get_scratch();
+	perm_idx_t tgt = src + IDXSORT_SIZE;
 
 	/* steps 4, 8, 16, 32, 64, 128
 	 * we strictly need an even number of rounds so that the final
@@ -478,48 +475,57 @@ merge_all(size_t nticks)
 	return;
 }
 
-static scidx_t*
+static perm_idx_t
 idxsort(scom_t p, size_t nticks)
 {
-	scidx_t *scp = get_scratch();
+	perm_idx_t keys = get_scratch();
 	size_t m = min(nticks, IDXSORT_SIZE);
 	size_t j = 0;
 
 	for (size_t i = 0; i < m; j++) {
 		size_t bsz = scom_thdr_size(p);
 
-		scp[j] = fake_scidx(p, i);
+		put_pi(keys + j, p, i);
 		p = DATCA(p, bsz);
 		i += bsz / sizeof(struct sndwch_s);
 	}
 	/* reuse m to compute the next 2-power */
 	m = __ilog2_ceil(j);
 	/* fill scp up with naughts */
-	memset(scp + j, 0, (m - j) * sizeof(*scp));
+	memset(keys + j, 0, (m - j) * sizeof(*keys));
 
 	/* use the local index in scp to do pornsort */
 	for (size_t i = 0; i < j; i += 4) {
-		uint8_t perm = pornsort_perm(scp + i);
-		pornsort_apply(scp + i, perm);
+		uint8_t perm = pornsort_perm(keys + i);
+		pornsort_apply(keys + i, perm);
 	}
 
 	/* merge steps, up to the next 2-power */
 	merge_all(m);
-	return scp;
+	return keys;
 }
 
 static void
-collate(void *tgt, const void *src, scidx_t *idxa, size_t nticks)
+collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 {
 	/* skip 0 idxs first */
 	size_t j;
 
-	for (j = 0; j < nticks && idxa[j].u == 0ULL; j++);
+	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
 
 	for (size_t i = 0; i < nticks; j++) {
-		sidx_t idx = scidx_idx(idxa[j]);
+		sidx_t idx = pi_sidx(pi + j);
 		const void *s = DATCI(src, idx, sizeof(struct sndwch_s));
 		size_t bsz = scom_thdr_size(s);
+
+		if (j > 0) {
+			assert(pi_skey(pi + j - 1) <= pi_skey(pi + j));
+		}
+		if (j > 0 && pi_skey(pi + j - 1) != 0ULL) {
+			assert(AS_SCOM(DATCI(src, pi_sidx(pi + j - 1),
+					     sizeof(struct sndwch_s)))->u <=
+			       AS_SCOM(s)->u);
+		}
 
 		memcpy(tgt, s, bsz);
 		tgt = DATA(tgt, bsz);
@@ -870,9 +876,9 @@ tpc_sort(utetpc_t tpc)
 	     tp < ep; ) {
 		size_t ntleft = DATDI(ep, tp, tpc_tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
-		scidx_t *scp = idxsort(tp, nticks);
+		perm_idx_t pi = idxsort(tp, nticks);
 
-		collate(np, tp, scp, nticks);
+		collate(np, tp, pi, nticks);
 		tp = DATI(tp, nticks, tpc_tsz);
 		np = DATI(np, nticks, tpc_tsz);
 	}

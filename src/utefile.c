@@ -868,6 +868,9 @@ ute_idx2sym(utectx_t ctx, uint16_t idx)
 uint16_t
 ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx)
 {
+	if (UNLIKELY(sym == NULL)) {
+		return 0;
+	}
 	return slut_bang(ctx->slut, sym, idx);
 }
 

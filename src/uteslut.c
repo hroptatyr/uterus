@@ -112,11 +112,15 @@ DEFUN void
 free_slut(uteslut_t s)
 {
 	/* s2i */
-	free_slut_tg(s->stbl);
-	s->stbl = NULL;
+	if (s->stbl != NULL) {
+		free_slut_tg(s->stbl);
+		s->stbl = NULL;
+	}
 	/* i2s */
-	munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
-	s->itbl = NULL;
+	if (s->itbl != NULL) {
+		munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
+		s->itbl = NULL;
+	}
 	return;
 }
 

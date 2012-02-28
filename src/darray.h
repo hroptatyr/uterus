@@ -62,6 +62,10 @@ typedef int(*darray_walk_f)(const char *key, trie_idx_t sep_node, void *clo);
 DECLF darray_t make_darray(void);
 DECLF void free_darray(darray_t d);
 
+/**
+ * Clone SRC and return a deep-copy. */
+DECLF darray_t clone_darray(const_darray_t src);
+
 DECLF darray_t darray_fmread(fmcmb_t filemem);
 DECLF int darray_fmwrite(const_darray_t d, fmcmb_t filemem);
 

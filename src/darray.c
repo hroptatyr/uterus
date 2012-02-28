@@ -198,6 +198,28 @@ exit_da_created:
 	return NULL;
 }
 
+DEFUN darray_t
+clone_darray(const_darray_t src)
+{
+	darray_t res;
+	const size_t tcsz = src->num_cells * sizeof(*src->cells);
+
+	if ((res = malloc(sizeof(*res))) == NULL) {
+		return NULL;
+	}
+	res->num_cells = src->num_cells;
+	if ((res->cells = malloc(tcsz)) == NULL) {
+		goto exit_da_created;
+	}
+	/* memcpy them cells */
+	memcpy(res->cells, src->cells, tcsz);
+	return res;
+
+exit_da_created:
+	free(res);
+	return NULL;
+}
+
 /**
  * @brief Read double-array data from file
  *

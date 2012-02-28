@@ -67,6 +67,10 @@ typedef const struct trie_state_s *const_trie_state_t;
 extern trie_t make_trie(void);
 extern void free_trie(trie_t trie);
 
+/**
+ * Deep-copy TRIE and return a clone. */
+extern trie_t clone_trie(const_trie_t trie);
+
 extern trie_t trie_mread(char *mem, size_t msz);
 extern trie_t trie_fread(FILE *file);
 extern int trie_mwrite(trie_t trie, char **mem, size_t *msz);

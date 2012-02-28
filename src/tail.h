@@ -50,6 +50,10 @@ typedef const struct tail_s *const_tail_t;
 DECLF tail_t make_tail(void);
 DECLF void free_tail(tail_t t);
 
+/**
+ * Clone SRC and return a deep-copy. */
+DECLF tail_t clone_tail(const_tail_t src);
+
 DECLF tail_t tail_fmread(fmcmb_t stream);
 DECLF int tail_fmwrite(const_tail_t t, fmcmb_t stream);
 

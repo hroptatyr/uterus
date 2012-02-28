@@ -89,6 +89,33 @@ make_tail(void)
 	return t;
 }
 
+DEFUN tail_t
+clone_tail(const_tail_t src)
+{
+	tail_t res;
+
+	if ((res = malloc(sizeof(*res))) == NULL) {
+		return NULL;
+	}
+	res->first_free = src->first_free;
+	res->num_tails = src->num_tails;
+
+	if ((res->tails = malloc(
+		     res->num_tails * sizeof(*res->tails))) == NULL) {
+		goto exit_tail_created;
+	}
+	for (trie_idx_t i = 0; i < res->num_tails; i++) {
+		res->tails[i].next_free = src->tails[i].next_free;
+		res->tails[i].data = src->tails[i].data;
+		res->tails[i].suffix = strdup(src->tails[i].suffix);
+	}
+	return res;
+
+exit_tail_created:
+	free(res);
+	return NULL;
+}
+
 /**
  * @brief Read tail data from file
  *

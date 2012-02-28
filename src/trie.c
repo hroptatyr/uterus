@@ -195,6 +195,31 @@ exit_trie_created:
 	return NULL;
 }
 
+trie_t
+clone_trie(const_trie_t src)
+{
+	trie_t res;
+
+	if ((res = (trie_t)malloc(sizeof(*res))) == NULL) {
+		return NULL;
+	}
+
+	if ((res->da = clone_darray(src->da)) == NULL) {
+		goto exit_trie_created;
+	}
+	if ((res->tail = clone_tail(src->tail)) == NULL) {
+		goto exit_da_created;
+	}
+	res->dirtyp = src->dirtyp;
+	return res;
+
+exit_da_created:
+	free_darray(res->da);
+exit_trie_created:
+	free(res);
+	return NULL;
+}
+
 static trie_t
 trie_fmread(fmcmb_t stream)
 {

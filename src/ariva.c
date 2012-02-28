@@ -465,6 +465,20 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 	return;
 }
 
+static m30_t
+__m30_23_get_s(const char **nptr)
+{
+	m30_t res = ffff_m30_23_get_s(nptr);
+	
+	/* allow for . and trailing naughts */
+	if (**nptr == '.') {
+		const char *p = *nptr;
+		while (*++p == '0');
+		*nptr = p;
+	}
+	return res;
+}
+
 static int
 parse_keyval(ariva_tl_t tgt, const char **p)
 {

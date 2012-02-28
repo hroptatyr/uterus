@@ -722,13 +722,16 @@ ute_mktemp(int oflags)
 	return make_utectx(tmpnam, resfd, oflags);
 }
 
+#if defined USE_UTE_SORT
 static void
 ute_prep_sort(utectx_t ctx)
 {
+/* this is probably the worst we can do */
 	/* delete the file */
 	unlink(ctx->fname);
 	return;
 }
+#endif	/* USE_UTE_SORT */
 
 void
 ute_close(utectx_t ctx)

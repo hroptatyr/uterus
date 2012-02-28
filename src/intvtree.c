@@ -169,6 +169,50 @@ inner_node_p(__node_t nd)
 }
 
 
+/* iterators and node stack fiddlers*/
+#if !defined _INDEXT
+# define _INDEXT
+typedef size_t index_t;
+#endif	/* !_INDEXT */
+
+typedef struct it_ndstk_s *it_ndstk_t;
+struct it_ndstk_s {
+	index_t idx;
+	__node_t *stk;
+};
+
+static inline void
+stack_push(it_ndstk_t stk, __node_t nd)
+{
+	stk->stk[stk->idx++] = nd;
+	return;
+}
+
+static inline __node_t
+stack_pop(it_ndstk_t stk)
+{
+	if (stk->idx == 0) {
+		return nil;
+	}
+	return stk->stk[--stk->idx];
+}
+
+static inline __attribute__((unused)) __node_t
+stack_top(it_ndstk_t stk)
+{
+	if (stk->idx == 0) {
+		return nil;
+	}
+	return stk->stk[stk->idx - 1];
+}
+
+static inline size_t
+stack_size(it_ndstk_t stk)
+{
+	return stk->idx;
+}
+
+
 /* ctor */
 static inline void
 init_itree(itree_t it)
@@ -638,50 +682,6 @@ itree_print(itree_t it)
 {
 	itree_print_helper(it, itree_left_root(it));
 	return;
-}
-
-
-#if !defined _INDEXT
-# define _INDEXT
-typedef size_t index_t;
-#endif	/* !_INDEXT */
-
-/* iterators and node stack fiddlers*/
-typedef struct it_ndstk_s *it_ndstk_t;
-struct it_ndstk_s {
-	index_t idx;
-	__node_t *stk;
-};
-
-static inline void
-stack_push(it_ndstk_t stk, __node_t nd)
-{
-	stk->stk[stk->idx++] = nd;
-	return;
-}
-
-static inline __node_t
-stack_pop(it_ndstk_t stk)
-{
-	if (stk->idx == 0) {
-		return nil;
-	}
-	return stk->stk[--stk->idx];
-}
-
-static inline __attribute__((unused)) __node_t
-stack_top(it_ndstk_t stk)
-{
-	if (stk->idx == 0) {
-		return nil;
-	}
-	return stk->stk[stk->idx - 1];
-}
-
-static inline size_t
-stack_size(it_ndstk_t stk)
-{
-	return stk->idx;
 }
 
 static void __attribute__((unused))

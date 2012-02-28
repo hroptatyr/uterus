@@ -170,6 +170,7 @@ __strat_cb(it_node_t itnd, void *clo)
 	sn = xmalloc(sizeof(struct strat_node_s) + (cc->cnt - 1) * sizeof(int));
 	sn->pg = pg;
 	sn->cnt = 0;
+	sn->next = NULL;
 	/* find the points again, this time filling the merge closure */
 	itree_find_point_cb(it, lo, __mrg, sn);
 	sn->pgs[sn->cnt++] = pg;

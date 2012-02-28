@@ -98,7 +98,7 @@ static void
 clone_i2s(uteslut_t tgt, uteslut_t src)
 {
 	const size_t clonsz = (tgt->nsyms = src->nsyms) * sizeof(slut_sym_t);
-	init_i2s(tgt, src->alloc_sz);
+	init_i2s(tgt, tgt->alloc_sz = src->alloc_sz);
 	memcpy(tgt->itbl, src->itbl, clonsz);
 	return;
 }

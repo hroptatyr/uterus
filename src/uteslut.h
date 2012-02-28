@@ -1,8 +1,8 @@
 /*** uteslut.h -- ute symbol look-up table
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2009-2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
  * This file is part of uterus.
  *
@@ -78,6 +78,10 @@ DECLF void fini_slut(void);
 /* ctor and dtor */
 DECLF void make_slut(uteslut_t s);
 DECLF void free_slut(uteslut_t s);
+
+/**
+ * Make a deep copy of SRC into TGT. */
+DECLF void clone_slut(uteslut_t tgt, uteslut_t src);
 
 /* (de)serialiser */
 DECLF void slut_deser(uteslut_t s, void *data, size_t size);

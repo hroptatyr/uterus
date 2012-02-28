@@ -58,9 +58,13 @@
 #include "ute-mux.h"
 #include "ute-print.h"
 
-#if defined USE_DEBUGGING_ASSERTIONS
+/* we're just as good as rudi, aren't we? */
+#if defined DEBUG_FLAG
 # include <assert.h>
-#endif	/* USE_DEBUGGING_ASSERTIONS */
+#else  /* !DEBUG_FLAG */
+# define assert(args...)
+#endif	/* DEBUG_FLAG */
+
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"

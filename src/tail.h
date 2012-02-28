@@ -2,6 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
+ * Copyright (C) 2010-2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,6 +49,10 @@ typedef const struct tail_s *const_tail_t;
 /* ctor/dtor */
 DECLF tail_t make_tail(void);
 DECLF void free_tail(tail_t t);
+
+/**
+ * Clone SRC and return a deep-copy. */
+DECLF tail_t clone_tail(const_tail_t src);
 
 DECLF tail_t tail_fmread(fmcmb_t stream);
 DECLF int tail_fmwrite(const_tail_t t, fmcmb_t stream);

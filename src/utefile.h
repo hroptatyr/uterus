@@ -1,10 +1,10 @@
 /*** utefile.h -- high level interface to ute files (r/w)
  *
- * Copyright (C) 2010 Sebastian Freundt
+ * Copyright (C) 2010-2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi/uterus.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,6 +125,10 @@ extern size_t ute_nsyms(utectx_t ctx);
 /**
  * Sort all ticks pages in the file. */
 extern void ute_sort(utectx_t ctx);
+
+/**
+ * Clone the symbol look-up table (slut) from SRC to TGT. */
+extern void ute_clone_slut(utectx_t tgt, utectx_t src);
 
 /**
  * Given a symbol SYM return the index in the look-up table. */

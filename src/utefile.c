@@ -1,10 +1,10 @@
 /*** utefile.c -- high level interface to ute files (r/w)
  *
- * Copyright (C) 2010 Sebastian Freundt
+ * Copyright (C) 2010-2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi/uterus.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -226,6 +226,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	return;
 }
 
+#if !defined USE_UTE_SORT
 static void
 seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
@@ -246,6 +247,7 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->fl = 0;
 	return;
 }
+#endif	/* USE_UTE_SORT */
 
 static void
 reseek(utectx_t ctx, sidx_t i)
@@ -369,6 +371,7 @@ out:
 
 
 /* tpc glue */
+#if !defined USE_UTE_SORT
 static void
 merge_tpc(utectx_t ctx, utetpc_t tpc)
 {
@@ -429,6 +432,7 @@ mrg:
 	unset_tpc_needmrg(tpc);
 	return;
 }
+#endif	/* USE_UTE_SORT */
 
 static bool
 seek_eof_p(uteseek_t sk)
@@ -718,18 +722,35 @@ ute_mktemp(int oflags)
 	return make_utectx(tmpnam, resfd, oflags);
 }
 
+#if defined USE_UTE_SORT
+static void
+ute_prep_sort(utectx_t ctx)
+{
+/* this is probably the worst we can do */
+	/* delete the file */
+	unlink(ctx->fname);
+	return;
+}
+#endif	/* USE_UTE_SORT */
+
 void
 ute_close(utectx_t ctx)
 {
 	/* first make sure we write the stuff */
 	ute_flush(ctx);
 	if (!ute_sorted_p(ctx)) {
+#if defined USE_UTE_SORT
+		ute_prep_sort(ctx);
+		ute_sort(ctx);
+#endif	/* USE_UTE_SORT */
 		ute_unset_unsorted(ctx);
 	}
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
 	/* serialse the slut */
 	flush_slut(ctx);
+	/* ... and finalise */
+	free_slut(ctx->slut);
 
 	/* finish our tpc session */
 	fini_tpc();
@@ -756,13 +777,25 @@ ute_flush(utectx_t ctx)
 		/* special case when the page cache has detected
 		 * a major violation */
 		ute_set_unsorted(ctx);
+#if !defined USE_UTE_SORT
 		/* since ute_sort() doesn't work, just use merge_tcp() */
 		merge_tpc(ctx, ctx->tpc);
+#endif	/* USE_UTE_SORT */
 	}
 	flush_tpc(ctx);
 	return;
 }
 
+void
+ute_clone_slut(utectx_t tgt, utectx_t src)
+{
+	/* free any existing sluts */
+	free_slut(tgt->slut);
+	/* now clone */
+	tgt->slut_sz = src->slut_sz;
+	clone_slut(tgt->slut, src->slut);
+	return;
+}
 
 
 /* accessor */

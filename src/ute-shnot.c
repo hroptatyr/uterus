@@ -43,9 +43,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#if defined USE_ASSERTIONS
-#include <assert.h>
-#endif	/* USE_ASSERTIONS */
+
+/* we're just as good as rudi, aren't we? */
+#if defined DEBUG_FLAG
+# include <assert.h>
+#else  /* !DEBUG_FLAG */
+# define assert(args...)
+#endif	/* DEBUG_FLAG */
 
 #define DEFINE_GORY_STUFF	1
 #include "utefile.h"

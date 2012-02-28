@@ -46,7 +46,11 @@
 #include "utetpc.h"
 
 /* we're just as good as rudi, aren't we? */
-#include <assert.h>
+#if defined DEBUG_FLAG
+# include <assert.h>
+#else  /* !DEBUG_FLAG */
+# define assert(args...)
+#endif	/* DEBUG_FLAG */
 
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x

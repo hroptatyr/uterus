@@ -642,52 +642,6 @@ itree_del_node(itree_t it, it_node_t nd)
 	return res;
 }
 
-
-/* printer shit */
-static void
-it_node_print(itree_t it, __node_t in)
-{
-	printf("k=%li, h=%li, mh=%li", in->pub.lo, in->pub.hi, in->max_high);
-	fputs("  l->key=", stdout);
-	if (nil_node_p(in->left)) {
-		fputs("NULL", stdout);
-	} else {
-		printf("%li", in->left->pub.lo);
-	}
-	fputs("  r->key=", stdout);
-	if (nil_node_p(in->right)) {
-		fputs("NULL", stdout);
-	} else {
-		printf("%li", in->right->pub.lo);
-	}
-	fputs("  p->key=", stdout);
-	if (in->parent == itree_root_node(it)) {
-		fputs("NULL", stdout);
-	} else {
-		printf("%li", in->parent->pub.lo);
-	}
-	printf("  red=%d\n", in->redp);
-	return;
-}
-
-static void
-itree_print_helper(itree_t it, __node_t x)
-{
-	if (!nil_node_p(x)) {
-		itree_print_helper(it, x->left);
-		it_node_print(it, x);
-		itree_print_helper(it, x->right);
-	}
-	return;
-}
-
-DEFUN void
-itree_print(itree_t it)
-{
-	itree_print_helper(it, itree_left_root(it));
-	return;
-}
-
 static void __attribute__((unused))
 __itree_trav_pre_order(
 	itree_t UNUSED(it), it_trav_f cb, void *clo, it_ndstk_t stk)

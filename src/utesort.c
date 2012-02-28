@@ -267,7 +267,7 @@ static ssize_t
 min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 {
 	ssize_t res = -1;
-	uint64_t min = LLONG_MAX;
+	uint64_t min = ULLONG_MAX;
 	strat_node_t curnd = str->last;
 
 	if (UNLIKELY(curnd == NULL)) {

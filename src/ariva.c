@@ -465,22 +465,22 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 	return;
 }
 
-static void
-parse_keyval(ariva_tl_t tgt, const char *p)
+static int
+parse_keyval(ariva_tl_t tgt, const char **p)
 {
 /* assumes tgt's si is set already */
 	uint16_t idx = atl_si(tgt);
 
-	switch (*p++) {
+	switch (*(*p)++) {
 	case 'p':
-		tgt->p = ffff_m30_get_s(&p);
+		tgt->p = ffff_m30_get_s(p);
 		/* store in cache */
 		SYMTBL_TRA[idx] = tgt->p;
 		/* also reset auction */
 		SYMTBL_AUCP[idx] = false;
 		break;
 	case 'b':
-		tgt->b = ffff_m30_get_s(&p);
+		tgt->b = ffff_m30_get_s(p);
 		/* store in cache */
 		SYMTBL_BID[idx] = tgt->b;
 		if (tgt->b.mant == 0) {
@@ -488,7 +488,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'a':
-		tgt->a = ffff_m30_get_s(&p);
+		tgt->a = ffff_m30_get_s(p);
 		/* store in cache */
 		SYMTBL_ASK[idx] = tgt->a;
 		if (tgt->a.mant == 0) {
@@ -496,19 +496,19 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'k':
-		tgt->k = ffff_m30_get_s(&p);
+		tgt->k = ffff_m30_get_s(p);
 		/* once weve seen this, an auction is going on */
 		SYMTBL_AUCP[idx] = true;
 		break;
 	case 'v':
 		/* unlike our `v' this is the vol-pri */
-		tgt->V = ffff_m62_get_s(&p);
+		tgt->V = ffff_m62_get_s(p);
 		break;
 	case 'P':
-		tgt->P = ffff_m30_23_get_s(&p);
+		tgt->P = __m30_23_get_s(p);
 		break;
 	case 'B':
-		tgt->B = ffff_m30_23_get_s(&p);
+		tgt->B = __m30_23_get_s(p);
 		/* store in cache */
 		SYMTBL_BSZ[idx] = tgt->B;
 		if (tgt->B.mant == 0) {
@@ -516,7 +516,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		}
 		break;
 	case 'A':
-		tgt->A = ffff_m30_23_get_s(&p);
+		tgt->A = __m30_23_get_s(p);
 		/* store in cache */
 		SYMTBL_ASZ[idx] = tgt->A;
 		if (tgt->A.mant == 0) {
@@ -525,10 +525,10 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		break;
 	case 'V':
 		/* this is the volume */
-		tgt->v = ffff_m62_get_s(&p);
+		tgt->v = ffff_m62_get_s(p);
 		break;
 	case 'T':
-		tgt->stmp2 = parse_time(&p);
+		tgt->stmp2 = parse_time(p);
 		if (atl_ts_sec(tgt) > 0) {
 			break;
 		}
@@ -537,7 +537,7 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 		break;
 	case 't': {
 		/* price stamp */
-		time_t stmp = parse_time(&p);
+		time_t stmp = parse_time(p);
 		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
 		SYMTBL_METR[idx] = stmp;
@@ -549,10 +549,12 @@ parse_keyval(ariva_tl_t tgt, const char *p)
 	case 'c':
 		/* must be a candle tick, kick it */
 		tgt->flags = FLAG_INVAL;
+		return -1;
 	default:
-		return;
+		*p = strchr(*p, ' ');
+		break;
 	}
-	return;
+	return 0;
 }
 
 static bool
@@ -562,14 +564,12 @@ parse_keyvals(ariva_tl_t tgt, const char *cursor)
  * also assumes that the string in cursor is nul-terminated */
 	const char *p = cursor;
 
-	while (true) {
-		parse_keyval(tgt, p);
-		if (UNLIKELY(tgt->flags & FLAG_INVAL)) {
+	do {
+		if (UNLIKELY(parse_keyval(tgt, &p) < 0)) {
+			/* abrupt exit */
 			return false;
-		} else if ((p = strchr(p, ' ')) == NULL || *++p == '\n') {
-			break;
-		}
-	}
+		} 
+	} while (p && *p++ == ' ');
 
 	if (tgt->flags & FLAG_HALTED &&
 	    (tgt->k.mant != 0 || tgt->P.mant != 0 ||

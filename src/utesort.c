@@ -156,8 +156,8 @@ static void
 __strat_cb(it_node_t itnd, void *clo)
 {
 	int pg = AS_INT(itnd->data);
-	int32_t lo = itnd->lo;
-	int32_t hi = itnd->hi;
+	T lo = itnd->lo;
+	T hi = itnd->hi;
 	strat_t sc = clo;
 	struct __cnt_clo_s cc[1];
 	strat_node_t sn;

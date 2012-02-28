@@ -60,9 +60,12 @@
 #define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
 
 #if defined DEBUG_FLAG
+# include <assert.h>
+# include <stdio.h>
 # define UDEBUG(args...)	printf(args)
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
+# define assert(args...)
 #endif	/* DEBUG_FLAG */
 
 
@@ -94,11 +97,19 @@
  */
 #include <stdio.h>
 #include <limits.h>
+
+/* we make use of the fact that intvtree.h is a template */
+#if !defined INTV_TYPE
+# define INTV_TYPE	uint64_t
+#endif	/* INTV_TYPE */
+
+#include "intvtree.h"
 #include "intvtree.c"
 
 #define AS_y(t, x)	((t)(long int)(void*)(x))
-#define AS_INT(x)	AS_y(int, x)
 #define AS_UINT32(x)	AS_y(uint32_t, x)
+
+#define T		INTV_TYPE
 
 typedef struct strat_node_s *strat_node_t;
 typedef struct strat_s *strat_t;
@@ -143,9 +154,9 @@ __cnt(it_node_t UNUSED(itnd), void *clo)
 static void
 __strat_cb(it_node_t itnd, void *clo)
 {
-	int pg = AS_INT(itnd->data);
-	int32_t lo = itnd->lo;
-	int32_t hi = itnd->hi;
+	uint32_t pg = AS_UINT32(itnd->data);
+	T lo = itnd->lo;
+	T hi = itnd->hi;
 	strat_t sc = clo;
 	struct __cnt_clo_s cc[1];
 	strat_node_t sn;
@@ -159,6 +170,7 @@ __strat_cb(it_node_t itnd, void *clo)
 	sn = xmalloc(sizeof(struct strat_node_s) + (cc->cnt - 1) * sizeof(int));
 	sn->pg = pg;
 	sn->cnt = 0;
+	sn->next = NULL;
 	/* find the points again, this time filling the merge closure */
 	itree_find_point_cb(it, lo, __mrg, sn);
 	sn->pgs[sn->cnt++] = pg;
@@ -256,7 +268,7 @@ static ssize_t
 min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 {
 	ssize_t res = -1;
-	uint64_t min = LLONG_MAX;
+	uint64_t min = ULLONG_MAX;
 	strat_node_t curnd = str->last;
 
 	if (UNLIKELY(curnd == NULL)) {
@@ -344,6 +356,9 @@ ute_sort(utectx_t ctx)
 		/* step the j-th run */
 		step_run(sks, (size_t)j, str);
 	}
+
+	/* something must have gone utterly wrong */
+	assert(ute_sorted_p(hdl));
 
 	/* close the ute file */
 	ute_close(hdl);

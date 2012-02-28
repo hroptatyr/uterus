@@ -37,9 +37,16 @@
 
 /** test client for libuterus */
 #include <stdio.h>
-#include <assert.h>
 #include <fcntl.h>
 #include "utefile.h"
+
+/* we're just as good as rudi, aren't we? */
+#if defined DEBUG_FLAG
+# include <assert.h>
+#else  /* !DEBUG_FLAG */
+# define assert(args...)
+#endif	/* DEBUG_FLAG */
+
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"

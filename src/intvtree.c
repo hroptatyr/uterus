@@ -46,8 +46,9 @@
 /* for thread-safe intvtrees */
 #include <pthread.h>
 
-#define MIN_KEY		LLONG_MIN
-#define MAX_KEY		LLONG_MAX
+/* we should somehow compute this */
+#define MIN_KEY		0
+#define MAX_KEY		ULLONG_MAX
 #define NDSTK_SIZE	16
 
 typedef struct __node_s *__node_t;
@@ -56,7 +57,7 @@ struct __node_s {
 	struct it_node_s pub;
 
 	/* book-keeping */
-	int64_t max_high;
+	T max_high;
 	bool redp;
 
 	/* tree navigation */
@@ -84,7 +85,7 @@ static const __node_t nil = &__nil;
 
 /* nodes, ctor */
 static void
-init_node(__node_t nd, int64_t lo, int64_t hi, void *data)
+init_node(__node_t nd, T lo, T hi, void *data)
 {
 	memset(nd, 0, sizeof(*nd));
 	nd->pub.lo = lo;
@@ -96,7 +97,7 @@ init_node(__node_t nd, int64_t lo, int64_t hi, void *data)
 }
 
 static __node_t
-make_node(int64_t lo, int64_t hi, void *data)
+make_node(T lo, T hi, void *data)
 {
 	__node_t n = xnew(struct __node_s);
 	init_node(n, lo, hi, data);
@@ -111,10 +112,10 @@ free_node(__node_t in)
 	return;
 }
 
-static inline int
-max(int a, int b)
+static inline T
+max(T a, T b)
 {
-	return a > b ? a : b;
+	return a >= b ? a : b;
 }
 
 static inline bool
@@ -123,7 +124,7 @@ nil_node_p(__node_t in)
 	return in == nil;
 }
 
-static inline int64_t
+static inline T
 node_key(__node_t nd)
 {
 	return nd->pub.lo;
@@ -147,17 +148,17 @@ itree_left_root(itree_t it)
 	return itree_root_node(it)->left;
 }
 
-static inline int64_t
+static inline T
 max_high(__node_t nd)
 {
 	return nd->max_high;
 }
 
-static inline int64_t
+static inline T
 children_max_high(__node_t x)
 {
-	int64_t xlh = max_high(x->left);
-	int64_t xrh = max_high(x->right);
+	T xlh = max_high(x->left);
+	T xrh = max_high(x->right);
 	return max(xlh, xrh);
 }
 
@@ -165,6 +166,50 @@ static bool
 inner_node_p(__node_t nd)
 {
 	return !(nil_node_p(nd->left) || nil_node_p(nd->right));
+}
+
+
+/* iterators and node stack fiddlers*/
+#if !defined _INDEXT
+# define _INDEXT
+typedef size_t index_t;
+#endif	/* !_INDEXT */
+
+typedef struct it_ndstk_s *it_ndstk_t;
+struct it_ndstk_s {
+	index_t idx;
+	__node_t *stk;
+};
+
+static inline void
+stack_push(it_ndstk_t stk, __node_t nd)
+{
+	stk->stk[stk->idx++] = nd;
+	return;
+}
+
+static inline __node_t
+stack_pop(it_ndstk_t stk)
+{
+	if (stk->idx == 0) {
+		return nil;
+	}
+	return stk->stk[--stk->idx];
+}
+
+static inline __attribute__((unused)) __node_t
+stack_top(it_ndstk_t stk)
+{
+	if (stk->idx == 0) {
+		return nil;
+	}
+	return stk->stk[stk->idx - 1];
+}
+
+static inline size_t
+stack_size(it_ndstk_t stk)
+{
+	return stk->idx;
 }
 
 
@@ -203,26 +248,30 @@ free_itree(itree_t it)
 	pthread_mutex_lock(&it->mtx);
 	x = itree_left_root(it);
 	if (!nil_node_p(x)) {
-#if 0
-/* implement me */
-		if (x->left != it->nil) {
-			stuffToFree.Push(x->left);
+		__node_t ____stk[128];
+		struct it_ndstk_s __stk = {
+			.idx = 0,
+			.stk = ____stk,
+		};
+		it_ndstk_t stk = &__stk;
+
+		if (x->left != nil) {
+			stack_push(stk, x->left);
 		}
 		if (x->right != nil) {
-			stuffToFree.Push(x->right);
+			stack_push(stk, x->right);
 		}
 		free_node(x);
-		while (stuffToFree.NotEmpty()) {
-			x = stuffToFree.Pop();
-			if (x->left != it->nil) {
-				stuffToFree.Push(x->left);
+
+		while ((x = stack_pop(stk)) != nil) {
+			if (x->left != nil) {
+				stack_push(stk, x->left);
 			}
-			if (x->right != it->nil) {
-				stuffToFree.Push(x->right);
+			if (x->right != nil) {
+				stack_push(stk, x->right);
 			}
 			free_node(x);
 		}
-#endif
 	}
 	memset(itree_root_node(it), 0, sizeof(struct __node_s));
 	pthread_mutex_unlock(&it->mtx);
@@ -328,7 +377,7 @@ itree_fixup_max_high(itree_t it, __node_t x)
 }
 
 DEFUN it_node_t
-itree_add(itree_t it, int64_t lo, int64_t hi, void *data)
+itree_add(itree_t it, T lo, T hi, void *data)
 {
 	__node_t x, y, res;
 
@@ -593,96 +642,6 @@ itree_del_node(itree_t it, it_node_t nd)
 	return res;
 }
 
-
-/* printer shit */
-static void
-it_node_print(itree_t it, __node_t in)
-{
-	printf("k=%li, h=%li, mh=%li", in->pub.lo, in->pub.hi, in->max_high);
-	fputs("  l->key=", stdout);
-	if (nil_node_p(in->left)) {
-		fputs("NULL", stdout);
-	} else {
-		printf("%li", in->left->pub.lo);
-	}
-	fputs("  r->key=", stdout);
-	if (nil_node_p(in->right)) {
-		fputs("NULL", stdout);
-	} else {
-		printf("%li", in->right->pub.lo);
-	}
-	fputs("  p->key=", stdout);
-	if (in->parent == itree_root_node(it)) {
-		fputs("NULL", stdout);
-	} else {
-		printf("%li", in->parent->pub.lo);
-	}
-	printf("  red=%d\n", in->redp);
-	return;
-}
-
-static void
-itree_print_helper(itree_t it, __node_t x)
-{
-	if (!nil_node_p(x)) {
-		itree_print_helper(it, x->left);
-		it_node_print(it, x);
-		itree_print_helper(it, x->right);
-	}
-	return;
-}
-
-DEFUN void
-itree_print(itree_t it)
-{
-	itree_print_helper(it, itree_left_root(it));
-	return;
-}
-
-
-#if !defined _INDEXT
-# define _INDEXT
-typedef size_t index_t;
-#endif	/* !_INDEXT */
-
-/* iterators and node stack fiddlers*/
-typedef struct it_ndstk_s *it_ndstk_t;
-struct it_ndstk_s {
-	index_t idx;
-	__node_t *stk;
-};
-
-static inline void
-stack_push(it_ndstk_t stk, __node_t nd)
-{
-	stk->stk[stk->idx++] = nd;
-	return;
-}
-
-static inline __node_t
-stack_pop(it_ndstk_t stk)
-{
-	if (stk->idx == 0) {
-		return nil;
-	}
-	return stk->stk[--stk->idx];
-}
-
-static inline __attribute__((unused)) __node_t
-stack_top(it_ndstk_t stk)
-{
-	if (stk->idx == 0) {
-		return nil;
-	}
-	return stk->stk[stk->idx - 1];
-}
-
-static inline size_t
-stack_size(it_ndstk_t stk)
-{
-	return stk->idx;
-}
-
 static void __attribute__((unused))
 __itree_trav_pre_order(
 	itree_t UNUSED(it), it_trav_f cb, void *clo, it_ndstk_t stk)
@@ -750,7 +709,7 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 
 /* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
-node_pivot_rel(__node_t n, int64_t p)
+node_pivot_rel(__node_t n, T p)
 {
 	if (p < n->pub.lo) {
 		return -1;
@@ -763,7 +722,7 @@ node_pivot_rel(__node_t n, int64_t p)
 
 /* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
-tree_pivot_rel(__node_t n, int64_t p)
+tree_pivot_rel(__node_t n, T p)
 {
 	if (p < n->pub.lo) {
 		return -1;
@@ -775,7 +734,7 @@ tree_pivot_rel(__node_t n, int64_t p)
 }
 
 DEFUN void
-itree_find_point_cb(itree_t it, int64_t p, it_trav_f cb, void *clo)
+itree_find_point_cb(itree_t it, T p, it_trav_f cb, void *clo)
 {
 /* Find all nodes that contain P.  Call cb() for each of them. */
 	/* root node has no right child, proceed with the left one */
@@ -843,7 +802,7 @@ itree_find_point_cb(itree_t it, int64_t p, it_trav_f cb, void *clo)
 }
 
 DEFUN void
-itree_find_point_cb1(itree_t it, int64_t p, it_trav_f cb, void *clo)
+itree_find_point_cb1(itree_t it, T p, it_trav_f cb, void *clo)
 {
 /* like itree_find_point() but stop after one occurrence,
  * prefer the right branch for nebulous reasons */
@@ -889,7 +848,7 @@ out:
 }
 
 DEFUN void*
-itree_find_point(itree_t it, int64_t p)
+itree_find_point(itree_t it, T p)
 {
 /* like itree_find_point() but stop after one occurrence,
  * prefer the right branch for nebulous reasons */

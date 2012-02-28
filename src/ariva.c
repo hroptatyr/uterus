@@ -111,7 +111,7 @@ static size_t lno;
 static inline __attribute__((pure)) uint32_t
 atl_ts_sec(const struct ariva_tl_s *l)
 {
-	return sl1t_stmp_sec((const_sl1t_t)l);
+	return scom_thdr_sec(AS_SCOM(l));
 }
 
 static inline __attribute__((unused)) void

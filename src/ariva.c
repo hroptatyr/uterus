@@ -469,18 +469,20 @@ static void
 parse_keyval(ariva_tl_t tgt, const char **p)
 {
 /* assumes tgt's si is set already */
+	uint16_t idx = atl_si(tgt);
+
 	switch (*(*p)++) {
 	case 'p':
 		tgt->p = ffff_m30_get_s(p);
 		/* store in cache */
-		SYMTBL_TRA[atl_si(tgt)] = tgt->p;
+		SYMTBL_TRA[idx] = tgt->p;
 		/* also reset auction */
-		SYMTBL_AUCP[atl_si(tgt)] = false;
+		SYMTBL_AUCP[idx] = false;
 		break;
 	case 'b':
 		tgt->b = ffff_m30_get_s(p);
 		/* store in cache */
-		SYMTBL_BID[atl_si(tgt)] = tgt->b;
+		SYMTBL_BID[idx] = tgt->b;
 		if (tgt->b.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -488,7 +490,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'a':
 		tgt->a = ffff_m30_get_s(p);
 		/* store in cache */
-		SYMTBL_ASK[atl_si(tgt)] = tgt->a;
+		SYMTBL_ASK[idx] = tgt->a;
 		if (tgt->a.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -496,7 +498,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'k':
 		tgt->k = ffff_m30_get_s(p);
 		/* once weve seen this, an auction is going on */
-		SYMTBL_AUCP[atl_si(tgt)] = true;
+		SYMTBL_AUCP[idx] = true;
 		break;
 	case 'v':
 		/* unlike our `v' this is the vol-pri */
@@ -508,7 +510,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'B':
 		tgt->B = ffff_m30_23_get_s(p);
 		/* store in cache */
-		SYMTBL_BSZ[atl_si(tgt)] = tgt->B;
+		SYMTBL_BSZ[idx] = tgt->B;
 		if (tgt->B.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -516,7 +518,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'A':
 		tgt->A = ffff_m30_23_get_s(p);
 		/* store in cache */
-		SYMTBL_ASZ[atl_si(tgt)] = tgt->A;
+		SYMTBL_ASZ[idx] = tgt->A;
 		if (tgt->A.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -531,14 +533,14 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 			break;
 		}
 		/* store in cache */
-		SYMTBL_METR[atl_si(tgt)] = tgt->stmp2;
+		SYMTBL_METR[idx] = tgt->stmp2;
 		break;
 	case 't': {
 		/* price stamp */
 		time_t stmp = parse_time(p);
 		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
-		SYMTBL_METR[atl_si(tgt)] = stmp;
+		SYMTBL_METR[idx] = stmp;
 		break;
 	}
 	case 'o':

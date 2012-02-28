@@ -789,8 +789,12 @@ ute_flush(utectx_t ctx)
 void
 ute_clone_slut(utectx_t tgt, utectx_t src)
 {
+	/* free any existing sluts */
+	free_slut(tgt->slut);
+	/* now clone */
 	tgt->slut_sz = src->slut_sz;
 	*tgt->slut = *src->slut;
+	clone_slut(tgt->slut, src->slut);
 	return;
 }
 

@@ -749,6 +749,8 @@ ute_close(utectx_t ctx)
 	tilman_comp(ctx);
 	/* serialse the slut */
 	flush_slut(ctx);
+	/* ... and finalise */
+	free_slut(ctx->slut);
 
 	/* finish our tpc session */
 	fini_tpc();

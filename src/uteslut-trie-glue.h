@@ -1,10 +1,10 @@
 /*** uteslut-trie-glue.h -- glue ute and various trie implementations
  *
- * Copyright (C) 2010 Sebastian Freundt
+ * Copyright (C) 2010-2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi/uterus.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +58,12 @@ free_slut_tg(__slut_t t)
 {
 	free_trie(t);
 	return;
+}
+
+static inline __slut_t
+clone_slut_tg(__slut_t t)
+{
+	return clone_trie(t);
 }
 
 /* should be uint32_t put(__slut_t, const char*) */

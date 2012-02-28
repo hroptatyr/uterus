@@ -2,7 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
- * Copyright (C) 2010  Sebastian Freundt  <hroptatyr@unserding.org>
+ * Copyright (C) 2010-2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -192,6 +192,31 @@ exit_da_created:
 	free_darray(trie->da);
 exit_trie_created:
 	free(trie);
+	return NULL;
+}
+
+trie_t
+clone_trie(const_trie_t src)
+{
+	trie_t res;
+
+	if ((res = (trie_t)malloc(sizeof(*res))) == NULL) {
+		return NULL;
+	}
+
+	if ((res->da = clone_darray(src->da)) == NULL) {
+		goto exit_trie_created;
+	}
+	if ((res->tail = clone_tail(src->tail)) == NULL) {
+		goto exit_da_created;
+	}
+	res->dirtyp = src->dirtyp;
+	return res;
+
+exit_da_created:
+	free_darray(res->da);
+exit_trie_created:
+	free(res);
 	return NULL;
 }
 

@@ -2,7 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
- * Copyright (C) 2010  Sebastian Freundt  <hroptatyr@unserding.org>
+ * Copyright (C) 2010-2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -61,6 +61,10 @@ typedef int(*darray_walk_f)(const char *key, trie_idx_t sep_node, void *clo);
 /* ctor/dtor */
 DECLF darray_t make_darray(void);
 DECLF void free_darray(darray_t d);
+
+/**
+ * Clone SRC and return a deep-copy. */
+DECLF darray_t clone_darray(const_darray_t src);
 
 DECLF darray_t darray_fmread(fmcmb_t filemem);
 DECLF int darray_fmwrite(const_darray_t d, fmcmb_t filemem);

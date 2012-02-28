@@ -1,8 +1,8 @@
 /*** uteslut.c -- ute symbol look-up table
  *
- * Copyright (C) 2009 Sebastian Freundt
+ * Copyright (C) 2009-2012 Sebastian Freundt
  *
- * Author:  Sebastian Freundt <sebastian.freundt@ga-group.nl>
+ * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
  * This file is part of uterus.
  *
@@ -94,6 +94,15 @@ resize_i2s(uteslut_t s)
 	return;
 }
 
+static void
+clone_i2s(uteslut_t tgt, uteslut_t src)
+{
+	const size_t clonsz = (tgt->nsyms = src->nsyms) * sizeof(slut_sym_t);
+	init_i2s(tgt, tgt->alloc_sz = src->alloc_sz);
+	memcpy(tgt->itbl, src->itbl, clonsz);
+	return;
+}
+
 DEFUN void
 make_slut(uteslut_t s)
 {
@@ -112,11 +121,25 @@ DEFUN void
 free_slut(uteslut_t s)
 {
 	/* s2i */
-	free_slut_tg(s->stbl);
-	s->stbl = NULL;
+	if (s->stbl != NULL) {
+		free_slut_tg(s->stbl);
+		s->stbl = NULL;
+	}
 	/* i2s */
-	munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
-	s->itbl = NULL;
+	if (s->itbl != NULL) {
+		munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
+		s->itbl = NULL;
+	}
+	return;
+}
+
+DEFUN void
+clone_slut(uteslut_t tgt, uteslut_t src)
+{
+	/* clone the s2i trie */
+	tgt->stbl = clone_slut_tg(src->stbl);
+	/* clone the i2s table */
+	clone_i2s(tgt, src);
 	return;
 }
 

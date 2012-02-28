@@ -2,7 +2,7 @@
  *
  * libdatrie - Double-Array Trie Library
  * Copyright (C) 2006  Theppitak Karoonboonyanan <thep@linux.thai.net>
- * Copyright (C) 2010  Sebastian Freundt  <hroptatyr@unserding.org>
+ * Copyright (C) 2010-2012  Sebastian Freundt  <hroptatyr@unserding.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -195,6 +195,28 @@ make_darray(void)
 
 exit_da_created:
 	free(d);
+	return NULL;
+}
+
+DEFUN darray_t
+clone_darray(const_darray_t src)
+{
+	darray_t res;
+	const size_t tcsz = src->num_cells * sizeof(*src->cells);
+
+	if ((res = malloc(sizeof(*res))) == NULL) {
+		return NULL;
+	}
+	res->num_cells = src->num_cells;
+	if ((res->cells = malloc(tcsz)) == NULL) {
+		goto exit_da_created;
+	}
+	/* memcpy them cells */
+	memcpy(res->cells, src->cells, tcsz);
+	return res;
+
+exit_da_created:
+	free(res);
 	return NULL;
 }
 

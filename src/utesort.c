@@ -97,6 +97,7 @@
  */
 #include <stdio.h>
 #include <limits.h>
+#include "intvtree.h"
 #include "intvtree.c"
 
 #define AS_y(t, x)	((t)(long int)(void*)(x))

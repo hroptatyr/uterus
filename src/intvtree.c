@@ -56,7 +56,7 @@ struct __node_s {
 	struct it_node_s pub;
 
 	/* book-keeping */
-	int64_t max_high;
+	T max_high;
 	bool redp;
 
 	/* tree navigation */
@@ -84,7 +84,7 @@ static const __node_t nil = &__nil;
 
 /* nodes, ctor */
 static void
-init_node(__node_t nd, int64_t lo, int64_t hi, void *data)
+init_node(__node_t nd, T lo, T hi, void *data)
 {
 	memset(nd, 0, sizeof(*nd));
 	nd->pub.lo = lo;
@@ -96,7 +96,7 @@ init_node(__node_t nd, int64_t lo, int64_t hi, void *data)
 }
 
 static __node_t
-make_node(int64_t lo, int64_t hi, void *data)
+make_node(T lo, T hi, void *data)
 {
 	__node_t n = xnew(struct __node_s);
 	init_node(n, lo, hi, data);
@@ -123,7 +123,7 @@ nil_node_p(__node_t in)
 	return in == nil;
 }
 
-static inline int64_t
+static inline T
 node_key(__node_t nd)
 {
 	return nd->pub.lo;
@@ -147,17 +147,17 @@ itree_left_root(itree_t it)
 	return itree_root_node(it)->left;
 }
 
-static inline int64_t
+static inline T
 max_high(__node_t nd)
 {
 	return nd->max_high;
 }
 
-static inline int64_t
+static inline T
 children_max_high(__node_t x)
 {
-	int64_t xlh = max_high(x->left);
-	int64_t xrh = max_high(x->right);
+	T xlh = max_high(x->left);
+	T xrh = max_high(x->right);
 	return max(xlh, xrh);
 }
 
@@ -328,7 +328,7 @@ itree_fixup_max_high(itree_t it, __node_t x)
 }
 
 DEFUN it_node_t
-itree_add(itree_t it, int64_t lo, int64_t hi, void *data)
+itree_add(itree_t it, T lo, T hi, void *data)
 {
 	__node_t x, y, res;
 
@@ -750,7 +750,7 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 
 /* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
-node_pivot_rel(__node_t n, int64_t p)
+node_pivot_rel(__node_t n, T p)
 {
 	if (p < n->pub.lo) {
 		return -1;
@@ -763,7 +763,7 @@ node_pivot_rel(__node_t n, int64_t p)
 
 /* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
-tree_pivot_rel(__node_t n, int64_t p)
+tree_pivot_rel(__node_t n, T p)
 {
 	if (p < n->pub.lo) {
 		return -1;
@@ -775,7 +775,7 @@ tree_pivot_rel(__node_t n, int64_t p)
 }
 
 DEFUN void
-itree_find_point_cb(itree_t it, int64_t p, it_trav_f cb, void *clo)
+itree_find_point_cb(itree_t it, T p, it_trav_f cb, void *clo)
 {
 /* Find all nodes that contain P.  Call cb() for each of them. */
 	/* root node has no right child, proceed with the left one */
@@ -843,7 +843,7 @@ itree_find_point_cb(itree_t it, int64_t p, it_trav_f cb, void *clo)
 }
 
 DEFUN void
-itree_find_point_cb1(itree_t it, int64_t p, it_trav_f cb, void *clo)
+itree_find_point_cb1(itree_t it, T p, it_trav_f cb, void *clo)
 {
 /* like itree_find_point() but stop after one occurrence,
  * prefer the right branch for nebulous reasons */
@@ -889,7 +889,7 @@ out:
 }
 
 DEFUN void*
-itree_find_point(itree_t it, int64_t p)
+itree_find_point(itree_t it, T p)
 {
 /* like itree_find_point() but stop after one occurrence,
  * prefer the right branch for nebulous reasons */

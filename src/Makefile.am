@@ -99,6 +99,7 @@ EXTRA_libuterus_la_SOURCES += darray.c darray.h
 EXTRA_libuterus_la_SOURCES += tail.c tail.h
 EXTRA_libuterus_la_SOURCES += fmcmb.h
 EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
+libuterus_la_CPPFLAGS += -DINTV_TYPE=uint64_t
 
 bin_PROGRAMS += ute
 ute_SOURCES =

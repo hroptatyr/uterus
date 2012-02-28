@@ -94,6 +94,15 @@ resize_i2s(uteslut_t s)
 	return;
 }
 
+static void
+clone_i2s(uteslut_t tgt, uteslut_t src)
+{
+	const size_t clonsz = (tgt->nsyms = src->nsyms) * sizeof(slut_sym_t);
+	init_i2s(tgt, src->alloc_sz);
+	memcpy(tgt->itbl, src->itbl, clonsz);
+	return;
+}
+
 DEFUN void
 make_slut(uteslut_t s)
 {
@@ -121,6 +130,16 @@ free_slut(uteslut_t s)
 		munmap(s->itbl, s->alloc_sz * sizeof(slut_sym_t));
 		s->itbl = NULL;
 	}
+	return;
+}
+
+DEFUN void
+clone_slut(uteslut_t tgt, uteslut_t src)
+{
+	/* clone the s2i trie */
+	tgt->stbl = clone_slut_tg(src);
+	/* clone the i2s table */
+	clone_i2s(tgt, src);
 	return;
 }
 

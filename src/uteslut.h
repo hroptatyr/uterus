@@ -79,6 +79,10 @@ DECLF void fini_slut(void);
 DECLF void make_slut(uteslut_t s);
 DECLF void free_slut(uteslut_t s);
 
+/**
+ * Make a deep copy of SRC into TGT. */
+DECLF void clone_slut(uteslut_t tgt, uteslut_t src);
+
 /* (de)serialiser */
 DECLF void slut_deser(uteslut_t s, void *data, size_t size);
 DECLF void slut_seria(uteslut_t s, void **data, size_t *size);

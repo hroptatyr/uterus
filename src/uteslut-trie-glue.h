@@ -60,6 +60,12 @@ free_slut_tg(__slut_t t)
 	return;
 }
 
+static inline __slut_t
+clone_slut_tg(__slut_t t)
+{
+	return clone_trie(t);
+}
+
 /* should be uint32_t put(__slut_t, const char*) */
 static inline void
 slut_tg_put(__slut_t t, const char *sym, uint32_t data)

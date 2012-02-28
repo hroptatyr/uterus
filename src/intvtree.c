@@ -248,26 +248,30 @@ free_itree(itree_t it)
 	pthread_mutex_lock(&it->mtx);
 	x = itree_left_root(it);
 	if (!nil_node_p(x)) {
-#if 0
-/* implement me */
-		if (x->left != it->nil) {
-			stuffToFree.Push(x->left);
+		__node_t ____stk[128];
+		struct it_ndstk_s __stk = {
+			.idx = 0,
+			.stk = ____stk,
+		};
+		it_ndstk_t stk = &__stk;
+
+		if (x->left != nil) {
+			stack_push(stk, x->left);
 		}
 		if (x->right != nil) {
-			stuffToFree.Push(x->right);
+			stack_push(stk, x->right);
 		}
 		free_node(x);
-		while (stuffToFree.NotEmpty()) {
-			x = stuffToFree.Pop();
-			if (x->left != it->nil) {
-				stuffToFree.Push(x->left);
+
+		while ((x = stack_pop(stk)) != nil) {
+			if (x->left != nil) {
+				stack_push(stk, x->left);
 			}
-			if (x->right != it->nil) {
-				stuffToFree.Push(x->right);
+			if (x->right != nil) {
+				stack_push(stk, x->right);
 			}
 			free_node(x);
 		}
-#endif
 	}
 	memset(itree_root_node(it), 0, sizeof(struct __node_s));
 	pthread_mutex_unlock(&it->mtx);

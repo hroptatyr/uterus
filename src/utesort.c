@@ -97,12 +97,20 @@
  */
 #include <stdio.h>
 #include <limits.h>
+
+/* we make use of the fact that intvtree.h is a template */
+#if !defined INTV_TYPE
+# define INTV_TYPE	uint64_t
+#endif	/* INTV_TYPE */
+
 #include "intvtree.h"
 #include "intvtree.c"
 
 #define AS_y(t, x)	((t)(long int)(void*)(x))
 #define AS_INT(x)	AS_y(int, x)
 #define AS_UINT32(x)	AS_y(uint32_t, x)
+
+#define T		INTV_TYPE
 
 typedef struct strat_node_s *strat_node_t;
 typedef struct strat_s *strat_t;

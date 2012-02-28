@@ -215,7 +215,7 @@ static inline void
 check_tic_stmp(ariva_tl_t tic)
 {
 	if (UNLIKELY(atl_ts_sec(tic) == 0)) {
-		if (tic->stmp2) {
+		if (tic->stmp2 > atl_cached_sec(tic)) {
 			/* better than nothing, use him */
 			atl_set_ts_sec(tic, tic->stmp2);
 		} else {

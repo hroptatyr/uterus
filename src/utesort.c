@@ -107,7 +107,6 @@
 #include "intvtree.c"
 
 #define AS_y(t, x)	((t)(long int)(void*)(x))
-#define AS_INT(x)	AS_y(int, x)
 #define AS_UINT32(x)	AS_y(uint32_t, x)
 
 #define T		INTV_TYPE
@@ -155,7 +154,7 @@ __cnt(it_node_t UNUSED(itnd), void *clo)
 static void
 __strat_cb(it_node_t itnd, void *clo)
 {
-	int pg = AS_INT(itnd->data);
+	uint32_t pg = AS_UINT32(itnd->data);
 	T lo = itnd->lo;
 	T hi = itnd->hi;
 	strat_t sc = clo;

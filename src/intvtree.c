@@ -112,10 +112,10 @@ free_node(__node_t in)
 	return;
 }
 
-static inline int
-max(int a, int b)
+static inline T
+max(T a, T b)
 {
-	return a > b ? a : b;
+	return a >= b ? a : b;
 }
 
 static inline bool

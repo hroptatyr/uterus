@@ -137,7 +137,7 @@ DEFUN void
 clone_slut(uteslut_t tgt, uteslut_t src)
 {
 	/* clone the s2i trie */
-	tgt->stbl = clone_slut_tg(src);
+	tgt->stbl = clone_slut_tg(src->stbl);
 	/* clone the i2s table */
 	clone_i2s(tgt, src);
 	return;

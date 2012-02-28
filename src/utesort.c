@@ -360,6 +360,9 @@ ute_sort(utectx_t ctx)
 	/* something must have gone utterly wrong */
 	assert(ute_sorted_p(hdl));
 
+	/* clone the slut */
+	ute_clone_slut(hdl, ctx);
+
 	/* close the ute file */
 	ute_close(hdl);
 	/* dump the pages */

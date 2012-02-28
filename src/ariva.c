@@ -111,7 +111,7 @@ static size_t lno;
 static inline __attribute__((pure)) uint32_t
 atl_ts_sec(const struct ariva_tl_s *l)
 {
-	return sl1t_stmp_sec((const_sl1t_t)l);
+	return scom_thdr_sec(AS_SCOM(l));
 }
 
 static inline __attribute__((unused)) void
@@ -215,7 +215,7 @@ static inline void
 check_tic_stmp(ariva_tl_t tic)
 {
 	if (UNLIKELY(atl_ts_sec(tic) == 0)) {
-		if (tic->stmp2) {
+		if (tic->stmp2 > atl_cached_sec(tic)) {
 			/* better than nothing, use him */
 			atl_set_ts_sec(tic, tic->stmp2);
 		} else {
@@ -452,12 +452,11 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 	int32_t d;
 	size_t lsz;
 	int fd = ctx->badfd;
-	//utehdr_t fhdr = sl1t_fio_fhdr(ctx->wrr);
 
 	d = diff_sl1t_ms((sl1t_t)t, t->rcv_stmp);
-	lsz = snprintf(b, sizeof(b), "%u.%09u (%d) %d ",
-		       t->rcv_stmp.sec, t->rcv_stmp.nsec,
-		       d, atl_si(t) /*utehdr_nth_sym(fhdr, atl_si(t))*/);
+	lsz = snprintf(
+		b, sizeof(b), "%u.%09u (%d) %d ",
+		t->rcv_stmp.sec, t->rcv_stmp.nsec, d, atl_si(t));
 	memcpy(b + lsz, cursor, len);
 	lsz = lsz + len;
 	lsz += reco_tl(b + lsz, t);
@@ -466,22 +465,42 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 	return;
 }
 
-static void
+static m30_t
+__m30_23_get_s(const char **nptr)
+{
+	m30_t res = ffff_m30_23_get_s(nptr);
+	
+	/* allow for . and trailing naughts */
+	if (**nptr == '.') {
+		const char *p = *nptr;
+		while (*++p == '0');
+		*nptr = p;
+	}
+	return res;
+}
+
+static int
 parse_keyval(ariva_tl_t tgt, const char **p)
 {
 /* assumes tgt's si is set already */
+	uint16_t idx = atl_si(tgt);
+
+	if (**p == '\0') {
+		*p = NULL;
+		return 0;
+	}
 	switch (*(*p)++) {
 	case 'p':
 		tgt->p = ffff_m30_get_s(p);
 		/* store in cache */
-		SYMTBL_TRA[atl_si(tgt)] = tgt->p;
+		SYMTBL_TRA[idx] = tgt->p;
 		/* also reset auction */
-		SYMTBL_AUCP[atl_si(tgt)] = false;
+		SYMTBL_AUCP[idx] = false;
 		break;
 	case 'b':
 		tgt->b = ffff_m30_get_s(p);
 		/* store in cache */
-		SYMTBL_BID[atl_si(tgt)] = tgt->b;
+		SYMTBL_BID[idx] = tgt->b;
 		if (tgt->b.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -489,7 +508,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'a':
 		tgt->a = ffff_m30_get_s(p);
 		/* store in cache */
-		SYMTBL_ASK[atl_si(tgt)] = tgt->a;
+		SYMTBL_ASK[idx] = tgt->a;
 		if (tgt->a.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -497,27 +516,27 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'k':
 		tgt->k = ffff_m30_get_s(p);
 		/* once weve seen this, an auction is going on */
-		SYMTBL_AUCP[atl_si(tgt)] = true;
+		SYMTBL_AUCP[idx] = true;
 		break;
 	case 'v':
 		/* unlike our `v' this is the vol-pri */
 		tgt->V = ffff_m62_get_s(p);
 		break;
 	case 'P':
-		tgt->P = ffff_m30_23_get_s(p);
+		tgt->P = __m30_23_get_s(p);
 		break;
 	case 'B':
-		tgt->B = ffff_m30_23_get_s(p);
+		tgt->B = __m30_23_get_s(p);
 		/* store in cache */
-		SYMTBL_BSZ[atl_si(tgt)] = tgt->B;
+		SYMTBL_BSZ[idx] = tgt->B;
 		if (tgt->B.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
 		break;
 	case 'A':
-		tgt->A = ffff_m30_23_get_s(p);
+		tgt->A = __m30_23_get_s(p);
 		/* store in cache */
-		SYMTBL_ASZ[atl_si(tgt)] = tgt->A;
+		SYMTBL_ASZ[idx] = tgt->A;
 		if (tgt->A.mant == 0) {
 			tgt->flags |= FLAG_HALTED;
 		}
@@ -532,14 +551,14 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 			break;
 		}
 		/* store in cache */
-		SYMTBL_METR[atl_si(tgt)] = tgt->stmp2;
+		SYMTBL_METR[idx] = tgt->stmp2;
 		break;
 	case 't': {
 		/* price stamp */
 		time_t stmp = parse_time(p);
 		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
-		SYMTBL_METR[atl_si(tgt)] = stmp;
+		SYMTBL_METR[idx] = stmp;
 		break;
 	}
 	case 'o':
@@ -548,10 +567,12 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'c':
 		/* must be a candle tick, kick it */
 		tgt->flags = FLAG_INVAL;
+		return -1;
 	default:
-		return;
+		*p = strchr(*p, ' ');
+		break;
 	}
-	return;
+	return 0;
 }
 
 static bool
@@ -561,14 +582,12 @@ parse_keyvals(ariva_tl_t tgt, const char *cursor)
  * also assumes that the string in cursor is nul-terminated */
 	const char *p = cursor;
 
-	while (true) {
-		parse_keyval(tgt, &p);
-		if (UNLIKELY(tgt->flags & FLAG_INVAL)) {
+	do {
+		if (UNLIKELY(parse_keyval(tgt, &p) < 0)) {
+			/* abrupt exit */
 			return false;
-		} else if (UNLIKELY(*p++ != ' ')) {
-			break;
-		}
-	}
+		} 
+	} while (p && *p++ == ' ');
 
 	if (tgt->flags & FLAG_HALTED &&
 	    (tgt->k.mant != 0 || tgt->P.mant != 0 ||

@@ -322,7 +322,7 @@ ute_sort(utectx_t ctx)
 {
 	struct uteseek_s *sks;
 	size_t npages = ute_npages(ctx);
-	void *hdl;
+	utectx_t hdl;
 	strat_t str;
 
 	/* this is to obtain a merge strategy,

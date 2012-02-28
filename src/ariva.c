@@ -452,12 +452,11 @@ pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
 	int32_t d;
 	size_t lsz;
 	int fd = ctx->badfd;
-	//utehdr_t fhdr = sl1t_fio_fhdr(ctx->wrr);
 
 	d = diff_sl1t_ms((sl1t_t)t, t->rcv_stmp);
-	lsz = snprintf(b, sizeof(b), "%u.%09u (%d) %d ",
-		       t->rcv_stmp.sec, t->rcv_stmp.nsec,
-		       d, atl_si(t) /*utehdr_nth_sym(fhdr, atl_si(t))*/);
+	lsz = snprintf(
+		b, sizeof(b), "%u.%09u (%d) %d ",
+		t->rcv_stmp.sec, t->rcv_stmp.nsec, d, atl_si(t));
 	memcpy(b + lsz, cursor, len);
 	lsz = lsz + len;
 	lsz += reco_tl(b + lsz, t);

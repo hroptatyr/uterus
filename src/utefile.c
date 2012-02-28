@@ -793,7 +793,6 @@ ute_clone_slut(utectx_t tgt, utectx_t src)
 	free_slut(tgt->slut);
 	/* now clone */
 	tgt->slut_sz = src->slut_sz;
-	*tgt->slut = *src->slut;
 	clone_slut(tgt->slut, src->slut);
 	return;
 }

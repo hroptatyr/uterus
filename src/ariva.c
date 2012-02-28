@@ -485,6 +485,10 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 /* assumes tgt's si is set already */
 	uint16_t idx = atl_si(tgt);
 
+	if (**p == '\0') {
+		*p = NULL;
+		return 0;
+	}
 	switch (*(*p)++) {
 	case 'p':
 		tgt->p = ffff_m30_get_s(p);

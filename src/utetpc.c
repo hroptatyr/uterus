@@ -351,17 +351,17 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 		}
 		if (PERMI(perm, 1) != 1) {
 			tmpa[1] = p[1];
-			/* PERMI(perm, 0) cant be 0 */
-			p[1] = p[PERMI(perm, 1)];
+			/* PERMI(perm, 1) could be 0 */
+			p[1] = PERMI(perm, 1) ? p[PERMI(perm, 1)] : tmpa[0];
 		}
 		if (PERMI(perm, 2) != 2) {
 			tmpa[2] = p[2];
 			tmpa[3] = p[3];
-			/* PERMI(perm, 0) cant be 0 */
+			/* all tmpa's are set by now */
 			p[2] = tmpa[PERMI(perm, 2)];
 		}
 		if (PERMI(perm, 3) != 3) {
-			/* PERMI(perm, 0) cant be 0 */
+			/* all tmpa's are set by now */
 			p[3] = tmpa[PERMI(perm, 3)];
 		}
 	}

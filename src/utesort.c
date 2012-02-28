@@ -348,6 +348,9 @@ ute_sort(utectx_t ctx)
 		step_run(sks, (size_t)j, str);
 	}
 
+	/* something must have gone utterly wrong */
+	assert(ute_sorted_p(hdl));
+
 	/* close the ute file */
 	ute_close(hdl);
 	/* dump the pages */

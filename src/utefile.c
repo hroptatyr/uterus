@@ -226,6 +226,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	return;
 }
 
+#if !defined USE_UTE_SORT
 static void
 seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
@@ -246,6 +247,7 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->fl = 0;
 	return;
 }
+#endif	/* USE_UTE_SORT */
 
 static void
 reseek(utectx_t ctx, sidx_t i)
@@ -369,6 +371,7 @@ out:
 
 
 /* tpc glue */
+#if !defined USE_UTE_SORT
 static void
 merge_tpc(utectx_t ctx, utetpc_t tpc)
 {
@@ -429,6 +432,7 @@ mrg:
 	unset_tpc_needmrg(tpc);
 	return;
 }
+#endif	/* USE_UTE_SORT */
 
 static bool
 seek_eof_p(uteseek_t sk)
@@ -718,12 +722,24 @@ ute_mktemp(int oflags)
 	return make_utectx(tmpnam, resfd, oflags);
 }
 
+static void
+ute_prep_sort(utectx_t ctx)
+{
+	/* delete the file */
+	unlink(ctx->fname);
+	return;
+}
+
 void
 ute_close(utectx_t ctx)
 {
 	/* first make sure we write the stuff */
 	ute_flush(ctx);
 	if (!ute_sorted_p(ctx)) {
+#if defined USE_UTE_SORT
+		ute_prep_sort(ctx);
+		ute_sort(ctx);
+#endif	/* USE_UTE_SORT */
 		ute_unset_unsorted(ctx);
 	}
 	/* tilman compress the file, needs to happen after sorting */
@@ -756,8 +772,10 @@ ute_flush(utectx_t ctx)
 		/* special case when the page cache has detected
 		 * a major violation */
 		ute_set_unsorted(ctx);
+#if !defined USE_UTE_SORT
 		/* since ute_sort() doesn't work, just use merge_tcp() */
 		merge_tpc(ctx, ctx->tpc);
+#endif	/* USE_UTE_SORT */
 	}
 	flush_tpc(ctx);
 	return;

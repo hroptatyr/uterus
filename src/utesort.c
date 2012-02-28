@@ -60,9 +60,12 @@
 #define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
 
 #if defined DEBUG_FLAG
+# include <assert.h>
+# include <stdio.h>
 # define UDEBUG(args...)	printf(args)
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
+# define assert(args...)
 #endif	/* DEBUG_FLAG */
 
 

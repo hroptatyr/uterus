@@ -784,6 +784,13 @@ ute_flush(utectx_t ctx)
 	return;
 }
 
+void
+ute_clone_slut(utectx_t tgt, utectx_t src)
+{
+	tgt->slut_sz = src->slut_sz;
+	*tgt->slut = *src->slut;
+	return;
+}
 
 
 /* accessor */

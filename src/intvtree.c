@@ -46,8 +46,9 @@
 /* for thread-safe intvtrees */
 #include <pthread.h>
 
-#define MIN_KEY		LLONG_MIN
-#define MAX_KEY		LLONG_MAX
+/* we should somehow compute this */
+#define MIN_KEY		0
+#define MAX_KEY		ULLONG_MAX
 #define NDSTK_SIZE	16
 
 typedef struct __node_s *__node_t;

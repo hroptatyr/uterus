@@ -16,7 +16,10 @@ LOG_COMPILER = echo
 TESTS += mux.1.ut
 TESTS += mux.2.ut
 TESTS += mux.3.ut
+TESTS += mux.4.ut
+TESTS += mux.5.ut
 EXTRA_DIST += mux.a.dukasq
+EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
 
 TESTS += print.1.ut

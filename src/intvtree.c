@@ -49,7 +49,7 @@
 /* we should somehow compute this */
 #define MIN_KEY		0
 #define MAX_KEY		ULLONG_MAX
-#define NDSTK_SIZE	16
+#define NDSTK_SIZE	(128)
 
 typedef struct __node_s *__node_t;
 
@@ -248,7 +248,7 @@ free_itree(itree_t it)
 	pthread_mutex_lock(&it->mtx);
 	x = itree_left_root(it);
 	if (!nil_node_p(x)) {
-		__node_t ____stk[128];
+		__node_t ____stk[NDSTK_SIZE];
 		struct it_ndstk_s __stk = {
 			.idx = 0,
 			.stk = ____stk,
@@ -665,7 +665,7 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 /* left child, me, right child */
 	/* root node has no right child, proceed with the left one */
 	__node_t curr;
-	__node_t ____stk[128];
+	__node_t ____stk[NDSTK_SIZE];
 	struct it_ndstk_s __stk = {.idx = 0, .stk = ____stk}, *stk = &__stk;
 
 #define proc(_x)						\
@@ -707,30 +707,28 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 	return;
 }
 
-/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
 node_pivot_rel(__node_t n, T p)
 {
+/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 	if (p < n->pub.lo) {
 		return -1;
 	} else if (p > n->pub.hi) {
 		return 1;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
-/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
 tree_pivot_rel(__node_t n, T p)
 {
+/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 	if (p < n->pub.lo) {
 		return -1;
 	} else if (p > max_high(n)) {
 		return 1;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
 DEFUN void
@@ -739,7 +737,7 @@ itree_find_point_cb(itree_t it, T p, it_trav_f cb, void *clo)
 /* Find all nodes that contain P.  Call cb() for each of them. */
 	/* root node has no right child, proceed with the left one */
 	__node_t curr;
-	__node_t ____stk[128];
+	__node_t ____stk[NDSTK_SIZE];
 	struct it_ndstk_s __stk = {.idx = 0, .stk = ____stk}, *stk = &__stk;
 
 #define proc(_x)						\
@@ -773,6 +771,198 @@ itree_find_point_cb(itree_t it, T p, it_trav_f cb, void *clo)
 		 * descend there */
 		if (inner_node_p(curr)) {
 			if (tree_pivot_rel(curr->left, p) == 0) {
+				stack_push(stk, curr->right);
+				stack_push(stk, curr);
+				curr = curr->left;
+			} else {
+				proc(curr);
+				curr = curr->right;
+			}
+
+		} else {
+			/* we just work off the shite, knowing there's
+			 * a balance and the subtree consists of only
+			 * one node */
+			if (!nil_node_p(curr->left)) {
+				proc(curr->left);
+			}
+			proc(curr);
+			if (!nil_node_p(curr->right)) {
+				proc(curr->right);
+			}
+			proc(stack_pop(stk));
+			curr = stack_pop(stk);
+		}
+	}
+#undef proc
+	pthread_mutex_unlock(&it->mtx);
+	return;
+}
+
+static inline int
+node_subeq_rel(__node_t n, T lo, T hi)
+{
+/* 0 if N is a subset of [lo,hi]
+ * 1 if N starts left of [lo,hi]
+ * -1 if N finishes right of [lo,hi] */
+	if (n->pub.lo < lo) {
+		return 1;
+	} else if (n->pub.hi > hi) {
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
+tree_subeq_rel(__node_t n, T lo, T hi)
+{
+/* 0 if N is a subset of [lo,hi]
+ * 1 if N starts left of [lo,hi]
+ * -1 if N finishes right of [lo,hi] */
+	if (hi < n->pub.lo) {
+		return -1;
+	} else if (lo > max_high(n)) {
+		return 1;
+	}
+	return 0;
+}
+
+DEFUN void
+itree_find_subs_cb(itree_t it, T lo, T hi, it_trav_f cb, void *clo)
+{
+/* Find all nodes that are contained in [LO,HI]. */
+	/* root node has no right child, proceed with the left one */
+	__node_t curr;
+	__node_t ____stk[NDSTK_SIZE];
+	struct it_ndstk_s __stk = {.idx = 0, .stk = ____stk}, *stk = &__stk;
+
+#define proc(_x)						\
+	do {							\
+		__node_t _y = _x;				\
+		if (!nil_node_p(_y) &&				\
+		    node_subeq_rel(_y, lo, hi) == 0) {		\
+			cb((it_node_t)_y, clo);			\
+		}						\
+	} while (0)
+
+	pthread_mutex_lock(&it->mtx);
+	curr = itree_left_root(it);
+	while (!nil_node_p(curr)) {
+		switch (tree_subeq_rel(curr, lo, hi)) {
+		case -1:
+			/* if the pivot is truly to the left of curr, descend */
+			curr = curr->left;
+			continue;
+		case 1:
+			/* pivot is beyond the scope, ascend */
+			proc(stack_pop(stk));
+			curr = stack_pop(stk);
+			continue;
+		case 0:
+		default:
+			break;
+		}
+		/* we know now that curr's right subtree contains the pivot
+		 * however the left tree could contain the pivot as well so
+		 * descend there */
+		if (inner_node_p(curr)) {
+			if (tree_subeq_rel(curr->left, lo, hi) == 0) {
+				stack_push(stk, curr->right);
+				stack_push(stk, curr);
+				curr = curr->left;
+			} else {
+				proc(curr);
+				curr = curr->right;
+			}
+
+		} else {
+			/* we just work off the shite, knowing there's
+			 * a balance and the subtree consists of only
+			 * one node */
+			if (!nil_node_p(curr->left)) {
+				proc(curr->left);
+			}
+			proc(curr);
+			if (!nil_node_p(curr->right)) {
+				proc(curr->right);
+			}
+			proc(stack_pop(stk));
+			curr = stack_pop(stk);
+		}
+	}
+#undef proc
+	pthread_mutex_unlock(&it->mtx);
+	return;
+}
+
+static inline int
+node_supeq_rel(__node_t n, T lo, T hi)
+{
+/* 0 if [lo,hi] is a subset of N
+ * 1 if lo is left of N
+ * -1 if hi is right of N */
+	if (lo < n->pub.lo) {
+		return 1;
+	} else if (hi > n->pub.hi) {
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
+tree_supeq_rel(__node_t n, T lo, T hi)
+{
+/* 0 if N is a supset of [lo,hi]
+ * 1 if lo is left of N
+ * -1 if hi is right of N */
+	if (lo < n->pub.lo || hi < n->pub.lo) {
+		return -1;
+	} else if (lo > max_high(n) || hi > max_high(n)) {
+		return 1;
+	}
+	return 0;
+}
+
+DEFUN void
+itree_find_sups_cb(itree_t it, T lo, T hi, it_trav_f cb, void *clo)
+{
+/* Find all nodes that are contained in [LO,HI]. */
+	/* root node has no right child, proceed with the left one */
+	__node_t curr;
+	__node_t ____stk[NDSTK_SIZE];
+	struct it_ndstk_s __stk = {.idx = 0, .stk = ____stk}, *stk = &__stk;
+
+#define proc(_x)						\
+	do {							\
+		__node_t _y = _x;				\
+		if (!nil_node_p(_y) &&				\
+		    node_supeq_rel(_y, lo, hi) == 0) {		\
+			cb((it_node_t)_y, clo);			\
+		}						\
+	} while (0)
+
+	pthread_mutex_lock(&it->mtx);
+	curr = itree_left_root(it);
+	while (!nil_node_p(curr)) {
+		switch (tree_supeq_rel(curr, lo, hi)) {
+		case -1:
+			/* if the pivot is truly to the left of curr, descend */
+			curr = curr->left;
+			continue;
+		case 1:
+			/* pivot is beyond the scope, ascend */
+			proc(stack_pop(stk));
+			curr = stack_pop(stk);
+			continue;
+		case 0:
+		default:
+			break;
+		}
+		/* we know now that curr's right subtree contains the pivot
+		 * however the left tree could contain the pivot as well so
+		 * descend there */
+		if (inner_node_p(curr)) {
+			if (tree_supeq_rel(curr->left, lo, hi) == 0) {
 				stack_push(stk, curr->right);
 				stack_push(stk, curr);
 				curr = curr->left;

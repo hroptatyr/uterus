@@ -121,27 +121,43 @@ struct strat_node_s {
 	uint32_t pgs[];
 };
 
-struct __cnt_clo_s {
-	size_t cnt;
-};
-
 struct strat_s {
 	itree_t it;
 	strat_node_t first;
 	strat_node_t last;
 };
 
+struct __mrg_clo_s {
+	strat_node_t sn;
+};
+
 static void
 __mrg(it_node_t itnd, void *clo)
 {
+	struct __mrg_clo_s *c = clo;
 	uint32_t pg = AS_UINT32(itnd->data);
-	strat_node_t sn = clo;
+	strat_node_t sn = c->sn;
 
 	if (sn->pg != pg) {
 		sn->pgs[sn->cnt++] = pg;
 	}
 	return;
 }
+
+static void
+__mrg_self(it_node_t itnd, void *clo)
+{
+	struct __mrg_clo_s *c = clo;
+	uint32_t pg = AS_UINT32(itnd->data);
+	strat_node_t sn = c->sn;
+
+	sn->pgs[sn->cnt++] = pg;
+	return;
+}
+
+struct __cnt_clo_s {
+	size_t cnt;
+};
 
 static void
 __cnt(it_node_t UNUSED(itnd), void *clo)
@@ -151,37 +167,65 @@ __cnt(it_node_t UNUSED(itnd), void *clo)
 	return;
 }
 
+struct __strat_clo_s {
+	/* current page */
+	strat_t strat;
+};
+
 static void
 __strat_cb(it_node_t itnd, void *clo)
 {
+/* The rationale here is to find all pages that contain the current page's
+ * lo and hi values and chain them up.
+ * Special care has to be taken for pages that are completely contained
+ * in another page, i.e.
+ *   lo_x in [lo_y ... hi_y] and
+ *   hi_x in [lo_y ... hi_y]
+ * it follows that lo_y <= lo_x <= hi_x <= hi_y.
+ * And just regarding the end-points of Y wouldn't detect page X.
+ *
+ * To solve that we keep track of the current highest hi page and include
+ * it in the list of highers */
+	struct __strat_clo_s *c = clo;
 	uint32_t pg = AS_UINT32(itnd->data);
 	T lo = itnd->lo;
 	T hi = itnd->hi;
-	strat_t sc = clo;
+	strat_t s = c->strat;
 	struct __cnt_clo_s cc[1];
+	struct __mrg_clo_s mc[1];
 	strat_node_t sn;
-	itree_t it = sc->it;
+	itree_t it = s->it;
 
 	cc->cnt = 0;
+	itree_find_sups_cb(it, lo, hi, __cnt, cc);
+	if (cc->cnt > 1) {
+		UDEBUG("uh oh, page %u is subset of some other page\n", pg);
+		return;
+	}
+	cc->cnt = 0;
 	itree_find_point_cb(it, lo, __cnt, cc);
+	itree_find_subs_cb(it, lo, hi, __cnt, cc);
 	itree_find_point_cb(it, hi, __cnt, cc);
 
 	/* create a strat node */
-	sn = xmalloc(sizeof(struct strat_node_s) + (cc->cnt - 1) * sizeof(int));
+	sn = xmalloc(sizeof(struct strat_node_s) + (cc->cnt - 2) * sizeof(int));
 	sn->pg = pg;
 	sn->cnt = 0;
 	sn->next = NULL;
 	/* find the points again, this time filling the merge closure */
-	itree_find_point_cb(it, lo, __mrg, sn);
-	sn->pgs[sn->cnt++] = pg;
-	itree_find_point_cb(it, hi, __mrg, sn);
+	mc->sn = sn;
+	itree_find_point_cb(it, lo, __mrg, mc);
+	/* insert pages that are contained in PG (inserts PG itself) */
+	itree_find_subs_cb(it, lo, hi, __mrg_self, mc);
+	/* finally insert all pages that contain the hi point */
+	itree_find_point_cb(it, hi, __mrg, mc);
 
 	/* now put that node into our list of nodes */
-	if (sc->first == NULL) {
-		sc->first = sc->last = sn;
+	if (s->first == NULL) {
+		s->first = s->last = sn;
 	} else {
-		sc->last->next = sn;
-		sc->last = sn;
+		s->last->next = sn;
+		s->last = sn;
 	}
 	return;
 }
@@ -218,12 +262,13 @@ static strat_t
 sort_strat(utectx_t ctx)
 {
 /* could be configurable */
-#define NRUNS		16
+#define NRUNS		64
 #define AS_VOID_PTR(x)	((void*)(long int)(x))
 	struct uteseek_s sks[NRUNS];
 	itree_t it = make_itree();
 	size_t npages = ute_npages(ctx);
-	strat_t sc;
+	strat_t s;
+	struct __strat_clo_s sc[1];
 
 	for (size_t j = 0; j < npages; ) {
 		/* initialise the seeks */
@@ -242,14 +287,16 @@ sort_strat(utectx_t ctx)
 		j += NRUNS;
 	}
 	/* run the strategy evaluator */
-	sc = xnew(struct strat_s);
-	sc->first = sc->last = NULL;
-	sc->it = it;
+	s = xnew(struct strat_s);
+	s->first = s->last = NULL;
+	s->it = it;
+	/* load the strat cb closure */
+	sc->strat = s;
 	itree_trav_in_order(it, __strat_cb, sc);
 
 	/* blast the itree to nirvana */
 	free_itree(it);
-	return sc;
+	return s;
 }
 
 static void
@@ -274,6 +321,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 	if (UNLIKELY(curnd == NULL)) {
 		return res;
 	}
+	/* check current run and next run's pages */
 	for (size_t i = 0; i < curnd->cnt; i++) {
 		scom_t sh;
 		uint32_t pg = curnd->pgs[i];
@@ -285,6 +333,26 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 			min = sh->u;
 		}
 	}
+#if defined DEBUG_FLAG
+	/* there must be no more minimal pages */
+	for (strat_node_t nd = curnd; nd = nd->next; ) {
+		for (size_t i = 0; i < nd->cnt; i++) {
+			scom_t sh;
+			uint32_t pg = nd->pgs[i];
+
+			if ((sh = seek_get_scom(sks + pg)) == NULL) {
+				continue;
+			}
+			if (min > sh->u) {
+				UDEBUG("%u cur min %u %zd %lx\n",
+				       str->last->pg, curnd->pg, res, min);
+				UDEBUG("  min'ner one: %u %u %lx\n",
+				       nd->pg, pg, sh->u);
+			}
+			assert(min <= sh->u);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	return res;
 }
 
@@ -324,6 +392,9 @@ ute_sort(utectx_t ctx)
 	size_t npages = ute_npages(ctx);
 	utectx_t hdl;
 	strat_t str;
+#if defined DEBUG_FLAG
+	uint64_t check = 0ULL;
+#endif	/* DEBUG_FLAG */
 
 	/* this is to obtain a merge strategy,
 	 * we have several outcomes:
@@ -336,6 +407,14 @@ ute_sort(utectx_t ctx)
 		for (uint32_t i = 0; i < n->cnt; i++) {
 			UDEBUG("  page %u\n", n->pgs[i]);
 		}
+#if defined DEBUG_FLAG
+		uint64_t thresh = 0;
+		for (size_t i = 0; i < sks[n->pg].si;) {
+			scom_t t = AS_SCOM(sks[n->pg].sp + i);
+			assert(thresh <= t->u);
+			i += scom_thdr_size(t) / sizeof(*sks->sp);
+		}
+#endif	/* DEBUG_FLAG */
 	}
 
 	/* let's assume we have an all-way merge */
@@ -349,6 +428,14 @@ ute_sort(utectx_t ctx)
 	/* ALL-way merge */
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
 		scom_t t = seek_get_scom(sks + j);
+
+#if defined DEBUG_FLAG
+		if (check > t->u) {
+			UDEBUG("FUCK %lx > %lx\n", check, t->u);
+		}
+		assert(check <= t->u);
+		check = t->u;
+#endif	/* DEBUG_FLAG */
 
 		/* add that bloke */
 		ute_add_tick(hdl, t);

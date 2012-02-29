@@ -41,9 +41,10 @@ typedef struct mux_ctx_s *mux_ctx_t;
 typedef struct sumux_opt_s *sumux_opt_t;
 
 struct mux_ctx_s {
-	int badfd;
 	/* input file index */
 	int infd;
+	/* err file desc */
+	int badfd;
 
 	/* can be used by the muxer */
 	void *rdr;
@@ -55,9 +56,7 @@ struct mux_ctx_s {
 };
 
 struct sumux_opt_s {
-	const char **infiles;
 	const char *outfile;
-	const char *badfile;
 	const char *sname;
 	const char *zone;
 	/** offset for timestamps relative to something other than epoch */
@@ -68,6 +67,10 @@ struct sumux_opt_s {
 	int32_t mul;
 	/** magnifier for expanded or up-scaled values */
 	int32_t mag;
+
+	/* outfile flags */
+#define OUTFILE_IS_INTO		(1)
+	int flags;
 };
 
 /**

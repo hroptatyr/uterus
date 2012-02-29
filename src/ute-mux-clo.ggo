@@ -7,24 +7,33 @@ option "help" h
 	"Show this help message."
 	optional
 
+
+section "Input options"
+
 option "format" f
 	"Use the specified parser, see below for a list"
 	string typestr="FORMAT" optional
+
+
+section "Output options"
+
+option "output" o
+	"Write result to specified output file"
+	string typestr="FILE" optional
+
+option "into" -
+	"Write result into ute file FILE"
+	string typestr="FILE" optional
+
+
+section "Content options"
 
 option "name" -
 	"For single-security files use NAME as security symbol"
 	string typestr="NAME" optional
 
-option "output" o
-	"Write result to specified output file (default workload.ute)"
-	string typestr="FILE" optional
-
-option "badfile" -
-	"Write erroneous lines to this file"
-	string typestr="FILE" optional
-
 option "zone" z
-	"Treat date/time strings as in time zone NAME (default UTC)"
+	"Treat dates/times as in time zone NAME (default UTC)"
 	string typestr="NAME" optional
 
 option "refdate" -
@@ -40,5 +49,6 @@ option "multiplier" -
 	int optional
 
 option "magnifier" -
-	"Price values are multiplied by INT"
+	"Price values are regarded as if multiplied by INT, \
+for better divisibility consider --multiplier"
 	int optional

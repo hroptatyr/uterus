@@ -142,7 +142,11 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 		fputs("This is binary data, cannot dump to stdout\n", stderr);
 		exit(1);
 
+	} else if ((opts->flags & OUTFILE_IS_INTO) &&
+		   (ctx->wrr = ute_open(outf, UO_CREAT | UO_RDWR))) {
+		;
 	} else {
+		/* plain old mux */
 		ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC);
 	}
 	/* just make sure we dont accidentally use infd 0 (STDIN) */
@@ -210,6 +214,12 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
+	if (argi->output_given && argi->into_given) {
+		fputs("only one of --output and --into can be given\n", stderr);
+		res = 1;
+		goto out;
+	}
+
 	/* initialise the module system */
 	ute_module_init();
 
@@ -226,10 +236,9 @@ main(int argc, char *argv[])
 
 	if (argi->output_given) {
 		opts->outfile = argi->output_arg;
-	}
-
-	if (argi->badfile_given) {
-		opts->badfile = argi->badfile_arg;
+	} else if (argi->into_given) {
+		opts->outfile = argi->into_arg;
+		opts->flags |= OUTFILE_IS_INTO;
 	}
 
 	if (argi->refdate_given) {
@@ -273,6 +282,7 @@ main(int argc, char *argv[])
 		/* open the infile ... */
 		if ((fd = open(f, 0)) >= 0) {
 			ctx->infd = fd;
+			ctx->badfd = STDERR_FILENO;
 		} else {
 			fprintf(stderr, "couldn't open file '%s'\n", f);
 			/* just try the next bloke */

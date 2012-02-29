@@ -47,6 +47,7 @@
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
+# include <stdio.h>
 # include <assert.h>
 #else  /* !DEBUG_FLAG */
 # define assert(args...)
@@ -903,6 +904,19 @@ tpc_sort(utetpc_t tpc)
 	unset_tpc_unsorted(tpc);
 	/* update last key */
 	tpc->last = tpc_last_scom(tpc)->u;
+
+#if defined DEBUG_FLAG
+	/* tpc should be sorted now innit */
+	{
+		uint64_t thresh = 0;
+		for (sidx_t i = 0; i < tpc->sk.si;) {
+			scom_t t = AS_SCOM(tpc->sk.sp + i);
+			assert(thresh <= t->u);
+			thresh = t->u;
+			i += scom_thdr_size(t) / sizeof(*tpc->sk.sp);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	return;
 }
 

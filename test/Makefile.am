@@ -21,6 +21,7 @@ TESTS += mux.5.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
+EXTRA_DIST += mux.d.ariva
 
 TESTS += print.1.ut
 TESTS += print.2.ut

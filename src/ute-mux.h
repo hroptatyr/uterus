@@ -56,9 +56,7 @@ struct mux_ctx_s {
 };
 
 struct sumux_opt_s {
-	const char **infiles;
 	const char *outfile;
-	const char *badfile;
 	const char *sname;
 	const char *zone;
 	/** offset for timestamps relative to something other than epoch */

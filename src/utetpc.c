@@ -291,12 +291,6 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 		/* nothing to do */
 		break;
 
-	case PERM(1, 0, 2, 3):
-		/* (1,2) */
-		/* not possible given the above perm generator */
-		abort();
-		break;
-
 	case PERM(2, 1, 0, 3):
 		/* (1,3) */
 		swap_pi(p + 0, p + 2);
@@ -317,12 +311,12 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 		swap_pi(p + 1, p + 3);
 		break;
 
+	case PERM(1, 0, 2, 3):
+		/* (1,2) */
+		/* not possible given the above perm generator */
 	case PERM(0, 1, 3, 2):
 		/* (3,4) */
 		/* not possible with the above perm generator */
-		abort();
-		break;
-
 	case PERM(1, 0, 3, 2):
 		/* (1,2)(3,4) */
 		/* not possible with the above perm generator */

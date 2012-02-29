@@ -333,6 +333,26 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 			min = sh->u;
 		}
 	}
+#if defined DEBUG_FLAG
+	/* there must be no more minimal pages */
+	for (strat_node_t nd = curnd; nd = nd->next; ) {
+		for (size_t i = 0; i < nd->cnt; i++) {
+			scom_t sh;
+			uint32_t pg = nd->pgs[i];
+
+			if ((sh = seek_get_scom(sks + pg)) == NULL) {
+				continue;
+			}
+			if (min > sh->u) {
+				UDEBUG("%u cur min %u %zd %lx\n",
+				       str->last->pg, curnd->pg, res, min);
+				UDEBUG("  min'ner one: %u %u %lx\n",
+				       nd->pg, pg, sh->u);
+			}
+			assert(min <= sh->u);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	return res;
 }
 
@@ -372,6 +392,9 @@ ute_sort(utectx_t ctx)
 	size_t npages = ute_npages(ctx);
 	utectx_t hdl;
 	strat_t str;
+#if defined DEBUG_FLAG
+	uint64_t check = 0ULL;
+#endif	/* DEBUG_FLAG */
 
 	/* this is to obtain a merge strategy,
 	 * we have several outcomes:
@@ -384,6 +407,14 @@ ute_sort(utectx_t ctx)
 		for (uint32_t i = 0; i < n->cnt; i++) {
 			UDEBUG("  page %u\n", n->pgs[i]);
 		}
+#if defined DEBUG_FLAG
+		uint64_t thresh = 0;
+		for (size_t i = 0; i < sks[n->pg].si;) {
+			scom_t t = AS_SCOM(sks[n->pg].sp + i);
+			assert(thresh <= t->u);
+			i += scom_thdr_size(t) / sizeof(*sks->sp);
+		}
+#endif	/* DEBUG_FLAG */
 	}
 
 	/* let's assume we have an all-way merge */
@@ -397,6 +428,14 @@ ute_sort(utectx_t ctx)
 	/* ALL-way merge */
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
 		scom_t t = seek_get_scom(sks + j);
+
+#if defined DEBUG_FLAG
+		if (check > t->u) {
+			UDEBUG("FUCK %lx > %lx\n", check, t->u);
+		}
+		assert(check <= t->u);
+		check = t->u;
+#endif	/* DEBUG_FLAG */
 
 		/* add that bloke */
 		ute_add_tick(hdl, t);

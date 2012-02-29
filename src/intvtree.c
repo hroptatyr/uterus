@@ -49,7 +49,7 @@
 /* we should somehow compute this */
 #define MIN_KEY		0
 #define MAX_KEY		ULLONG_MAX
-#define NDSTK_SIZE	16
+#define NDSTK_SIZE	(128)
 
 typedef struct __node_s *__node_t;
 
@@ -248,7 +248,7 @@ free_itree(itree_t it)
 	pthread_mutex_lock(&it->mtx);
 	x = itree_left_root(it);
 	if (!nil_node_p(x)) {
-		__node_t ____stk[128];
+		__node_t ____stk[NDSTK_SIZE];
 		struct it_ndstk_s __stk = {
 			.idx = 0,
 			.stk = ____stk,
@@ -665,7 +665,7 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 /* left child, me, right child */
 	/* root node has no right child, proceed with the left one */
 	__node_t curr;
-	__node_t ____stk[128];
+	__node_t ____stk[NDSTK_SIZE];
 	struct it_ndstk_s __stk = {.idx = 0, .stk = ____stk}, *stk = &__stk;
 
 #define proc(_x)						\
@@ -739,7 +739,7 @@ itree_find_point_cb(itree_t it, T p, it_trav_f cb, void *clo)
 /* Find all nodes that contain P.  Call cb() for each of them. */
 	/* root node has no right child, proceed with the left one */
 	__node_t curr;
-	__node_t ____stk[128];
+	__node_t ____stk[NDSTK_SIZE];
 	struct it_ndstk_s __stk = {.idx = 0, .stk = ____stk}, *stk = &__stk;
 
 #define proc(_x)						\

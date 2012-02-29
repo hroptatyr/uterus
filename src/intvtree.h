@@ -98,6 +98,14 @@ DECLF void itree_trav_in_order(itree_t it, it_trav_f cb, void *clo);
  * Find all intervals in the itree that contain P and call CB() on them. */
 DECLF void itree_find_point_cb(itree_t, T p, it_trav_f cb, void *clo);
 /**
+ * Find all intervals that are subsets of [LO,HI] and call CB() on them. */
+DECLF void
+itree_find_subs_cb(itree_t it, T lo, T hi, it_trav_f cb, void *clo);
+/**
+ * Find all intervals that are supersets of [LO,HI] and call CB() on them. */
+DECLF void
+itree_find_sups_cb(itree_t it, T lo, T hi, it_trav_f cb, void *clo);
+/**
  * Find an interval in the itree that contains P and call CB() on it. */
 DECLF void itree_find_point_cb1(itree_t, T p, it_trav_f cb, void *clo);
 /**

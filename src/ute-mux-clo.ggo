@@ -19,10 +19,6 @@ option "output" o
 	"Write result to specified output file (default workload.ute)"
 	string typestr="FILE" optional
 
-option "badfile" -
-	"Write erroneous lines to this file"
-	string typestr="FILE" optional
-
 option "zone" z
 	"Treat date/time strings as in time zone NAME (default UTC)"
 	string typestr="NAME" optional

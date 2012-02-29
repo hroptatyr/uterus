@@ -228,10 +228,6 @@ main(int argc, char *argv[])
 		opts->outfile = argi->output_arg;
 	}
 
-	if (argi->badfile_given) {
-		opts->badfile = argi->badfile_arg;
-	}
-
 	if (argi->refdate_given) {
 		/* for simplicity expect unix epoch stamp for now */
 		opts->tsoff = argi->refdate_arg;

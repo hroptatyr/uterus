@@ -146,6 +146,7 @@ cache_hdr(utectx_t ctx)
 	}
 	/* otherwise something's fucked */
 err_out:
+	munmap(res, sz);
 	ctx->hdrp = NULL;
 	ctx->slut_sz = 0;
 	return -1;

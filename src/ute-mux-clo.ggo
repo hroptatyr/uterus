@@ -19,6 +19,10 @@ option "output" o
 	"Write result to specified output file (default workload.ute)"
 	string typestr="FILE" optional
 
+option "into" -
+	"Write result into ute file FILE"
+	string typestr="FILE" optional
+
 option "zone" z
 	"Treat date/time strings as in time zone NAME (default UTC)"
 	string typestr="NAME" optional

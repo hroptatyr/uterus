@@ -707,30 +707,28 @@ itree_trav_in_order(itree_t it, it_trav_f cb, void *clo)
 	return;
 }
 
-/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
 node_pivot_rel(__node_t n, T p)
 {
+/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 	if (p < n->pub.lo) {
 		return -1;
 	} else if (p > n->pub.hi) {
 		return 1;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
-/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 static inline int
 tree_pivot_rel(__node_t n, T p)
 {
+/* 0 if N contains P, 1 if P is right of N and -1 if N is right of P. */
 	if (p < n->pub.lo) {
 		return -1;
 	} else if (p > max_high(n)) {
 		return 1;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
 DEFUN void

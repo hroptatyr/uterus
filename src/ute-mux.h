@@ -41,9 +41,10 @@ typedef struct mux_ctx_s *mux_ctx_t;
 typedef struct sumux_opt_s *sumux_opt_t;
 
 struct mux_ctx_s {
-	int badfd;
 	/* input file index */
 	int infd;
+	/* err file desc */
+	int badfd;
 
 	/* can be used by the muxer */
 	void *rdr;

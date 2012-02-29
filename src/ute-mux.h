@@ -67,6 +67,10 @@ struct sumux_opt_s {
 	int32_t mul;
 	/** magnifier for expanded or up-scaled values */
 	int32_t mag;
+
+	/* outfile flags */
+#define OUTFILE_IS_INTO		(1)
+	int flags;
 };
 
 /**

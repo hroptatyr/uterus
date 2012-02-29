@@ -123,6 +123,11 @@ cache_hdr(utectx_t ctx)
 	struct utehdr2_s *res;
 	int pflags = __pflags(ctx);
 
+	/* check if the file's big enough */
+	if (ctx->fsz < sz) {
+		/* must be a mistake then */
+		goto err_out;
+	}
 	/* just map the first sizeof(struct bla) bytes */
 	res = mmap(NULL, sz, pflags, MAP_SHARED, ctx->fd, 0);
 	if (UNLIKELY(res == MAP_FAILED)) {
@@ -132,7 +137,7 @@ cache_hdr(utectx_t ctx)
 	/* assign the header ... */
 	ctx->slut_sz = (ctx->hdrp = res)->slut_sz;
 	/* ... and take a probe, if it's not for creation */
-	if (ctx->oflags & (UO_CREAT | UO_TRUNC)) {
+	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
 		return 0;
 	} else if (!memcmp(res->magic, "UTE+", sizeof(res->magic))) {

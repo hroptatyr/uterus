@@ -502,6 +502,27 @@ tilman_comp(utectx_t ctx)
 }
 
 static void
+tpc_from_seek(utectx_t ctx, uteseek_t sk)
+{
+	if (!tpc_active_p(ctx->tpc)) {
+		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
+	}
+	/* copy the last page */
+	memcpy(ctx->tpc->sk.sp, sk->sp, sk->sz);
+	/* ... and set the new length */
+	ctx->tpc->sk.si = sk->sz / sizeof(*sk->sp);
+	/* store the first value as ctx's lvtd and the last as tpc's last */
+	{
+		scom_t frst = seek_first_scom(sk);
+		scom_t last = seek_last_scom(sk);
+
+		ctx->lvtd = ctx->tpc->least = frst->u;
+		ctx->tpc->last = last->u;
+	}
+	return;
+}
+
+static void
 load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file
@@ -516,13 +537,7 @@ load_last_tpc(utectx_t ctx)
 	/* seek to the last page */
 	seek_page(sk, ctx, lpg - 1);
 	/* create the tpc space */
-	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
-	}
-	/* copy the last page */
-	memcpy(ctx->tpc->sk.sp, sk->sp, sk->sz);
-	/* ... and set the new length */
-	ctx->tpc->sk.si = sk->sz / sizeof(*sk->sp);
+	tpc_from_seek(ctx, sk);
 	/* now munmap the seek */
 	flush_seek(sk);
 	/* also set the last and lvtd values */
@@ -810,6 +825,7 @@ ute_add_tick(utectx_t ctx, scom_t t)
 /* the big question here is if we want to allow arbitrary ticks as in
  * can T be of type scdl too? */
 	if (!tpc_active_p(ctx->tpc)) {
+		/* is this case actually possible? */
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
 	} else if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */

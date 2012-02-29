@@ -228,10 +228,6 @@ main(int argc, char *argv[])
 		opts->outfile = argi->output_arg;
 	}
 
-	if (argi->badfile_given) {
-		opts->badfile = argi->badfile_arg;
-	}
-
 	if (argi->refdate_given) {
 		/* for simplicity expect unix epoch stamp for now */
 		opts->tsoff = argi->refdate_arg;
@@ -273,6 +269,7 @@ main(int argc, char *argv[])
 		/* open the infile ... */
 		if ((fd = open(f, 0)) >= 0) {
 			ctx->infd = fd;
+			ctx->badfd = STDERR_FILENO;
 		} else {
 			fprintf(stderr, "couldn't open file '%s'\n", f);
 			/* just try the next bloke */

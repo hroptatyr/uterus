@@ -143,9 +143,13 @@ cache_hdr(utectx_t ctx)
 	} else if (!memcmp(res->magic, "UTE+", sizeof(res->magic))) {
 		/* perfect */
 		return 0;
+	} else if (ctx->oflags & UO_NO_HDR_CHK) {
+		/* not perfect but just as good */
+		return 0;
 	}
 	/* otherwise something's fucked */
 err_out:
+	munmap(res, sz);
 	ctx->hdrp = NULL;
 	ctx->slut_sz = 0;
 	return -1;

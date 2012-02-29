@@ -210,6 +210,12 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
+	if (argi->output_given && argi->into_given) {
+		fputs("only one of --output and --into can be given\n", stderr);
+		res = 1;
+		goto out;
+	}
+
 	/* initialise the module system */
 	ute_module_init();
 

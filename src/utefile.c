@@ -551,11 +551,13 @@ load_last_tpc(utectx_t ctx)
 	struct uteseek_s sk[1];
 
 	if (UNLIKELY(lpg == 0)) {
-		return;
-	} else if (!(ctx->oflags & UO_RDWR) || (ctx->oflags & UO_NO_LOAD_TPC)) {
+		goto wipeout;
+	} else if (!(ctx->oflags & UO_RDWR)) {
 		/* we mustn't change things, so fuck off right here */
-		memset(ctx->tpc, 0, sizeof(*ctx->tpc));
-		return;
+		goto wipeout;
+	} else if ((ctx->oflags & UO_NO_LOAD_TPC)) {
+		/* we don't want to load the tpc */
+		goto wipeout;
 	}
 
 	/* seek to the last page */
@@ -571,6 +573,9 @@ load_last_tpc(utectx_t ctx)
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
 	ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	return;
+wipeout:
+	memset(ctx->tpc, 0, sizeof(*ctx->tpc));
 	return;
 }
 

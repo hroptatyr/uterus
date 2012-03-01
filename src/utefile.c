@@ -544,6 +544,10 @@ load_last_tpc(utectx_t ctx)
 
 	if (UNLIKELY(lpg == 0)) {
 		return;
+	} else if (!(ctx->oflags & UO_RDWR)) {
+		/* we mustn't change things, so fuck off right here */
+		memset(ctx->tpc, 0, sizeof(*ctx->tpc));
+		return;
 	}
 
 	/* seek to the last page */
@@ -702,10 +706,7 @@ make_utectx(const char *fn, int fd, int oflags)
 		 * the file accordingly */
 		load_slut(res);
 		/* load the last page as tpc */
-		if (res->oflags & UO_RDWR) {
-			/* actually this changes things */
-			load_last_tpc(res);
-		}
+		load_last_tpc(res);
 	}
 	return res;
 }

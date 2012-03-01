@@ -892,12 +892,12 @@ seek_sort(uteseek_t sk)
 			tmp = tgt, tgt = src, src = tmp;
 		}
 		if (sk->sp == tgt) {
-			/* oh, we were about to copy shit into tgt, so
-			 * munmap tpc->tp and install the new vector */
-			sk->sp = src;
+			/* oh, we were about to copy shit into tgt
+			 * just copy the rest so it ends up in seek space */
+			memcpy(sk->sp, new, sk->sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(tgt, sk->sz);
+		munmap(new, sk->sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

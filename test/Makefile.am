@@ -35,5 +35,7 @@ TESTS += shnot.2.ut
 
 TESTS += fsck.1.ut
 TESTS += fsck.2.ut
+TESTS += fsck.3.ut
+EXTRA_DIST += fsck.a.ute
 
 ## Makefile.am ends here

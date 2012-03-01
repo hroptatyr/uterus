@@ -175,6 +175,19 @@ index_past_eof_p(utectx_t ctx, sidx_t i)
 	return tot >= ctx->fsz;
 }
 
+static inline bool
+index_in_tpc_space_p(utectx_t ctx, sidx_t i)
+{
+/* could do this in terms of page_size() */
+/* oh oh oh */
+	const size_t bsz = UTE_BLKSZ(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	const uint32_t p = page_of_index(ctx, i);
+	const uint32_t o = offset_of_index(ctx, i);
+	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
+	return tot >= ctx->fsz - tpc_byte_size(ctx->tpc) - ctx->slut_sz;
+}
+
 static inline sidx_t
 index_to_tpc_index(utectx_t ctx, sidx_t i)
 {

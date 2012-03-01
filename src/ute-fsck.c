@@ -144,7 +144,7 @@ static int
 fsck1(fsck_ctx_t ctx, const char *fn)
 {
 	utectx_t hdl;
-	const int fl = ctx->dryp ? UO_RDONLY : UO_RDWR;
+	const int fl = (ctx->dryp ? UO_RDONLY : UO_RDWR) | UO_NO_LOAD_TPC;
 	size_t npg;
 	scidx_t last = {
 		.u = 0ULL,

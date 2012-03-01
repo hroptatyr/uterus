@@ -604,7 +604,6 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 {
 	char *line;
 	size_t llen;
-	bool res;
 	const char *cursor;
 
 	llen = prchunk_getline(ctx->rdr, &line);
@@ -614,15 +613,15 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	cursor = line;
 	/* check if there's html/json remnants */
 	if (UNLIKELY(strpbrk(line, "<()>") != NULL)) {
-		return false;
+		goto bugger;
 	}
 	/* receive time stamp, always first on line */
 	if (UNLIKELY(!parse_rcv_stmp(tl, &cursor))) {
-		return false;
+		goto bugger;
 	}
 	/* symbol comes next, or `nothing' or `C-c' */
 	if (UNLIKELY(!parse_symbol(tl, &cursor))) {
-		return false;
+		goto bugger;
 	}
 	/* lookup the symbol (or create it) */
 	{
@@ -632,7 +631,7 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 
 	/* and now parse the key value pairs */
 	if (UNLIKELY(!parse_keyvals(tl, cursor))) {
-		return false;
+		goto bugger;
 	}
 
 	/* assess tick quality */
@@ -640,16 +639,17 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	check_tic_offs(tl);
 
 	/* check if it's good or bad line */
-	if ((res = check_ariva_tl(tl))) {
+	if (check_ariva_tl(tl)) {
 		/* good */
 		enrich_batps(tl);
-	} else {
-		/* bad */
-		tl->flags = FLAG_INVAL;
-		/* we should make this optional */
-		pr_tl(ctx, tl, line, llen);
+		return true;
 	}
-	return res;
+bugger:
+	/* bad */
+	tl->flags = FLAG_INVAL;
+	/* we should make this optional */
+	pr_tl(ctx, tl, line, llen);
+	return false;
 }
 
 static void

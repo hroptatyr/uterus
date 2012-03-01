@@ -612,6 +612,10 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 
 	/* we parse the line in 3 steps, receive time stamp, symbol, values */
 	cursor = line;
+	/* check if there's html/json remnants */
+	if (UNLIKELY(strpbrk(line, "<()>") != NULL)) {
+		return false;
+	}
 	/* receive time stamp, always first on line */
 	if (UNLIKELY(!parse_rcv_stmp(tl, &cursor))) {
 		return false;

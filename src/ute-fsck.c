@@ -156,6 +156,9 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 			if (!ctx->dryp) {
 				/* flush back to our page ... */
 				memcpy(ti, buf, sizeof(*ti));
+			} else {
+				/* well we need to pretend we changed it */
+				ti = nu_ti;
 			}
 		} else {
 			/* everything fine so far */

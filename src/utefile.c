@@ -219,14 +219,19 @@ flush_seek(uteseek_t sk)
 void
 seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
-	size_t psz = page_size(ctx, pg);
 	size_t off = page_offset(ctx, pg);
-	void *tmp;
 	int pflags = __pflags(ctx);
+	size_t psz;
+	void *tmp;
 
 	/* trivial checks */
-	if (UNLIKELY(off >= ctx->fsz)) {
-		return;
+	if (UNLIKELY(off > ctx->fsz)) {
+		goto wipe;
+	} else if (UNLIKELY((psz = page_size(ctx, pg)) == 0)) {
+		/* could be tpc space */
+		if ((psz += tpc_byte_size(ctx->tpc)) == 0) {
+			goto wipe;
+		}
 	}
 	/* create a new seek */
 	tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
@@ -238,6 +243,9 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->sz = psz;
 	sk->pg = pg;
 	sk->fl = 0;
+	return;
+wipe:
+	memset(sk, 0, sizeof(*sk));
 	return;
 }
 
@@ -284,6 +292,8 @@ ute_seek(utectx_t ctx, sidx_t i)
 {
 	/* wishful thinking */
 	if (UNLIKELY(index_past_eof_p(ctx, i))) {
+		return NULL;
+	} else if (UNLIKELY(index_in_tpc_space_p(ctx, i))) {
 		sidx_t new_i = index_to_tpc_index(ctx, i);
 		return tpc_get_scom(ctx->tpc, new_i);
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
@@ -541,6 +551,10 @@ load_last_tpc(utectx_t ctx)
 	struct uteseek_s sk[1];
 
 	if (UNLIKELY(lpg == 0)) {
+		return;
+	} else if (!(ctx->oflags & UO_RDWR)) {
+		/* we mustn't change things, so fuck off right here */
+		memset(ctx->tpc, 0, sizeof(*ctx->tpc));
 		return;
 	}
 

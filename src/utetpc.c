@@ -860,19 +860,16 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 }
 
 DEFUN void
-tpc_sort(utetpc_t tpc)
+seek_sort(uteseek_t sk)
 {
 /* simplified merge sort */
-	const size_t tpc_tsz = sizeof(*tpc->sk.sp);
+	const size_t tpc_tsz = sizeof(*sk->sp);
 	void *new;
 
 	/* get us another map */
-	new = mmap(NULL, tpc->sk.sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, sk->sz, PROT_MEM, MAP_MEM, -1, 0);
 
-	for (void *tp = tpc->sk.sp,
-		     *np = new,
-		     *ep = tpc->sk.sp + tpc->sk.si;
-	     tp < ep; ) {
+	for (void *tp = sk->sp, *np = new, *ep = sk->sp + sk->si; tp < ep; ) {
 		size_t ntleft = DATDI(ep, tp, tpc_tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
 		perm_idx_t pi = idxsort(tp, nticks);
@@ -884,39 +881,46 @@ tpc_sort(utetpc_t tpc)
 	/* now in NEW there's sorted pages consisting of 256 ticks each
 	 * we now use a bottom-up merge step */
 	{
-		void *tgt = tpc->sk.sp;
+		void *tgt = sk->sp;
 		void *src = new;
-		for (size_t rsz = 256; tpc->sk.si > rsz; rsz *= 2) {
+		for (size_t rsz = 256; sk->si > rsz; rsz *= 2) {
 			void *tmp;
-			bup_round(tgt, src, rsz, tpc->sk.si);
+			bup_round(tgt, src, rsz, sk->si);
 			/* swap the roles of src and tgt */
 			tmp = tgt, tgt = src, src = tmp;
 		}
-		if (tpc->sk.sp == tgt) {
+		if (sk->sp == tgt) {
 			/* oh, we were about to copy shit into tgt, so
 			 * munmap tpc->tp and install the new vector */
-			tpc->sk.sp = src;
+			sk->sp = src;
 		}
 		/* munmap()ing is the same in either case */
-		munmap(tgt, tpc->sk.sz);
+		munmap(tgt, sk->sz);
 	}
-	/* set the sorted flag, i.e. unset the unsorted flag */
-	unset_tpc_unsorted(tpc);
-	/* update last key */
-	tpc->last = tpc_last_scom(tpc)->u;
-
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */
 	{
 		uint64_t thresh = 0;
-		for (sidx_t i = 0; i < tpc->sk.si;) {
-			scom_t t = AS_SCOM(tpc->sk.sp + i);
+		for (sidx_t i = 0; i < sk->si;) {
+			scom_t t = AS_SCOM(sk->sp + i);
 			assert(thresh <= t->u);
 			thresh = t->u;
-			i += scom_thdr_size(t) / sizeof(*tpc->sk.sp);
+			i += scom_thdr_size(t) / sizeof(*sk->sp);
 		}
 	}
 #endif	/* DEBUG_FLAG */
+	return;
+}
+
+DEFUN void
+tpc_sort(utetpc_t tpc)
+{
+	/* sort the internal seek */
+	seek_sort(&tpc->sk);
+	/* set the sorted flag, i.e. unset the unsorted flag */
+	unset_tpc_unsorted(tpc);
+	/* update last key */
+	tpc->last = tpc_last_scom(tpc)->u;
 	return;
 }
 

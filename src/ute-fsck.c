@@ -38,6 +38,7 @@
 /** test client for libuterus */
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include "utefile-private.h"
 #include "utefile.h"
@@ -55,10 +56,8 @@
 
 /* one day verbpr() might become --verbose */
 #if defined DEBUG_FLAG
-# define verbpr(args...)	fprintf(stderr, args)
 # define UDEBUG(args...)	fprintf(stderr, args)
 #else
-# define verbpr(args...)
 # define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
@@ -69,52 +68,75 @@ struct fsck_ctx_s {
 };
 
 
-static scom_thdr_t
-tpc_get_scom_thdr(utetpc_t tpc, sidx_t i)
-{
-	if (UNLIKELY(i > tpc->sk.si)) {
-		return NULL;
-	}
-	return AS_SCOM_THDR(tpc->sk.sp + i);
-}
-
-static scom_thdr_t
-seek_get_scom_thdr(uteseek_t sk)
-{
-	if (UNLIKELY(sk->si * sizeof(*sk->sp) >= sk->sz)) {
-		return NULL;
-	}
-	return AS_SCOM_THDR(sk->sp + sk->si);
-}
-
+/* helper functions */
 static void
-reseek(utectx_t ctx, sidx_t i)
+__attribute__((format(printf, 1, 2)))
+verbprf(const char *fmt, ...)
 {
-	uint32_t p = page_of_index(ctx, i);
-	uint32_t o = offset_of_index(ctx, i);
-
-	/* flush the old seek */
-	flush_seek(ctx->seek);
-	/* create a new seek */
-	seek_page(ctx->seek, ctx, p);
-	ctx->seek->si = o;
+#if defined DEBUG_FLAG
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+#endif	/* DEBUG_FLAG */
 	return;
 }
 
-static scom_thdr_t
-__seek(utectx_t ctx, sidx_t i)
+
+/* actual fscking */
+enum {
+	ISS_NO_ISSUES,
+	ISS_OLD_VER,
+	ISS_UNSORTED,
+};
+
+static int
+fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 {
-/* just like ute_seek() but returns a scom_thdr */
-	if (UNLIKELY(index_past_eof_p(ctx, i))) {
-		sidx_t new_i = index_to_tpc_index(ctx, i);
-		return tpc_get_scom_thdr(ctx->tpc, new_i);
-	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
-		reseek(ctx, i);
-	} else {
-		/* just seek inside the page */
-		ctx->seek->si = offset_of_index(ctx, i);
+	const size_t ssz = sizeof(*sk->sp);
+	int issues = 0;
+
+	for (size_t i = 0, tsz; i < sk->sz; i += tsz) {
+		char buf[64];
+		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
+		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+
+		if (issues & ISS_OLD_VER) {
+			/* promote the old header
+			 * copy to tmp buffer BUF */
+			scom_promote_v01(nu_ti, ti);
+
+			/* now to what we always do */
+			if (!ctx->dryp) {
+				/* flush back to our page ... */
+				memcpy(ti, buf, sizeof(*ti));
+			} else {
+				/* pretend we changed it */
+				ti = nu_ti;
+			}
+		}
+
+		/* check for sortedness */
+		if (last.u > ti->u) {
+			verbprf("  tick p%u/%zu  %lx > %lx\n",
+				sk->pg, i / ssz, last.u, ti->u);
+			issues |= ISS_UNSORTED;
+		}
+		last.u = ti->u;
+
+		/* determine the length for the increment */
+		tsz = scom_thdr_size(ti);
 	}
-	return seek_get_scom_thdr(ctx->seek);
+	/* deal with issues that need page-wise dealing */
+	if (issues & ISS_UNSORTED) {
+		printf("file `%s' page %u needs sorting ...\n", fn, sk->pg);
+		if (!ctx->dryp) {
+			/* we need to set seek's si accordingly */
+			sk->si = sk->sz / ssz;
+			seek_sort(sk);
+		}
+	}
+	return issues;
 }
 
 static int
@@ -122,12 +144,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 {
 	utectx_t hdl;
 	const int fl = ctx->dryp ? UO_RDONLY : UO_RDWR;
-	const size_t ssz = sizeof(*hdl->seek->sp);
-	enum {
-		ISS_NO_ISSUES,
-		ISS_OLD_VER,
-		ISS_UNSORTED,
-	};
+	size_t npg;
 	scidx_t last = {
 		.u = 0ULL,
 	};
@@ -143,36 +160,19 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		printf("file `%s' needs upgrading (ute format 0.1) ...\n", fn);
 		issues |= ISS_OLD_VER;
 	}
-	for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz / ssz) {
-		char buf[64];
-		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
-		scom_thdr_t ti = __seek(hdl, i);
+	/* go through the pages manually */
+	npg = ute_npages(hdl);
+	for (size_t p = 0; p < npg + tpc_has_ticks_p(hdl->tpc); p++) {
+		struct uteseek_s sk[1];
 
-		if (issues & ISS_OLD_VER) {
-			/* promote the old header, copy to tmp buffer BUF */
-			scom_promote_v01(nu_ti, ti);
-			tsz = scom_thdr_size(nu_ti);
-			/* now to what we always do */
-			if (!ctx->dryp) {
-				/* flush back to our page ... */
-				memcpy(ti, buf, sizeof(*ti));
-			} else {
-				/* well we need to pretend we changed it */
-				ti = nu_ti;
-			}
-		} else {
-			/* everything fine so far */
-			tsz = scom_thdr_size(ti);
-		}
-
-		/* check for sortedness */
-		if (last.u > ti->u) {
-			printf("file `%s' needs sorting ...\n", fn);
-			verbpr("  tick %zu  %lx > %lx\n", i, last.u, ti->u);
-			issues |= ISS_UNSORTED;
-		}
-		last.u = ti->u;
+		/* create a new seek */
+		seek_page(sk, hdl, p);
+		/* fsck that one page */
+		issues |= fsckp(ctx, sk, fn, last);
+		/* flush the old seek */
+		flush_seek(sk);
 	}
+
 	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
 		/* update the header version */
 		const char *ver = hdl->hdrp->version;
@@ -180,8 +180,16 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		ute_flush(hdl);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
 	}
+	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
+		/* just to be sure */
+		printf(" ... `%s' sorting\n", fn);
+		ute_set_unsorted(hdl);
+	}
 	/* oh right, close the handle */
 	ute_close(hdl);
+	if ((issues & ISS_UNSORTED) && !ctx->dryp && ute_sorted_p(hdl)) {
+		printf(" ... `%s' sorted\n", fn);
+	}
 	return issues;
 }
 

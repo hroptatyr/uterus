@@ -66,9 +66,9 @@ struct uteseek_s {
 	/** the actual page data */
 	struct sndwch_s *sp;
 	/** page we're on */
-	sidx_t pg:48;
+	uint32_t pg;
 	/** general page flags */
-	uint64_t fl:8;
+	uint32_t fl;
 };
 
 struct utetpc_s {
@@ -145,6 +145,7 @@ DECLF void clear_tpc(utetpc_t tpc);
 DECLF void tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz);
 
 /* temporary */
+DECLF void seek_sort(uteseek_t);
 DECLF void tpc_sort(utetpc_t);
 
 /**

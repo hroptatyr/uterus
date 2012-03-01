@@ -226,6 +226,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 
 	/* trivial checks */
 	if (UNLIKELY(off >= ctx->fsz)) {
+		memset(sk, 0, sizeof(*sk));
 		return;
 	}
 	/* create a new seek */

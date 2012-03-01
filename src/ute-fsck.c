@@ -129,7 +129,12 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 	}
 	/* deal with issues that need page-wise dealing */
 	if (issues & ISS_UNSORTED) {
-		printf("file `%s' needs sorting ...\n", fn);
+		printf("file `%s' page %u needs sorting ...\n", fn, sk->pg);
+		if (!ctx->dryp) {
+			/* we need to set seek's si accordingly */
+			sk->si = sk->sz / ssz;
+			seek_sort(sk);
+		}
 	}
 	return issues;
 }

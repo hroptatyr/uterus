@@ -9,7 +9,7 @@ CMDLINE="fsck -n '${INFILE}'"
 ## STDOUT
 stdout=$(mktemp)
 cat <<EOF > "${stdout}"
-file \`${INFILE}' needs sorting ...
+file \`${INFILE}' page 0 needs sorting ...
 EOF
 
 EXPECT_EXIT_CODE=1

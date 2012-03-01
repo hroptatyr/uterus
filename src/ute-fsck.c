@@ -68,6 +68,7 @@ struct fsck_ctx_s {
 };
 
 
+/* helper functions */
 static void
 __attribute__((format(printf, 1, 2)))
 verbprf(const char *fmt, ...)

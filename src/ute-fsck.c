@@ -38,6 +38,7 @@
 /** test client for libuterus */
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include "utefile-private.h"
 #include "utefile.h"
@@ -55,10 +56,8 @@
 
 /* one day verbpr() might become --verbose */
 #if defined DEBUG_FLAG
-# define verbpr(args...)	fprintf(stderr, args)
 # define UDEBUG(args...)	fprintf(stderr, args)
 #else
-# define verbpr(args...)
 # define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
@@ -69,6 +68,19 @@ struct fsck_ctx_s {
 };
 
 
+static void
+__attribute__((format(printf, 1, 2)))
+verbprf(const char *fmt, ...)
+{
+#if defined DEBUG_FLAG
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+#endif	/* DEBUG_FLAG */
+	return;
+}
+
 static scom_thdr_t
 tpc_get_scom_thdr(utetpc_t tpc, sidx_t i)
 {

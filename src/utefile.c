@@ -702,7 +702,10 @@ make_utectx(const char *fn, int fd, int oflags)
 		 * the file accordingly */
 		load_slut(res);
 		/* load the last page as tpc */
-		load_last_tpc(res);
+		if (res->oflags & UO_RDWR) {
+			/* actually this changes things */
+			load_last_tpc(res);
+		}
 	}
 	return res;
 }

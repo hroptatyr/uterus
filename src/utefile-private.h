@@ -172,7 +172,7 @@ index_past_eof_p(utectx_t ctx, sidx_t i)
 	const uint32_t p = page_of_index(ctx, i);
 	const uint32_t o = offset_of_index(ctx, i);
 	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
-	return tot >= ctx->fsz;
+	return tot >= ctx->fsz + tpc_byte_size(ctx->tpc);
 }
 
 static inline bool
@@ -185,7 +185,8 @@ index_in_tpc_space_p(utectx_t ctx, sidx_t i)
 	const uint32_t p = page_of_index(ctx, i);
 	const uint32_t o = offset_of_index(ctx, i);
 	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
-	return tot >= ctx->fsz - tpc_byte_size(ctx->tpc) - ctx->slut_sz;
+	/* assume file is trunc'd to last settled page */
+	return tot >= ctx->fsz && tot <= ctx->fsz + tpc_byte_size(ctx->tpc);
 }
 
 static inline sidx_t

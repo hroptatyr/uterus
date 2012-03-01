@@ -283,11 +283,11 @@ scom_t
 ute_seek(utectx_t ctx, sidx_t i)
 {
 	/* wishful thinking */
-	if (UNLIKELY(index_in_tpc_space_p(ctx, i))) {
+	if (UNLIKELY(index_past_eof_p(ctx, i))) {
+		return NULL;
+	} else if (UNLIKELY(index_in_tpc_space_p(ctx, i))) {
 		sidx_t new_i = index_to_tpc_index(ctx, i);
 		return tpc_get_scom(ctx->tpc, new_i);
-	} else if (UNLIKELY(index_past_eof_p(ctx, i))) {
-		return NULL;
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
 		reseek(ctx, i);
 	} else {

@@ -287,7 +287,8 @@ sort_strat(utectx_t ctx)
 	strat_t s;
 	struct __strat_clo_s sc[1];
 
-	for (size_t j = 0; j < npages; ) {
+	npages += tpc_has_ticks_p(ctx->tpc);
+	for (size_t j = 0; j < npages; j += NRUNS) {
 		/* initialise the seeks */
 		load_runs(sks, ctx, j, j + NRUNS);
 
@@ -302,7 +303,6 @@ sort_strat(utectx_t ctx)
 
 		/* finish off the seeks */
 		dump_runs(sks, ctx, j, j + NRUNS);
-		j += NRUNS;
 	}
 	/* run the strategy evaluator */
 	s = xnew(struct strat_s);

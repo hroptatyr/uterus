@@ -53,6 +53,15 @@
 # define countof(x)	(sizeof(x) / sizeof(*x))
 #endif	/* !countof */
 
+/* one day verbpr() might become --verbose */
+#if defined DEBUG_FLAG
+# define verbpr(args...)	fprintf(stderr, args)
+# define UDEBUG(args...)	fprintf(stderr, args)
+#else
+# define verbpr(args...)
+# define UDEBUG(args...)
+#endif	/* DEBUG_FLAG */
+
 typedef struct fsck_ctx_s *fsck_ctx_t;
 
 struct fsck_ctx_s {
@@ -120,7 +129,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		ISS_UNSORTED,
 	};
 	scidx_t last = {
-		.u = 0UL,
+		.u = 0ULL,
 	};
 	int issues = 0;
 
@@ -147,6 +156,9 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 			if (!ctx->dryp) {
 				/* flush back to our page ... */
 				memcpy(ti, buf, sizeof(*ti));
+			} else {
+				/* well we need to pretend we changed it */
+				ti = nu_ti;
 			}
 		} else {
 			/* everything fine so far */
@@ -156,6 +168,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		/* check for sortedness */
 		if (last.u > ti->u) {
 			printf("file `%s' needs sorting ...\n", fn);
+			verbpr("  tick %zu  %lx > %lx\n", i, last.u, ti->u);
 			issues |= ISS_UNSORTED;
 		}
 		last.u = ti->u;

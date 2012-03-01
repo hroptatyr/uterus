@@ -1,0 +1,17 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/fsck.a.ute"
+CMDLINE="fsck -n '${INFILE}'"
+
+## STDIN
+
+## STDOUT
+stdout=$(mktemp)
+cat <<EOF > "${stdout}"
+file \`${INFILE}' needs sorting ...
+EOF
+
+EXPECT_EXIT_CODE=1
+
+## fsck.3.ut ends here

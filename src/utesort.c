@@ -62,7 +62,7 @@
 #if defined DEBUG_FLAG
 # include <assert.h>
 # include <stdio.h>
-# define UDEBUG(args...)	printf(args)
+# define UDEBUG(args...)	fprintf(stderr, args)
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
 # define assert(args...)

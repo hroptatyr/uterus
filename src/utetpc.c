@@ -47,9 +47,11 @@
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
-# include <stdio.h>
 # include <assert.h>
+# include <stdio.h>
+# define UDEBUG(args...)	fprintf(stderr, args)
 #else  /* !DEBUG_FLAG */
+# define UDEBUG(args...)
 # define assert(args...)
 #endif	/* DEBUG_FLAG */
 

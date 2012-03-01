@@ -8,8 +8,8 @@ CMDLINE="fsck -n '${INFILE}'"
 
 ## STDOUT
 stdout=$(mktemp)
-cat <<'EOF' > "${stdout}"
-file `../test/print.a.ute' needs upgrading (ute format 0.1) ...
+cat <<EOF > "${stdout}"
+file \`${INFILE}' needs upgrading (ute format 0.1) ...
 EOF
 
 ## fsck.1.ut ends here

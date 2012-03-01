@@ -180,6 +180,10 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		ute_flush(hdl);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
 	}
+	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
+		ute_set_unsorted(hdl);
+		printf(" ... `%s' sorted\n", fn);
+	}
 	/* oh right, close the handle */
 	ute_close(hdl);
 	return issues;

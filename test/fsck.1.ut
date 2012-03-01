@@ -12,4 +12,6 @@ cat <<EOF > "${stdout}"
 file \`${INFILE}' needs upgrading (ute format 0.1) ...
 EOF
 
+EXPECT_EXIT_CODE=1
+
 ## fsck.1.ut ends here

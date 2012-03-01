@@ -147,7 +147,16 @@ page_size(utectx_t ctx, uint32_t page)
 	const size_t tsz = sizeof(*ctx->seek->sp);
 	const size_t psz = bsz * tsz;
 	const size_t tot = sizeof(struct utehdr2_s) + page * psz;
-	return (tot + psz) <= ctx->fsz ? psz : ctx->fsz - tot;
+
+	if (LIKELY(tot + psz <= ctx->fsz)) {
+		return psz;
+	}
+	/* otherwise check if the page is beyond eof */
+	if (LIKELY(ctx->fsz - tot <= psz)) {
+		return ctx->fsz - tot;
+	}
+	/* otherwise the page is beyond */
+	return 0;
 }
 
 static inline size_t
@@ -172,7 +181,21 @@ index_past_eof_p(utectx_t ctx, sidx_t i)
 	const uint32_t p = page_of_index(ctx, i);
 	const uint32_t o = offset_of_index(ctx, i);
 	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
-	return tot >= ctx->fsz;
+	return tot >= ctx->fsz + tpc_byte_size(ctx->tpc);
+}
+
+static inline bool
+index_in_tpc_space_p(utectx_t ctx, sidx_t i)
+{
+/* could do this in terms of page_size() */
+/* oh oh oh */
+	const size_t bsz = UTE_BLKSZ(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	const uint32_t p = page_of_index(ctx, i);
+	const uint32_t o = offset_of_index(ctx, i);
+	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
+	/* assume file is trunc'd to last settled page */
+	return tot >= ctx->fsz && tot <= ctx->fsz + tpc_byte_size(ctx->tpc);
 }
 
 static inline sidx_t

@@ -33,4 +33,11 @@ EXTRA_DIST += print.d.ute
 TESTS += shnot.1.ut
 TESTS += shnot.2.ut
 
+TESTS += fsck.1.ut
+TESTS += fsck.2.ut
+TESTS += fsck.3.ut
+TESTS += fsck.4.ut
+EXTRA_DIST += fsck.a.ute
+EXTRA_DIST += fsck.b.ute
+
 ## Makefile.am ends here

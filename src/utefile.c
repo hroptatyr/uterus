@@ -49,6 +49,12 @@
 
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
+#if defined DEBUG_FLAG
+# define UDEBUG(args...)	fprintf(stderr, args)
+#else
+# define UDEBUG(args...)
+#endif	/* DEBUG_FLAG */
+
 #define SMALLEST_LVTD	(0)
 
 static const char ute_vers[][8] = {
@@ -213,14 +219,19 @@ flush_seek(uteseek_t sk)
 void
 seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
-	size_t psz = page_size(ctx, pg);
 	size_t off = page_offset(ctx, pg);
-	void *tmp;
 	int pflags = __pflags(ctx);
+	size_t psz;
+	void *tmp;
 
 	/* trivial checks */
-	if (UNLIKELY(off >= ctx->fsz)) {
-		return;
+	if (UNLIKELY(off > ctx->fsz)) {
+		goto wipe;
+	} else if (UNLIKELY((psz = page_size(ctx, pg)) == 0)) {
+		/* could be tpc space */
+		if ((psz += tpc_byte_size(ctx->tpc)) == 0) {
+			goto wipe;
+		}
 	}
 	/* create a new seek */
 	tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
@@ -232,6 +243,9 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->sz = psz;
 	sk->pg = pg;
 	sk->fl = 0;
+	return;
+wipe:
+	memset(sk, 0, sizeof(*sk));
 	return;
 }
 
@@ -278,6 +292,8 @@ ute_seek(utectx_t ctx, sidx_t i)
 {
 	/* wishful thinking */
 	if (UNLIKELY(index_past_eof_p(ctx, i))) {
+		return NULL;
+	} else if (UNLIKELY(index_in_tpc_space_p(ctx, i))) {
 		sidx_t new_i = index_to_tpc_index(ctx, i);
 		return tpc_get_scom(ctx->tpc, new_i);
 	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
@@ -535,7 +551,13 @@ load_last_tpc(utectx_t ctx)
 	struct uteseek_s sk[1];
 
 	if (UNLIKELY(lpg == 0)) {
-		return;
+		goto wipeout;
+	} else if (!(ctx->oflags & UO_RDWR)) {
+		/* we mustn't change things, so fuck off right here */
+		goto wipeout;
+	} else if ((ctx->oflags & UO_NO_LOAD_TPC)) {
+		/* we don't want to load the tpc */
+		goto wipeout;
 	}
 
 	/* seek to the last page */
@@ -551,6 +573,9 @@ load_last_tpc(utectx_t ctx)
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
 	ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	return;
+wipeout:
+	memset(ctx->tpc, 0, sizeof(*ctx->tpc));
 	return;
 }
 
@@ -705,6 +730,7 @@ utectx_t
 ute_open(const char *path, int oflags)
 {
 	int resfd;
+	int real_oflags;
 
 	/* massage the flags */
 	if (UNLIKELY((oflags & UO_WRONLY))) {
@@ -713,11 +739,12 @@ ute_open(const char *path, int oflags)
 	}
 	/* we need to open the file RDWR at the moment, various
 	 * mmap()s use PROT_WRITE */
-	if (oflags != UO_RDONLY) {
+	if (!(oflags & UO_RDONLY)) {
 		oflags |= UO_RDWR;
 	}
 	/* try and open the file first */
-	if ((resfd = open(path, oflags, 0644)) < 0) {
+	real_oflags = oflags & ~(UO_ANON | UO_NO_HDR_CHK | UO_NO_LOAD_TPC);
+	if ((resfd = open(path, real_oflags, 0644)) < 0) {
 		/* ooooh, leave with a big bang */
 		return NULL;
 	}

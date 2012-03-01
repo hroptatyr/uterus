@@ -66,8 +66,11 @@ typedef void *utectx_t;
 #define UO_RDWR		(02)
 #define UO_CREAT	(0100)
 #define UO_TRUNC	(01000)
-#define UO_ANON		(04000000)
-#define UO_NO_HDR_CHK	(010000000)
+#define UO_APPEND	(02000)
+/* not in fcntl.h mehopes */
+#define UO_ANON		(010)
+#define UO_NO_HDR_CHK	(020)
+#define UO_NO_LOAD_TPC	(040)
 
 /**
  * Open the file in PATH and create a ute context.

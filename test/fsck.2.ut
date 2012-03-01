@@ -1,0 +1,13 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/print.c.ute"
+CMDLINE="fsck -n '${INFILE}'"
+
+## STDIN
+
+## STDOUT
+stdout=$(mktemp)
+## no output at all
+
+## fsck.2.ut ends here

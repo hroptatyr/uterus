@@ -551,11 +551,13 @@ load_last_tpc(utectx_t ctx)
 	struct uteseek_s sk[1];
 
 	if (UNLIKELY(lpg == 0)) {
-		return;
+		goto wipeout;
 	} else if (!(ctx->oflags & UO_RDWR)) {
 		/* we mustn't change things, so fuck off right here */
-		memset(ctx->tpc, 0, sizeof(*ctx->tpc));
-		return;
+		goto wipeout;
+	} else if ((ctx->oflags & UO_NO_LOAD_TPC)) {
+		/* we don't want to load the tpc */
+		goto wipeout;
 	}
 
 	/* seek to the last page */
@@ -571,6 +573,9 @@ load_last_tpc(utectx_t ctx)
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
 	ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	return;
+wipeout:
+	memset(ctx->tpc, 0, sizeof(*ctx->tpc));
 	return;
 }
 
@@ -725,6 +730,7 @@ utectx_t
 ute_open(const char *path, int oflags)
 {
 	int resfd;
+	int real_oflags;
 
 	/* massage the flags */
 	if (UNLIKELY((oflags & UO_WRONLY))) {
@@ -733,11 +739,12 @@ ute_open(const char *path, int oflags)
 	}
 	/* we need to open the file RDWR at the moment, various
 	 * mmap()s use PROT_WRITE */
-	if (oflags != UO_RDONLY) {
+	if (!(oflags & UO_RDONLY)) {
 		oflags |= UO_RDWR;
 	}
 	/* try and open the file first */
-	if ((resfd = open(path, oflags, 0644)) < 0) {
+	real_oflags = oflags & ~(UO_ANON | UO_NO_HDR_CHK | UO_NO_LOAD_TPC);
+	if ((resfd = open(path, real_oflags, 0644)) < 0) {
 		/* ooooh, leave with a big bang */
 		return NULL;
 	}

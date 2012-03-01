@@ -147,7 +147,16 @@ page_size(utectx_t ctx, uint32_t page)
 	const size_t tsz = sizeof(*ctx->seek->sp);
 	const size_t psz = bsz * tsz;
 	const size_t tot = sizeof(struct utehdr2_s) + page * psz;
-	return (tot + psz) <= ctx->fsz ? psz : ctx->fsz - tot;
+
+	if (LIKELY(tot + psz <= ctx->fsz)) {
+		return psz;
+	}
+	/* otherwise check if the page is beyond eof */
+	if (LIKELY(ctx->fsz - tot <= psz)) {
+		return ctx->fsz - tot;
+	}
+	/* otherwise the page is beyond */
+	return 0;
 }
 
 static inline size_t

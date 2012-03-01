@@ -56,6 +56,7 @@
 
 /* one day verbpr() might become --verbose */
 #if defined DEBUG_FLAG
+# include <assert.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
 #else
 # define UDEBUG(args...)
@@ -172,6 +173,25 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		/* flush the old seek */
 		flush_seek(sk);
 	}
+
+#if defined DEBUG_FLAG
+	/* second time lucky, there should be no page related issues anymore */
+	for (size_t p = 0;
+	     !ctx->dryp && p < npg + tpc_has_ticks_p(hdl->tpc); p++) {
+		struct uteseek_s sk[1];
+		int iss = 0;
+
+		/* create a new seek */
+		seek_page(sk, hdl, p);
+		/* fsck that one page */
+		ctx->dryp = true;
+		iss = fsckp(ctx, sk, fn, last);
+		assert(!(iss & ISS_UNSORTED));
+		ctx->dryp = false;
+		/* flush the old seek */
+		flush_seek(sk);
+	}
+#endif	/* DEBUG_FLAG */
 
 	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
 		/* update the header version */

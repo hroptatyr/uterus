@@ -49,6 +49,12 @@
 
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
+#if defined DEBUG_FLAG
+# define UDEBUG(args...)	fprintf(stderr, args)
+#else
+# define UDEBUG(args...)
+#endif	/* DEBUG_FLAG */
+
 #define SMALLEST_LVTD	(0)
 
 static const char ute_vers[][8] = {

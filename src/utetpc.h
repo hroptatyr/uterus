@@ -145,6 +145,7 @@ DECLF void clear_tpc(utetpc_t tpc);
 DECLF void tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz);
 
 /* temporary */
+DECLF void seek_sort(uteseek_t);
 DECLF void tpc_sort(utetpc_t);
 
 /**

@@ -552,7 +552,7 @@ load_last_tpc(utectx_t ctx)
 
 	if (UNLIKELY(lpg == 0)) {
 		return;
-	} else if (!(ctx->oflags & UO_RDWR)) {
+	} else if (!(ctx->oflags & UO_RDWR) || (ctx->oflags & UO_NO_LOAD_TPC)) {
 		/* we mustn't change things, so fuck off right here */
 		memset(ctx->tpc, 0, sizeof(*ctx->tpc));
 		return;

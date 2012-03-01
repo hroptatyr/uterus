@@ -70,6 +70,7 @@ typedef void *utectx_t;
 /* not in fcntl.h mehopes */
 #define UO_ANON		(010)
 #define UO_NO_HDR_CHK	(020)
+#define UO_NO_LOAD_TPC	(040)
 
 /**
  * Open the file in PATH and create a ute context.

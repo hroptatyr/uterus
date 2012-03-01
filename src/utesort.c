@@ -207,6 +207,11 @@ __strat_cb(it_node_t itnd, void *clo)
 	itree_find_subs_cb(it, lo, hi, __cnt, cc);
 	itree_find_point_cb(it, hi, __cnt, cc);
 
+	assert(cc->cnt >= 2);
+	if (cc->cnt < 2) {
+		return;
+	}
+
 	/* create a strat node */
 	sn = xmalloc(sizeof(struct strat_node_s) + (cc->cnt - 2) * sizeof(int));
 	sn->pg = pg;
@@ -244,6 +249,18 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 		/* set up page i */
 		seek_page(sks + i, ctx, k);
 	}
+
+#if defined DEBUG_FLAG
+	for (size_t k = start_run, j = 0; k < e; j++, k++) {
+		uint64_t thresh = 0;
+		for (sidx_t i = 0; i < sks[j].sz / sizeof(*sks->sp);) {
+			scom_t t = AS_SCOM(sks[j].sp + i);
+			assert(thresh <= t->u);
+			thresh = t->u;
+			i += scom_thdr_size(t) / sizeof(*sks->sp);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	return;
 }
 
@@ -279,6 +296,7 @@ sort_strat(utectx_t ctx)
 			scom_t sb = seek_first_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
+			assert(sb->u <= se->u);
 			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}
 

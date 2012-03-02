@@ -56,6 +56,8 @@ EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
 BUILT_SOURCES = version.h
 GGO_HELPERS = common.ggo.in
 
+DSO_LDFLAGS = -shared
+
 ## datrie stuff
 noinst_LIBRARIES += libdatrie.a
 libdatrie_a_SOURCES =
@@ -147,20 +149,20 @@ BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c
-uta_la_LDFLAGS = -module $(XCCLDFLAGS)
+uta_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 uta_la_LIBADD = libuterus.la
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
-dukas_la_LDFLAGS = -module $(XCCLDFLAGS)
+dukas_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
-mat_la_LDFLAGS = -module $(XCCLDFLAGS)
+mat_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
-ariva_la_LDFLAGS = -module $(XCCLDFLAGS)
+ariva_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ariva_la_LIBADD = libuterus.la
 
 version.h: $(top_builddir)/.version

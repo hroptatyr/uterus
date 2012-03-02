@@ -572,8 +572,6 @@ parse_keyval(ariva_tl_t tgt, const char **p, const char *ep)
 	case 'l':
 	case 'c':
 		/* must be a candle tick, kick it */
-		tgt->flags = FLAG_INVAL;
-		return -1;
 	default:
 		*p = strchr(*p, ' ');
 		break;

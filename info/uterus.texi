@@ -108,10 +108,14 @@ algorithms perform in a nearly optimal way.
 Uterus data structures are layered.  Here is a list from primitive to
 complex layers:
 @itemize
-@item tick payloads
-@item ticks
-@item tick pages
-@item tick file
+@item
+tick payloads
+@item
+ticks
+@item
+tick pages
+@item
+tick file
 @end itemize
 
 Following the data-metadata separation approach any of the above is
@@ -537,7 +541,38 @@ slut to a new location upon insertion or deletion of ticks.
 @node Muxers
 @chapter Muxers
 
+Muxers are used to transform foreign data source formats into ute
+format.  Some muxers can be used as @emph{printers} (or @emph{demuxers})
+as well.
 
+Muxers and demuxers are modular in design.  They can be compiled outside
+the uterus source tree and build process and work as some sort of
+plug-in to the @samp{mux} command.
+
+uterus v0.2 ships with the following muxers:
+@table @asis
+@item uta
+The ute ASCII representation, also a printer.
+
+@item dukas
+Dukascopy bi5 and big data as can be downloaded from
+@url{http://www.dukascopy.com/swiss/english/data_feed/historical/}.
+
+@item ariva
+Custom ariva file muxer, this is an ASCII-fied version of ariva's json
+data push, see @url{http://www.ariva.de}.
+@end table
+
+and the following printers:
+@table @asis
+@item uta
+The ute ASCII representation, can also be mux'd.
+
+@item mat
+MATLAB Level 5 .mat file printer which currently only works on shnots.
+The output columns are, in that order, timestamp, bid price, ask price,
+bid quantity, ask quantity.
+@end table
 
 @summarycontents
 @contents

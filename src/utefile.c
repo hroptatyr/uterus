@@ -737,13 +737,15 @@ ute_open(const char *path, int oflags)
 		/* stupid nutters, we allow read/write, not write-only */
 		oflags = (oflags & ~UO_WRONLY) | UO_RDWR;
 	}
+	/* comb out stuff that will confuse open() */
+	real_oflags = oflags & ~(UO_ANON | UO_NO_HDR_CHK | UO_NO_LOAD_TPC);
 	/* we need to open the file RDWR at the moment, various
 	 * mmap()s use PROT_WRITE */
-	if (!(oflags & UO_RDONLY)) {
+	if (real_oflags > UO_RDONLY) {
 		oflags |= UO_RDWR;
+		real_oflags |= UO_RDWR;
 	}
 	/* try and open the file first */
-	real_oflags = oflags & ~(UO_ANON | UO_NO_HDR_CHK | UO_NO_LOAD_TPC);
 	if ((resfd = open(path, real_oflags, 0644)) < 0) {
 		/* ooooh, leave with a big bang */
 		return NULL;

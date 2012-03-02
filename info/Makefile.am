@@ -7,11 +7,16 @@ LC_ALL=C
 BUILT_SOURCES =
 EXTRA_DIST = $(BUILT_SOURCES)
 
+info_TEXINFOS = uterus.texi
+uterus_TEXINFOS =
+uterus_TEXINFOS += $(built_texis)
+uterus_TEXINFOS += uterus.texi
+
 man1_MANS =
 man1_MANS += $(built_mans)
 
 EXTRA_DIST += author.h2m
-BUILT_SOURCES += $(built_mans)
+BUILT_SOURCES += $(built_mans) $(built_infos)
 
 built_mans =
 built_mans += ute.man
@@ -19,6 +24,14 @@ built_mans += ute-mux.man
 built_mans += ute-print.man
 built_mans += ute-shnot.man
 built_mans += ute-fsck.man
+
+built_infos =
+built_infos += ute-mux.texi
+built_infos += ute-print.texi
+built_infos += ute-shnot.texi
+built_infos += ute-fsck.texi
+
+dist_noinst_SCRIPTS = gentexi.sh
 
 ## help2man helpers
 my_bld_man = $(__bld_man_$(V))
@@ -33,3 +46,12 @@ ute.man: $(top_srcdir)/src/ute.c $(top_srcdir)/configure
 	$(my_bld_man) $(HELP2MAN) -S "$(PACKAGE_STRING)" -p "($(PACKAGE))$*" \
 		-I "$(srcdir)/author.h2m" \
 		-o $@ $(top_builddir)/src/ute
+
+my_bld_texi = $(__bld_texi_$(V))
+__bld_texi_ = $(__bld_texi_$(AM_DEFAULT_VERBOSITY))
+__bld_texi_0 = @echo "  GENTEXI " $*;
+%.texi: $(top_srcdir)/src/%-clo.ggo
+	$(my_bld_texi) ${SHELL} \
+		$(srcdir)/gentexi.sh $(top_builddir)/src/$* \
+		$($*_EXAMPLES) > $@ || rm -f -- $@
+

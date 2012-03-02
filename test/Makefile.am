@@ -18,10 +18,12 @@ TESTS += mux.2.ut
 TESTS += mux.3.ut
 TESTS += mux.4.ut
 TESTS += mux.5.ut
+TESTS += mux.6.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
 EXTRA_DIST += mux.d.ariva
+EXTRA_DIST += mux.e.ariva
 
 TESTS += print.1.ut
 TESTS += print.2.ut

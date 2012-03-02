@@ -1,0 +1,16 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.e.ariva"
+OUTFILE="testload.ute"
+CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
+COMMENT="broken ariva file"
+
+## STDIN
+
+## STDOUT
+
+## outfile sum
+OUTFILE_SHA1="4a79c7e68ccb0c02fb19a5e977a80d9f5be12b94"
+
+## mux.6.ut ends here

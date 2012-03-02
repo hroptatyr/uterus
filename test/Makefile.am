@@ -42,4 +42,6 @@ TESTS += fsck.4.ut
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 
+.NOTPARALLEL:
+
 ## Makefile.am ends here

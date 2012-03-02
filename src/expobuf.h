@@ -127,10 +127,10 @@ free_expobuf(expobuf_t UNUSED(eb))
 static bool
 eb_fetch_lines_df(expobuf_t eb)
 {
-	index_t offs = eb->pgno - (EB_PGSZ - eb->idx) % EB_PGSZ;
-	index_t new_idx = offs % glob_pgsz;
+	size_t offs = eb->pgno - (EB_PGSZ - eb->idx) % EB_PGSZ;
+	size_t new_idx = offs % glob_pgsz;
 	/* page-aligned offset */
-	index_t offs_al = offs - new_idx;
+	size_t offs_al = offs - new_idx;
 
 	if (eb->pgno > eb->tot) {
 		return false;
@@ -162,8 +162,8 @@ read_safe(int fd, char *buf, size_t sz)
 static bool
 eb_fetch_lines_fd(expobuf_t eb)
 {
-	index_t bno = eb->idx;
-	index_t eno = eb->tot - bno;
+	size_t bno = eb->idx;
+	size_t eno = eb->tot - bno;
 
 	if (eb->tot == 0) {
 		return false;

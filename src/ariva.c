@@ -350,8 +350,10 @@ static zif_t z = NULL;
 static inline time_t
 parse_time(const char **buf, const char *eobuf)
 {
-	struct tm tm;
 	const size_t step = 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
+	struct tm tm = {
+		.tm_yday = 0
+	};
 
 	/* check if the buffer is large enough */
 	if (UNLIKELY(*buf + step > eobuf)) {
@@ -360,6 +362,10 @@ parse_time(const char **buf, const char *eobuf)
 	}
 	/* use our sped-up version */
 	ffff_strptime_ISO(*buf, &tm);
+	if (UNLIKELY(!tm.tm_yday)) {
+		/* means we haven't parsed anything basically */
+		return 0;
+	}
 	*buf += step;
 	return ffff_timelocal(&tm, z);
 }

@@ -21,3 +21,5 @@ libltdl/
 .rsync-filter
 .version
 version.h
+texinfo.tex
+*.info

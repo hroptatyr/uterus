@@ -1,22 +1,128 @@
-DRAFT
+\input texinfo  @c -*-texinfo-*-
+@setfilename uterus.info
+@comment  node-name,  next,  previous,  up
+
+@ifinfo
+@dircategory uterus
+@direntry
+* uterus: (uterus).             Universal tick encoders.
+@end direntry
+
+This manual documents the uterus package.
+
+Copyright @copyright{} 2009-2012 Sebastian Freundt.
+
+Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License,
+Version 1.3 or any later version published by the Free Software
+Foundation; with no Invariant Sections, with no Front-Cover Texts,
+and with no Back-Cover Texts.  A copy of the license is included
+in the section entitled "GNU Free Documentation License".
+@end ifinfo
+@c
+@setchapternewpage odd
+@settitle uterus User's Manual
+@c
+@titlepage
+@sp 6
+@center @titlefont{uterus User's Manual}
+@sp 4
+@sp 1
+@sp 1
+@center March 2012
+@sp 5
+@center Sebastian Freundt
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2009-2012 Sebastian Freundt.
+
+Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License,
+Version 1.3 or any later version published by the Free Software
+Foundation; with no Invariant Sections, with no Front-Cover Texts,
+and with no Back-Cover Texts.  A copy of the license is included
+in the section entitled "GNU Free Documentation License".
+@end titlepage
+@page
+
+@node Top
+@top dateutils
+
+uterus is a universal tick encoder library to efficiently transport and
+store huge amounts of tick data.
+
+The ute file format
+- provides a container for chronologically sorted quote and tick data
+- allows to store meta data within the file (contract specs, etc.)
+- is optimised for cli tools to automate common tasks
+
+@menu
+* Introduction::        Motivation, background, etc.
+* File format::         File format internals
+* ute-mux::             Generate an ute file from a tick source
+* ute-print::           Print the contents of an ute file
+* ute-shnot::           Generate all-level snapshots from ute files
+* ute-fsck::            Check ute file for consistency
+* Muxers::              Connect foreign sources/sinks to/from ute files
+@end menu
+
+
+@node Introduction
+@chapter Introduction
+
+uterus is the vision of a bunch of guys with a strong emphasis on
+financial market data integrity and maintainability.  We constantly moan
+about the lack of standards, poor documentation of market-typical
+solutions and longevity of established formats, well, if there is such a
+thing as an established format.
+
+While there are several good solutions out there to store massive
+amounts of intraday tick data, there is not a single good way to
+actually get the data there.  Every data provider comes up with their
+own more or less suitable ad-hoc idea of a file exchange format.
+
+Many solutions just work as advertised, no doubt about that, but, and
+that's a big but, on a one-off basis!  Certainly it's fine to expect
+that a local Australian dealer that provides ASX data will stamp their
+ticks in AEST and AUD.  Fine, as long as you remember New South Wales'
+daylight saving time rules.  And fine, as long as you remember that some
+electricity futures are quoted in NZD.  Mixing such data with
+Northern-American data requires you to put up with the oddities of
+different time zones and currencies, at best your program allows you to
+bring them into shape, i.e. convert them to a common time zone or
+currency.  That's not an automatic process however and data from a
+different data vendor needs different treatment.
+
+
+@node File format
+@chapter File format
 
 This file describes storage concepts of uterus.
+The current file layout version is v0.2.
 
 Uterus provides efficient tick data storage and is primarily considered
 a file format (or codec) rather than a tool box of algorithms.  The
-meticulous storage layout specifications are necessary to help the
+meticulous storage layout specifications are necessary to help
 algorithms perform in a nearly optimal way.
 
-Uterus data structures are layered.  Here is a list from primitve to
+Uterus data structures are layered.  Here is a list from primitive to
 complex layers:
-* tick payloads
-* ticks
-* tick pages
-* tick file
+@itemize
+@item
+tick payloads
+@item
+ticks
+@item
+tick pages
+@item
+tick file
+@end itemize
 
 Following the data-metadata separation approach any of the above is
 usually accompanied by meta data that aids administrative and
 algorithmic tasks such as sorting, searching, slabbing, grouping, etc.
+
+@heading Overall layout
 
 The overall design (and any of the layers in particular) is chunk based,
 so that new/old chunks can be overlooked by older/newer versions of the
@@ -24,30 +130,33 @@ codec (backward/forward compatibility).  Metadata is usually
 sufficiently annotated so that the back/forth compatibility paradigm
 is still fulfilled.
 
-The overall file layout, 1 tick file:
 
+The overall file layout of a tick file:
+@verbatim
 +---------+-----------+----------+--------------+
 | hdr (1) | ticks (n) | slut (m) | metadata (k) |
 +---------+-----------+----------+--------------+
+@end verbatim
 
 The header is exactly 1 tick page (256 ticks == 4096 bytes) long.
 The ticks section is aligned to 1 tick, i.e. 16 bytes, its length is not
-bounded except for OS-limitations.  The slut is the symbol look-up table
-and variable in size as well.  It's basically an index
-  symbol idx (uint16_t) -> symbol string (char*)
+bounded except for OS-limitations.
+
+The slut is the symbol look-up table and variable in size as well.  It's
+basically an index 
+@verbatim
+| symbol idx (uint16_t) -> symbol string (char*)
+@end verbatim
 with a twist, the actual symbol strings are stored in a double-array
 (prefix/postfix) trie for performance reasons, see below for details.
-We say the slut size is variable but it's determined, as the trie
-serialisation is stipulated in this document.  In contrast the metadata
-part is of arbitrary size, the user is responsible as it may be used to
-associate custom data to anything, ticks, symbols, etc.  It is the
-caller's responsibility to keep the metadata in sync, libuterus will
-merely move any data found past the slut to a new location upon
-insertion or deletion of ticks.
 
+The final metadata part is of arbitrary size, layout and content, that
+is users of the uterus file format must take care of the metadata themselves.
+Typically this part is used to associate custom data to anything, ticks,
+symbols, etc.  See discussion below for further information.
 
-Tick payloads
-=============
+@heading Tick payloads
+
 Tick payloads are usually 32 bits wide, under certain circumstances 64
 bits are admissible too.  Tick payloads always come in multiples of 64
 bits, so 32bit payloads come in pairs.
@@ -55,82 +164,96 @@ bits, so 32bit payloads come in pairs.
 The meaning (and context) of the payload depends on the surrounding tick
 type and hence tick payloads cannot exist on their own.
 
-1. m30 payloads (32 bits)
+@subheading m30 payloads (32 bits)
 Prices, the most important data to track, can be encoded using a special
 fixed-point format with 30 mantissa bits and 2 exponent bits.
 
 Exponents are
+@verbatim
 - 0x00 1E-8
 - 0x01 1E-4
 - 0x02 1E+0
 - 0x03 1E+4
+@end verbatim
 
 That means there is no unique nor canonical presentation for a given
 decimal number.  Also note, in contrast to ieee754 there is no sign bit
 so signedness interpretation is up to the application.
 
 This gives following ranges:
+@verbatim
 - 0x00 0.00000000 to 5.36870912
 - 0x01 0.0000 to 53687.0912
 - 0x02 0 to 538670912
 - 0x03 0, then 10000 to 5368709120000
+@end verbatim
 
-2. m62 payloads (64 bits)
+@subheading m62 payloads (64 bits)
 The wider version of m30 data is m62 data which uses 62 mantissa bits
 and 2 exponent bits. 
 
 The exponents are the same as the m30 ones.  This gives following
 ranges:
+@verbatim
 - 0x00 0.00000000 to 23058430092.13693952
 - 0x01 0.0000 to 230584300921369.3952
 - 0x02 0 to 2305843009213693952
 - 0x03 0, then 10000 to 23058430092136939520000
+@end verbatim
 
-3. u32 payloads
+@subheading u32 payloads
 
 This is indeed the (anonymous) type used to implement tick payloads, a
 plain uint32_t that is capable of storing 32bits.
 
-4. u64 payloads
+@subheading u64 payloads
 
 This is indeed the (anonymous) type used to implement tick payloads, a
 plain uint64_t that is capable of storing 64bits.
 
 Supported routines:
 Conversion to m30:
+@verbatim
 m30_t get_ui32(uint32_t);
 m30_t get_f(float);
 m30_t get_d(double);
 m30_t get_s(const char**);
+@end verbatim
 
 Conversion from m30:
+@verbatim
 uint32_t ui32(m30_t);
 float f(m30_t);
 double d(m30_t);
 size_t s(char*, m30_t);
+@end verbatim
 
 Conversion to m62:
+@verbatim
 m62_t get_ui64(uint64_t);
 m62_t get_f(float);
 m62_t get_d(double);
 m62_t get_s(const char**);
+@end verbatim
 
 Conversion from m62:
+@verbatim
 uint64_t ui64(m62_t);
 float f(m62_t);
 double d(m62_t);
 size_t s(char*, m62_t);
+@end verbatim
 
 BEWARE: uterus does not provide arithmetics for m30 and m62 numbers!
 
+@heading Ticks
 
-Ticks
-=====
 Ticks are the envelopes of tick payloads in the sense that they give
 them their meanings.  The tick layer is flexible and extensible apart
 from the tick header which will not change in future versions due to its
 importance.
 
+@verbatim
 Header:
 -------
 The header consists of following data (and widths)
@@ -140,17 +263,26 @@ offset   width   slot  description
 0x000x    6bits  ttf   tick type and flags
 0x0007   16bits  idx   index, used to distinguish several time series
 0x0008   var.          tick payloads
+@end verbatim
 
 These constraints imply:
-- there cannot be ticks on 01 Jan 1970 00:00:00, special stamp 0x00000000
-- there cannot be ticks on 31 Dec 1969 23:59:59, special stamp 0xffffffff
-- the oldest tick date is: dd mmm 1902, special stamp 0x80000000
-- the youngest tick date is: dd mmm 2038, special, stamp 0x7fffffff
-- tick msec values must be between 000 and 999 otherwise they change the
-  meaning of the tick
-- there can be only 256 simultaneous time series (idx is 8bits)
+@itemize
+@item
+there cannot be ticks on 01 Jan 1970 00:00:00, special stamp 0x00000000
+@item
+there cannot be ticks on 31 Dec 1969 23:59:59, special stamp 0xffffffff
+@item
+the oldest tick date is: dd mmm 1902, special stamp 0x80000000
+@item
+the youngest tick date is: dd mmm 2038, special, stamp 0x7fffffff
+@item
+tick msec values must be between 000 and 999 otherwise they change the
+meaning of the tick
+@item there can be only 256 simultaneous time series (idx is 8bits)
+@end itemize
 
 There is some predefined functionality overloading the msec slot.
+@verbatim
 A value of:
 - 1023 indicates that the tick in question does not exist.
 - 1022 is reserved for unserding, meaning the tick is on hold.
@@ -161,8 +293,10 @@ A value of:
        hour/minute/second part of the time stamp is to be ignored
 - 1000 indicates that a millisecond resolution of the timestamp is not
        available for the tick in question
+@end verbatim
 
 Moreover, there are some predefined values for the ttf slot:
+@verbatim
 value   name   indicates
 0x0000  unk    an unknown tick type
 0x0001  bid    speaks for itself
@@ -180,11 +314,12 @@ value   name   indicates
 0x000d  g32    a generic tick using 2 32bit payloads
 0x000e  g64    a generic tick using 1 64bit payload
 0x000f  reserved
+@end verbatim
 
 We now discuss predefined tick types.
 
-Sparse level 1 ticks:
----------------------
+@subheading Sparse level 1 ticks:
+
 Sparsity in this sense means that a tick payload is fully wrapped in a
 tick envelope, i.e. a transferred bid/ask or bid/ask/trade tuple is
 dissected into 2 or 3 single ticks, each having their own timestamps
@@ -192,6 +327,7 @@ dissected into 2 or 3 single ticks, each having their own timestamps
 
 A sparse level 1 tick looks like:
 
+@verbatim
 offset   width   slot   description
 0x0000   64bits  hdr    the full header as described above
 0x0008   32bits  v1     an m30-coded price (for bid/ask/tra/fix/stl/auc/vwp)
@@ -202,13 +338,15 @@ or
 0x0000   64bits  hdr    the full header as described above
 0x0008   64bits  w      an m62-coded value (for vol/vpr)
 0x0010
+@end verbatim
 
-Sparse candles:
----------------
+@subheading Sparse candles:
+
 Sparsity is to be understood as for sparse level 1 ticks.
 
 A sparse candle looks like:
 
+@verbatim
 offset   width   slot   description
 0x0000   64bits  hdr    the full header as described above
 0x0008   32bits  hi     the high price, m30-coded
@@ -219,18 +357,20 @@ offset   width   slot   description
 0x001c   32bits  cnt    free, used to count the number of ticks in the
                         interval at the moment
 0x0020
+@end verbatim
 
 Deviating from the standard O/H/L/C notation the layout here has been
 optimised so that the more frequently used open and close prices are on
 a 128bit boundary (for algorithms using SSE).
 
-Sparse snapshots:
------------------
+@subheading Sparse snapshots:
+
 A sparse snapshot can be used to reflect a current view on the market,
 as if it was freezed.  If freezed a captured security generally has a
 bid side, an ask side and some trade history.
 The ticks look like:
 
+@verbatim
 offset   width   slot   description
 0x0000   64bits  hdr    the full header as described above
 0x0008   32bits  bq     the m30-coded size of the bid position
@@ -240,6 +380,7 @@ offset   width   slot   description
 0x0018   32bits  tvpr   free, or the m30-coded traded volume price
 0x001c   32bits  tq     free, or the m30-coded total traded quantity
 0x0020
+@end verbatim
 
 The layout, again, has been optimised so that the frequently used bid
 and ask prices are on a 128bit boundary (for algorithms using SSE).
@@ -253,11 +394,12 @@ way of keeping track (inside the tick envelope) which period has been
 used for their observation, this information has to be built-in
 knowledge of the application or has to be stored elsewhere.
 
-Sparse BAT candles:
--------------------
+@subheading Sparse BAT candles:
+
 A sparse BAT candle can be used to capture OHLCV candles for the bid,
 ask and trade sides altogether, and looks like:
 
+@verbatim
 offset   width   slot   description
 0x0000   64bits  hdr    the full header as described above
 0x0008   32bits  bo     bid-open (m30-coded)
@@ -274,11 +416,12 @@ offset   width   slot   description
 0x0034   32bits  tc     trade-close (m30-coded)
 0x0038   32bits  tv     trade volume (m30-coded)
 0x003c   32bits  sts    the time stamp when the candle started
+@end verbatim
 
 This tick type is highly experimental and subject to change.
 
-Dense level1 ticks:
--------------------
+@subheading Dense level1 ticks:
+
 Dense level1 ticks can be used for an equidistant time series to keep
 track of several tick payloads of different times using just one tick
 header, it is dense storage in that sense.
@@ -289,8 +432,8 @@ is even a 128bit) boundary.  Also be aware that there is (currently) no
 way of storing the width of these equidistant steps, it has to be either
 built-in knowledge or stored elsewhere in the application.
 
-Sparse level2 ticks (depth):
-----------------------------
+@subheading Sparse level2 ticks (depth):
+
 Sparse level2 ticks are not inherently distinct from sparse level1
 ticks, in fact they can be marked as such using 1 bit (WHICH ONE?).
 Given the strict ordering by time and the overall sparseness of ute
@@ -307,8 +450,7 @@ price of the changing party's quote along with its size.
 
 One proposal, ticks along the time axis, cf. Example 1 to 4.
 
-Example 1
----------
+@example
 We demonstrate how depth is built up.
 
   L2(09:00:00.000, b, 15.00, 100)
@@ -317,18 +459,22 @@ We demonstrate how depth is built up.
 The order book at time 09:00:00.100 would then look like:
   b: 15.01/100  15.00/100
      top level  --depth-->
+@end example
 
-Example 2 (given the order book of Example 1)
----------
+@example
+given the order book of Example 1
+
 We demonstrate how quotes in depth are changed.
   L2(09:00:00.200, b, 15.00, 200)
 
 The order book at time 09:00:00.200 would then look like:
 b: 15.01/100  15.00/200
    top level  --depth-->
+@end example
 
-Example 3 (given the order book of Example 2):
----------
+@example
+given the order book of Example 2
+
 We demonstrate how a price level in depth is split.
   L2l(09:00:00.300, b, 15.00, 100, 14.99, 100)
 Here L2l is a linked tick consisting of 2 sparse level2 ticks.
@@ -336,15 +482,18 @@ Here L2l is a linked tick consisting of 2 sparse level2 ticks.
 The order book at time 09:00:00.300 would then look like:
 b: 15.01/100  15.00/100  14.99/100
    top level  --depth-->
+@end example
 
-Example 4 (given the order book of Example 3):
----------
+@example
+given the order book of Example 3
+
 We demonstrate how a price level in depth vanishes.
   L2(09:00:00.400, b, 15.00, 0)
 
 The order book at time 09:00:00.400 would then look like:
 b: 15.01/100  14.99/100
    top level  --depth-->
+@end example
 
 Remark on statelessness:
 Given that actually observed sizes and prices are submitted (instead of,
@@ -354,8 +503,8 @@ next successfully received tick at price x corrects any mistakes made in
 the slot for the price level x.
 
 
-Further ticks:
---------------
+@subheading Further ticks:
+
 Further tick kinds may be desirable but there is currently no
 specification for them.  Here is an assortment of questions:
 - Level 2 data? Sparse? Dense?
@@ -363,12 +512,75 @@ specification for them.  Here is an assortment of questions:
   Store POTs (place of trade) somewhere?
 
 
-Tick pages
-==========
+@heading Tick pages
+
 Tick pages are large collections of ticks of the same kind (really?).
 
 
-Tick file
-=========
+@heading Tick file
+
 A tick file gathers several tick pages.
 
+
+@heading Slut details
+
+
+@heading Metadata details
+
+As mentioned in the overview, it is the caller's responsibility to keep
+the metadata in sync, libuterus will merely move any data found past the
+slut to a new location upon insertion or deletion of ticks.
+
+
+@include ute-mux.texi
+@include ute-print.texi
+@include ute-shnot.texi
+@include ute-fsck.texi
+
+
+@node Muxers
+@chapter Muxers
+
+Muxers are used to transform foreign data source formats into ute
+format.  Some muxers can be used as @emph{printers} (or @emph{demuxers})
+as well.
+
+Muxers and demuxers are modular in design.  They can be compiled outside
+the uterus source tree and build process and work as some sort of
+plug-in to the @samp{mux} command.
+
+uterus v0.2 ships with the following muxers:
+@table @asis
+@item uta
+The ute ASCII representation, also a printer.
+
+@item dukas
+Dukascopy bi5 and big data as can be downloaded from
+@url{http://www.dukascopy.com/swiss/english/data_feed/historical/}.
+
+@item ariva
+Custom ariva file muxer, this is an ASCII-fied version of ariva's json
+data push, see @url{http://www.ariva.de}.
+@end table
+
+and the following printers:
+@table @asis
+@item uta
+The ute ASCII representation, can also be mux'd.
+
+@item mat
+MATLAB Level 5 .mat file printer which currently only works on shnots.
+The output columns are, in that order, timestamp, bid price, ask price,
+bid quantity, ask quantity.
+@end table
+
+@summarycontents
+@contents
+@bye
+
+
+@c Remember to delete these lines before creating the info file.
+@iftex
+@bindingoffset = 0.5in
+@parindent = 0pt
+@end iftex

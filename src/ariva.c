@@ -348,13 +348,25 @@ parse_rcv_stmp(ariva_tl_t tgt, const char **cursor)
 static zif_t z = NULL;
 
 static inline time_t
-parse_time(const char **buf)
+parse_time(const char **buf, const char *eobuf)
 {
-	struct tm tm;
+	const size_t step = 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
+	struct tm tm = {
+		.tm_yday = 0
+	};
 
+	/* check if the buffer is large enough */
+	if (UNLIKELY(*buf + step > eobuf)) {
+		*buf = eobuf;
+		return 0;
+	}
 	/* use our sped-up version */
 	ffff_strptime_ISO(*buf, &tm);
-	*buf += 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
+	if (UNLIKELY(!tm.tm_yday)) {
+		/* means we haven't parsed anything basically */
+		return 0;
+	}
+	*buf += step;
 	return ffff_timelocal(&tm, z);
 }
 
@@ -445,23 +457,15 @@ reco_tl(char *buf, ariva_tl_t t)
 	return len;
 }
 
-static __attribute__((unused)) void
-pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
+static void
+pr_tl(mux_ctx_t ctx, ariva_tl_t UNUSED(t), const char *cursor, size_t len)
 {
-	char b[512];
-	int32_t d;
-	size_t lsz;
+	static const char prefix[] = "invalid line: ";
 	int fd = ctx->badfd;
 
-	d = diff_sl1t_ms((sl1t_t)t, t->rcv_stmp);
-	lsz = snprintf(
-		b, sizeof(b), "%u.%09u (%d) %d ",
-		t->rcv_stmp.sec, t->rcv_stmp.nsec, d, atl_si(t));
-	memcpy(b + lsz, cursor, len);
-	lsz = lsz + len;
-	lsz += reco_tl(b + lsz, t);
-	b[lsz++] = '\n';
-	write(fd, b, lsz);
+	write(fd, prefix, sizeof(prefix) - 1); 
+	write(fd, cursor, len);
+	write(fd, "\n", 1);
 	return;
 }
 
@@ -480,7 +484,7 @@ __m30_23_get_s(const char **nptr)
 }
 
 static int
-parse_keyval(ariva_tl_t tgt, const char **p)
+parse_keyval(ariva_tl_t tgt, const char **p, const char *ep)
 {
 /* assumes tgt's si is set already */
 	uint16_t idx = atl_si(tgt);
@@ -546,7 +550,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 		tgt->v = ffff_m62_get_s(p);
 		break;
 	case 'T':
-		tgt->stmp2 = parse_time(p);
+		tgt->stmp2 = parse_time(p, ep);
 		if (atl_ts_sec(tgt) > 0) {
 			break;
 		}
@@ -555,7 +559,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 		break;
 	case 't': {
 		/* price stamp */
-		time_t stmp = parse_time(p);
+		time_t stmp = parse_time(p, ep);
 		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
 		SYMTBL_METR[idx] = stmp;
@@ -566,8 +570,6 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 	case 'l':
 	case 'c':
 		/* must be a candle tick, kick it */
-		tgt->flags = FLAG_INVAL;
-		return -1;
 	default:
 		*p = strchr(*p, ' ');
 		break;
@@ -576,14 +578,15 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 }
 
 static bool
-parse_keyvals(ariva_tl_t tgt, const char *cursor)
+parse_keyvals(ariva_tl_t tgt, const char *cursor, size_t curlen)
 {
 /* assumes tgt's si is set already, this parses xVAL [SPC xVAL ...] pairs
  * also assumes that the string in cursor is nul-terminated */
 	const char *p = cursor;
+	const char *ep = cursor + curlen;
 
 	do {
-		if (UNLIKELY(parse_keyval(tgt, &p) < 0)) {
+		if (UNLIKELY(parse_keyval(tgt, &p, ep) < 0)) {
 			/* abrupt exit */
 			return false;
 		} 
@@ -604,7 +607,6 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 {
 	char *line;
 	size_t llen;
-	bool res;
 	const char *cursor;
 
 	llen = prchunk_getline(ctx->rdr, &line);
@@ -612,13 +614,17 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 
 	/* we parse the line in 3 steps, receive time stamp, symbol, values */
 	cursor = line;
+	/* check if there's html/json remnants */
+	if (UNLIKELY(strpbrk(line, "<()>") != NULL)) {
+		goto bugger;
+	}
 	/* receive time stamp, always first on line */
 	if (UNLIKELY(!parse_rcv_stmp(tl, &cursor))) {
-		return false;
+		goto bugger;
 	}
 	/* symbol comes next, or `nothing' or `C-c' */
 	if (UNLIKELY(!parse_symbol(tl, &cursor))) {
-		return false;
+		goto bugger;
 	}
 	/* lookup the symbol (or create it) */
 	{
@@ -627,8 +633,8 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	}
 
 	/* and now parse the key value pairs */
-	if (UNLIKELY(!parse_keyvals(tl, cursor))) {
-		return false;
+	if (UNLIKELY(!parse_keyvals(tl, cursor, llen - (cursor - line)))) {
+		goto bugger;
 	}
 
 	/* assess tick quality */
@@ -636,16 +642,17 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	check_tic_offs(tl);
 
 	/* check if it's good or bad line */
-	if ((res = check_ariva_tl(tl))) {
+	if (check_ariva_tl(tl)) {
 		/* good */
 		enrich_batps(tl);
-	} else {
-		/* bad */
-		tl->flags = FLAG_INVAL;
-		/* we should make this optional */
-		pr_tl(ctx, tl, line, llen);
+		return true;
 	}
-	return res;
+bugger:
+	/* bad */
+	tl->flags = FLAG_INVAL;
+	/* we should make this optional */
+	pr_tl(ctx, tl, line, llen);
+	return false;
 }
 
 static void

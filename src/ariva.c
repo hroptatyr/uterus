@@ -348,13 +348,19 @@ parse_rcv_stmp(ariva_tl_t tgt, const char **cursor)
 static zif_t z = NULL;
 
 static inline time_t
-parse_time(const char **buf)
+parse_time(const char **buf, const char *eobuf)
 {
 	struct tm tm;
+	const size_t step = 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
 
+	/* check if the buffer is large enough */
+	if (UNLIKELY(*buf + step > eobuf)) {
+		*buf = eobuf;
+		return 0;
+	}
 	/* use our sped-up version */
 	ffff_strptime_ISO(*buf, &tm);
-	*buf += 8/*YYYYMMDD*/ + 6/*HHMMSS*/;
+	*buf += step;
 	return ffff_timelocal(&tm, z);
 }
 
@@ -480,7 +486,7 @@ __m30_23_get_s(const char **nptr)
 }
 
 static int
-parse_keyval(ariva_tl_t tgt, const char **p)
+parse_keyval(ariva_tl_t tgt, const char **p, const char *ep)
 {
 /* assumes tgt's si is set already */
 	uint16_t idx = atl_si(tgt);
@@ -546,7 +552,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 		tgt->v = ffff_m62_get_s(p);
 		break;
 	case 'T':
-		tgt->stmp2 = parse_time(p);
+		tgt->stmp2 = parse_time(p, ep);
 		if (atl_ts_sec(tgt) > 0) {
 			break;
 		}
@@ -555,7 +561,7 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 		break;
 	case 't': {
 		/* price stamp */
-		time_t stmp = parse_time(p);
+		time_t stmp = parse_time(p, ep);
 		atl_set_ts_sec(tgt, stmp);
 		/* also set the instruments metronome */
 		SYMTBL_METR[idx] = stmp;
@@ -576,14 +582,15 @@ parse_keyval(ariva_tl_t tgt, const char **p)
 }
 
 static bool
-parse_keyvals(ariva_tl_t tgt, const char *cursor)
+parse_keyvals(ariva_tl_t tgt, const char *cursor, size_t curlen)
 {
 /* assumes tgt's si is set already, this parses xVAL [SPC xVAL ...] pairs
  * also assumes that the string in cursor is nul-terminated */
 	const char *p = cursor;
+	const char *ep = cursor + curlen;
 
 	do {
-		if (UNLIKELY(parse_keyval(tgt, &p) < 0)) {
+		if (UNLIKELY(parse_keyval(tgt, &p, ep) < 0)) {
 			/* abrupt exit */
 			return false;
 		} 
@@ -630,7 +637,7 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	}
 
 	/* and now parse the key value pairs */
-	if (UNLIKELY(!parse_keyvals(tl, cursor))) {
+	if (UNLIKELY(!parse_keyvals(tl, cursor, llen - (cursor - line)))) {
 		goto bugger;
 	}
 

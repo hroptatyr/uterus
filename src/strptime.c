@@ -49,23 +49,32 @@
 
 static const int tenners[10] = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
 
-/* week days of the years 1970 to 2038 */
+#define M	(1U)
+#define T	(2U)
+#define W	(3U)
+#define R	(4U)
+#define F	(5U)
+#define A	(6U)
+#define S	(0U)
+
+/* week days of the years 1970 to 2029 */
 static const uint8_t jan01_wday[] = {
-	/* 1970 */
-	4, 5, 6, 1, 2, 3, 4, 6,
-	/* 1978 */
-	0, 1, 2, 4, 5, 6, 0, 2,
-	/* 1986 */
-	3, 4, 5, 0, 1, 2, 3, 5,
-	/* 1994 */
-	6, 0, 1, 3, 4, 5, 6, 1,
-	/* 2002 */
-	2, 3, 4, 6, 0, 1, 2, 4,
-	/* 2010 */
-	5, 6, 0, 2, 3, 4, 5, 0,
-	/* 2018 */
+#define __JAN01_WDAY_BEG	(1970)
+	/* 1970 - 1979 */
+	R, F, A, M, T, W, R, A, S, M, 0,
+	/* 1980 - 1989 */
+	T, R, F, A, S, T, W, R, F, S, 0,
+	/* 1990 - 1999 */
+	M, T, W, F, A, S, M, W, R, F, 0,
+	/* 2000 - 2009 */
+	A, M, T, W, R, A, S, M, T, R, 0,
+	/* 2010 - 2019 */
+	F, A, S, T, W, R, F, S, M, T, 0,
+	/* 2020 - 2029 */
+	W, F, A, S, M, W, R, F, A, M, 0,
+#define __JAN01_WDAY_END	(2030)
 };
-	
+
 
 static int
 get_year(const char *buf)

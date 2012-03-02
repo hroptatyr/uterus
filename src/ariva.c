@@ -451,23 +451,15 @@ reco_tl(char *buf, ariva_tl_t t)
 	return len;
 }
 
-static __attribute__((unused)) void
-pr_tl(mux_ctx_t ctx, ariva_tl_t t, const char *cursor, size_t len)
+static void
+pr_tl(mux_ctx_t ctx, ariva_tl_t UNUSED(t), const char *cursor, size_t len)
 {
-	char b[512];
-	int32_t d;
-	size_t lsz;
+	static const char prefix[] = "invalid line: ";
 	int fd = ctx->badfd;
 
-	d = diff_sl1t_ms((sl1t_t)t, t->rcv_stmp);
-	lsz = snprintf(
-		b, sizeof(b), "%u.%09u (%d) %d ",
-		t->rcv_stmp.sec, t->rcv_stmp.nsec, d, atl_si(t));
-	memcpy(b + lsz, cursor, len);
-	lsz = lsz + len;
-	lsz += reco_tl(b + lsz, t);
-	b[lsz++] = '\n';
-	write(fd, b, lsz);
+	write(fd, prefix, sizeof(prefix) - 1); 
+	write(fd, cursor, len);
+	write(fd, "\n", 1);
 	return;
 }
 

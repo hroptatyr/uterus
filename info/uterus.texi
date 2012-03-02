@@ -108,10 +108,14 @@ algorithms perform in a nearly optimal way.
 Uterus data structures are layered.  Here is a list from primitive to
 complex layers:
 @itemize
-@item tick payloads
-@item ticks
-@item tick pages
-@item tick file
+@item
+tick payloads
+@item
+ticks
+@item
+tick pages
+@item
+tick file
 @end itemize
 
 Following the data-metadata separation approach any of the above is

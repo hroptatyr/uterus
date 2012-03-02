@@ -40,6 +40,13 @@
 #define INCL_TBLS
 #include "date.h"
 
+#if !defined LIKELY
+# define LIKELY(_x)	__builtin_expect((_x), 1)
+#endif
+#if !defined UNLIKELY
+# define UNLIKELY(_x)	__builtin_expect((_x), 0)
+#endif	/* !UNLIKELY */
+
 static const int tenners[10] = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
 
 /* week days of the years 1970 to 2038 */
@@ -122,7 +129,12 @@ ffff_strptime(const char *buf, struct tm *restrict tm)
 void
 ffff_strptime_ISO(const char *buf, struct tm *restrict tm)
 {
-	tm->tm_year = get_year(buf + 0);
+	int y = get_year(buf + 0);
+	if (UNLIKELY(y < __JAN01_WDAY_BEG - 1900 ||
+		     y >= __JAN01_WDAY_END - 1900)) {
+		return;
+	}
+	tm->tm_year = y;
 	tm->tm_mon = get_month(buf + 4) - 1;
 	tm->tm_mday = get_day(buf + 6);
 	tm->tm_hour = get_hour(buf + 8);

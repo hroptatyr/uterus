@@ -1,13 +1,15 @@
-DRAFT
+File layout (v0.2)
+==================
 
 This file describes storage concepts of uterus.
+The current file layout version is v0.2.
 
 Uterus provides efficient tick data storage and is primarily considered
 a file format (or codec) rather than a tool box of algorithms.  The
-meticulous storage layout specifications are necessary to help the
+meticulous storage layout specifications are necessary to help
 algorithms perform in a nearly optimal way.
 
-Uterus data structures are layered.  Here is a list from primitve to
+Uterus data structures are layered.  Here is a list from primitive to
 complex layers:
 * tick payloads
 * ticks
@@ -32,18 +34,20 @@ The overall file layout, 1 tick file:
 
 The header is exactly 1 tick page (256 ticks == 4096 bytes) long.
 The ticks section is aligned to 1 tick, i.e. 16 bytes, its length is not
-bounded except for OS-limitations.  The slut is the symbol look-up table
-and variable in size as well.  It's basically an index
-  symbol idx (uint16_t) -> symbol string (char*)
+bounded except for OS-limitations.
+
+The slut is the symbol look-up table and variable in size as well.  It's
+basically an index 
++
+| symbol idx (uint16_t) -> symbol string (char*)
++
 with a twist, the actual symbol strings are stored in a double-array
 (prefix/postfix) trie for performance reasons, see below for details.
-We say the slut size is variable but it's determined, as the trie
-serialisation is stipulated in this document.  In contrast the metadata
-part is of arbitrary size, the user is responsible as it may be used to
-associate custom data to anything, ticks, symbols, etc.  It is the
-caller's responsibility to keep the metadata in sync, libuterus will
-merely move any data found past the slut to a new location upon
-insertion or deletion of ticks.
+
+The final metadata part is of arbitrary size, layout and content, that
+is users of the uterus file format must take care of the metadata themselves.
+Typically this part is used to associate custom data to anything, ticks,
+symbols, etc.  See discussion below for further information.
 
 
 Tick payloads
@@ -371,4 +375,16 @@ Tick pages are large collections of ticks of the same kind (really?).
 Tick file
 =========
 A tick file gathers several tick pages.
+
+
+Slut details
+============
+
+
+Metadata details
+================
+
+As mentioned in the overview, it is the caller's responsibility to keep
+the metadata in sync, libuterus will merely move any data found past the
+slut to a new location upon insertion or deletion of ticks.
 

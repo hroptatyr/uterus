@@ -247,7 +247,7 @@ eb_unfetch_lines(expobuf_t eb)
 static inline void
 eb_consume_lines(expobuf_t eb)
 {
-	eb->idx += eb_buf_size(eb);
+	eb->idx = eb_buf_size(eb);
 	return;
 }
 

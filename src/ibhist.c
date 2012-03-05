@@ -56,7 +56,7 @@
 #define STATIC_EB	1
 #include "expobuf.h"
 
-#undef DEFINE_GORY_STUFF
+#define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
 

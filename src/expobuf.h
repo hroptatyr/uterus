@@ -240,6 +240,7 @@ eb_unfetch_lines(expobuf_t eb)
 {
 	if (mmapable(eb->fd)) {
 		munmap(eb->data, eb_buf_size(eb));
+		eb->data = NULL;
 	}
 	return;
 }

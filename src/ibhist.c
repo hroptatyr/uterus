@@ -359,8 +359,7 @@ reset:
 		}
 
 		/* check if there's more */
-		if (eb_current_line(eb)[0] == '\f' &&
-		    eb_rest_len(eb) > 1) {
+		if (eb_rest_len(eb) > 1 && eb_current_line(eb)[0] == '\f') {
 			/* advance once more (read over the \f */
 			eb_set_current_line_by_offs(eb, 1);
 			/* reset carry */
@@ -369,10 +368,6 @@ reset:
 			XML_ParserReset(hdl, NULL);
 			/* off we go */
 			goto reset;
-		} else if (eb_current_line(eb)[0] == '\f') {
-			/* ah, the last ^L */
-			eb_unfetch_lines(eb);
-			break;
 		}
 		/* otherwise leave everything as is and advance the expobuf */
 		eb_consume_lines(eb);

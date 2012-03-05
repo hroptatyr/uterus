@@ -67,8 +67,10 @@
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
 # include <assert.h>
+# define UDEBUG(args...)	fprintf(stderr, args)
 #else  /* !DEBUG_FLAG */
 # define assert(args...)
+# define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
 #if defined __INTEL_COMPILER
@@ -334,6 +336,7 @@ reset:
 		const char *data = eb_current_line(eb);
 		size_t dtsz = eb_rest_len(eb);
 
+		UDEBUG("feeding: offs %zu  size %zu\n", eb->fi, dtsz);
 		res = XML_Parse(hdl, data, dtsz, XML_FALSE);
 		if (UNLIKELY(res == XML_STATUS_ERROR)) {
 			const enum XML_Error errnum = XML_GetErrorCode(hdl);
@@ -347,6 +350,8 @@ reset:
 		{
 			size_t inc = XML_GetCurrentByteIndex(hdl) - carry;
 			size_t new_carry = eb_rest_len(eb);
+
+			UDEBUG("consumed %zu (carry was %zu)\n", inc, carry);
 			/* advance a bit, just for the inspection below */
 			eb_set_current_line_by_offs(eb, inc);
 			/* set carry */

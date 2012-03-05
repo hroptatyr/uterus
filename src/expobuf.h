@@ -278,6 +278,12 @@ eb_current_line(expobuf_t eb)
 	return eb->data + eb->idx;
 }
 
+static inline size_t
+eb_rest_len(expobuf_t eb)
+{
+	return eb_buf_size(eb) - eb->idx;
+}
+
 static inline void
 eb_set_current_line_by_ptr(expobuf_t eb, const char *p)
 {

@@ -134,6 +134,8 @@ extern void ute_sort(utectx_t ctx);
  * Clone the symbol look-up table (slut) from SRC to TGT. */
 extern void ute_clone_slut(utectx_t tgt, utectx_t src);
 
+#define SLUT_SYMLEN	(64)
+
 /**
  * Given a symbol SYM return the index in the look-up table. */
 extern uint16_t ute_sym2idx(utectx_t ctx, const char *sym);

@@ -50,10 +50,6 @@
 # define DECLF	extern
 #endif	/* STATIC_GUTS */
 
-/**
- * Generic symbol, this is non-normative at the moment */
-typedef char slut_sym_t[32];
-
 typedef struct uteslut_s *uteslut_t;
 
 /* anonymous glue type, could be a trie */

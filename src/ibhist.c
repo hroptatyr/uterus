@@ -109,15 +109,15 @@ el_sta(void *UNUSED(data), const char *elem, const char **attr)
 }
 
 static void
-el_end(void *UNUSED(data), const char *elem)
+el_end(void *clo, const char *UNUSED(elem))
 {
+	XML_Parser hdl = clo;
+
 	depth--;
-	for (size_t i = 0; i < depth; i++) {
-		fprintf(stderr, " ");
+	if (depth == 0) {
+		/* need to reset the parser */
+		XML_StopParser(hdl, XML_TRUE);
 	}
-	fprintf(stderr, "EO-%s\n", elem);
-	return;
-}
 
 static void
 data(void *UNUSED(data), const char *UNUSED(buf), int UNUSED(bsz))
@@ -132,15 +132,19 @@ parse(mux_ctx_t ctx)
 {
 /* bit of a co-routine, yields lines from reader and yields parsed xml */
 	XML_Parser hdl = XML_ParserCreate(NULL);
+	expobuf_t eb = ctx->rdr;
 
+reset:
 	XML_SetElementHandler(hdl, el_sta, el_end);
-	XML_SetCharacterDataHandler(hdl, data);
+	XML_SetUserData(hdl, hdl);
 
-	for (expobuf_t e = ctx->rdr; eb_fetch_lines(e); eb_unfetch_lines(e)) {
+	for (size_t carry = 0; eb_fetch_lines(eb); eb_unfetch_lines(eb)) {
 		enum XML_Status res;
+		const char *data = eb_current_line(eb);
+		size_t dtsz = eb_rest_len(eb);
 
-		res = XML_Parse(hdl, e->data, eb_buf_size(e), XML_FALSE);
-		if (res == XML_STATUS_ERROR) {
+		res = XML_Parse(hdl, data, dtsz, XML_FALSE);
+		if (UNLIKELY(res == XML_STATUS_ERROR)) {
 			const enum XML_Error errnum = XML_GetErrorCode(hdl);
 			const char *errstr = XML_ErrorString(errnum);
 
@@ -148,9 +152,34 @@ parse(mux_ctx_t ctx)
 			write(ctx->badfd, errstr, strlen(errstr));
 			write(ctx->badfd, "\n", 1);
 		}
+		/* set eb's index */
+		{
+			size_t inc = XML_GetCurrentByteIndex(hdl) - carry;
+			size_t new_carry = eb_rest_len(eb);
+			/* advance a bit, just for the inspection below */
+			eb_set_current_line_by_offs(eb, inc);
+			/* set carry */
+			carry = new_carry;
+		}
 
-		/* we consumed it all didn't we */
-		eb_consume_lines(e);
+		/* check if there's more */
+		if (eb_current_line(eb)[0] == '\f' &&
+		    eb_rest_len(eb) > 1) {
+			/* advance once more (read over the \f */
+			eb_set_current_line_by_offs(eb, 1);
+			/* reset carry */
+			carry = 0;
+			/* resume the parser */
+			XML_ParserReset(hdl, NULL);
+			/* off we go */
+			goto reset;
+		} else if (eb_current_line(eb)[0] == '\f') {
+			/* ah, the last ^L */
+			eb_unfetch_lines(eb);
+			break;
+		}
+		/* otherwise leave everything as is and advance the expobuf */
+		eb_consume_lines(eb);
 	}
 
 	XML_ParserFree(hdl);

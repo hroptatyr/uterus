@@ -218,6 +218,7 @@ eb_unfetch_lines(expobuf_t eb)
 	return;
 }
 
+#if defined MAX_LINE_LEN
 static inline bool
 eb_one_more_line_p(expobuf_t eb)
 {
@@ -236,6 +237,7 @@ eb_one_more_line_p(expobuf_t eb)
 		return memchr(eb->data + eb->idx, '\n', eb->tot - eb->idx);
 	}
 }
+#endif	/* MAX_LINE_LEN */
 
 static inline const char*
 eb_current_line(expobuf_t eb)

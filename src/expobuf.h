@@ -108,17 +108,17 @@ make_expobuf(int fd)
 	if (mmapable(res->fd = fd)) {
 		res->sz = st.st_size;
 		res->data = NULL;
-		res->fi = 0;
 	} else {
 		res->sz = 0UL;
 		/* target read rate */
-		res->fi = EB_PGSZ;
+		res->fl = EB_PGSZ;
 		/* get us a nice large page buffer here */
 #define MAP_MEM		(MAP_ANONYMOUS | MAP_PRIVATE)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 		res->data = mmap(NULL, EB_PGSZ, PROT_MEM, MAP_MEM, 0, 0);
 	}
 	res->idx = 0;
+	res->fi = 0;
 	return res;
 }
 
@@ -136,11 +136,7 @@ static size_t
 eb_buf_size(expobuf_t eb)
 {
 /* return the alloc'd size of the page */
-	if (mmapable(eb->fd)) {
-		return eb->fi + EB_PGSZ < eb->sz ? EB_PGSZ : eb->sz - eb->fi;
-	} else {
-		return eb->sz;
-	}
+	return eb->fi + EB_PGSZ < eb->sz ? EB_PGSZ : eb->sz - eb->fi;
 }
 
 #if 0
@@ -198,45 +194,21 @@ eb_fetch_lines_fd(expobuf_t eb)
 {
 	ssize_t nrd;
 
-	/* memcpy left overs to the front
-	 * we effectively divide the eb page into two halves and
-	 * now we're swapping them:
-	 * +----------+-+
-	 * |pppppppppp|u|
-	 * +----------+-+
-	 * becomes:
-	 * +-+----------+
-	 * |u|nnnnnnnnnn|
-	 * +-+----------+
-	 * where p is processed, u is unprocessed and n is the
-	 * new data we're about to read */
-	if (LIKELY(eb->idx > 0)) {
-		memmove(eb->data, eb->data + eb->idx, eb->sz -= eb->idx);
-	}
 	/* now read up to EB_PGSZ bytes */
-	if ((nrd = read(eb->fd, eb->data + eb->sz, eb->fi - eb->sz)) == -1) {
+	if ((nrd = read(eb->fd, eb->data + eb->sz, eb->fl - eb->sz)) == -1) {
 		eb->sz = 0;
 		return false;
 	}
 
 	/* set new target read rate */
 	if (eb->sz == 0) {
-		eb->fi = nrd;
+		if ((eb->fl = nrd) < 4096) {
+			eb->fl = 4096;
+		}
 	}
 	/* account for the stuff that has been there before */
 	eb->sz += nrd;
-	eb->idx = 0;
 	return true;
-}
-
-static inline bool
-eb_fetch_lines(expobuf_t eb)
-{
-	if (mmapable(eb->fd)) {
-		return eb_fetch_lines_df(eb);
-	} else {
-		return eb_fetch_lines_fd(eb);
-	}
 }
 
 static inline void
@@ -246,9 +218,33 @@ eb_unfetch_lines(expobuf_t eb)
 		munmap(eb->data, eb_buf_size(eb));
 		eb->data = NULL;
 	} else if (eb->idx > 0) {
+		/* memcpy left overs to the front
+		 * we effectively divide the eb page into two halves and
+		 * now we're swapping them:
+		 * +----------+-+
+		 * |pppppppppp|u|
+		 * +----------+-+
+		 * becomes:
+		 * +-+----------+
+		 * |u|nnnnnnnnnn|
+		 * +-+----------+
+		 * where p is processed, u is unprocessed and n is the
+		 * new data we're about to read */
 		memmove(eb->data, eb->data + eb->idx, eb->sz -= eb->idx);
+		eb->idx = 0;
 	}
 	return;
+}
+
+static inline bool
+eb_fetch_lines(expobuf_t eb)
+{
+	if (mmapable(eb->fd)) {
+		return eb_fetch_lines_df(eb);
+	} else {
+		eb_unfetch_lines(eb);
+		return eb_fetch_lines_fd(eb);
+	}
 }
 
 static inline void

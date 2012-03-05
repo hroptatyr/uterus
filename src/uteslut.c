@@ -52,6 +52,13 @@
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
 
+#include "utefile.h"
+
+/* generic symbol, this is non-normative at the moment
+ * actual length is defined in utefile.h */
+typedef char slut_sym_t[SLUT_SYMLEN];
+
+
 DEFUN void
 init_slut(void)
 {

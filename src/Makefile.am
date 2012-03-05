@@ -56,6 +56,8 @@ EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
 BUILT_SOURCES = version.h
 GGO_HELPERS = common.ggo.in
 
+DSO_LDFLAGS = -shared
+
 ## datrie stuff
 noinst_LIBRARIES += libdatrie.a
 libdatrie_a_SOURCES =
@@ -139,7 +141,7 @@ BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 ute_PROGRAMS += ute-fsck
 ute_fsck_SOURCES = ute-fsck.c ute-fsck-clo.ggo
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_fsck_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
+ute_fsck_LDFLAGS = $(AM_LDFLAGS)
 ute_fsck_LDADD = libuterus.la
 ute_fsck_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
@@ -147,21 +149,28 @@ BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c
-uta_la_LDFLAGS = -module $(XCCLDFLAGS)
+uta_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 uta_la_LIBADD = libuterus.la
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
-dukas_la_LDFLAGS = -module $(XCCLDFLAGS)
+dukas_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
-mat_la_LDFLAGS = -module $(XCCLDFLAGS)
+mat_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
-ariva_la_LDFLAGS = -module $(XCCLDFLAGS)
+ariva_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ariva_la_LIBADD = libuterus.la
+
+ute_LTLIBRARIES += ibhist.la
+ibhist_la_SOURCES = ibhist.c
+ibhist_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
+ibhist_la_LIBADD = libuterus.la
+## check for me
+ibhist_la_LIBADD += -lexpat
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@

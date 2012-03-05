@@ -280,7 +280,10 @@ main(int argc, char *argv[])
 		int fd;
 
 		/* open the infile ... */
-		if ((fd = open(f, 0)) >= 0) {
+		if (f[0] == '-' && f[1] == '\0') {
+			ctx->infd = fd = STDIN_FILENO;
+			ctx->badfd = STDERR_FILENO;
+		} else if ((fd = open(f, 0)) >= 0) {
 			ctx->infd = fd;
 			ctx->badfd = STDERR_FILENO;
 		} else {

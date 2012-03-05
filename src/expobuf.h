@@ -137,6 +137,11 @@ eb_buf_size(expobuf_t eb)
 	return eb->fi + EB_PGSZ < eb->sz ? EB_PGSZ : eb->sz - eb->fi;
 }
 
+#if 0
+# define REMAP_THRESH	* 4 / 5
+#else  /* !0 */
+# define REMAP_THRESH	- 4096
+#endif	/* 0 */
 #define MMAP(_p, _bsz, _fd, _offs)				\
 	mmap(_p, _bsz, PROT_READ, MAP_PRIVATE, _fd, _offs)
 static bool
@@ -145,10 +150,13 @@ eb_fetch_lines_df(expobuf_t eb)
 /* the next GLOB_PGSZ aligned page before eb->idx becomes the new fi */
 	size_t pg = (eb->fi + eb->idx) / glob_pgsz;
 	size_t of = (eb->fi + eb->idx) % glob_pgsz;
-	size_t bsz;
+	size_t bsz = eb_buf_size(eb);
 
 	/* munmap what's there */
-	if (eb->data) {
+	if (eb->idx > 0 && eb->idx < bsz REMAP_THRESH) {
+		/* more than a page left */
+		return true;
+	} else if (eb->data) {
 		bsz = eb_buf_size(eb);
 		munmap(eb->data, bsz);
 	}

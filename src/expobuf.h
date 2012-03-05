@@ -142,8 +142,8 @@ eb_buf_size(expobuf_t eb)
 #else  /* !0 */
 # define REMAP_THRESH	- 4096
 #endif	/* 0 */
-#define MMAP(_p, _bsz, _fd, _offs)				\
-	mmap(_p, _bsz, PROT_READ, MAP_PRIVATE, _fd, _offs)
+#define MMAP(_bsz, _fd, _offs)				\
+	mmap(NULL, _bsz, PROT_READ, MAP_PRIVATE, _fd, _offs)
 static bool
 eb_fetch_lines_df(expobuf_t eb)
 {
@@ -164,7 +164,9 @@ eb_fetch_lines_df(expobuf_t eb)
 	eb->fi = pg * glob_pgsz;
 	eb->idx = of;
 	bsz = eb_buf_size(eb);
-	if ((eb->data = MMAP(eb->data, bsz, eb->fd, eb->fi)) == MAP_FAILED) {
+	if (UNLIKELY(bsz == of)) {
+		return false;
+	} else if ((eb->data = MMAP(bsz, eb->fd, eb->fi)) == MAP_FAILED) {
 		/* could eval errno */
 		return false;
 	}

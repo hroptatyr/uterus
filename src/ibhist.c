@@ -109,7 +109,9 @@ static const char ibhist_zone[] = "Europe/Berlin";
 
 
 /* track the current level in the xml tree */
+#if defined DEBUG_FLAG
 static size_t depth = 0;
+#endif	/* DEBUG_FLAG */
 static struct qry_s cur_qry = {0};
 static struct rsp_s cur_rsp = {0};
 
@@ -280,7 +282,9 @@ el_sta(void *clo, const char *elem, const char **attr)
 	} else if (strcmp(elem, "row") == 0) {
 		inspect_row(xp_clo->wrr, attr);
 	}
+#if defined DEBUG_FLAG
 	depth++;
+#endif	/* DEBUG_FLAG */
 	return;
 }
 
@@ -289,6 +293,9 @@ el_end(void *clo, const char *elem)
 {
 	struct xp_clo_s *xp_clo = clo;
 
+#if defined DEBUG_FLAG
+	depth--;
+#endif	/* DEBUG_FLAG */
 	if (strcmp(elem, "response") == 0) {
 		/* make sure we free up qry resources */
 		;
@@ -299,7 +306,6 @@ el_end(void *clo, const char *elem)
 			memset(&cur_rsp.cdl, 0, sizeof(cur_rsp.cdl));
 		}
 	} else if (strcmp(elem, "TWSXML") == 0) {
-		depth--;
 		assert(depth == 0);
 		/* need to reset the parser */
 		XML_StopParser(xp_clo->xp, XML_TRUE);

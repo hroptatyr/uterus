@@ -305,7 +305,6 @@ el_end(void *clo, const char *elem)
 		/* write the candle */
 		if (cur_rsp.cdl.sta_ts > 0) {
 			ute_add_tick(xp_clo->wrr, AS_SCOM(&cur_rsp.cdl));
-			memset(&cur_rsp.cdl, 0, sizeof(cur_rsp.cdl));
 		}
 	} else if (strcmp(elem, "TWSXML") == 0) {
 		assert(depth == 0);

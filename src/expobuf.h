@@ -70,10 +70,17 @@
 typedef struct expobuf_s *expobuf_t;
 
 struct expobuf_s {
+	/* file descriptor we're talking */
 	int fd;
-	size_t tot;
+	/* padding */
+	uint32_t fl;
+	/* total size of the file (if mmap'able) */
+	size_t sz;
+	/* index into the file */
+	size_t fi;
+	/* index into data */
 	size_t idx;
-	size_t pgno;
+	/* the actual data */
 	char *data;
 };
 
@@ -99,17 +106,17 @@ make_expobuf(int fd)
 	glob_pgsz = (size_t)sysconf(_SC_PAGESIZE);
 	fstat(fd, &st);
 	if (mmapable(res->fd = fd)) {
-		res->tot = st.st_size;
+		res->sz = st.st_size;
 		res->data = NULL;
 	} else {
-		res->tot = -1;
+		res->sz = (size_t)-1;
 		/* get us a nice large page buffer here */
 #define MAP_MEM		(MAP_ANONYMOUS | MAP_PRIVATE)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 		res->data = mmap(NULL, EB_PGSZ, PROT_MEM, MAP_MEM, 0, 0);
 	}
 	res->idx = 0;
-	res->pgno = 0;
+	res->fi = 0;
 	return res;
 }
 
@@ -122,27 +129,38 @@ free_expobuf(expobuf_t UNUSED(eb))
 	return;
 }
 
-#define MMAP(_p, _fd, _offs)					\
-	mmap(_p, EB_PGSZ, PROT_READ, MAP_PRIVATE, _fd, _offs)
+
+static size_t
+eb_buf_size(expobuf_t eb)
+{
+/* return the alloc'd size of the page */
+	return eb->fi + EB_PGSZ < eb->sz ? EB_PGSZ : eb->sz - eb->fi;
+}
+
+#define MMAP(_p, _bsz, _fd, _offs)				\
+	mmap(_p, _bsz, PROT_READ, MAP_PRIVATE, _fd, _offs)
 static bool
 eb_fetch_lines_df(expobuf_t eb)
 {
-	index_t offs = eb->pgno - (EB_PGSZ - eb->idx) % EB_PGSZ;
-	index_t new_idx = offs % glob_pgsz;
-	/* page-aligned offset */
-	index_t offs_al = offs - new_idx;
+/* the next GLOB_PGSZ aligned page before eb->idx becomes the new fi */
+	size_t pg = (eb->fi + eb->idx) / glob_pgsz;
+	size_t of = (eb->fi + eb->idx) % glob_pgsz;
+	size_t bsz;
 
-	if (eb->pgno > eb->tot) {
-		return false;
+	/* munmap what's there */
+	if (eb->data) {
+		bsz = eb_buf_size(eb);
+		munmap(eb->data, bsz);
 	}
-	eb->data = MMAP(eb->data, eb->fd, offs_al);
-	if (eb->data == MAP_FAILED) {
+	/* fill in the form */
+	eb->fi = pg * glob_pgsz;
+	eb->idx = of;
+	bsz = eb_buf_size(eb);
+	if ((eb->data = MMAP(eb->data, bsz, eb->fd, eb->fi)) == MAP_FAILED) {
 		/* could eval errno */
 		return false;
 	}
-	posix_madvise(eb->data, EB_PGSZ, POSIX_MADV_SEQUENTIAL);
-	eb->pgno = offs_al + EB_PGSZ;
-	eb->idx = new_idx;
+	posix_madvise(eb->data, bsz, POSIX_MADV_SEQUENTIAL);
 	return true;
 }
 #undef MMAP
@@ -162,10 +180,10 @@ read_safe(int fd, char *buf, size_t sz)
 static bool
 eb_fetch_lines_fd(expobuf_t eb)
 {
-	index_t bno = eb->idx;
-	index_t eno = eb->tot - bno;
+	size_t bno = eb->idx;
+	size_t eno = eb->sz - bno;
 
-	if (eb->tot == 0) {
+	if (eb->sz == 0) {
 		return false;
 	}
 
@@ -188,13 +206,13 @@ eb_fetch_lines_fd(expobuf_t eb)
 		eno = 0;
 	}
 	/* now read up to bno bytes */
-	if ((eb->tot = read(eb->fd, eb->data + eno, bno)) == -1) {
+	if ((eb->sz = read(eb->fd, eb->data + eno, bno)) == -1) {
 		return false;
 	}
 	/* account for the stuff that has been there before */
-	eb->tot += eno;
+	eb->sz += eno;
 	/* set new target read rate */
-	eb->pgno = 0;
+	eb->fi = 0;
 	eb->idx = 0;
 	return true;
 }
@@ -213,16 +231,24 @@ static inline void
 eb_unfetch_lines(expobuf_t eb)
 {
 	if (mmapable(eb->fd)) {
-		munmap(eb->data, EB_PGSZ);
+		munmap(eb->data, eb_buf_size(eb));
 	}
 	return;
 }
 
+static inline void
+eb_consume_lines(expobuf_t eb)
+{
+	eb->idx += eb_buf_size(eb);
+	return;
+}
+
+#if defined MAX_LINE_LEN
 static inline bool
 eb_one_more_line_p(expobuf_t eb)
 {
 	if (mmapable(eb->fd)) {
-		if (LIKELY(eb->pgno < eb->tot)) {
+		if (LIKELY(eb->fi < eb->sz)) {
 			if (LIKELY(EB_PGSZ - eb->idx > MAX_LINE_LEN)) {
 				return true;
 			}
@@ -231,16 +257,17 @@ eb_one_more_line_p(expobuf_t eb)
 		}
 		/* bummer we're on the last page */
 		return memchr(eb->data + eb->idx, '\n',
-			      EB_PGSZ - (eb->pgno - eb->tot) - eb->idx);
+			      EB_PGSZ - (eb->fi - eb->sz) - eb->idx);
 	} else {
-		return memchr(eb->data + eb->idx, '\n', eb->tot - eb->idx);
+		return memchr(eb->data + eb->fi, '\n', eb->sz - eb->idx);
 	}
 }
+#endif	/* MAX_LINE_LEN */
 
 static inline const char*
 eb_current_line(expobuf_t eb)
 {
-	return &eb->data[eb->idx];
+	return eb->data + eb->idx;
 }
 
 static inline void

@@ -165,6 +165,13 @@ ariva_la_SOURCES = ariva.c
 ariva_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ariva_la_LIBADD = libuterus.la
 
+ute_LTLIBRARIES += ibhist.la
+ibhist_la_SOURCES = ibhist.c
+ibhist_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
+ibhist_la_LIBADD = libuterus.la
+## check for me
+ibhist_la_LIBADD += -lexpat
+
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 

@@ -258,13 +258,13 @@ inspect_row(utectx_t UNUSED(hdl), const char **attr)
 			scdl_set_stmp_sec(&cur_rsp.cdl, end);
 			scdl_set_stmp_msec(&cur_rsp.cdl, 0);
 		} else if (strcmp(attr[i], "open") == 0) {
-			cur_rsp.cdl.o = ffff_m30_get_s(&p).v;
+			cur_rsp.cdl.o = ffff_m30_get_s(&p).u;
 		} else if (strcmp(attr[i], "high") == 0) {
-			cur_rsp.cdl.h = ffff_m30_get_s(&p).v;
+			cur_rsp.cdl.h = ffff_m30_get_s(&p).u;
 		} else if (strcmp(attr[i], "low") == 0) {
-			cur_rsp.cdl.l = ffff_m30_get_s(&p).v;
+			cur_rsp.cdl.l = ffff_m30_get_s(&p).u;
 		} else if (strcmp(attr[i], "close") == 0) {
-			cur_rsp.cdl.c = ffff_m30_get_s(&p).v;
+			cur_rsp.cdl.c = ffff_m30_get_s(&p).u;
 		}
 	}
 	/* no volume nor count */

@@ -118,11 +118,6 @@ el_end(void *clo, const char *UNUSED(elem))
 		/* need to reset the parser */
 		XML_StopParser(hdl, XML_TRUE);
 	}
-
-static void
-data(void *UNUSED(data), const char *UNUSED(buf), int UNUSED(bsz))
-{
-	/* twstools is data-less */
 	return;
 }
 

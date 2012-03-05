@@ -217,7 +217,7 @@ inspect_con(utectx_t hdl, const char **attr)
 
 	/* free what's there */
 	{
-		char tmp[32];
+		char tmp[SLUT_SYMLEN];
 		char *p = tmp;
 		uint16_t idx;
 

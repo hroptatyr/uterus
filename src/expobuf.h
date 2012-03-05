@@ -108,15 +108,17 @@ make_expobuf(int fd)
 	if (mmapable(res->fd = fd)) {
 		res->sz = st.st_size;
 		res->data = NULL;
+		res->fi = 0;
 	} else {
-		res->sz = (size_t)-1;
+		res->sz = 0UL;
+		/* target read rate */
+		res->fi = EB_PGSZ;
 		/* get us a nice large page buffer here */
 #define MAP_MEM		(MAP_ANONYMOUS | MAP_PRIVATE)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 		res->data = mmap(NULL, EB_PGSZ, PROT_MEM, MAP_MEM, 0, 0);
 	}
 	res->idx = 0;
-	res->fi = 0;
 	return res;
 }
 
@@ -134,7 +136,11 @@ static size_t
 eb_buf_size(expobuf_t eb)
 {
 /* return the alloc'd size of the page */
-	return eb->fi + EB_PGSZ < eb->sz ? EB_PGSZ : eb->sz - eb->fi;
+	if (mmapable(eb->fd)) {
+		return eb->fi + EB_PGSZ < eb->sz ? EB_PGSZ : eb->sz - eb->fi;
+	} else {
+		return eb->sz;
+	}
 }
 
 #if 0
@@ -190,12 +196,7 @@ read_safe(int fd, char *buf, size_t sz)
 static bool
 eb_fetch_lines_fd(expobuf_t eb)
 {
-	size_t bno = eb->idx;
-	size_t eno = eb->sz - bno;
-
-	if (eb->sz == 0) {
-		return false;
-	}
+	ssize_t nrd;
 
 	/* memcpy left overs to the front
 	 * we effectively divide the eb page into two halves and
@@ -209,20 +210,21 @@ eb_fetch_lines_fd(expobuf_t eb)
 	 * +-+----------+
 	 * where p is processed, u is unprocessed and n is the
 	 * new data we're about to read */
-	if (LIKELY(bno > 0)) {
-		memcpy(eb->data, eb->data + bno, eno);
-	} else {
-		bno = EB_PGSZ;
-		eno = 0;
+	if (LIKELY(eb->idx > 0)) {
+		memmove(eb->data, eb->data + eb->idx, eb->sz -= eb->idx);
 	}
-	/* now read up to bno bytes */
-	if ((eb->sz = read(eb->fd, eb->data + eno, bno)) == -1) {
+	/* now read up to EB_PGSZ bytes */
+	if ((nrd = read(eb->fd, eb->data + eb->sz, eb->fi - eb->sz)) == -1) {
+		eb->sz = 0;
 		return false;
 	}
-	/* account for the stuff that has been there before */
-	eb->sz += eno;
+
 	/* set new target read rate */
-	eb->fi = 0;
+	if (eb->sz == 0) {
+		eb->fi = nrd;
+	}
+	/* account for the stuff that has been there before */
+	eb->sz += nrd;
 	eb->idx = 0;
 	return true;
 }
@@ -243,6 +245,8 @@ eb_unfetch_lines(expobuf_t eb)
 	if (mmapable(eb->fd)) {
 		munmap(eb->data, eb_buf_size(eb));
 		eb->data = NULL;
+	} else if (eb->idx > 0) {
+		memmove(eb->data, eb->data + eb->idx, eb->sz -= eb->idx);
 	}
 	return;
 }

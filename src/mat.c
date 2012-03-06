@@ -438,7 +438,7 @@ init(pr_ctx_t pctx)
 void
 fini(pr_ctx_t UNUSED(pctx))
 {
-	size_t nc = STATIC_VALS + vals_per_idx * nidxs;
+	size_t nc = frag_hdr->dim.cols;
 	size_t nr = frag_hdr->dim.rows;
 
 	/* reshape to smaller size */
@@ -483,16 +483,23 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	static uint32_t ol_sec = 0U;
 	static uint16_t ol_msec = 0U;
 	static double ts = 0.0;
+	static uint16_t ol_idx = 0U;
 	/* for dimen checks */
 	size_t arows = frag_hdr->dim.rows;
+	size_t acols = frag_hdr->dim.cols;
 
+	if (STATIC_VALS + vals_per_idx * (ttf & 0xf) > acols) {
+		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, acols);
+		acols = STATIC_VALS + vals_per_idx * (nidxs = (ttf & 0xf));
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows, acols);
+		/* reshape not necessary, this is just adding more space
+		 * in a column-oriented data format which .mat is */
+	}
 	if (nrows >= arows) {
-		size_t nc = STATIC_VALS + vals_per_idx * nidxs;
-
-		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, nc);
-		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, nc);
+		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, acols);
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, acols);
 		/* reshape */
-		reshape((void*)frag_dat->data, nc, arows, arows * 2);
+		reshape((void*)frag_dat->data, acols, arows, arows * 2);
 	}
 
 	/* pre-compute time stamp in matlab format */
@@ -517,7 +524,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5idx(nrows++, 0, idx, ts, bp, ap, bq, aq);
+		bang5idx(nrows, 0, idx, ts, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
@@ -534,11 +541,22 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5idx(nrows++, 0, idx, ts, o, h, l, c);
+		bang5idx(nrows, (ttf & 0xf) - 1, idx, ts, o, h, l, c);
 		break;
 	}
 	default:
 		break;
+	}
+
+	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
+		/* update */
+		ol_sec = sec;
+		ol_msec = msec;
+		ol_idx = idx;
+		nrows++;
+	} else if (idx != ol_idx) {
+		ol_idx = idx;
+		nrows++;
 	}
 	return 0;
 }

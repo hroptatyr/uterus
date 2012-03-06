@@ -456,20 +456,12 @@ fini(pr_ctx_t UNUSED(pctx))
 
 /* must be here as it uses local vars */
 static void
-bang5ttfidx(
-	size_t row, size_t col, uint16_t ttf, uint16_t idx,
+bang5idx(
+	size_t row, size_t col, uint16_t idx,
 	double ts, double d1, double d2, double d3, double d4)
 {
 	double *d = (void*)frag_dat->data;
 	size_t arows = frag_hdr->dim.rows;
-	size_t acols = frag_hdr->dim.cols;
-
-	/* clean up idx */
-	ttf &= 0xf;
-	if (STATIC_VALS + 4 * ttf >= acols) {
-		/* add more columns */
-		;
-	}
 
 	d[0 * arows + row] = ts;
 	d[1 * arows + row] = idx;
@@ -525,7 +517,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5ttfidx(nrows++, 0, ttf, idx, ts, bp, ap, bq, aq);
+		bang5idx(nrows++, 0, idx, ts, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
@@ -542,7 +534,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5ttfidx(nrows++, 0, ttf, idx, ts, o, h, l, c);
+		bang5idx(nrows++, 0, idx, ts, o, h, l, c);
 		break;
 	}
 	default:

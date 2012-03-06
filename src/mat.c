@@ -421,6 +421,8 @@ init(pr_ctx_t pctx)
 
 	/* start out with an array */
 	frag_hdr = get_mat_arr_hdr(__gmctx);
+	/* get ourselves 256 rows */
+	frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, 256, 5);
 	return;
 }
 
@@ -451,9 +453,9 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		if (frag_dat) {
 			put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
 		}
-		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows + 256, 5);
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows * 2, 5);
 		/* reshape */
-		reshape((void*)frag_dat->data, 5, nrows, nrows + 256);
+		reshape((void*)frag_dat->data, 5, nrows, nrows * 2);
 	}
 
 	switch (ttf) {

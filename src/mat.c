@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/mman.h>
 
 #include "utefile.h"
@@ -224,6 +225,9 @@ munmap_any(mctx_t ctx, void *map, off_t off, size_t len)
 }
 
 
+#define VALS_PER_IDX	(4U)
+#define STATIC_VALS	(2U)
+
 static const struct {
 	struct mathdr_s hdr;
 	struct matarr_s arr;
@@ -354,11 +358,55 @@ put_mat_arr_dat(mctx_t ctx, matarr_t arr, matdat_t dat, size_t nr, size_t nc)
 }
 
 
+/* aux helpers */
+static double
+stmp_to_matdt(uint32_t sec, uint16_t msec)
+{
+	double res;
+	res = (double)sec / 86400. + 719529.;
+	res += (double)msec / 1000. / 86400.;
+	return res;
+}
+
+static inline bool
+mmapable(int fd)
+{
+	return fd > STDERR_FILENO;
+}
+
+/* code dupe! */
+static char*
+mat_tmpnam(void)
+{
+/* return a template for mkstemp(), malloc() it. */
+	static const char tmpnam_dflt[] = "/mat.XXXXXX";
+	static const char tmpdir_var[] = "TMPDIR";
+	static const char tmpdir_pfx[] = "/tmp";
+	const char *tmpdir;
+	size_t tmpdln;
+	char *res;
+
+	if ((tmpdir = getenv(tmpdir_var))) {
+		tmpdln = strlen(tmpdir);
+	} else {
+		tmpdir = tmpdir_pfx;
+		tmpdln = sizeof(tmpdir_pfx) - 1;
+	}
+	res = malloc(tmpdln + sizeof(tmpnam_dflt));
+	memcpy(res, tmpdir, tmpdln);
+	memcpy(res + tmpdln, tmpnam_dflt, sizeof(tmpnam_dflt));
+	return res;
+}
+
+
 /* public demuxer */
 static struct mctx_s __gmctx[1];
 static matarr_t frag_hdr = NULL;
 static matdat_t frag_dat = NULL;
 static size_t nrows = 0UL;
+static size_t nidxs = 1UL;
+static size_t vals_per_idx = VALS_PER_IDX;
+static char *tmpfn = NULL;
 
 void
 init(pr_ctx_t pctx)
@@ -366,23 +414,61 @@ init(pr_ctx_t pctx)
 	/* set up our context */
 	__gmctx->flen = 0;
 	__gmctx->pgsz = sysconf(_SC_PAGESIZE);
-	__gmctx->fd = pctx->outfd;
+	if (!mmapable(__gmctx->fd = pctx->outfd)) {
+		/* great we need a new file descriptor now
+		 * generate a new one, mmapable this time */
+		tmpfn = mat_tmpnam();
+		__gmctx->fd = mkstemp(tmpfn);
+		puts(tmpfn);
+	}
 	__gmctx->prot = PROT_READ | PROT_WRITE;
 	__gmctx->flags = MAP_SHARED;
 
 	/* start out with an array */
 	frag_hdr = get_mat_arr_hdr(__gmctx);
+	/* get ourselves 256 rows */
+	{
+		const size_t ini_nr = 256U;
+		const size_t ini_nc = STATIC_VALS + vals_per_idx * nidxs;
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, ini_nr, ini_nc);
+	}
 	return;
 }
 
 void
 fini(pr_ctx_t UNUSED(pctx))
 {
+	size_t nc = frag_hdr->dim.cols;
+	size_t nr = frag_hdr->dim.rows;
+
+	/* reshape to smaller size */
+	reshape((void*)frag_dat->data, nc, nr, nrows);
 	/* update matarr */
-	if (frag_dat) {
-		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
-	}
+	put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, nc);
 	put_mat_arr_hdr(__gmctx, frag_hdr);
+
+	if (tmpfn) {
+		close(__gmctx->fd);
+		free(tmpfn);
+	}
+	return;
+}
+
+/* must be here as it uses local vars */
+static void
+bang5idx(
+	size_t row, size_t col, uint16_t idx,
+	double ts, double d1, double d2, double d3, double d4)
+{
+	double *d = (void*)frag_dat->data;
+	size_t arows = frag_hdr->dim.rows;
+
+	d[0 * arows + row] = ts;
+	d[1 * arows + row] = idx;
+	d[(STATIC_VALS + 0 + vals_per_idx * col) * arows + row] = d1;
+	d[(STATIC_VALS + 1 + vals_per_idx * col) * arows + row] = d2;
+	d[(STATIC_VALS + 2 + vals_per_idx * col) * arows + row] = d3;
+	d[(STATIC_VALS + 3 + vals_per_idx * col) * arows + row] = d4;
 	return;
 }
 
@@ -392,49 +478,85 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
+	uint16_t idx = scom_thdr_tblidx(st);
+	/* for the time stamp check */
+	static uint32_t ol_sec = 0U;
+	static uint16_t ol_msec = 0U;
+	static double ts = 0.0;
+	static uint16_t ol_idx = 0U;
+	/* for dimen checks */
+	size_t arows = frag_hdr->dim.rows;
+	size_t acols = frag_hdr->dim.cols;
 
-	if (nrows >= frag_hdr->dim.rows) {
-		if (frag_dat) {
-			put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
-		}
-		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows + 256, 5);
+	if (STATIC_VALS + vals_per_idx * (ttf & 0xf) > acols) {
+		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, acols);
+		acols = STATIC_VALS + vals_per_idx * (nidxs = (ttf & 0xf));
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows, acols);
+		/* reshape not necessary, this is just adding more space
+		 * in a column-oriented data format which .mat is */
+	}
+	if (nrows >= arows) {
+		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, acols);
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, acols);
 		/* reshape */
-		reshape((void*)frag_dat->data, 5, nrows, nrows + 256);
+		reshape((void*)frag_dat->data, acols, arows, arows * 2);
+	}
+
+	/* pre-compute time stamp in matlab format */
+	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
+		/* only update if there's news */
+		ts = stmp_to_matdt(sec, msec);
+		ol_sec = sec;
+		ol_msec = msec;
 	}
 
 	switch (ttf) {
-		double ts;
+		/* we only process shnots here */
+	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
+		const_ssnap_t snp = (const void*)st;
 		double bp;
 		double ap;
 		double bq;
 		double aq;
-
-		/* we only process shnots here */
-	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
-		const_ssnap_t snp = (const void*)st;
-		ts = (double)sec / 86400. + 719529.;
-		ts += (double)msec / 1000. / 86400.;
 
 		bp = ffff_m30_d((m30_t)snp->bp);
 		ap = ffff_m30_d((m30_t)snp->ap);
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		{
-			double *d = (void*)frag_dat->data;
-			size_t arows = frag_hdr->dim.rows;
+		bang5idx(nrows, 0, idx, ts, bp, ap, bq, aq);
+		break;
+	}
+	case SL1T_TTF_BID | SCOM_FLAG_LM:
+	case SL1T_TTF_ASK | SCOM_FLAG_LM:
+	case SL1T_TTF_TRA | SCOM_FLAG_LM: {
+		const_scdl_t cdl = (const void*)st;
+		double o;
+		double h;
+		double l;
+		double c;
 
-			d[0 * arows + nrows] = ts;
-			d[1 * arows + nrows] = bp;
-			d[2 * arows + nrows] = ap;
-			d[3 * arows + nrows] = bq;
-			d[4 * arows + nrows] = aq;
-			nrows++;
-		}
+		o = ffff_m30_d((m30_t)cdl->o);
+		h = ffff_m30_d((m30_t)cdl->h);
+		l = ffff_m30_d((m30_t)cdl->l);
+		c = ffff_m30_d((m30_t)cdl->c);
+
+		bang5idx(nrows, (ttf & 0xf) - 1, idx, ts, o, h, l, c);
 		break;
 	}
 	default:
 		break;
+	}
+
+	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
+		/* update */
+		ol_sec = sec;
+		ol_msec = msec;
+		ol_idx = idx;
+		nrows++;
+	} else if (idx != ol_idx) {
+		ol_idx = idx;
+		nrows++;
 	}
 	return 0;
 }

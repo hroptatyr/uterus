@@ -19,11 +19,19 @@ TESTS += mux.3.ut
 TESTS += mux.4.ut
 TESTS += mux.5.ut
 TESTS += mux.6.ut
+if HAVE_EXPAT
+TESTS += mux.7.ut
+TESTS += mux.8.ut
+TESTS += mux.9.ut
+TESTS += mux.10.ut
+endif
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
 EXTRA_DIST += mux.d.ariva
 EXTRA_DIST += mux.e.ariva
+EXTRA_DIST += mux.f.ibhist.xml
+EXTRA_DIST += mux.g.ibhist.xml
 
 TESTS += print.1.ut
 TESTS += print.2.ut

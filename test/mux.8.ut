@@ -1,0 +1,18 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.f.ibhist.xml"
+OUTFILE="testload.ute"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXXXX")
+cat <<EOF > "${CMDFILE}"
+cat '${INFILE}' | "\${TOOL}" mux -f ibhist -o '${OUTFILE}' -
+EOF
+
+## STDIN
+
+## STDOUT
+
+## outfile sum
+OUTFILE_SHA1="5e7fd6539adcbb0730c0744786a360ec4799bb15"
+
+## mux.8.ut ends here

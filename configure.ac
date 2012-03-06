@@ -42,6 +42,10 @@ SXE_CHECK_ANON_STRUCTS
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 
+## ibhist needs expat
+PKG_CHECK_MODULES([EXPAT], [expat], [have_expat="yes"], [have_expat="no"])
+AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])
+
 ## output
 AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([Makefile])

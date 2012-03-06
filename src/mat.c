@@ -376,7 +376,7 @@ static char*
 mat_tmpnam(void)
 {
 /* return a template for mkstemp(), malloc() it. */
-	static const char tmpnam_dflt[] = "/mat.XXXXXX.mat";
+	static const char tmpnam_dflt[] = "/mat.XXXXXX";
 	static const char tmpdir_var[] = "TMPDIR";
 	static const char tmpdir_pfx[] = "/tmp";
 	const char *tmpdir;

@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/mman.h>
 
 #include "utefile.h"
@@ -354,12 +355,7 @@ put_mat_arr_dat(mctx_t ctx, matarr_t arr, matdat_t dat, size_t nr, size_t nc)
 }
 
 
-/* public demuxer */
-static struct mctx_s __gmctx[1];
-static matarr_t frag_hdr = NULL;
-static matdat_t frag_dat = NULL;
-static size_t nrows = 0UL;
-
+/* aux helpers */
 static double
 stmp_to_matdt(uint32_t sec, uint16_t msec)
 {
@@ -369,14 +365,57 @@ stmp_to_matdt(uint32_t sec, uint16_t msec)
 	return res;
 }
 
+static inline bool
+mmapable(int fd)
+{
+	return fd > STDERR_FILENO;
+}
+
+/* code dupe! */
+static char*
+mat_tmpnam(void)
+{
+/* return a template for mkstemp(), malloc() it. */
+	static const char tmpnam_dflt[] = "/mat.XXXXXX";
+	static const char tmpdir_var[] = "TMPDIR";
+	static const char tmpdir_pfx[] = "/tmp";
+	const char *tmpdir;
+	size_t tmpdln;
+	char *res;
+
+	if ((tmpdir = getenv(tmpdir_var))) {
+		tmpdln = strlen(tmpdir);
+	} else {
+		tmpdir = tmpdir_pfx;
+		tmpdln = sizeof(tmpdir_pfx) - 1;
+	}
+	res = malloc(tmpdln + sizeof(tmpnam_dflt));
+	memcpy(res, tmpdir, tmpdln);
+	memcpy(res + tmpdln, tmpnam_dflt, sizeof(tmpnam_dflt));
+	return res;
+}
+
 
+/* public demuxer */
+static struct mctx_s __gmctx[1];
+static matarr_t frag_hdr = NULL;
+static matdat_t frag_dat = NULL;
+static size_t nrows = 0UL;
+static char *tmpfn = NULL;
+
 void
 init(pr_ctx_t pctx)
 {
 	/* set up our context */
 	__gmctx->flen = 0;
 	__gmctx->pgsz = sysconf(_SC_PAGESIZE);
-	__gmctx->fd = pctx->outfd;
+	if (!mmapable(__gmctx->fd = pctx->outfd)) {
+		/* great we need a new file descriptor now
+		 * generate a new one, mmapable this time */
+		tmpfn = mat_tmpnam();
+		__gmctx->fd = mkstemp(tmpfn);
+		puts(tmpfn);
+	}
 	__gmctx->prot = PROT_READ | PROT_WRITE;
 	__gmctx->flags = MAP_SHARED;
 
@@ -393,6 +432,11 @@ fini(pr_ctx_t UNUSED(pctx))
 		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
 	}
 	put_mat_arr_hdr(__gmctx, frag_hdr);
+
+	if (tmpfn) {
+		close(__gmctx->fd);
+		free(tmpfn);
+	}
 	return;
 }
 

@@ -414,14 +414,15 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 
 	switch (ttf) {
 		double ts;
+
+		/* we only process shnots here */
+	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
+		const_ssnap_t snp = (const void*)st;
 		double bp;
 		double ap;
 		double bq;
 		double aq;
 
-		/* we only process shnots here */
-	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
-		const_ssnap_t snp = (const void*)st;
 		ts = stmp_to_matdt(sec, msec);
 		bp = ffff_m30_d((m30_t)snp->bp);
 		ap = ffff_m30_d((m30_t)snp->ap);

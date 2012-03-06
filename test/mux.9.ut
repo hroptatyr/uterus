@@ -1,0 +1,15 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.g.ibhist.xml"
+OUTFILE="testload.ute"
+CMDLINE="mux -f ibhist '${INFILE}' -o '${OUTFILE}'"
+
+## STDIN
+
+## STDOUT
+
+## outfile sum
+OUTFILE_SHA1="ee2df91bbf022b0645a13c4fc9f99a4a8ad3a983"
+
+## mux.9.ut ends here

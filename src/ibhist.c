@@ -330,10 +330,11 @@ reset:
 	XML_SetElementHandler(hdl, el_sta, el_end);
 	XML_SetUserData(hdl, &clo);
 
-	for (size_t carry = 0; eb_fetch_lines(eb); eb_unfetch_lines(eb)) {
+	for (size_t carry = 0, dtsz;
+	     eb_fetch_lines(eb) && (dtsz = eb_rest_len(eb));
+	     eb_unfetch_lines(eb)) {
 		enum XML_Status res;
 		const char *data = eb_current_line(eb);
-		size_t dtsz = eb_rest_len(eb);
 
 		UDEBUG("feeding: offs %zu  size %zu\n", eb->fi, dtsz);
 		res = XML_Parse(hdl, data, dtsz, XML_FALSE);
@@ -344,6 +345,10 @@ reset:
 			/* best not to print stuff here? */
 			write(ctx->badfd, errstr, strlen(errstr));
 			write(ctx->badfd, "\n", 1);
+
+			/* off and out */
+			eb_unfetch_lines(eb);
+			break;
 		}
 		/* set eb's index */
 		{

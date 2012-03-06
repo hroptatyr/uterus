@@ -430,6 +430,11 @@ init(pr_ctx_t pctx)
 void
 fini(pr_ctx_t UNUSED(pctx))
 {
+	size_t nc = 1 + 4 * nidxs;
+	size_t nr = frag_hdr->dim.rows;
+
+	/* reshape to smaller size */
+	reshape((void*)frag_dat->data, nc, nr, nrows);
 	/* update matarr */
 	put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 1 + 4 * nidxs);
 	put_mat_arr_hdr(__gmctx, frag_hdr);

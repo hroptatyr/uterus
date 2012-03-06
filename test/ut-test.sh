@@ -98,6 +98,7 @@ myexit()
 	rm_if_not_src "${stdout}" "${srcdir}"
 	rm_if_not_src "${stderr}" "${srcdir}"
 	rm_if_not_src "${OUTFILE}"
+	rm_if_not_src "${CMDFILE}" "${srcdir}"
 	rm -f -- "${tool_stdout}" "${tool_stderr}"
 	exit ${1:-1}
 }
@@ -138,6 +139,19 @@ eval_echo()
 	return ${ret}
 }
 
+exec_echo()
+{
+	local ret
+	local HUSK="${1}"
+	shift
+
+	## repeat stdin to &3
+	echo "TOOL=${TOOL}" | cat - "${@}" >&3
+	echo "TOOL=${TOOL}" | cat - "${@}" | "/bin/sh"
+	ret=${?}
+	return ${ret}
+}
+
 ## check if everything's set
 if test -z "${TOOL}"; then
 	echo "variable \${TOOL} not set" >&2
@@ -153,10 +167,17 @@ stdin=$(find_file "${stdin}")
 stdout=$(find_file "${stdout}")
 stderr=$(find_file "${stderr}")
 
-eval_echo "${HUSK}" "${TOOL}" "${CMDLINE}" \
-	< "${stdin:-/dev/null}" \
-	3>&2 \
-	> "${tool_stdout}" 2> "${tool_stderr}" || fail=${?}
+## check if we used a CMDFILE instead of CMDLINE
+if test -n "${CMDFILE}"; then
+	CMDFILE=$(find_file "${CMDFILE}")
+	exec_echo "${HUSK}" "${CMDFILE}" 3>&2 \
+		> "${tool_stdout}" 2> "${tool_stderr}" || fail=${?}
+else
+	eval_echo "${HUSK}" "${TOOL}" "${CMDLINE}" \
+		< "${stdin:-/dev/null}" \
+		3>&2 \
+		> "${tool_stdout}" 2> "${tool_stderr}" || fail=${?}
+fi
 
 echo
 if test "${EXPECT_EXIT_CODE}" = "${fail}"; then

@@ -225,6 +225,9 @@ munmap_any(mctx_t ctx, void *map, off_t off, size_t len)
 }
 
 
+#define VALS_PER_IDX	(4U)
+#define STATIC_VALS	(2U)
+
 static const struct {
 	struct mathdr_s hdr;
 	struct matarr_s arr;
@@ -402,6 +405,7 @@ static matarr_t frag_hdr = NULL;
 static matdat_t frag_dat = NULL;
 static size_t nrows = 0UL;
 static size_t nidxs = 1UL;
+static size_t vals_per_idx = VALS_PER_IDX;
 static char *tmpfn = NULL;
 
 void
@@ -423,20 +427,24 @@ init(pr_ctx_t pctx)
 	/* start out with an array */
 	frag_hdr = get_mat_arr_hdr(__gmctx);
 	/* get ourselves 256 rows */
-	frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, 256, 1 + 4 * nidxs);
+	{
+		const size_t ini_nr = 256U;
+		const size_t ini_nc = STATIC_VALS + vals_per_idx * nidxs;
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, ini_nr, ini_nc);
+	}
 	return;
 }
 
 void
 fini(pr_ctx_t UNUSED(pctx))
 {
-	size_t nc = 1 + 4 * nidxs;
+	size_t nc = STATIC_VALS + vals_per_idx * nidxs;
 	size_t nr = frag_hdr->dim.rows;
 
 	/* reshape to smaller size */
 	reshape((void*)frag_dat->data, nc, nr, nrows);
 	/* update matarr */
-	put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 1 + 4 * nidxs);
+	put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, nc);
 	put_mat_arr_hdr(__gmctx, frag_hdr);
 
 	if (tmpfn) {
@@ -448,16 +456,27 @@ fini(pr_ctx_t UNUSED(pctx))
 
 /* must be here as it uses local vars */
 static void
-bang5(size_t r, size_t c, double d0, double d1, double d2, double d3, double d4)
+bang5ttfidx(
+	size_t row, size_t col, uint16_t ttf, uint16_t idx,
+	double ts, double d1, double d2, double d3, double d4)
 {
 	double *d = (void*)frag_dat->data;
 	size_t arows = frag_hdr->dim.rows;
+	size_t acols = frag_hdr->dim.cols;
 
-	d[0 * arows + r] = d0;
-	d[(1 + 4 * c) * arows + r] = d1;
-	d[(2 + 4 * c) * arows + r] = d2;
-	d[(3 + 4 * c) * arows + r] = d3;
-	d[(4 + 4 * c) * arows + r] = d4;
+	/* clean up idx */
+	ttf &= 0xf;
+	if (STATIC_VALS + 4 * ttf >= acols) {
+		/* add more columns */
+		;
+	}
+
+	d[0 * arows + row] = ts;
+	d[1 * arows + row] = idx;
+	d[(STATIC_VALS + 0 + vals_per_idx * col) * arows + row] = d1;
+	d[(STATIC_VALS + 1 + vals_per_idx * col) * arows + row] = d2;
+	d[(STATIC_VALS + 2 + vals_per_idx * col) * arows + row] = d3;
+	d[(STATIC_VALS + 3 + vals_per_idx * col) * arows + row] = d4;
 	return;
 }
 
@@ -467,6 +486,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
+	uint16_t idx = scom_thdr_tblidx(st);
 	/* for the time stamp check */
 	static uint32_t ol_sec = 0U;
 	static uint16_t ol_msec = 0U;
@@ -475,7 +495,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	size_t arows = frag_hdr->dim.rows;
 
 	if (nrows >= arows) {
-		size_t nc = 1 + 4 * nidxs;
+		size_t nc = STATIC_VALS + vals_per_idx * nidxs;
 
 		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, nc);
 		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, nc);
@@ -505,7 +525,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5(nrows++, 0, ts, bp, ap, bq, aq);
+		bang5ttfidx(nrows++, 0, ttf, idx, ts, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
@@ -522,7 +542,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5(nrows++, 0, ts, o, h, l, c);
+		bang5ttfidx(nrows++, 0, ttf, idx, ts, o, h, l, c);
 		break;
 	}
 	default:

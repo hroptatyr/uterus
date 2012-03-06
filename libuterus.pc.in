@@ -6,7 +6,7 @@ datadir=@datarootdir@
 
 Name: libuterus
 Description: Universal Tick Encoders R Us
-Version: 0.1
+Version: @VERSION@
 Libs: @LDFLAGS@ -L${libdir} -luterus
 Cflags: @CPPFLAGS@ -I${includedir}
 

@@ -73,7 +73,6 @@ header_HEADERS += scommon.h
 header_HEADERS += sl1t.h
 header_HEADERS += scdl.h
 header_HEADERS += m30.h m62.h
-header_HEADERS += expobuf.h
 libuterus_la_SOURCES =
 EXTRA_libuterus_la_SOURCES =
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
@@ -168,6 +167,7 @@ ariva_la_LIBADD = libuterus.la
 
 ute_LTLIBRARIES += ibhist.la
 ibhist_la_SOURCES = ibhist.c
+ibhist_la_SOURCES += expobuf.h
 ibhist_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ibhist_la_LIBADD = libuterus.la
 ## check for me

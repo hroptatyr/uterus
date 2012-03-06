@@ -401,6 +401,7 @@ static struct mctx_s __gmctx[1];
 static matarr_t frag_hdr = NULL;
 static matdat_t frag_dat = NULL;
 static size_t nrows = 0UL;
+static size_t nidxs = 1UL;
 static char *tmpfn = NULL;
 
 void
@@ -422,7 +423,7 @@ init(pr_ctx_t pctx)
 	/* start out with an array */
 	frag_hdr = get_mat_arr_hdr(__gmctx);
 	/* get ourselves 256 rows */
-	frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, 256, 5);
+	frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, 256, 1 + 4 * nidxs);
 	return;
 }
 
@@ -430,9 +431,7 @@ void
 fini(pr_ctx_t UNUSED(pctx))
 {
 	/* update matarr */
-	if (frag_dat) {
-		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
-	}
+	put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 1 + 4 * nidxs);
 	put_mat_arr_hdr(__gmctx, frag_hdr);
 
 	if (tmpfn) {
@@ -448,14 +447,15 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
+	/* for dimen checks */
+	size_t arows = frag_hdr->dim.rows;
 
-	if (nrows >= frag_hdr->dim.rows) {
-		if (frag_dat) {
-			put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, nrows, 5);
-		}
-		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, nrows * 2, 5);
+	if (nrows >= arows) {
+		size_t nc = 1 + 4 * nidxs;
+		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, nc);
+		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, nc);
 		/* reshape */
-		reshape((void*)frag_dat->data, 5, nrows, nrows * 2);
+		reshape((void*)frag_dat->data, nc, arows, arows * 2);
 	}
 
 	switch (ttf) {

@@ -165,13 +165,15 @@ ariva_la_SOURCES = ariva.c
 ariva_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ariva_la_LIBADD = libuterus.la
 
+if HAVE_EXPAT
 ute_LTLIBRARIES += ibhist.la
 ibhist_la_SOURCES = ibhist.c
 ibhist_la_SOURCES += expobuf.h
+ibhist_la_CPPFLAGS = $(AM_CPPFLAGS) $(EXPAT_CFLAGS)
 ibhist_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ibhist_la_LIBADD = libuterus.la
-## check for me
-ibhist_la_LIBADD += -lexpat
+ibhist_la_LIBADD += $(EXPAT_LIBS)
+endif
 
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@

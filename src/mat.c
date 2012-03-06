@@ -446,26 +446,52 @@ fini(pr_ctx_t UNUSED(pctx))
 	return;
 }
 
+/* must be here as it uses local vars */
+static void
+bang5(size_t r, size_t c, double d0, double d1, double d2, double d3, double d4)
+{
+	double *d = (void*)frag_dat->data;
+	size_t arows = frag_hdr->dim.rows;
+
+	d[0 * arows + r] = d0;
+	d[(1 + 4 * c) * arows + r] = d1;
+	d[(2 + 4 * c) * arows + r] = d2;
+	d[(3 + 4 * c) * arows + r] = d3;
+	d[(4 + 4 * c) * arows + r] = d4;
+	return;
+}
+
 ssize_t
 pr(pr_ctx_t UNUSED(pctx), scom_t st)
 {
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
+	/* for the time stamp check */
+	static uint32_t ol_sec = 0U;
+	static uint16_t ol_msec = 0U;
+	static double ts = 0.0;
 	/* for dimen checks */
 	size_t arows = frag_hdr->dim.rows;
 
 	if (nrows >= arows) {
 		size_t nc = 1 + 4 * nidxs;
+
 		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, nc);
 		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, nc);
 		/* reshape */
 		reshape((void*)frag_dat->data, nc, arows, arows * 2);
 	}
 
-	switch (ttf) {
-		double ts;
+	/* pre-compute time stamp in matlab format */
+	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
+		/* only update if there's news */
+		ts = stmp_to_matdt(sec, msec);
+		ol_sec = sec;
+		ol_msec = msec;
+	}
 
+	switch (ttf) {
 		/* we only process shnots here */
 	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
 		const_ssnap_t snp = (const void*)st;
@@ -474,23 +500,12 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		double bq;
 		double aq;
 
-		ts = stmp_to_matdt(sec, msec);
 		bp = ffff_m30_d((m30_t)snp->bp);
 		ap = ffff_m30_d((m30_t)snp->ap);
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		{
-			double *d = (void*)frag_dat->data;
-			size_t arows = frag_hdr->dim.rows;
-
-			d[0 * arows + nrows] = ts;
-			d[1 * arows + nrows] = bp;
-			d[2 * arows + nrows] = ap;
-			d[3 * arows + nrows] = bq;
-			d[4 * arows + nrows] = aq;
-			nrows++;
-		}
+		bang5(nrows++, 0, ts, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
@@ -502,23 +517,12 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		double l;
 		double c;
 
-		ts = stmp_to_matdt(sec, msec);
 		o = ffff_m30_d((m30_t)cdl->o);
 		h = ffff_m30_d((m30_t)cdl->h);
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		{
-			double *d = (void*)frag_dat->data;
-			size_t arows = frag_hdr->dim.rows;
-
-			d[0 * arows + nrows] = ts;
-			d[1 * arows + nrows] = o;
-			d[2 * arows + nrows] = h;
-			d[3 * arows + nrows] = l;
-			d[4 * arows + nrows] = c;
-			nrows++;
-		}
+		bang5(nrows++, 0, ts, o, h, l, c);
 		break;
 	}
 	default:

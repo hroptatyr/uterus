@@ -169,10 +169,10 @@ if HAVE_EXPAT
 ute_LTLIBRARIES += ibhist.la
 ibhist_la_SOURCES = ibhist.c
 ibhist_la_SOURCES += expobuf.h
-ibhist_la_CPPFLAGS = $(AM_CPPFLAGS) $(EXPAT_CFLAGS)
+ibhist_la_CPPFLAGS = $(AM_CPPFLAGS) $(expat_CFLAGS)
 ibhist_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ibhist_la_LIBADD = libuterus.la
-ibhist_la_LIBADD += $(EXPAT_LIBS)
+ibhist_la_LIBADD += $(expat_LIBS)
 endif
 
 version.h: $(top_builddir)/.version

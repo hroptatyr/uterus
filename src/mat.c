@@ -442,6 +442,34 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		}
 		break;
 	}
+	case SL1T_TTF_BID | SCOM_FLAG_LM:
+	case SL1T_TTF_ASK | SCOM_FLAG_LM:
+	case SL1T_TTF_TRA | SCOM_FLAG_LM: {
+		const_scdl_t cdl = (const void*)st;
+		double o;
+		double h;
+		double l;
+		double c;
+
+		ts = stmp_to_matdt(sec, msec);
+		o = ffff_m30_d((m30_t)cdl->o);
+		h = ffff_m30_d((m30_t)cdl->h);
+		l = ffff_m30_d((m30_t)cdl->l);
+		c = ffff_m30_d((m30_t)cdl->c);
+
+		{
+			double *d = (void*)frag_dat->data;
+			size_t arows = frag_hdr->dim.rows;
+
+			d[0 * arows + nrows] = ts;
+			d[1 * arows + nrows] = o;
+			d[2 * arows + nrows] = h;
+			d[3 * arows + nrows] = l;
+			d[4 * arows + nrows] = c;
+			nrows++;
+		}
+		break;
+	}
 	default:
 		break;
 	}

@@ -360,6 +360,16 @@ static matarr_t frag_hdr = NULL;
 static matdat_t frag_dat = NULL;
 static size_t nrows = 0UL;
 
+static double
+stmp_to_matdt(uint32_t sec, uint16_t msec)
+{
+	double res;
+	res = (double)sec / 86400. + 719529.;
+	res += (double)msec / 1000. / 86400.;
+	return res;
+}
+
+
 void
 init(pr_ctx_t pctx)
 {
@@ -412,9 +422,7 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		/* we only process shnots here */
 	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
 		const_ssnap_t snp = (const void*)st;
-		ts = (double)sec / 86400. + 719529.;
-		ts += (double)msec / 1000. / 86400.;
-
+		ts = stmp_to_matdt(sec, msec);
 		bp = ffff_m30_d((m30_t)snp->bp);
 		ap = ffff_m30_d((m30_t)snp->ap);
 		bq = ffff_m30_d((m30_t)snp->bq);

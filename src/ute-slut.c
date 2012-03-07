@@ -321,9 +321,11 @@ main(int argc, char *argv[])
 	for (unsigned int i = 0; i < argi->inputs_num; i++) {
 		/* just quickly do it here */
 		const char *fn = argi->inputs[i];
+		const int editp = argi->edit_given;
+		const int fl = editp ? UO_RDWR : UO_RDONLY;
 		utectx_t hdl;
 
-		if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
+		if ((hdl = ute_open(fn, fl)) == NULL) {
 			fprintf(stderr, "cannot open file '%s'\n", fn);
 			continue;
 		} else if (argi->inputs_num > 1) {

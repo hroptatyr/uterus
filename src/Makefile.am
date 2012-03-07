@@ -65,6 +65,7 @@ libdatrie_a_SOURCES += trie.c trie.h
 
 ## buffered writer
 lib_LTLIBRARIES += libuterus.la
+header_HEADERS += uterus.h
 header_HEADERS += utefile.h
 header_HEADERS += utehdr.h
 header_HEADERS += date.h

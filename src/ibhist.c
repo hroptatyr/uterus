@@ -194,7 +194,7 @@ inspect_con(utectx_t hdl, const char **attr)
 	const char *sym = NULL;
 	const char *sty = NULL;
 	const char *xch = NULL;
-	const char *exp = NULL;
+	const char *xpy = NULL;
 	const char *ccy = NULL;
 	const char *mul = NULL;
 
@@ -204,7 +204,7 @@ inspect_con(utectx_t hdl, const char **attr)
 		} else if (strcmp(attr[i], "secType") == 0) {
 			sty = attr[i + 1];
 		} else if (strcmp(attr[i], "expiry") == 0) {
-			exp = attr[i + 1];
+			xpy = attr[i + 1];
 		} else if (strcmp(attr[i], "multiplier") == 0) {
 			mul = attr[i + 1];
 		} else if (strcmp(attr[i], "exchange") == 0) {
@@ -227,7 +227,7 @@ inspect_con(utectx_t hdl, const char **attr)
 		*p++ = ' ';
 		p = stpcpy(p, xch);
 		*p++ = ' ';
-		p = stpcpy(p, exp);
+		p = stpcpy(p, xpy);
 		*p++ = ' ';
 		p = stpcpy(p, ccy);
 		*p++ = ' ';

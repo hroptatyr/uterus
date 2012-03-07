@@ -38,7 +38,7 @@
 /** test client for libuterus */
 #include <stdio.h>
 #include <fcntl.h>
-#include "utefile.h"
+#include "utefile-private.h"
 /* we need some private titbits */
 #include "uteslut.h"
 
@@ -85,6 +85,27 @@ main(int argc, char *argv[])
 		slut_parser_print_help();
 		res = 0;
 		goto out;
+	}
+
+	for (unsigned int i = 0; i < argi->inputs_num; i++) {
+		/* just quickly do it here */
+		const char *fn = argi->inputs[i];
+		utectx_t hdl;
+
+		if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
+			fprintf(stderr, "cannot open file '%s'\n", fn);
+			continue;
+		} else if (argi->inputs_num > 1) {
+			/* print file names when more than 1 */
+			puts(fn);
+		}
+
+		for (uint16_t j = 1; j <= hdl->slut->nsyms; j++) {
+			printf("%hu\t%s\n", j, ute_idx2sym(hdl, j));
+		}
+
+		/* we worship the ute god by giving back what belongs to him */
+		ute_close(hdl);
 	}
 
 out:

@@ -97,7 +97,7 @@ static inline expobuf_t
 make_expobuf(int fd)
 {
 #if defined STATIC_EB
-	static struct expobuf_s res[1] = {0};
+	static struct expobuf_s res[1] = {{0}};
 #else  /* !STATIC_EB */
 	expobuf_t res = xnew(*res);
 #endif	/* STATIC_EB */

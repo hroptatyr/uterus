@@ -60,6 +60,20 @@
 #endif	/* !countof */
 
 
+#if !defined DEFAULT_EDITOR
+# define DEFAULT_EDITOR	"vi"
+#endif	/* DEFAULT_EDITOR */
+
+static int
+dump_slut(FILE *outf, utectx_t hdl)
+{
+	for (uint16_t j = 1; j <= hdl->slut->nsyms; j++) {
+		fprintf(outf, "%hu\t%s\n", j, ute_idx2sym(hdl, j));
+	}
+	return 0;
+}
+
+
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
 # pragma warning (disable:593)
@@ -100,9 +114,7 @@ main(int argc, char *argv[])
 			puts(fn);
 		}
 
-		for (uint16_t j = 1; j <= hdl->slut->nsyms; j++) {
-			printf("%hu\t%s\n", j, ute_idx2sym(hdl, j));
-		}
+		(void)dump_slut(stdout, hdl);
 
 		/* we worship the ute god by giving back what belongs to him */
 		ute_close(hdl);

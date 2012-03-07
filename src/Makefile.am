@@ -147,6 +147,14 @@ ute_fsck_LDADD = libuterus.la
 ute_fsck_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
 
+ute_PROGRAMS += ute-slut
+ute_slut_SOURCES = ute-slut.c ute-slut-clo.ggo
+ute_slut_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_slut_LDFLAGS = $(AM_LDFLAGS)
+ute_slut_LDADD = libuterus.la
+ute_slut_LDADD += $(LIBLTDL)
+BUILT_SOURCES += ute-slut-clo.c ute-slut-clo.h
+
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c

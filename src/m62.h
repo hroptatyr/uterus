@@ -128,11 +128,6 @@ ffff_m62_get_m30(m30_t m30)
 }
 #endif	/* INCLUDED_m30_h_ */
 
-/**
- * For convenience. */
-static inline long int __attribute__((unused))
-ffff_strtol(const char *p, const char **endp, int b);
-
 
 /* ctor impls */
 #define FFFF_M62_EXPO_DIFF_LOG	4

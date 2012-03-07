@@ -1,0 +1,9 @@
+args "--unamed-opts --no-help --long-help --no-handle-error -a slut_args_info -f slut_parser"
+package "ute slut"
+usage "ute slut FILEs..."
+description "Print the symbol look-up tables of FILE."
+
+option "help" h
+	"Show this help message."
+	optional
+

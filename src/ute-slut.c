@@ -41,6 +41,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 
 #include "utefile.h"
 
@@ -196,6 +197,52 @@ dump_slut(int outfd, utectx_t hdl)
 }
 
 static int
+pump_slut(int outfd, utectx_t hdl)
+{
+	struct stat st;
+	char *buf;
+	ssize_t bsz;
+
+	if (fstat(outfd, &st) < 0) {
+		return -1;
+	} else if ((bsz = st.st_size) < 0) {
+		return -1;
+	}
+	/* otherwise map the file */
+	buf = mmap(NULL, bsz, PROT_READ, MAP_PRIVATE, outfd, 0);
+
+	/* go through it line by line */
+	for (const char *nex = buf, *prv = buf;
+	     (nex = memchr(prv, '\n', bsz - (prv - buf)));
+	     prv = nex + 1) {
+		/* prv points to the beginning of the line, nex to the end */
+		char sym[SLUT_SYMLEN];
+		long unsigned int idx;
+		char *on;
+
+		if ((idx = strtoul(prv, &on, 10)) == 0 || idx > 65535 ||
+		    *on++ != '\t') {
+			/* line fuckered */
+			fprintf(stderr, "cannot make sense of:\n");
+			write(STDERR_FILENO, prv, nex - prv + 1);
+			continue;
+		}
+		/* frob the symbol */
+		{
+			size_t ssz = nex - on;
+			size_t min = ssz > SLUT_SYMLEN ? SLUT_SYMLEN - 1 : ssz;
+
+			memcpy(sym, on, min);
+			sym[min] = '\0';
+		}
+		/* time to bang! */
+		ute_bang_symidx(hdl, sym, idx);
+	}
+	munmap(buf, bsz);
+	return 0;
+}
+
+static int
 slut1(utectx_t hdl, int editp)
 {
 	static char tmpf[] = "/tmp/slut.XXXXXX";
@@ -229,6 +276,12 @@ slut1(utectx_t hdl, int editp)
 			fprintf(stderr, "\
 There was a problem with the editor '%s'.", editor);
 		}
+	}
+
+	/* re-read the slut */
+	if (pump_slut(outfd, hdl) < 0) {
+		res = -1;
+		goto out;
 	}
 out:
 	/* unprocess */

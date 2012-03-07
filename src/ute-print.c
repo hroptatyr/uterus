@@ -134,6 +134,7 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 	void *hdl;
 
 	if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
+		fprintf(stderr, "cannot open file '%s'\n", f);
 		return;
 	}
 	/* otherwise print all them ticks */

@@ -58,8 +58,12 @@
 #if defined DEBUG_FLAG
 # include <assert.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define UNUSED_dbg(x)		UNUSED(x)
+# define UNUSED_nodbg(x)	x
 #else
 # define UDEBUG(args...)
+# define UNUSED_dbg(x)		x
+# define UNUSED_nodbg(x)	UNUSED(x)
 #endif	/* DEBUG_FLAG */
 
 typedef struct fsck_ctx_s *fsck_ctx_t;
@@ -72,7 +76,7 @@ struct fsck_ctx_s {
 /* helper functions */
 static void
 __attribute__((format(printf, 1, 2)))
-verbprf(const char *fmt, ...)
+verbprf(const char *UNUSED_nodbg(fmt), ...)
 {
 #if defined DEBUG_FLAG
 	va_list vap;

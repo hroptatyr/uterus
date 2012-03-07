@@ -130,7 +130,7 @@ ffff_m62_get_m30(m30_t m30)
 
 /**
  * For convenience. */
-static inline long int __attribute__((unused))
+static inline long int
 ffff_strtol(const char *p, const char **endp, int b);
 
 

@@ -7,3 +7,6 @@ option "help" h
 	"Show this help message."
 	optional
 
+option "edit" e
+	"Open the sluts in edit mode"
+	optional

@@ -36,8 +36,12 @@
  ***/
 
 /** test client for libuterus */
+#include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <sys/wait.h>
+
 #include "utefile-private.h"
 /* we need some private titbits */
 #include "uteslut.h"
@@ -64,13 +68,128 @@
 # define DEFAULT_EDITOR	"vi"
 #endif	/* DEFAULT_EDITOR */
 
-static int
-dump_slut(FILE *outf, utectx_t hdl)
+static const char*
+ute_editor(void)
 {
+/* stolen from git's editor.c */
+	const char *editor = getenv("UTE_EDITOR");
+	const char *terminal = getenv("TERM");
+	int terminal_dumb_p = !terminal || strcmp(terminal, "dumb") == 0;
+
+	if (!editor && !terminal_dumb_p) {
+		editor = getenv("VISUAL");
+	}
+	if (!editor) {
+		editor = getenv("EDITOR");
+	}
+	if (!editor && terminal_dumb_p) {
+		return NULL;
+	}
+	if (!editor) {
+		editor = DEFAULT_EDITOR;
+	}
+	return editor;
+}
+
+static int
+run_cmd(const char **argv, const char *const UNUSED(env)[])
+{
+	pid_t pid, wp;
+	int status;
+	int res = 0;
+
+	if ((pid = fork()) < 0) {
+		/* FFF: fork failed, fuck! */
+		fprintf(stderr, "cannot fork(): %s: %s\n",
+			argv[0], strerror(errno));
+		return -1;
+	} else if (pid == 0) {
+		/* in child */
+		execvp(argv[0], (char**)argv);
+	}
+	/* in parent */
+	while ((wp = waitpid(pid, &status, 0)) < 0 && errno == EINTR);
+
+	if (wp < 0) {
+		fprintf(stderr, "waitpid for %s failed: %s\n",
+			argv[0], strerror(errno));
+	} else if (wp != pid) {
+		fprintf(stderr, "waitpid is confused (%s)\n", argv[0]);
+	} else if (WIFSIGNALED(status)) {
+		res = WTERMSIG(status);
+		fprintf(stderr, "%s died of signal %d\n", argv[0], res);
+		/* This return value is chosen so that code & 0xff
+		 * mimics the exit code that a POSIX shell would report for
+		 * a program that died from this signal. */
+		res -= 128;
+	} else if (WIFEXITED(status)) {
+		if ((res = WEXITSTATUS(status)) == 127) {
+			/* Convert special exit code when execvp failed. */
+			res = -1;
+		}
+	} else {
+		fprintf(stderr, "waitpid is confused (%s)\n", argv[0]);
+	}
+	return res;
+}
+
+static int
+dump_slut(int outfd, utectx_t hdl)
+{
+	/* per line max 5 for idx, 1 for \t, 64 for the sym and 1 for \n */
+	char buf[5 + 1 + 64 + 1 + 1/*\nul*/];
+
 	for (uint16_t j = 1; j <= hdl->slut->nsyms; j++) {
-		fprintf(outf, "%hu\t%s\n", j, ute_idx2sym(hdl, j));
+		const char *sym = ute_idx2sym(hdl, j);
+		int sz = snprintf(buf, sizeof(buf), "%hu\t%s\n", j, sym);
+
+		if (write(outfd, buf, sz) < 0) {
+			return -1;
+		}
 	}
 	return 0;
+}
+
+static int
+slut1(utectx_t hdl, int editp)
+{
+	static char tmpf[] = "/tmp/slut.XXXXXX";
+	int outfd = !editp ? STDOUT_FILENO : mkstemp(tmpf);
+	int res = 0;
+
+	/* dump slut first */
+	if (dump_slut(outfd, hdl) < 0) {
+		res = -1;
+		goto out;
+	} else if (!editp) {
+		return 0;
+	}
+
+	/* otherwise launch the editor */
+	{
+		const char *editor = ute_editor();
+		const char *args[] = {
+			editor,
+			tmpf,
+			NULL
+		};
+
+		if (editor == NULL) {
+			/* error message? */
+			res = -1;
+		} else if (strcmp(editor, ":") == 0) {
+			/* no-op */
+			;
+		} else if (run_cmd(args, NULL) < 0) {
+			fprintf(stderr, "\
+There was a problem with the editor '%s'.", editor);
+		}
+	}
+out:
+	/* unprocess */
+	close(outfd);
+	unlink(tmpf);
+	return res;
 }
 
 
@@ -114,7 +233,8 @@ main(int argc, char *argv[])
 			puts(fn);
 		}
 
-		(void)dump_slut(stdout, hdl);
+		/* process this file */
+		slut1(hdl, argi->edit_given);
 
 		/* we worship the ute god by giving back what belongs to him */
 		ute_close(hdl);

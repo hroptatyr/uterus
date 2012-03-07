@@ -69,6 +69,7 @@ header_HEADERS += uterus.h
 header_HEADERS += utefile.h
 header_HEADERS += utehdr.h
 header_HEADERS += date.h
+header_HEADERS += tzraw.h
 header_HEADERS += scommon.h
 header_HEADERS += sl1t.h
 header_HEADERS += scdl.h

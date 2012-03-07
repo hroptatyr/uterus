@@ -42,9 +42,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 
-#include "utefile-private.h"
-/* we need some private titbits */
-#include "uteslut.h"
+#include "utefile.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -186,7 +184,7 @@ dump_slut(int outfd, utectx_t hdl)
 	/* per line max 5 for idx, 1 for \t, 64 for the sym and 1 for \n */
 	char buf[5 + 1 + 64 + 1 + 1/*\nul*/];
 
-	for (uint16_t j = 1; j <= hdl->slut->nsyms; j++) {
+	for (uint16_t j = 1; j <= ute_nsyms(hdl); j++) {
 		const char *sym = ute_idx2sym(hdl, j);
 		int sz = snprintf(buf, sizeof(buf), "%hu\t%s\n", j, sym);
 

@@ -91,6 +91,46 @@ ute_editor(void)
 	return editor;
 }
 
+static const char**
+prep_sh_cmd(const char **argv)
+{
+	int argc, nargc = 0;
+	const char **res;
+	size_t a0len;
+
+	/* count nargs */
+	for (argc = 0; argv[argc]; argc++);
+
+	/* +1 for NULL, +3 for "sh -c" plus extra $0 */
+	res = malloc(sizeof(*res) * (argc + 1 + 3));
+	a0len = strlen(argv[0]);
+
+	if (argc < 1) {
+		fputs("BUG: shell command is empty\n", stderr);
+		return NULL;
+	} else if (strcspn(argv[0], "|&;<>()$`\\\"' \t\n*?[#~=%") != a0len) {
+		res[nargc++] = "sh";
+		res[nargc++] = "-c";
+
+		if (argc < 2) {
+			res[nargc++] = argv[0];
+		} else {
+			static const char glue[] = " \"$@\"";
+			char *a0 = malloc(a0len + sizeof(glue));
+			memcpy(a0, argv[0], a0len);
+			memcpy(a0 + a0len, glue, sizeof(glue));
+
+			res[nargc++] = a0;
+		}
+	}
+
+	for (argc = 0; argv[argc]; argc++) {
+		res[nargc++] = argv[argc];
+	}
+	res[nargc] = NULL;
+	return res;
+}
+
 static int
 run_cmd(const char **argv, const char *const UNUSED(env)[])
 {
@@ -105,7 +145,14 @@ run_cmd(const char **argv, const char *const UNUSED(env)[])
 		return -1;
 	} else if (pid == 0) {
 		/* in child */
-		execvp(argv[0], (char**)argv);
+		const char **nu_argv = prep_sh_cmd(argv);
+
+		execvp(nu_argv[0], (char**)nu_argv);
+		if (argv[1]) {
+			/* nu_argv[2] is alloc'd obviously */
+			free(((char**)nu_argv)[2]);
+		}
+		free(nu_argv);
 	}
 	/* in parent */
 	while ((wp = waitpid(pid, &status, 0)) < 0 && errno == EINTR);

@@ -42,6 +42,15 @@
 #include <time.h>
 #include "tzraw.h"
 
+#ifdef __cplusplus
+extern "C" {
+# if defined __GNUC__
+#  define restrict	__restrict__
+# else
+#  define restrict
+# endif
+#endif /* __cplusplus */
+
 /**
  * Like strptime() but sans the format specs argument and only for ISO
  * dates YYYY-MM-DD HH:MM:SS */
@@ -135,5 +144,9 @@ static const unsigned short int __attribute__((unused)) __mon_yday[2][13] = {
 	{ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 }
 };
 #endif	/* INCL_TBLS */
+
+#ifdef __cplusplus
+}
+#endif	/* __cplusplus */
 
 #endif	/* INCLUDED_date_h_ */

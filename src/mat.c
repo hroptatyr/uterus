@@ -529,7 +529,10 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	}
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
 	case SL1T_TTF_ASK | SCOM_FLAG_LM:
-	case SL1T_TTF_TRA | SCOM_FLAG_LM: {
+	case SL1T_TTF_TRA | SCOM_FLAG_LM:
+	case SL1T_TTF_FIX | SCOM_FLAG_LM:
+	case SL1T_TTF_STL | SCOM_FLAG_LM:
+	case SL1T_TTF_AUC | SCOM_FLAG_LM: {
 		const_scdl_t cdl = (const void*)st;
 		double o;
 		double h;

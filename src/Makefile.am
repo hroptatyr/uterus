@@ -39,8 +39,7 @@ AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
 AM_LDFLAGS = -static
 
-headerdir = $(includedir)/uterus
-utedir = $(libexecdir)/ute
+## headerdir and utedir are defined in c.ac
 
 M4 = m4
 
@@ -66,9 +65,11 @@ libdatrie_a_SOURCES += trie.c trie.h
 
 ## buffered writer
 lib_LTLIBRARIES += libuterus.la
+header_HEADERS += uterus.h
 header_HEADERS += utefile.h
 header_HEADERS += utehdr.h
 header_HEADERS += date.h
+header_HEADERS += tzraw.h
 header_HEADERS += scommon.h
 header_HEADERS += sl1t.h
 header_HEADERS += scdl.h

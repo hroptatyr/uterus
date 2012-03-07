@@ -46,6 +46,11 @@
 
 #ifdef __cplusplus
 extern "C" {
+# if defined __GNUC__
+#  define restrict	__restrict__
+# else
+#  define restrict
+# endif
 #endif /* __cplusplus */
 
 #if !defined M30T

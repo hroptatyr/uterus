@@ -46,6 +46,12 @@ AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 PKG_CHECK_MODULES([expat], [expat], [have_expat="yes"], [have_expat="no"])
 AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])
 
+## offload some of the final targets here
+headerdir="${includedir}/uterus"
+utedir="${libexecdir}/ute"
+AC_SUBST([headerdir])
+AC_SUBST([utedir])
+
 ## output
 AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([Makefile])

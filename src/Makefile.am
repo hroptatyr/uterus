@@ -39,8 +39,7 @@ AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
 AM_LDFLAGS = -static
 
-headerdir = $(includedir)/uterus
-utedir = $(libexecdir)/ute
+## headerdir and utedir are defined in c.ac
 
 M4 = m4
 

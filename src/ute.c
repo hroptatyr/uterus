@@ -97,7 +97,7 @@ DEFCMD(help)(int UNUSED(argc), char *UNUSED(argv)[])
 {
 #define SUBCMD(x, line)					\
 	do {						\
-		printf("  % -20s " line "\n", #x);	\
+		printf("  %-20s " line "\n", #x);	\
 	} while (0)
 
 	/* output version first */

@@ -121,6 +121,7 @@ Common options:\n\
 	SUBCMD(mux, "Generate an ute file from a tick or candle source");
 	SUBCMD(print, "Print the contents of an ute file");
 	SUBCMD(shnot, "Generate all-level snapshots from ute files");
+	SUBCMD(slut, "Print or edit the symbol look-up table");
 	puts("");
 	return 0;
 }

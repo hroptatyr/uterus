@@ -1,0 +1,13 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/print.d.ute"
+CMDLINE="slut '${INFILE}'"
+COMMENT="no slut in print.d.ute"
+
+## STDIN
+
+## STDOUT
+stdout=$(mktemp)
+
+## slut.4.ut ends here

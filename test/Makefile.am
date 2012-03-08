@@ -50,6 +50,11 @@ TESTS += fsck.4.ut
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 
+TESTS += slut.1.ut
+TESTS += slut.2.ut
+TESTS += slut.3.ut
+TESTS += slut.4.ut
+
 .NOTPARALLEL:
 
 ## Makefile.am ends here

@@ -155,6 +155,14 @@ ute_slut_LDADD = libuterus.la
 ute_slut_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-slut-clo.c ute-slut-clo.h
 
+ute_PROGRAMS += ute-slab
+ute_slab_SOURCES = ute-slab.c ute-slab-clo.ggo
+ute_slab_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_slab_LDFLAGS = $(AM_LDFLAGS)
+ute_slab_LDADD = libuterus.la
+ute_slab_LDADD += $(LIBLTDL)
+BUILT_SOURCES += ute-slab-clo.c ute-slab-clo.h
+
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c

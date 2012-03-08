@@ -1,0 +1,15 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/print.c.ute"
+CMDLINE="slut '${INFILE}'"
+
+## STDIN
+
+## STDOUT
+stdout=$(mktemp)
+cat <<EOF > "${stdout}"
+1	TESJPY
+EOF
+
+## slut.3.ut ends here

@@ -25,6 +25,8 @@ TESTS += mux.8.ut
 TESTS += mux.9.ut
 TESTS += mux.10.ut
 endif
+TESTS += mux.11.ut
+TESTS += mux.12.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5

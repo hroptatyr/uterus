@@ -24,6 +24,7 @@ built_mans += ute-mux.man
 built_mans += ute-print.man
 built_mans += ute-shnot.man
 built_mans += ute-fsck.man
+built_mans += ute-slut.man
 
 built_infos =
 built_infos += ute-mux.texi

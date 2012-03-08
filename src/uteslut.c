@@ -238,7 +238,9 @@ tri_cb(const char *sym, uint32_t val, void *clo)
 	for (char *tgt = ((slut_sym_t*)s->itbl)[slot]; *sym; tgt++, sym++) {
 		*tgt = (char)(*sym);
 	}
-	s->nsyms++;
+	if (++s->nsyms < val) {
+		s->nsyms = val;
+	}
 	return 0;
 }
 

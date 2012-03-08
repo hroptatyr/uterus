@@ -24,12 +24,14 @@ built_mans += ute-mux.man
 built_mans += ute-print.man
 built_mans += ute-shnot.man
 built_mans += ute-fsck.man
+built_mans += ute-slut.man
 
 built_infos =
 built_infos += ute-mux.texi
 built_infos += ute-print.texi
 built_infos += ute-shnot.texi
 built_infos += ute-fsck.texi
+built_infos += ute-slut.texi
 
 dist_noinst_SCRIPTS = gentexi.sh
 

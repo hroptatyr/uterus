@@ -207,7 +207,8 @@ slut_bang(uteslut_t s, const char *sym, uint16_t idx)
 		/* check for a resize */
 		if ((data = idx) > s->nsyms) {
 			s->nsyms = data;
-		} else if (data >= s->alloc_sz) {
+		}
+		if (data >= s->alloc_sz) {
 			resize_i2s(s);
 		}
 
@@ -237,7 +238,9 @@ tri_cb(const char *sym, uint32_t val, void *clo)
 	for (char *tgt = ((slut_sym_t*)s->itbl)[slot]; *sym; tgt++, sym++) {
 		*tgt = (char)(*sym);
 	}
-	s->nsyms++;
+	if (s->nsyms < val) {
+		s->nsyms = val;
+	}
 	return 0;
 }
 

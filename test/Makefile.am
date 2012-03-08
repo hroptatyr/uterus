@@ -25,6 +25,8 @@ TESTS += mux.8.ut
 TESTS += mux.9.ut
 TESTS += mux.10.ut
 endif
+TESTS += mux.11.ut
+TESTS += mux.12.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
@@ -49,6 +51,11 @@ TESTS += fsck.3.ut
 TESTS += fsck.4.ut
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
+
+TESTS += slut.1.ut
+TESTS += slut.2.ut
+TESTS += slut.3.ut
+TESTS += slut.4.ut
 
 .NOTPARALLEL:
 

@@ -1,0 +1,16 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.b.ariva"
+OUTFILE="testload.ute"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+cat <<EOF > "${CMDFILE}"
+cat '${INFILE}' | "\${TOOL}" mux -f ariva -o '${OUTFILE}' -
+## STDIN
+
+## STDOUT
+
+## outfile sum
+OUTFILE_SHA1="9b6c473046b4199b9cc9d0d8f723ded8caab94e9"
+
+## mux.11.ut ends here

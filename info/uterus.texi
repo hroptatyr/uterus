@@ -63,6 +63,7 @@ The ute file format
 * ute-print::           Print the contents of an ute file
 * ute-shnot::           Generate all-level snapshots from ute files
 * ute-fsck::            Check ute file for consistency
+* ute-slut::            Print or edit the symbol look-up table
 * Muxers::              Connect foreign sources/sinks to/from ute files
 @end menu
 
@@ -536,6 +537,7 @@ slut to a new location upon insertion or deletion of ticks.
 @include ute-print.texi
 @include ute-shnot.texi
 @include ute-fsck.texi
+@include ute-slut.texi
 
 
 @node Muxers

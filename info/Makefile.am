@@ -31,6 +31,7 @@ built_infos += ute-mux.texi
 built_infos += ute-print.texi
 built_infos += ute-shnot.texi
 built_infos += ute-fsck.texi
+built_infos += ute-slut.texi
 
 dist_noinst_SCRIPTS = gentexi.sh
 

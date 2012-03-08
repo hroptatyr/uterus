@@ -18,3 +18,13 @@ option "into" -
 	string typestr="FILE" optional
 
 section "Slab options"
+
+option "extract-symbol" -
+	"Extract ticks regarding SYM, can be comma-separated list \
+or used multiple times"
+	string typestr="SYM,..." optional multiple
+
+option "extract-symidx" -
+	"Extract ticks with index IDX, can be comma-separated list \
+or used multiple times"
+	int typestr="IDX,..." optional multiple

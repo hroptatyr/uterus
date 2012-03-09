@@ -187,8 +187,13 @@ dump_slut(int outfd, utectx_t hdl)
 
 	for (uint16_t j = 1; j <= ute_nsyms(hdl); j++) {
 		const char *sym = ute_idx2sym(hdl, j);
-		int sz = snprintf(buf, sizeof(buf), "%hu\t%s\n", j, sym);
+		int sz;
 
+		if (sym == NULL || *sym == '\0') {
+			/* don't bother printing nil symbols */
+			continue;
+		}
+		sz = snprintf(buf, sizeof(buf), "%hu\t%s\n", j, sym);
 		if (write(outfd, buf, sz) < 0) {
 			return -1;
 		}

@@ -106,8 +106,11 @@ struct bitset_s {
 static bitset_t
 make_bitset(size_t bits)
 {
-	static struct bitset_s bs = {0};
-	const size_t rd = sizeof(*bs.bs) * 8/*bits/byte*/;
+	static struct bitset_s pool[2] = {{0}, {0}};
+	/* round robin var */
+	static size_t rr = 0UL;
+	const size_t rd = sizeof(*pool->bs) * 8/*bits/byte*/;
+	bitset_t res;
 
 	if (bits == 0) {
 		return NULL;
@@ -115,26 +118,28 @@ make_bitset(size_t bits)
 	/* round bits up to the next multiple */
 	bits = bits / rd + 1;
 
+	/* get ourselves a result bitset */
+	res = pool + ((rr++) % countof(pool));
 	/* check for resizes */
-	if (bits > bs.sz) {
+	if (bits > res->sz) {
 		/* resize */
-		free(bs.bs);
-		bs.bs = calloc(bits, sizeof(*bs.bs));
+		free(res->bs);
+		res->bs = calloc(bits, sizeof(*res->bs));
 
 #if defined USE_BITCOUNT_ARR
-		free(bs.bc);
-		bs.bc = calloc(bits, sizeof(*bs.bc));
+		free(res->bc);
+		res->bc = calloc(bits, sizeof(*res->bc));
 #endif	/* USE_BITCOUNT_ARR */
 
-		bs.sz = bits;
+		res->sz = bits;
 	} else {
 		/* wipe */
-		memset(bs.bs, 0, bs.sz * sizeof(*bs.bs));
+		memset(res->bs, 0, res->sz * sizeof(*res->bs));
 #if defined USE_BITCOUNT_ARR
-		memset(bs.bc, 0, bs.sz * sizeof(*bs.bc));
+		memset(res->bc, 0, res->sz * sizeof(*res->bc));
 #endif	/* USE_BITCOUNT_ARR */
 	}
-	return &bs;
+	return res;
 }
 
 static void

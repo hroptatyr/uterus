@@ -210,9 +210,6 @@ slut_bang(uteslut_t s, const char *sym, uint16_t idx)
 	uint32_t data;
 
 	if (slut_tg_get(s->stbl, sym, &data) < 0) {
-		/* great, banging will definitely succeed */
-		slut_sym_t *itbl = s->itbl;
-
 		/* check for a resize */
 		if ((data = idx) > s->nsyms) {
 			s->nsyms = data;
@@ -224,7 +221,10 @@ slut_bang(uteslut_t s, const char *sym, uint16_t idx)
 		/* store in the s2i table (trie) */
 		slut_tg_put(s->stbl, sym, data);
 		/* store in the i2s table */
-		strcpy(itbl[data], sym);
+		{
+			slut_sym_t *itbl = s->itbl;
+			strcpy(itbl[data], sym);
+		}
 		return idx;
 	}
 	/* otherwise just return what we've got */

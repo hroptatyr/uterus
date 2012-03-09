@@ -762,12 +762,8 @@ ute_mktemp(int oflags)
 	/* get a tmp name template for mkstemp() */
 	tmpnam = ute_tmpnam();
 	/* now open it ... */
-#if defined HAVE_MKOSTEMP
-	resfd = mkostemp(tmpnam, 0644);
-#else  /* !HAVE_MKOSTEMP */
 	resfd = mkstemp(tmpnam);
 	chmod(tmpnam, 0644);
-#endif	/* HAVE_MKOSTEMP */
 	/* wipe and check for anon */
 	if ((oflags &= UO_ANON)) {
 		/* ... and unlink it if ANON is set */

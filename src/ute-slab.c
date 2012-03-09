@@ -97,6 +97,10 @@ struct bitset_s {
 	size_t sz;
 	/* the actual set */
 	long unsigned int *bs;
+#if defined USE_BITCOUNT_ARR
+	/* bit counts for each bucket */
+	uint8_t *bc;
+#endif	/* USE_BITCOUNT_ARR */
 };
 
 static bitset_t
@@ -116,10 +120,19 @@ make_bitset(size_t bits)
 		/* resize */
 		free(bs.bs);
 		bs.bs = calloc(bits, sizeof(*bs.bs));
+
+#if defined USE_BITCOUNT_ARR
+		free(bs.bc);
+		bs.bc = calloc(bits, sizeof(*bs.bc));
+#endif	/* USE_BITCOUNT_ARR */
+
 		bs.sz = bits;
 	} else {
 		/* wipe */
 		memset(bs.bs, 0, bs.sz * sizeof(*bs.bs));
+#if defined USE_BITCOUNT_ARR
+		memset(bs.bc, 0, bs.sz * sizeof(*bs.bc));
+#endif	/* USE_BITCOUNT_ARR */
 	}
 	return &bs;
 }

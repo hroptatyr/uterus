@@ -246,9 +246,6 @@ pump_slut(int outfd, utectx_t hdl)
 		/* time to bang! */
 		if (*sym) {
 			ute_bang_symidx(hdl, sym, idx);
-		} else {
-			/* delete? we should really */
-			;
 		}
 	}
 	munmap(buf, bsz);

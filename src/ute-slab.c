@@ -168,6 +168,16 @@ bitset_get(bitset_t bs, size_t bit)
 	return (bs->bs[word] & (1UL << shft)) ? 1 : 0;
 }
 
+#define BITSET_LOOP(_x, _n)						\
+	for (size_t __i = 0, _n = 0;					\
+	     __i < (_x)->sz;						\
+	     __i++, _n = __i * sizeof(*(_x)->bs) * 8/*bits/byte*/)	\
+		for (long unsigned int __cell = (_x)->bs[__i];		\
+		     __cell; __cell >>= 1, _n++)			\
+			if (!(__cell & 1)) {				\
+				continue;				\
+			} else
+
 /* date fiddling */
 static time_t
 get_date(const char *s)
@@ -201,9 +211,9 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	static size_t max_idx = 0UL;
 	size_t hdl_nsyms;
 	/* bitset for the index filter */
-	bitset_t filtix;
+	bitset_t filtix = NULL;
 	/* bitset with copied tick indices */
-	bitset_t copyix;
+	bitset_t copyix = NULL;
 
 	if (max_idx == 0UL) {
 		/* find the maximum index in ctx->idxs */
@@ -218,11 +228,13 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	if (max_idx < hdl_nsyms && ctx->nsyms > 0) {
 		max_idx = hdl_nsyms;
 	}
-	/* get ourselves a bitset, won't be freed, so there's a leak! */
-	filtix = make_bitset(max_idx);
-	/* and another one to keep track of to-bang symidxs */
-	copyix = make_bitset(hdl_nsyms);
-
+	if (max_idx) {
+		/* get ourselves a bitset, won't be freed, so there's a leak! */
+		filtix = make_bitset(max_idx);
+	} else {
+		/* or another one to keep track of to-bang symidxs */
+		copyix = make_bitset(hdl_nsyms);
+	}
 	/* set the bits from the idx */
 	for (size_t i = 0; i < ctx->nidxs; i++) {
 		/* it's unclear what the final name in the outfile should be */
@@ -256,10 +268,21 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 			continue;
 		}
 
-		/* set the bit again, coz we're now interested in this */
-		bitset_set(copyix, idx);
+		if (max_idx == 0) {
+			/* set the bit in the copyix bitset
+			 * coz we're now interested in banging the symbol */
+			bitset_set(copyix, idx);
+		}
 		/* we passed all them tests, just let him through */
 		ute_add_tick(ctx->out, ti);
+	}
+
+	if (max_idx == 0) {
+		BITSET_LOOP(copyix, i) {
+			uint16_t idx = i;
+			const char *sym = ute_idx2sym(hdl, idx);
+			ute_bang_symidx(ctx->out, sym, idx);
+		}
 	}
 	return;
 }

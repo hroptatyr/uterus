@@ -205,14 +205,20 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
 
-	for (size_t i = 0; i < ute_nticks(hdl);) {
+	for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
 		scom_t ti = ute_seek(hdl, i);
 		uint16_t idx = scom_thdr_tblidx(ti);
 
-		if (idx <= max_idx && bitset_get(idxs, idx)) {
-			ute_add_tick(ctx->out, ti);
+		/* first off, set the tick size */
+		tsz = scom_thdr_size(ti) / sizeof(struct sndwch_s);
+
+		/* chain of filters, first one loses */
+		if (max_idx && (idx > max_idx || !bitset_get(idxs, idx))) {
+			continue;
 		}
-		i += scom_thdr_size(ti) / sizeof(struct sndwch_s);
+
+		/* we passed all them tests, just let him through */
+		ute_add_tick(ctx->out, ti);
 	}
 	return;
 }

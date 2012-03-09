@@ -174,7 +174,10 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	/* set the bits from the idx */
 	for (size_t i = 0; i < ctx->nidxs; i++) {
 		/* it's unclear what the final name in the outfile should be */
-		bitset_set(idxs, ctx->idxs[i]);
+		uint16_t idx = (uint16_t)ctx->idxs[i];
+		const char *sym = ute_idx2sym(hdl, idx);
+		bitset_set(idxs, idx);
+		ute_bang_symidx(ctx->out, sym, idx);
 	}
 	/* transform and set the rest */
 	for (size_t i = 0; i < ctx->nsyms; i++) {

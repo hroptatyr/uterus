@@ -91,14 +91,19 @@ error(int eno, const char *fmt, ...)
 }
 
 /* bitsets */
-typedef long unsigned int *bitset_t;
+typedef struct bitset_s *bitset_t;
+
+struct bitset_s {
+	size_t sz;
+	/* the actual set */
+	long unsigned int *bs;
+};
 
 static bitset_t
 make_bitset(size_t bits)
 {
-	static bitset_t bs = NULL;
-	static size_t all_bs = 0UL;
-	const size_t rd = sizeof(*bs) * 8/*bits/byte*/;
+	static struct bitset_s bs = {0};
+	const size_t rd = sizeof(*bs.bs) * 8/*bits/byte*/;
 
 	if (bits == 0) {
 		return NULL;
@@ -107,37 +112,37 @@ make_bitset(size_t bits)
 	bits = bits / rd + 1;
 
 	/* check for resizes */
-	if (bits > all_bs) {
+	if (bits > bs.sz) {
 		/* resize */
-		free(bs);
-		bs = calloc(bits, sizeof(*bs));
-		all_bs = bits;
+		free(bs.bs);
+		bs.bs = calloc(bits, sizeof(*bs.bs));
+		bs.sz = bits;
 	} else {
 		/* wipe */
-		memset(bs, 0, all_bs * sizeof(*bs));
+		memset(bs.bs, 0, bs.sz * sizeof(*bs.bs));
 	}
-	return bs;
+	return &bs;
 }
 
 static void
 bitset_set(bitset_t bs, size_t bit)
 {
-	const size_t rd = sizeof(*bs) * 8/*bits/byte*/;
+	const size_t rd = sizeof(*bs->bs) * 8/*bits/byte*/;
 	size_t word = bit / rd;
 	size_t shft = bit % rd;
 
-	bs[word] |= (1UL << shft);
+	bs->bs[word] |= (1UL << shft);
 	return;
 }
 
 static int
 bitset_get(bitset_t bs, size_t bit)
 {
-	const size_t rd = sizeof(*bs) * 8/*bits/byte*/;
+	const size_t rd = sizeof(*bs->bs) * 8/*bits/byte*/;
 	size_t word = bit / rd;
 	size_t shft = bit % rd;
 
-	return (bs[word] & (1UL << shft)) ? 1 : 0;
+	return (bs->bs[word] & (1UL << shft)) ? 1 : 0;
 }
 
 

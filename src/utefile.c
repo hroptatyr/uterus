@@ -850,6 +850,18 @@ ute_clone_slut(utectx_t tgt, utectx_t src)
 	return;
 }
 
+void
+ute_empty_slut(utectx_t ctx)
+{
+	/* free existing sluts */
+	free_slut(ctx->slut);
+	/* reset slut size */
+	ctx->slut_sz = 0;
+	/* make a new slut */
+	make_slut(ctx->slut);
+	return;
+}
+
 
 /* accessor */
 void

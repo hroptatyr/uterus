@@ -134,6 +134,10 @@ extern void ute_sort(utectx_t ctx);
  * Clone the symbol look-up table (slut) from SRC to TGT. */
 extern void ute_clone_slut(utectx_t tgt, utectx_t src);
 
+/**
+ * Wipe out CTX's slut leaving a clean empty version behind. */
+extern void ute_empty_slut(utectx_t ctx);
+
 #define SLUT_SYMLEN	(64)
 
 /**

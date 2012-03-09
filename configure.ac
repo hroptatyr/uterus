@@ -40,6 +40,13 @@ SXE_CHECK_LIBLTDL
 ## we need C11 anon structs
 SXE_CHECK_ANON_STRUCTS
 
+## check for mkostemp
+AC_CHECK_FUNC([mkostemp], [:], [:])
+if test "${ac_cv_func_mkostemp}" = "yes"; then
+	AC_DEFINE([HAVE_MKOSTEMP], [1], [Define if mkostemp() exists])
+fi
+
+
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 
 ## ibhist needs expat

@@ -89,15 +89,24 @@ init_i2s(uteslut_t s, size_t initial_alloc_sz)
 }
 
 static void
-resize_i2s(uteslut_t s)
+resize_i2s(uteslut_t s, size_t at_least)
 {
 	size_t old, new;
 
 	/* alloc stepping is 128, 1024, 8192, 65536 */
+	if (at_least > 8192) {
+		at_least = 65536;
+	} else if (at_least > 1024) {
+		at_least = 8192;
+	} else if (at_least > 128) {
+		at_least = 1024;
+	} else {
+		at_least = 128;
+	}
 	old = s->alloc_sz * sizeof(slut_sym_t);
-	new = old * 8;
-	s->alloc_sz *= 8;
+	new = at_least * sizeof(slut_sym_t);
 	s->itbl = mremap(s->itbl, old, new, MREMAP_MAYMOVE);
+	s->alloc_sz = at_least;
 	return;
 }
 
@@ -158,7 +167,7 @@ __crea(uteslut_t s, const char *sym)
 
 	/* check for a resize */
 	if (res >= s->alloc_sz) {
-		resize_i2s(s);
+		resize_i2s(s, res);
 	}
 
 	/* store in the s2i table (trie) */
@@ -201,21 +210,21 @@ slut_bang(uteslut_t s, const char *sym, uint16_t idx)
 	uint32_t data;
 
 	if (slut_tg_get(s->stbl, sym, &data) < 0) {
-		/* great, banging will definitely succeed */
-		slut_sym_t *itbl = s->itbl;
-
 		/* check for a resize */
 		if ((data = idx) > s->nsyms) {
 			s->nsyms = data;
 		}
 		if (data >= s->alloc_sz) {
-			resize_i2s(s);
+			resize_i2s(s, data);
 		}
 
 		/* store in the s2i table (trie) */
 		slut_tg_put(s->stbl, sym, data);
 		/* store in the i2s table */
-		strcpy(itbl[data], sym);
+		{
+			slut_sym_t *itbl = s->itbl;
+			strcpy(itbl[data], sym);
+		}
 		return idx;
 	}
 	/* otherwise just return what we've got */
@@ -231,8 +240,8 @@ tri_cb(const char *sym, uint32_t val, void *clo)
 	uint32_t slot = (uint32_t)val;
 
 	/* check if we need a resize */
-	while (slot >= s->alloc_sz) {
-		resize_i2s(s);
+	if (slot >= s->alloc_sz) {
+		resize_i2s(s, slot);
 	}
 
 	for (char *tgt = ((slut_sym_t*)s->itbl)[slot]; *sym; tgt++, sym++) {

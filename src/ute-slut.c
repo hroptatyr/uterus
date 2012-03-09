@@ -187,8 +187,13 @@ dump_slut(int outfd, utectx_t hdl)
 
 	for (uint16_t j = 1; j <= ute_nsyms(hdl); j++) {
 		const char *sym = ute_idx2sym(hdl, j);
-		int sz = snprintf(buf, sizeof(buf), "%hu\t%s\n", j, sym);
+		int sz;
 
+		if (sym == NULL || *sym == '\0') {
+			/* don't bother printing nil symbols */
+			continue;
+		}
+		sz = snprintf(buf, sizeof(buf), "%hu\t%s\n", j, sym);
 		if (write(outfd, buf, sz) < 0) {
 			return -1;
 		}
@@ -210,6 +215,9 @@ pump_slut(int outfd, utectx_t hdl)
 	}
 	/* otherwise map the file */
 	buf = mmap(NULL, bsz, PROT_READ, MAP_PRIVATE, outfd, 0);
+
+	/* clear out the original slut, could be in utefile, aye? */
+	ute_empty_slut(hdl);
 
 	/* go through it line by line */
 	for (const char *nex = buf, *prv = buf;
@@ -238,9 +246,6 @@ pump_slut(int outfd, utectx_t hdl)
 		/* time to bang! */
 		if (*sym) {
 			ute_bang_symidx(hdl, sym, idx);
-		} else {
-			/* delete? we should really */
-			;
 		}
 	}
 	munmap(buf, bsz);

@@ -41,6 +41,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <time.h>
 
 #include "utefile.h"
 
@@ -71,6 +72,10 @@ struct slab_ctx_s {
 
 	size_t nsyms;
 	const char *const *syms;
+
+	/* interval [from, till) for time-based extraction */
+	time_t from;
+	time_t till;
 };
 
 static void
@@ -91,14 +96,26 @@ error(int eno, const char *fmt, ...)
 }
 
 /* bitsets */
-typedef long unsigned int *bitset_t;
+typedef struct bitset_s *bitset_t;
+
+struct bitset_s {
+	size_t sz;
+	/* the actual set */
+	long unsigned int *bs;
+#if defined USE_BITCOUNT_ARR
+	/* bit counts for each bucket */
+	uint8_t *bc;
+#endif	/* USE_BITCOUNT_ARR */
+};
 
 static bitset_t
 make_bitset(size_t bits)
 {
-	static bitset_t bs = NULL;
-	static size_t all_bs = 0UL;
-	const size_t rd = sizeof(*bs) * 8/*bits/byte*/;
+	static struct bitset_s pool[2] = {{0}, {0}};
+	/* round robin var */
+	static size_t rr = 0UL;
+	const size_t rd = sizeof(*pool->bs) * 8/*bits/byte*/;
+	bitset_t res;
 
 	if (bits == 0) {
 		return NULL;
@@ -106,38 +123,76 @@ make_bitset(size_t bits)
 	/* round bits up to the next multiple */
 	bits = bits / rd + 1;
 
+	/* get ourselves a result bitset */
+	res = pool + ((rr++) % countof(pool));
 	/* check for resizes */
-	if (bits > all_bs) {
+	if (bits > res->sz) {
 		/* resize */
-		free(bs);
-		bs = calloc(bits, sizeof(*bs));
-		all_bs = bits;
+		free(res->bs);
+		res->bs = calloc(bits, sizeof(*res->bs));
+
+#if defined USE_BITCOUNT_ARR
+		free(res->bc);
+		res->bc = calloc(bits, sizeof(*res->bc));
+#endif	/* USE_BITCOUNT_ARR */
+
+		res->sz = bits;
 	} else {
 		/* wipe */
-		memset(bs, 0, all_bs * sizeof(*bs));
+		memset(res->bs, 0, res->sz * sizeof(*res->bs));
+#if defined USE_BITCOUNT_ARR
+		memset(res->bc, 0, res->sz * sizeof(*res->bc));
+#endif	/* USE_BITCOUNT_ARR */
 	}
-	return bs;
+	return res;
 }
 
 static void
 bitset_set(bitset_t bs, size_t bit)
 {
-	const size_t rd = sizeof(*bs) * 8/*bits/byte*/;
+	const size_t rd = sizeof(*bs->bs) * 8/*bits/byte*/;
 	size_t word = bit / rd;
 	size_t shft = bit % rd;
 
-	bs[word] |= (1UL << shft);
+	bs->bs[word] |= (1UL << shft);
 	return;
 }
 
 static int
 bitset_get(bitset_t bs, size_t bit)
 {
-	const size_t rd = sizeof(*bs) * 8/*bits/byte*/;
+	const size_t rd = sizeof(*bs->bs) * 8/*bits/byte*/;
 	size_t word = bit / rd;
 	size_t shft = bit % rd;
 
-	return (bs[word] & (1UL << shft)) ? 1 : 0;
+	return (bs->bs[word] & (1UL << shft)) ? 1 : 0;
+}
+
+#define BITSET_LOOP(_x, _n)						\
+	for (size_t __i = 0, _n = 0;					\
+	     __i < (_x)->sz;						\
+	     __i++, _n = __i * sizeof(*(_x)->bs) * 8/*bits/byte*/)	\
+		for (long unsigned int __cell = (_x)->bs[__i];		\
+		     __cell; __cell >>= 1, _n++)			\
+			if (!(__cell & 1)) {				\
+				continue;				\
+			} else
+
+/* date fiddling */
+static time_t
+get_date(const char *s)
+{
+	struct tm tm = {0};
+	strptime(s, "%F", &tm);
+	return mktime(&tm);
+}
+
+static time_t
+get_stamp(const char *s)
+{
+	struct tm tm = {0};
+	strptime(s, "%FT%T", &tm);
+	return mktime(&tm);
 }
 
 
@@ -154,7 +209,11 @@ static void
 slab1(slab_ctx_t ctx, utectx_t hdl)
 {
 	static size_t max_idx = 0UL;
-	bitset_t idxs;
+	size_t hdl_nsyms;
+	/* bitset for the index filter */
+	bitset_t filtix = NULL;
+	/* bitset with copied tick indices */
+	bitset_t copyix = NULL;
 
 	if (max_idx == 0UL) {
 		/* find the maximum index in ctx->idxs */
@@ -165,33 +224,65 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 		}
 	}
 	/* dont bother checking for the largest one, just take nsyms */
-	if (max_idx < ute_nsyms(hdl) && ctx->nsyms > 0) {
-		max_idx = ute_nsyms(hdl);
+	hdl_nsyms = ute_nsyms(hdl);
+	if (max_idx < hdl_nsyms && ctx->nsyms > 0) {
+		max_idx = hdl_nsyms;
 	}
-	/* get ourselves a bitset, won't be freed, so there's a leak! */
-	idxs = make_bitset(max_idx);
-
+	if (max_idx) {
+		/* get ourselves a bitset, won't be freed, so there's a leak! */
+		filtix = make_bitset(max_idx);
+	} else {
+		/* or another one to keep track of to-bang symidxs */
+		copyix = make_bitset(hdl_nsyms);
+	}
 	/* set the bits from the idx */
 	for (size_t i = 0; i < ctx->nidxs; i++) {
 		/* it's unclear what the final name in the outfile should be */
-		bitset_set(idxs, ctx->idxs[i]);
+		uint16_t idx = (uint16_t)ctx->idxs[i];
+		const char *sym = ute_idx2sym(hdl, idx);
+		bitset_set(filtix, idx);
+		ute_bang_symidx(ctx->out, sym, idx);
 	}
 	/* transform and set the rest */
 	for (size_t i = 0; i < ctx->nsyms; i++) {
 		const char *sym = ctx->syms[i];
 		uint16_t idx = ute_sym2idx(hdl, sym);
-		bitset_set(idxs, idx);
+		bitset_set(filtix, idx);
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
 
-	for (size_t i = 0; i < ute_nticks(hdl);) {
+	for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
 		scom_t ti = ute_seek(hdl, i);
 		uint16_t idx = scom_thdr_tblidx(ti);
+		time_t stmp = scom_thdr_sec(ti);
 
-		if (idx <= max_idx && bitset_get(idxs, idx)) {
-			ute_add_tick(ctx->out, ti);
+		/* first off, set the tick size */
+		tsz = scom_thdr_size(ti) / sizeof(struct sndwch_s);
+
+		/* chain of filters, first one loses */
+		if (max_idx && (idx > max_idx || !bitset_get(filtix, idx))) {
+			/* index no matchee */
+			continue;
+		} else if (stmp < ctx->from || stmp >= ctx->till) {
+			/* time stamp no matchee */
+			continue;
 		}
-		i += scom_thdr_size(ti) / sizeof(struct sndwch_s);
+
+		if (max_idx == 0) {
+			/* set the bit in the copyix bitset
+			 * coz we're now interested in banging the symbol */
+			bitset_set(copyix, idx);
+		}
+		/* we passed all them tests, just let him through */
+		ute_add_tick(ctx->out, ti);
+	}
+
+	if (max_idx == 0) {
+		BITSET_LOOP(copyix, i) {
+			uint16_t idx = i;
+			const char *sym = ute_idx2sym(hdl, idx);
+			ute_bang_symidx(ctx->out, sym, idx);
+		}
 	}
 	return;
 }
@@ -236,6 +327,25 @@ main(int argc, char *argv[])
 		ctx->idxs = (unsigned int*)argi->extract_symidx_arg;
 		/* quick count */
 		for (const unsigned int *p = ctx->idxs; *p; p++, ctx->nidxs++);
+	}
+
+	/* time based extraction */
+	if (argi->extract_day_given) {
+		ctx->from = get_date(argi->extract_day_arg);
+		ctx->till = ctx->from + 86400;
+	}
+	if (argi->extract_from_given) {
+		ctx->from = get_stamp(argi->extract_from_arg);
+	}
+	if (argi->extract_till_given) {
+		ctx->till = get_stamp(argi->extract_till_arg);
+	}
+	/* set defaults */
+	if (ctx->from == 0) {
+		ctx->from = -2147483648;
+	}
+	if (ctx->till == 0) {
+		ctx->till = 2147483647;
 	}
 
 	/* handle outfile */

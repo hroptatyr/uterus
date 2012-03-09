@@ -763,6 +763,7 @@ ute_mktemp(int oflags)
 	tmpnam = ute_tmpnam();
 	/* now open it ... */
 	resfd = mkstemp(tmpnam);
+	chmod(tmpnam, 0644);
 	/* wipe and check for anon */
 	if ((oflags &= UO_ANON)) {
 		/* ... and unlink it if ANON is set */
@@ -847,6 +848,18 @@ ute_clone_slut(utectx_t tgt, utectx_t src)
 	/* now clone */
 	tgt->slut_sz = src->slut_sz;
 	clone_slut(tgt->slut, src->slut);
+	return;
+}
+
+void
+ute_empty_slut(utectx_t ctx)
+{
+	/* free existing sluts */
+	free_slut(ctx->slut);
+	/* reset slut size */
+	ctx->slut_sz = 0;
+	/* make a new slut */
+	make_slut(ctx->slut);
 	return;
 }
 

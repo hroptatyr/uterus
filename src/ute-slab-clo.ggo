@@ -28,3 +28,15 @@ option "extract-symidx" -
 	"Extract ticks with index IDX, can be comma-separated list \
 or used multiple times"
 	int typestr="IDX,..." optional multiple
+
+option "extract-from" -
+	"Extract all ticks younger than STMP."
+	string typestr="STMP" optional
+
+option "extract-till" -
+	"Extract all ticks older than STMP."
+	string typestr="STMP" optional
+
+option "extract-day" -
+	"Short for --extract-from='DATE' --extract-till='DATE'"
+	string typestr="DATE" optional

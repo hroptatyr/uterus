@@ -216,6 +216,9 @@ pump_slut(int outfd, utectx_t hdl)
 	/* otherwise map the file */
 	buf = mmap(NULL, bsz, PROT_READ, MAP_PRIVATE, outfd, 0);
 
+	/* clear out the original slut, could be in utefile, aye? */
+	ute_empty_slut(hdl);
+
 	/* go through it line by line */
 	for (const char *nex = buf, *prv = buf;
 	     (nex = memchr(prv, '\n', bsz - (prv - buf)));

@@ -549,6 +549,24 @@ A tick file gathers several tick pages.
 
 @heading Slut details
 
+Storing more than one security in uterus' @samp{.ute} files naturally
+requires some form of identification.  While uterus internally solves
+this neatly by using integer indices (first security gets 1, second
+security gets 2, @dots{}) the more popular (and portable) approach is to use
+security symbols (like @samp{.FTSE} for the FTSE 100 stock index).
+
+Translating from and to integer indices to/from a symbol reference is
+what the symbol look-up table (@emph{SLUT}) is for.  Two public API
+functions help translate the two entities
+
+@deftypefun int ute_sym2idx (utectx_t @var{ctx}, const char *@var{sym})
+Given a symbol @var{sym} return the index in @var{ctx}'s look-up table.
+@end deftypefun
+
+@deftypefun {const char *} ute_idx2sym (utectx_t @var{ctx}, uint16_t @var{sym})
+Given an index @var{idx} return the symbol in @var{ctx}'s look-up table.
+@end deftypefun
+
 
 @heading Metadata details
 

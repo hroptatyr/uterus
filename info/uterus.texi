@@ -94,6 +94,23 @@ bring them into shape, i.e. convert them to a common time zone or
 currency.  That's not an automatic process however and data from a
 different data vendor needs different treatment.
 
+Another nuisance about non-normative data is that it often isn't
+@emph{self-documenting}.  While the order of columns and the instruments
+in question (identified by some symbol) may be perfectly reasonable
+today, we defy anyone to put the data somewhere safe (a database maybe?)
+without the accompanying documentation and leave it there for a year or
+so.  Chances are that after a year the data will have become useless.
+Unfortunately most data vendors don't seem to anticipate this problem,
+after all their format is all they know about, so from their perspective
+it's fine to ship the data documentation externally, e.g. in a separate
+file or a link to some explanations on a web-site.
+
+The uterus file format is not the solution of all evil but it aims to
+avoid aforementioned mistakes by @emph{normalising} data,
+i.e. converting it to normal form, and storing @emph{metadata along with
+data} in an inseparable unit, well that's a file on the disk in most
+cases.
+
 
 @node File format
 @chapter File format

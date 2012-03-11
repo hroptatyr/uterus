@@ -544,7 +544,9 @@ hugepage support this is going to be 268435456 ticks (or 4 GB).
 
 @heading Tick file
 
-A tick file gathers several tick pages.
+A tick file gathers several tick pages.  The principal layout is
+described above.  Tick files consist of chronologically ascending sorted
+tick pages.
 
 
 @heading Slut details

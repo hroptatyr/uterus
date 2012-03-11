@@ -532,7 +532,14 @@ specification for them.  Here is an assortment of questions:
 
 @heading Tick pages
 
-Tick pages are large collections of ticks of the same kind (really?).
+Tick pages are equally-sized collections of ticks.  Tick pages, like
+pages of a file, provide a view on a much larger file.  Many of the
+uterus tools hold at most 1 or 2 tick pages in memory and thusly
+facilitate working with big files on low-memory machines.
+
+The tick page capacity is 64 system pages of sl1t ticks, that is
+typically 262144 ticks, or 4194304 bytes (4 MB).  On systems with
+hugepage support this is going to be 268435456 ticks (or 4 GB).
 
 
 @heading Tick file

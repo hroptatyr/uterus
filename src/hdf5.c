@@ -88,7 +88,6 @@ struct mctx_s {
 	hid_t fil;
 	hid_t spc;
 	hid_t dat;
-	hid_t plist;
 	hid_t mem;
 
 	size_t nrows;
@@ -153,6 +152,7 @@ hdf5_open(mctx_t ctx, const char *fn)
 	static const char ute_dsnam[] = "/ute_out";
 	hsize_t dims[] = {1, STATIC_VALS + VALS_PER_IDX, 0};
 	hsize_t maxdims[] = {1, STATIC_VALS + VALS_PER_IDX, H5S_UNLIMITED};
+	hid_t plist;
 
 	/* generate the handle */
         ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -161,14 +161,17 @@ hdf5_open(mctx_t ctx, const char *fn)
 
 	/* create a plist */
 	dims[countof(dims) - 1] = 1;
-	ctx->plist = H5Pcreate(H5P_DATASET_CREATE);
-	H5Pset_chunk(ctx->plist, countof(dims), dims);
+	plist = H5Pcreate(H5P_DATASET_CREATE);
+	H5Pset_chunk(plist, countof(dims), dims);
 	/* generate the data set */
 	ctx->dat = H5Dcreate(
 		ctx->fil, ute_dsnam, H5T_IEEE_F64LE,
-		ctx->spc, H5P_DEFAULT, ctx->plist, H5P_DEFAULT);
+		ctx->spc, H5P_DEFAULT, plist, H5P_DEFAULT);
 	/* just one more for slabbing later on */
 	ctx->mem = H5Screate_simple(countof(dims), dims, dims);
+
+	/* clear local resources */
+	(void)H5Pclose(plist);
 	return;
 }
 
@@ -176,7 +179,6 @@ static void
 hdf5_close(mctx_t ctx)
 {
 	(void)H5Sclose(ctx->mem);
-	(void)H5Pclose(ctx->plist);
 	(void)H5Dclose(ctx->dat);
 	(void)H5Sclose(ctx->spc);
 	(void)H5Fclose(ctx->fil);

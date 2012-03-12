@@ -226,12 +226,18 @@ inspect_con(utectx_t hdl, const char **attr)
 		p = stpcpy(p, sty);
 		*p++ = ' ';
 		p = stpcpy(p, xch);
-		*p++ = ' ';
-		p = stpcpy(p, xpy);
-		*p++ = ' ';
-		p = stpcpy(p, ccy);
-		*p++ = ' ';
-		p = stpcpy(p, mul);
+		if (xpy) {
+			*p++ = ' ';
+			p = stpcpy(p, xpy);
+		}
+		if (ccy) {
+			*p++ = ' ';
+			p = stpcpy(p, ccy);
+		}
+		if (mul) {
+			*p++ = ' ';
+			p = stpcpy(p, mul);
+		}
 		*p = '\0';
 		/* just to speed up computing later on */
 		if ((idx = ute_sym2idx(hdl, tmp)) || idx == 0) {

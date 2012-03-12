@@ -94,6 +94,23 @@ bring them into shape, i.e. convert them to a common time zone or
 currency.  That's not an automatic process however and data from a
 different data vendor needs different treatment.
 
+Another nuisance about non-normative data is that it often isn't
+@emph{self-documenting}.  While the order of columns and the instruments
+in question (identified by some symbol) may be perfectly reasonable
+today, we defy anyone to put the data somewhere safe (a database maybe?)
+without the accompanying documentation and leave it there for a year or
+so.  Chances are that after a year the data will have become useless.
+Unfortunately most data vendors don't seem to anticipate this problem,
+after all their format is all they know about, so from their perspective
+it's fine to ship the data documentation externally, e.g. in a separate
+file or a link to some explanations on a web-site.
+
+The uterus file format is not the solution of all evil but it aims to
+avoid aforementioned mistakes by @emph{normalising} data,
+i.e. converting it to normal form, and storing @emph{metadata along with
+data} in an inseparable unit, well that's a file on the disk in most
+cases.
+
 
 @node File format
 @chapter File format
@@ -515,15 +532,42 @@ specification for them.  Here is an assortment of questions:
 
 @heading Tick pages
 
-Tick pages are large collections of ticks of the same kind (really?).
+Tick pages are equally-sized collections of ticks.  Tick pages, like
+pages of a file, provide a view on a much larger file.  Many of the
+uterus tools hold at most 1 or 2 tick pages in memory and thusly
+facilitate working with big files on low-memory machines.
+
+The tick page capacity is 64 system pages of sl1t ticks, that is
+typically 262144 ticks, or 4194304 bytes (4 MB).  On systems with
+hugepage support this is going to be 268435456 ticks (or 4 GB).
 
 
 @heading Tick file
 
-A tick file gathers several tick pages.
+A tick file gathers several tick pages.  The principal layout is
+described above.  Tick files consist of chronologically ascending sorted
+tick pages.
 
 
 @heading Slut details
+
+Storing more than one security in uterus' @samp{.ute} files naturally
+requires some form of identification.  While uterus internally solves
+this neatly by using integer indices (first security gets 1, second
+security gets 2, @dots{}) the more popular (and portable) approach is to use
+security symbols (like @samp{.FTSE} for the FTSE 100 stock index).
+
+Translating from and to integer indices to/from a symbol reference is
+what the symbol look-up table (@emph{SLUT}) is for.  Two public API
+functions help translate the two entities
+
+@deftypefun int ute_sym2idx (utectx_t @var{ctx}, const char *@var{sym})
+Given a symbol @var{sym} return the index in @var{ctx}'s look-up table.
+@end deftypefun
+
+@deftypefun {const char *} ute_idx2sym (utectx_t @var{ctx}, uint16_t @var{sym})
+Given an index @var{idx} return the symbol in @var{ctx}'s look-up table.
+@end deftypefun
 
 
 @heading Metadata details

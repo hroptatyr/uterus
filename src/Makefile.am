@@ -177,6 +177,14 @@ ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
 mat_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
+if HAVE_HDF5
+ute_LTLIBRARIES += hdf5.la
+hdf5_la_SOURCES = hdf5.c
+hdf5_la_CFLAGS = $(AM_CFLAGS) $(HDF5_CFLAGS)
+hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
+hdf5_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
+endif  ## HAVE_HDF5
+
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
 ariva_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)

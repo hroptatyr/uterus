@@ -276,22 +276,6 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	static double ts = 0.0;
 	static uint16_t ol_idx = 0U;
 
-#if 0
-	if (STATIC_VALS + vals_per_idx * (ttf & 0xf) > acols) {
-		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, acols);
-		acols = STATIC_VALS + vals_per_idx * (nidxs = (ttf & 0xf));
-		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows, acols);
-		/* reshape not necessary, this is just adding more space
-		 * in a column-oriented data format which .mat is */
-	}
-	if (nrows >= arows) {
-		put_mat_arr_dat(__gmctx, frag_hdr, frag_dat, arows, acols);
-		frag_dat = get_mat_arr_dat(__gmctx, frag_hdr, arows * 2, acols);
-		/* reshape */
-		reshape((void*)frag_dat->data, acols, arows, arows * 2);
-	}
-#endif
-
 	/* pre-compute time stamp in matlab format */
 	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
 		/* only update if there's news */

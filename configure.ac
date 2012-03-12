@@ -49,6 +49,10 @@ AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 PKG_CHECK_MODULES([expat], [expat], [have_expat="yes"], [have_expat="no"])
 AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])
 
+## hdf5 demuxer needs hdf5
+AX_LIB_HDF5([serial])
+AM_CONDITIONAL([HAVE_HDF5], [test "${with_hdf5}" = "yes"])
+
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"
 utedir="${libexecdir}/ute"

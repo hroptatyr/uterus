@@ -87,17 +87,18 @@ struct mctx_s {
 	/* hdf5 specific */
 	hid_t fil;
 	hid_t spc;
-	hid_t dat;
 	hid_t mem;
+	hid_t plist;
+	hid_t *dat;
 
-	size_t nrows;
 	size_t nidxs;
+	utectx_t u;
 };
 
 
 /* aux helpers */
 #define VALS_PER_IDX	(4U)
-#define STATIC_VALS	(2U)
+#define STATIC_VALS	(1U)
 
 static double
 stmp_to_matdt(uint32_t sec, uint16_t msec)
@@ -149,10 +150,9 @@ hdf5_tmpnam(void)
 static void
 hdf5_open(mctx_t ctx, const char *fn)
 {
-	static const char ute_dsnam[] = "/ute_out";
+	static const char ute_dsnam[] = "/default";
 	hsize_t dims[] = {1, STATIC_VALS + VALS_PER_IDX, 0};
 	hsize_t maxdims[] = {1, STATIC_VALS + VALS_PER_IDX, H5S_UNLIMITED};
-	hid_t plist;
 
 	/* generate the handle */
         ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -161,56 +161,71 @@ hdf5_open(mctx_t ctx, const char *fn)
 
 	/* create a plist */
 	dims[countof(dims) - 1] = 1;
-	plist = H5Pcreate(H5P_DATASET_CREATE);
-	H5Pset_chunk(plist, countof(dims), dims);
-	/* generate the data set */
-	ctx->dat = H5Dcreate(
+	ctx->plist = H5Pcreate(H5P_DATASET_CREATE);
+	H5Pset_chunk(ctx->plist, countof(dims), dims);
+	/* generate the catch-all data set */
+	ctx->dat = malloc(sizeof(*ctx->dat));
+	ctx->dat[0] = H5Dcreate(
 		ctx->fil, ute_dsnam, H5T_IEEE_F64LE,
-		ctx->spc, H5P_DEFAULT, plist, H5P_DEFAULT);
+		ctx->spc, H5P_DEFAULT, ctx->plist, H5P_DEFAULT);
 	/* just one more for slabbing later on */
 	ctx->mem = H5Screate_simple(countof(dims), dims, dims);
-
-	/* clear local resources */
-	(void)H5Pclose(plist);
 	return;
 }
 
 static void
 hdf5_close(mctx_t ctx)
 {
+	(void)H5Pclose(ctx->plist);
 	(void)H5Sclose(ctx->mem);
-	(void)H5Dclose(ctx->dat);
+	for (size_t i = 0; i <= ctx->nidxs; i++) {
+		(void)H5Dclose(ctx->dat[i]);
+	}
 	(void)H5Sclose(ctx->spc);
 	(void)H5Fclose(ctx->fil);
 	return;
 }
 
+static hid_t
+get_dat(mctx_t ctx, uint16_t idx)
+{
+	/* check for resize */
+	if (idx > ctx->nidxs) {
+		const char *dnam = ute_idx2sym(ctx->u, idx);
+		ctx->nidxs = idx;
+		ctx->dat = realloc(ctx->dat, (idx + 1) * sizeof(*ctx->dat));
+		ctx->dat[idx] = H5Dcreate(
+			ctx->fil, dnam, H5T_IEEE_F64LE,
+			ctx->spc, H5P_DEFAULT, ctx->plist, H5P_DEFAULT);
+	}
+	return ctx->dat[idx];
+}
 static void
 bang5idx(
 	mctx_t ctx, uint16_t idx, double ts,
 	double d1, double d2, double d3, double d4)
 {
-	const hid_t dat = ctx->dat;
+	const hid_t dat = get_dat(ctx, idx);
 	const hid_t mem = ctx->mem;
-	const hsize_t nro = ctx->nrows;
-	hsize_t dims[] = {1, STATIC_VALS + VALS_PER_IDX, nro + 1};
-	hsize_t sta[] = {0, 0, nro};
+	hsize_t dims[] = {0, 0, 0};
+	hsize_t sta[] = {0, 0, 0};
 	hsize_t cnt[] = {1, STATIC_VALS + VALS_PER_IDX, 1};
-	double d[6];
+	double d[5] = {
+		ts, d1, d2, d3, d4
+	};
+	hid_t spc;
 
-	d[0] = ts;
-	d[1] = idx;
-	d[2] = d1;
-	d[3] = d2;
-	d[4] = d3;
-	d[5] = d4;
-
+	/* get current dimensions */
+	spc = H5Dget_space(dat);
+	H5Sget_simple_extent_dims(spc, dims, NULL);
+	/* one more row */
+	sta[2] = dims[2]++;
 	/* make sure we're at least as wide as it says */
 	H5Dset_extent(dat, dims);
-	ctx->spc = H5Dget_space(dat);
-	H5Sselect_hyperslab(ctx->spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
-	H5Dwrite(dat, H5T_NATIVE_DOUBLE, mem, ctx->spc, H5P_DEFAULT, d);
-	ctx->nrows++;
+	spc = H5Dget_space(dat);
+	/* select a hyperslab */
+	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+	H5Dwrite(dat, H5T_NATIVE_DOUBLE, mem, spc, H5P_DEFAULT, d);
 	return;
 }
 
@@ -264,7 +279,7 @@ fini(pr_ctx_t UNUSED(pctx))
 }
 
 ssize_t
-pr(pr_ctx_t UNUSED(pctx), scom_t st)
+pr(pr_ctx_t pctx, scom_t st)
 {
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t msec = scom_thdr_msec(st);
@@ -283,6 +298,9 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 		ol_sec = sec;
 		ol_msec = msec;
 	}
+
+	/* bang new ute context */
+	__gmctx->u = pctx->uctx;
 
 	switch (ttf) {
 		/* we only process shnots here */

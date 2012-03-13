@@ -301,9 +301,11 @@ main(int argc, char *argv[])
 		/* open the infile ... */
 		if (f[0] == '-' && f[1] == '\0') {
 			ctx->infd = fd = STDIN_FILENO;
+			ctx->infn = NULL;
 			ctx->badfd = STDERR_FILENO;
 		} else if ((fd = open(f, 0)) >= 0) {
 			ctx->infd = fd;
+			ctx->infn = f;
 			ctx->badfd = STDERR_FILENO;
 		} else {
 			error(0, "cannot open file '%s'", f);

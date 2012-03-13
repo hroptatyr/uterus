@@ -50,7 +50,7 @@
 #include <string.h>
 #include "module.h"
 
-#include "utefile.h"
+#include "utefile-private.h"
 #include "ute-mux.h"
 
 #if !defined UNLIKELY
@@ -92,14 +92,39 @@ ute_mux(mux_ctx_t ctx)
 {
 	const int fl = UO_RDONLY;
 	const char *fn = ctx->infn;
+	size_t wrr_npg = ute_npages(ctx->wrr);
 	utectx_t hdl;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
 		error(0, "cannot open file '%s'", fn);
 		return;
 	}
-	/* churn churn churn */
-	;
+	/* churn churn churn, steps here are
+	 * 1. check if the sluts coincide
+	 * 2.1. copy all tick pages
+	 * 2.2. go through the ticks and adapt tbl idxs if need be  */
+	for (size_t i = 0; i < ute_npages(hdl); i++) {
+		struct uteseek_s sk[2];
+		const size_t bsz = UTE_BLKSZ(hdl);
+		const size_t tsz = sizeof(*sk->sp);
+		const size_t psz = bsz * tsz;
+
+		seek_page(sk, hdl, i);
+		if (sk->sz < psz) {
+			/* half page, just add it to the tpc */
+			const size_t nticks = sk->sz / sizeof(*sk->sp);
+			ute_add_ticks(ctx->wrr, sk->sp, nticks);
+		} else if (!ute_extend(ctx->wrr, sk->sz)) {
+			/* file extending fucked */
+			error(0, "cannot extend file");
+		} else {
+			/* just mmap into target space */
+			seek_page(sk + 1, ctx->wrr, wrr_npg++);
+			memcpy(sk[1].sp, sk[0].sp, sk->sz);
+			flush_seek(sk + 1);
+		}
+		flush_seek(sk);
+	}
 	/* and off we are */
 	ute_close(hdl);
 	return;

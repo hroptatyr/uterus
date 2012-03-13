@@ -302,6 +302,8 @@ get_cch(mctx_t ctx, uint16_t idx)
 		ctx->cch = __resize(ctx->cch, ol, nu, sizeof(*ctx->cch));
 		ctx->nidxs = idx;
 	}
+	/* for the side-effect */
+	(void)get_dat(ctx, idx);
 	return ctx->cch + idx;
 }
 

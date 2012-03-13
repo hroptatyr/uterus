@@ -84,7 +84,7 @@
 
 /* hdf5 helpers */
 typedef struct mctx_s *mctx_t;
-
+typedef struct atom_s *atom_t;
 typedef struct cache_s *cache_t;
 
 struct mctx_s {
@@ -93,26 +93,43 @@ struct mctx_s {
 	hid_t spc;
 	hid_t mem;
 	hid_t plist;
+	hid_t fty;
+	hid_t mty;
 	cache_t cch;
 
 	size_t nidxs;
 	utectx_t u;
 };
 
+struct atom_s {
+	union {
+		time_t ts;
+		int64_t pad;
+	};
+	union {
+		double d[4];
+		struct {
+			double o;
+			double h;
+			double l;
+			double c;
+		};
+	};
+};
+
+static struct {
+	const char *nam;
+	const off_t off;
+} atom_desc[] = {
+	{"timestamp (s)", offsetof(struct atom_s, ts)},
+	{"open", offsetof(struct atom_s, o)},
+	{"high", offsetof(struct atom_s, h)},
+	{"low", offsetof(struct atom_s, l)},
+	{"close", offsetof(struct atom_s, c)},
+};
+
 
 /* aux helpers */
-#define VALS_PER_IDX	(4U)
-#define STATIC_VALS	(1U)
-
-static double
-stmp_to_matdt(uint32_t sec, uint16_t msec)
-{
-	double res;
-	res = (double)sec / 86400. + 719529.;
-	res += (double)msec / 1000. / 86400.;
-	return res;
-}
-
 static inline bool
 mmapable(int fd)
 {
@@ -169,7 +186,7 @@ __resize(void *p, size_t nol, size_t nnu, size_t blsz)
 struct cache_s {
 	size_t nbang;
 	hid_t dat;
-	double vals[(STATIC_VALS + VALS_PER_IDX) * CHUNK_INC];
+	struct atom_s vals[CHUNK_INC];
 };
 
 static hid_t
@@ -177,12 +194,38 @@ make_dat(mctx_t ctx, const char *nam)
 {
 	const hid_t fil = ctx->fil;
 	const hid_t spc = ctx->spc;
-	const hid_t ds_ty = H5T_IEEE_F64LE;
+	const hid_t ds_ty = ctx->fty;
 	const hid_t ln_crea = H5P_DEFAULT;
 	const hid_t ds_crea = ctx->plist;
 	const hid_t ds_acc = H5P_DEFAULT;
 
 	return H5Dcreate(fil, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
+}
+
+static hid_t
+make_fil_type()
+{
+	hid_t res = H5Tcreate(H5T_COMPOUND, sizeof(struct atom_s));
+
+	H5Tinsert(res, atom_desc[0].nam, atom_desc[0].off, H5T_UNIX_D64LE);
+	H5Tinsert(res, atom_desc[1].nam, atom_desc[1].off, H5T_IEEE_F64LE);
+	H5Tinsert(res, atom_desc[2].nam, atom_desc[2].off, H5T_IEEE_F64LE);
+	H5Tinsert(res, atom_desc[3].nam, atom_desc[3].off, H5T_IEEE_F64LE);
+	H5Tinsert(res, atom_desc[4].nam, atom_desc[4].off, H5T_IEEE_F64LE);
+	return res;
+}
+
+static hid_t
+make_mem_type()
+{
+	hid_t res = H5Tcreate(H5T_COMPOUND, sizeof(struct atom_s));
+
+	H5Tinsert(res, atom_desc[0].nam, atom_desc[0].off, H5T_UNIX_D64LE);
+	H5Tinsert(res, atom_desc[1].nam, atom_desc[1].off, H5T_NATIVE_DOUBLE);
+	H5Tinsert(res, atom_desc[2].nam, atom_desc[2].off, H5T_NATIVE_DOUBLE);
+	H5Tinsert(res, atom_desc[3].nam, atom_desc[3].off, H5T_NATIVE_DOUBLE);
+	H5Tinsert(res, atom_desc[4].nam, atom_desc[4].off, H5T_NATIVE_DOUBLE);
+	return res;
 }
 
 static hid_t
@@ -199,8 +242,8 @@ get_dat(mctx_t ctx, uint16_t idx)
 static void
 hdf5_open(mctx_t ctx, const char *fn)
 {
-	hsize_t dims[] = {1, STATIC_VALS + VALS_PER_IDX, 0};
-	hsize_t maxdims[] = {1, STATIC_VALS + VALS_PER_IDX, H5S_UNLIMITED};
+	hsize_t dims[] = {1, 1, 0};
+	hsize_t maxdims[] = {1, 1, H5S_UNLIMITED};
 
 	/* generate the handle */
         ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -213,12 +256,18 @@ hdf5_open(mctx_t ctx, const char *fn)
 	H5Pset_chunk(ctx->plist, countof(dims), dims);
 	/* just one more for slabbing later on */
 	ctx->mem = H5Screate_simple(countof(dims), dims, dims);
+
+	/* generate the types we're one about */
+	ctx->fty = make_fil_type();
+	ctx->mty = make_mem_type();
 	return;
 }
 
 static void
 hdf5_close(mctx_t ctx)
 {
+	(void)H5Tclose(ctx->fty);
+	(void)H5Tclose(ctx->mty);
 	(void)H5Pclose(ctx->plist);
 	(void)H5Sclose(ctx->mem);
 	(void)H5Sclose(ctx->spc);
@@ -244,11 +293,11 @@ cache_flush(mctx_t ctx, size_t idx, const cache_t cch)
 {
 	const hid_t dat = get_dat(ctx, idx);
 	const hid_t mem = ctx->mem;
-	const hsize_t nbang = cch->nbang / (countof(cch->vals) / CHUNK_INC);
+	const hsize_t nbang = cch->nbang;
 	hsize_t ol_dims[] = {0, 0, 0};
 	hsize_t nu_dims[] = {0, 0, 0};
 	hsize_t sta[] = {0, 0, 0};
-	hsize_t cnt[] = {1, STATIC_VALS + VALS_PER_IDX, -1};
+	hsize_t cnt[] = {1, 1, -1};
 	hid_t spc;
 
 	/* get current dimensions */
@@ -271,7 +320,7 @@ cache_flush(mctx_t ctx, size_t idx, const cache_t cch)
 	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
 
 	/* final flush */
-	H5Dwrite(dat, H5T_NATIVE_DOUBLE, mem, spc, H5P_DEFAULT, cch->vals);
+	H5Dwrite(dat, ctx->mty, mem, spc, H5P_DEFAULT, cch->vals);
 	cch->nbang = 0UL;
 	return;
 }
@@ -281,6 +330,7 @@ cache_fini(mctx_t ctx)
 {
 	for (size_t i = 0; i <= ctx->nidxs; i++) {
 		if (ctx->cch[i].nbang) {
+			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
 			cache_flush(ctx, i, ctx->cch + i);
 		}
 		if (ctx->cch[i].dat) {
@@ -302,25 +352,27 @@ get_cch(mctx_t ctx, uint16_t idx)
 		ctx->cch = __resize(ctx->cch, ol, nu, sizeof(*ctx->cch));
 		ctx->nidxs = idx;
 	}
+	/* for the side-effect */
+	(void)get_dat(ctx, idx);
 	return ctx->cch + idx;
 }
 
 static void
 bang5idx(
-	mctx_t ctx, uint16_t idx, double ts,
+	mctx_t ctx, uint16_t idx, time_t ts, uint16_t UNUSED(msec),
 	double d1, double d2, double d3, double d4)
 {
 	const cache_t cch = get_cch(ctx, idx);
 	const size_t nbang = cch->nbang;
-	double *vals = cch->vals;
+	atom_t vals = cch->vals;
 
-	vals[nbang + 0] = ts;
-	vals[nbang + 1] = d1;
-	vals[nbang + 2] = d2;
-	vals[nbang + 3] = d3;
-	vals[nbang + 4] = d4;
+	vals[nbang].ts = ts;
+	vals[nbang].o = d1;
+	vals[nbang].h = d2;
+	vals[nbang].l = d3;
+	vals[nbang].c = d4;
 	/* check if we need to flush the whole shebang */
-	if ((cch->nbang += 5) < countof(cch->vals)) {
+	if (++cch->nbang < countof(cch->vals)) {
 		/* yay, we're safe */
 		return;
 	}
@@ -388,19 +440,6 @@ pr(pr_ctx_t pctx, scom_t st)
 	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
 	uint16_t idx = scom_thdr_tblidx(st);
-	/* for the time stamp check */
-	static uint32_t ol_sec = 0U;
-	static uint16_t ol_msec = 0U;
-	static double ts = 0.0;
-	static uint16_t ol_idx = 0U;
-
-	/* pre-compute time stamp in matlab format */
-	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
-		/* only update if there's news */
-		ts = stmp_to_matdt(sec, msec);
-		ol_sec = sec;
-		ol_msec = msec;
-	}
 
 	/* bang new ute context */
 	__gmctx->u = pctx->uctx;
@@ -419,7 +458,7 @@ pr(pr_ctx_t pctx, scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5idx(__gmctx, idx, ts, bp, ap, bq, aq);
+		bang5idx(__gmctx, idx, sec, msec, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCOM_FLAG_LM:
@@ -439,20 +478,11 @@ pr(pr_ctx_t pctx, scom_t st)
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5idx(__gmctx, idx, ts, o, h, l, c);
+		bang5idx(__gmctx, idx, sec, msec, o, h, l, c);
 		break;
 	}
 	default:
 		break;
-	}
-
-	if (sec > ol_sec || (sec == ol_sec && msec > ol_msec)) {
-		/* update */
-		ol_sec = sec;
-		ol_msec = msec;
-		ol_idx = idx;
-	} else if (idx != ol_idx) {
-		ol_idx = idx;
 	}
 	return 0;
 }

@@ -106,6 +106,9 @@ extern void flush_seek(uteseek_t sk);
 
 extern void bump_header(struct utehdr2_s *hdr);
 
+/* add a whole bunch of ticks */
+extern void ute_add_ticks(utectx_t ctx, const void *p, size_t nticks);
+
 
 /* inlines */
 static inline size_t
@@ -231,6 +234,39 @@ ute_unset_unsorted(utectx_t ctx)
 {
 	ctx->flags &= ~UTE_FL_UNSORTED;
 	return;
+}
+
+
+/* shaping the file */
+static inline bool
+__fwr_trunc(int fd, size_t sz)
+{
+	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
+		return false;
+	}
+	return true;
+}
+
+static inline bool
+ute_trunc(utectx_t ctx, size_t sz)
+{
+	if (!__fwr_trunc(ctx->fd, sz)) {
+		return false;
+	}
+	ctx->fsz = sz;
+	return true;
+}
+
+static inline bool
+ute_extend(utectx_t ctx, ssize_t sz)
+{
+/* extend the ute file by SZ bytes */
+	size_t tot = sz + ctx->fsz;
+	if (!__fwr_trunc(ctx->fd, tot)) {
+		return false;
+	}
+	ctx->fsz = tot;
+	return true;
 }
 
 #endif	/* INCLUDED_utefile_private_h_ */

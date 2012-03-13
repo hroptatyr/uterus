@@ -4,9 +4,13 @@
 LANG = C
 LC_ALL = C
 
+AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L -I$(abs_top_srcdir)/src
+AM_LDFLAGS = -L$(abs_top_builddir)/src
+
 EXTRA_DIST = $(TESTS)
 EXTRA_DIST += $(UT_LOG_COMPILER)
 TESTS =
+check_PROGRAMS =
 
 TEST_EXTENSIONS = .ut
 UT_LOG_COMPILER = $(srcdir)/ut-test.sh
@@ -55,6 +59,16 @@ TESTS += slut.1.ut
 TESTS += slut.2.ut
 TESTS += slut.3.ut
 TESTS += slut.4.ut
+
+## test the core api
+check_PROGRAMS += core-file-1
+check_PROGRAMS += core-file-2
+
+core_file_1_LDFLAGS = $(AM_LDFLAGS) -luterus
+core_file_2_LDFLAGS = $(AM_LDFLAGS) -luterus
+TESTS += core-file-1
+TESTS += core-file-2
+
 
 .NOTPARALLEL:
 

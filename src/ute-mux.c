@@ -86,13 +86,37 @@ error(int eno, const char *fmt, ...)
 }
 
 
+/* standard mux function for ute files */
+static void
+ute_mux(mux_ctx_t ctx)
+{
+	const int fl = UO_RDONLY;
+	const char *fn = ctx->infn;
+	utectx_t hdl;
+
+	if ((hdl = ute_open(fn, fl)) == NULL) {
+		error(0, "cannot open file '%s'", fn);
+		return;
+	}
+	/* churn churn churn */
+	;
+	/* and off we are */
+	ute_close(hdl);
+	return;
+}
+
+
 static ute_dso_t mux_dso;
 
 static void
 (*find_muxer(const char *opt))(mux_ctx_t)
 {
 	ute_dso_sym_t mux_sym;
-	if ((mux_dso = open_aux(opt)) == NULL) {
+
+	if (opt == NULL) {
+		/* ah, default muxer is ute himself */
+		return ute_mux;
+	} else if ((mux_dso = open_aux(opt)) == NULL) {
 		return NULL;
 	} else if ((mux_sym = find_sym(mux_dso, "mux")) == NULL) {
 		return NULL;
@@ -220,16 +244,6 @@ main(int argc, char *argv[])
 		fputs("\n", stdout);
 		print_muxers();
 		res = 0;
-		goto out;
-	}
-
-	if (!argi->format_given) {
-		/* it's mandatory even though we said it's optional
-		 * but that's just due to Bettini's gengetopt in that
-		 * it doesn't allow you to treat a -h|--help option
-		 * specially */
-		fputs("muxer format (-f|--format) required\n", stderr);
-		res = 1;
 		goto out;
 	}
 

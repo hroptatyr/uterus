@@ -281,6 +281,7 @@ cache_fini(mctx_t ctx)
 {
 	for (size_t i = 0; i <= ctx->nidxs; i++) {
 		if (ctx->cch[i].nbang) {
+			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
 			cache_flush(ctx, i, ctx->cch + i);
 		}
 		if (ctx->cch[i].dat) {

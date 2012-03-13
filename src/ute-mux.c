@@ -39,7 +39,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
 #if defined HAVE_CONFIG_H
 # include "config.h"
@@ -65,6 +67,23 @@
 # define _INDEXT
 typedef size_t index_t;
 #endif	/* !_INDEXT */
+
+static void
+__attribute__((format(printf, 2, 3)))
+error(int eno, const char *fmt, ...)
+{
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+	if (eno || errno) {
+		fputc(':', stderr);
+		fputc(' ', stderr);
+		fputs(strerror(eno ?: errno), stderr);
+	}
+	fputc('\n', stderr);
+	return;
+}
 
 
 static ute_dso_t mux_dso;

@@ -306,7 +306,7 @@ main(int argc, char *argv[])
 			ctx->infd = fd;
 			ctx->badfd = STDERR_FILENO;
 		} else {
-			fprintf(stderr, "couldn't open file '%s'\n", f);
+			error(0, "cannot open file '%s'", f);
 			/* just try the next bloke */
 			continue;
 		}

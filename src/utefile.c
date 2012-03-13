@@ -83,42 +83,12 @@ munmap_any(char *map, off_t off, size_t len)
 	return;
 }
 
-static bool
-__fwr_trunc(int fd, size_t sz)
-{
-	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
-		return false;
-	}
-	return true;
-}
-
 static inline int
 __pflags(utectx_t ctx)
 {
 	return PROT_READ | ((ctx->oflags & UO_RDWR) ? PROT_WRITE : 0);
 }
 
-static bool
-ute_trunc(utectx_t ctx, size_t sz)
-{
-	if (!__fwr_trunc(ctx->fd, sz)) {
-		return false;
-	}
-	ctx->fsz = sz;
-	return true;
-}
-
-static bool
-ute_extend(utectx_t ctx, ssize_t sz)
-{
-/* extend the ute file by SZ bytes */
-	size_t tot = sz + ctx->fsz;
-	if (!__fwr_trunc(ctx->fd, tot)) {
-		return false;
-	}
-	ctx->fsz = tot;
-	return true;
-}
 
 /* header caching, also probing */
 static int

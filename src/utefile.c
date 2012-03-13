@@ -882,6 +882,22 @@ ute_add_tick(utectx_t ctx, scom_t t)
 	return;
 }
 
+/* private version */
+void
+ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
+{
+	if (!tpc_active_p(ctx->tpc)) {
+		/* is this case actually possible? */
+		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
+	} else if (tpc_full_p(ctx->tpc)) {
+		/* oh current tpc is full, flush and start over */
+		ute_flush(ctx);
+	}
+	/* we sort the tick question for now by passing on the size of T */
+	tpc_add_tick(ctx->tpc, src, nticks * sizeof(*ctx->tpc->sk.sp));
+	return;
+}
+
 size_t
 ute_nticks(utectx_t ctx)
 {

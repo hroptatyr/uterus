@@ -51,6 +51,9 @@ struct mux_ctx_s {
 	/* will be used by ute-mux */
 	void *wrr;
 
+	/* special service */
+	const char *infn;
+
 	/* our options */
 	sumux_opt_t opts;
 };

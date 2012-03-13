@@ -39,7 +39,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
 #if defined HAVE_CONFIG_H
 # include "config.h"
@@ -48,7 +50,7 @@
 #include <string.h>
 #include "module.h"
 
-#include "utefile.h"
+#include "utefile-private.h"
 #include "ute-mux.h"
 
 #if !defined UNLIKELY
@@ -66,6 +68,68 @@
 typedef size_t index_t;
 #endif	/* !_INDEXT */
 
+static void
+__attribute__((format(printf, 2, 3)))
+error(int eno, const char *fmt, ...)
+{
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+	if (eno || errno) {
+		fputc(':', stderr);
+		fputc(' ', stderr);
+		fputs(strerror(eno ?: errno), stderr);
+	}
+	fputc('\n', stderr);
+	return;
+}
+
+
+/* standard mux function for ute files */
+static void
+ute_mux(mux_ctx_t ctx)
+{
+	const int fl = UO_RDONLY;
+	const char *fn = ctx->infn;
+	size_t wrr_npg = ute_npages(ctx->wrr);
+	utectx_t hdl;
+
+	if ((hdl = ute_open(fn, fl)) == NULL) {
+		error(0, "cannot open file '%s'", fn);
+		return;
+	}
+	/* churn churn churn, steps here are
+	 * 1. check if the sluts coincide
+	 * 2.1. copy all tick pages
+	 * 2.2. go through the ticks and adapt tbl idxs if need be  */
+	for (size_t i = 0; i < ute_npages(hdl); i++) {
+		struct uteseek_s sk[2];
+		const size_t bsz = UTE_BLKSZ(hdl);
+		const size_t tsz = sizeof(*sk->sp);
+		const size_t psz = bsz * tsz;
+
+		seek_page(sk, hdl, i);
+		if (sk->sz < psz) {
+			/* half page, just add it to the tpc */
+			const size_t nticks = sk->sz / sizeof(*sk->sp);
+			ute_add_ticks(ctx->wrr, sk->sp, nticks);
+		} else if (!ute_extend(ctx->wrr, sk->sz)) {
+			/* file extending fucked */
+			error(0, "cannot extend file");
+		} else {
+			/* just mmap into target space */
+			seek_page(sk + 1, ctx->wrr, wrr_npg++);
+			memcpy(sk[1].sp, sk[0].sp, sk->sz);
+			flush_seek(sk + 1);
+		}
+		flush_seek(sk);
+	}
+	/* and off we are */
+	ute_close(hdl);
+	return;
+}
+
 
 static ute_dso_t mux_dso;
 
@@ -73,7 +137,11 @@ static void
 (*find_muxer(const char *opt))(mux_ctx_t)
 {
 	ute_dso_sym_t mux_sym;
-	if ((mux_dso = open_aux(opt)) == NULL) {
+
+	if (opt == NULL) {
+		/* ah, default muxer is ute himself */
+		return ute_mux;
+	} else if ((mux_dso = open_aux(opt)) == NULL) {
 		return NULL;
 	} else if ((mux_sym = find_sym(mux_dso, "mux")) == NULL) {
 		return NULL;
@@ -204,16 +272,6 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	if (!argi->format_given) {
-		/* it's mandatory even though we said it's optional
-		 * but that's just due to Bettini's gengetopt in that
-		 * it doesn't allow you to treat a -h|--help option
-		 * specially */
-		fputs("muxer format (-f|--format) required\n", stderr);
-		res = 1;
-		goto out;
-	}
-
 	if (argi->output_given && argi->into_given) {
 		fputs("only one of --output and --into can be given\n", stderr);
 		res = 1;
@@ -282,12 +340,14 @@ main(int argc, char *argv[])
 		/* open the infile ... */
 		if (f[0] == '-' && f[1] == '\0') {
 			ctx->infd = fd = STDIN_FILENO;
+			ctx->infn = NULL;
 			ctx->badfd = STDERR_FILENO;
 		} else if ((fd = open(f, 0)) >= 0) {
 			ctx->infd = fd;
+			ctx->infn = f;
 			ctx->badfd = STDERR_FILENO;
 		} else {
-			fprintf(stderr, "couldn't open file '%s'\n", f);
+			error(0, "cannot open file '%s'", f);
 			/* just try the next bloke */
 			continue;
 		}

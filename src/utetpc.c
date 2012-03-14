@@ -768,6 +768,9 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 	return;
 }
 
+/* for the tilman compression, which doesn't really belong here */
+#include "scdl.h"
+
 static bool
 ssnap_compressiblep(const_ssnap_t t1, const_ssnap_t t2)
 {

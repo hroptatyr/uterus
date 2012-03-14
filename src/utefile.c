@@ -848,7 +848,7 @@ ute_add_tick(utectx_t ctx, scom_t t)
 		ute_flush(ctx);
 	}
 	/* we sort the tick question for now by passing on the size of T */
-	tpc_add_tick(ctx->tpc, t, scom_thdr_size(t));
+	tpc_add_tick(ctx->tpc, t, scom_byte_size(t));
 	return;
 }
 

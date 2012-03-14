@@ -483,12 +483,12 @@ idxsort(scom_t p, size_t nticks)
 	size_t m = min(nticks, IDXSORT_SIZE);
 	size_t j = 0;
 
-	for (size_t i = 0; i < m; j++) {
-		size_t bsz = scom_thdr_size(p);
+	for (size_t i = 0, tsz, bsz; i < m; j++, i += tsz) {
+		tsz = scom_tick_size(p);
+		bsz = scom_byte_size(p);
 
 		put_pi(keys + j, p, i);
 		p = DATCA(p, bsz);
-		i += bsz / sizeof(struct sndwch_s);
 	}
 	/* reuse m to compute the next 2-power */
 	m = __ilog2_ceil(j);
@@ -514,10 +514,12 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
 
-	for (size_t i = 0; i < nticks; j++) {
+	for (size_t i = 0, bsz, tsz; i < nticks; j++, i += tsz) {
 		sidx_t idx = pi_sidx(pi + j);
 		const void *s = DATCI(src, idx, sizeof(struct sndwch_s));
-		size_t bsz = scom_thdr_size(s);
+
+		tsz = scom_tick_size(s);
+		bsz = scom_byte_size(s);
 
 		if (j > 0) {
 			assert(pi_skey(pi + j - 1) <= pi_skey(pi + j));
@@ -530,7 +532,6 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 
 		memcpy(tgt, s, bsz);
 		tgt = DATA(tgt, bsz);
-		i += bsz / sizeof(struct sndwch_s);
 	}
 	return;
 }
@@ -550,14 +551,14 @@ merge_bup(
 		uint64_t sr = ((const uint64_t*)srcr)[0];
 
 		if (sl <= sr) {
-			size_t bszl = scom_thdr_size(srcl);
+			size_t bszl = scom_byte_size(srcl);
 			/* copy the left tick */
 			memcpy(tgt, srcl, bszl);
 			/* step things */
 			srcl = DATCA(srcl, bszl);
 			tgt = DATA(tgt, bszl);
 		} else {
-			size_t bszr = scom_thdr_size(srcr);
+			size_t bszr = scom_byte_size(srcr);
 			/* use the right guy */
 			memcpy(tgt, srcr, bszr);
 			/* step things */
@@ -735,13 +736,13 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 	while (tp < eot && sp < eos && rp < eor) {
 		if (AS_SCOM(sp)->u <= AS_SCOM(rp)->u) {
 			/* copy the src */
-			size_t ssz = scom_thdr_size(sp);
+			size_t ssz = scom_byte_size(sp);
 			memcpy(tp, sp, ssz);
 			sp = DATA(sp, ssz);
 			tp = DATA(tp, ssz);
 		} else {
 			/* copy from swap */
-			size_t rsz = scom_thdr_size(rp);
+			size_t rsz = scom_byte_size(rp);
 			memcpy(tp, rp, rsz);
 			rp = DATA(rp, rsz);
 			tp = DATA(tp, rsz);
@@ -850,7 +851,7 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 			break;
 		}
 		default:
-			bsz = scom_thdr_size(sp);
+			bsz = scom_byte_size(sp);
 		condens:
 			if (tp != sp) {
 				memcpy(tp, sp, bsz);
@@ -906,11 +907,12 @@ seek_sort(uteseek_t sk)
 	/* tpc should be sorted now innit */
 	{
 		uint64_t thresh = 0;
-		for (sidx_t i = 0; i < sk->si;) {
+		for (sidx_t i = 0, tsz; i < sk->si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
+
 			assert(thresh <= t->u);
 			thresh = t->u;
-			i += scom_thdr_size(t) / sizeof(*sk->sp);
+			tsz = scom_tick_size(t);
 		}
 	}
 #endif	/* DEBUG_FLAG */

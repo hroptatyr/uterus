@@ -491,10 +491,11 @@ main(int argc, char *argv[])
 		/* (re)initialise our buckets */
 		init_buckets(ctx, hdl, bkt);
 		/* otherwise print all them ticks */
-		for (size_t i = 0; i < ute_nticks(hdl);) {
+		for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
 			scom_t ti = ute_seek(hdl, i);
+
 			bucketiser(ctx, ti);
-			i += scom_thdr_size(ti) / sizeof(struct sl1t_s);
+			tsz = scom_tick_size(ti);
 		}
 		/* last round, just emit what we've got */
 		new_candle(ctx);

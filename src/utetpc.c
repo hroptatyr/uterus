@@ -154,17 +154,17 @@ clear_tpc(utetpc_t tpc)
 }
 
 DEFUN void
-tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
+tpc_add(utetpc_t tpc, scom_t t, size_t nt)
 {
 /* supports variadic ticks */
 	uint64_t skey = tick_sortkey(t);
 
-	if (UNLIKELY(tpc_full_p(tpc))) {
+	if (UNLIKELY(tpc_full_p(tpc) || !tpc_can_hold_p(tpc, nt) || !skey)) {
 		return;
 	}
-	memcpy(tpc->sk.sp + tpc->sk.si, t, tsz);
+	memcpy(tpc->sk.sp + tpc->sk.si, t, nt * sizeof(*tpc->sk.sp));
 	/* just add the total byte size as passed on */
-	tpc->sk.si += tsz / sizeof(*tpc->sk.sp);
+	tpc->sk.si += nt;
 
 	/* maybe mark the whole shebang as unsorted */
 	if (UNLIKELY(skey < tpc->last)) {
@@ -483,15 +483,19 @@ idxsort(scom_t p, size_t nticks)
 	size_t m = min(nticks, IDXSORT_SIZE);
 	size_t j = 0;
 
-	for (size_t i = 0; i < m; j++) {
-		size_t bsz = scom_thdr_size(p);
+	for (size_t i = 0, tsz, bsz; i < m; j++, i += tsz) {
+		tsz = scom_tick_size(p);
+		bsz = scom_byte_size(p);
 
 		put_pi(keys + j, p, i);
 		p = DATCA(p, bsz);
-		i += bsz / sizeof(struct sndwch_s);
 	}
 	/* reuse m to compute the next 2-power */
 	m = __ilog2_ceil(j);
+	/* check if m is a 2-power indeed */
+	assert((m & (m - 1)) == 0);
+	/* ... and a ceil */
+	assert(m >= j);
 	/* fill scp up with naughts */
 	memset(keys + j, 0, (m - j) * sizeof(*keys));
 
@@ -509,15 +513,30 @@ idxsort(scom_t p, size_t nticks)
 static void
 collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 {
+/* collating is the process of putting the satellite data along with
+ * the sorted keys again
+ * SRC is an array of keys and satellite data and
+ * PI is the permutation to apply */
 	/* skip 0 idxs first */
 	size_t j;
 
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
 
-	for (size_t i = 0; i < nticks; j++) {
+#if defined DEBUG_FLAG && 0
+	/* since idxsort used 2-powers and we don't allow 0 skeys
+	 * the sum of J and NTICKS should be a 2-power
+	 * we use the identity 1 + \sum_i 2^i = 2^{i+1} to detect a 2-power */
+	size_t ni = j + nticks;
+	assert(((ni - 1) & ni) == 0);
+	/* this turns out to be wrong in the case of variadic tick sizes */
+#endif	/* DEBUG_FLAG */
+
+	for (size_t i = 0, bsz, tsz; i < nticks; j++, i += tsz) {
 		sidx_t idx = pi_sidx(pi + j);
 		const void *s = DATCI(src, idx, sizeof(struct sndwch_s));
-		size_t bsz = scom_thdr_size(s);
+
+		tsz = scom_tick_size(s);
+		bsz = scom_byte_size(s);
 
 		if (j > 0) {
 			assert(pi_skey(pi + j - 1) <= pi_skey(pi + j));
@@ -530,7 +549,6 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 
 		memcpy(tgt, s, bsz);
 		tgt = DATA(tgt, bsz);
-		i += bsz / sizeof(struct sndwch_s);
 	}
 	return;
 }
@@ -550,14 +568,14 @@ merge_bup(
 		uint64_t sr = ((const uint64_t*)srcr)[0];
 
 		if (sl <= sr) {
-			size_t bszl = scom_thdr_size(srcl);
+			size_t bszl = scom_byte_size(srcl);
 			/* copy the left tick */
 			memcpy(tgt, srcl, bszl);
 			/* step things */
 			srcl = DATCA(srcl, bszl);
 			tgt = DATA(tgt, bszl);
 		} else {
-			size_t bszr = scom_thdr_size(srcr);
+			size_t bszr = scom_byte_size(srcr);
 			/* use the right guy */
 			memcpy(tgt, srcr, bszr);
 			/* step things */
@@ -565,6 +583,9 @@ merge_bup(
 			tgt = DATA(tgt, bszr);
 		}
 	}
+	/* the end pointers must match exactly, otherwise we copied too much */
+	assert(srcl == elp || srcr == erp);
+
 	if (srcl < elp) {
 		/* not all left ticks */
 		size_t sz = DATCD(elp, srcl);
@@ -735,13 +756,13 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 	while (tp < eot && sp < eos && rp < eor) {
 		if (AS_SCOM(sp)->u <= AS_SCOM(rp)->u) {
 			/* copy the src */
-			size_t ssz = scom_thdr_size(sp);
+			size_t ssz = scom_byte_size(sp);
 			memcpy(tp, sp, ssz);
 			sp = DATA(sp, ssz);
 			tp = DATA(tp, ssz);
 		} else {
 			/* copy from swap */
-			size_t rsz = scom_thdr_size(rp);
+			size_t rsz = scom_byte_size(rp);
 			memcpy(tp, rp, rsz);
 			rp = DATA(rp, rsz);
 			tp = DATA(tp, rsz);
@@ -767,6 +788,9 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 	tgt->si = tgt->sz / sizeof(*tgt->sp);
 	return;
 }
+
+/* for the tilman compression, which doesn't really belong here */
+#include "scdl.h"
 
 static bool
 ssnap_compressiblep(const_ssnap_t t1, const_ssnap_t t2)
@@ -847,7 +871,7 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 			break;
 		}
 		default:
-			bsz = scom_thdr_size(sp);
+			bsz = scom_byte_size(sp);
 		condens:
 			if (tp != sp) {
 				memcpy(tp, sp, bsz);
@@ -870,6 +894,15 @@ seek_sort(uteseek_t sk)
 
 	/* get us another map */
 	new = mmap(NULL, sk->sz, PROT_MEM, MAP_MEM, -1, 0);
+
+#if defined DEBUG_FLAG
+	/* randomise the rest of the seek page */
+	{
+		size_t rest_bsz = sk->sz - sk->si * sizeof(*sk->sp);
+		UDEBUG("seek_sort(): randomising %zu bytes\n", rest_bsz);
+		memset(sk->sp + sk->si, 0x93, rest_bsz);
+	}
+#endif	/* DEBUG_FLAG */
 
 	for (void *tp = sk->sp, *np = new, *ep = sk->sp + sk->si; tp < ep; ) {
 		size_t ntleft = DATDI(ep, tp, tpc_tsz);
@@ -903,11 +936,12 @@ seek_sort(uteseek_t sk)
 	/* tpc should be sorted now innit */
 	{
 		uint64_t thresh = 0;
-		for (sidx_t i = 0; i < sk->si;) {
+		for (sidx_t i = 0, tsz; i < sk->si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
+
 			assert(thresh <= t->u);
 			thresh = t->u;
-			i += scom_thdr_size(t) / sizeof(*sk->sp);
+			tsz = scom_tick_size(t);
 		}
 	}
 #endif	/* DEBUG_FLAG */

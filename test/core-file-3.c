@@ -21,6 +21,7 @@ snarf_nticks(int argc, char *argv[])
 	return res;
 }
 
+/* like core-file-2 but writes sandwich-2 ticks */
 int
 main(int argc, char *argv[])
 {
@@ -34,12 +35,12 @@ main(int argc, char *argv[])
 	UDEBUG("generating %zu ticks\n", max);
 
 	if ((ctx = ute_mktemp(UO_RDWR)) == NULL) {
-		perror("core-file-2");
+		perror("core-file-3");
 		res = 1;
 		goto out;
 	}
 	if ((cfn = ute_fn(ctx)) == NULL) {
-		perror("core-file-2");
+		perror("core-file-3");
 		res = 1;
 		goto out;
 	}
@@ -47,7 +48,7 @@ main(int argc, char *argv[])
 
 	for (size_t i = 0; i < max; i++) {
 		/* make sure we have breathing space */
-		struct sndwch_s stor[1];
+		struct sndwch_s stor[2];
 
 		/* initialise */
 		memset(stor, 0x93 + i, sizeof(stor));
@@ -55,6 +56,7 @@ main(int argc, char *argv[])
 		/* set at least the tick type so ute_add_tick()
 		 * knows that this is a sl1t */
 		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SL1T_TTF_UNK);
+		scom_thdr_set_linked(AS_SCOM_THDR(stor));
 		ute_add_tick(ctx, AS_SCOM(stor));
 	}
 	ute_close(ctx);
@@ -64,4 +66,4 @@ out:
 	return res;
 }
 
-/* core-file-2.c ends here */
+/* core-file-3.c ends here */

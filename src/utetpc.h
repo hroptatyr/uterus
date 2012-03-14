@@ -104,6 +104,13 @@ tpc_full_p(utetpc_t tpc)
 	return tpc->sk.si >= tpc->sk.sz / sizeof(*tpc->sk.sp);
 }
 
+static inline bool
+tpc_can_hold_p(utetpc_t tpc, size_t nt)
+{
+/* whether there's space for NT more sandwiches in TPC */
+	return tpc->sk.si + nt <= tpc->sk.sz / sizeof(*tpc->sk.sp);
+}
+
 /**
  * Return non-false if all ticks in the page are sorted. */
 static inline bool
@@ -142,7 +149,10 @@ DECLF void free_tpc(utetpc_t tpc);
 /**
  * Clear the current page cache. */
 DECLF void clear_tpc(utetpc_t tpc);
-DECLF void tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz);
+
+/**
+ * Add a tick sandwich T to TPC that consists of NT sandwiches */
+DECLF void tpc_add(utetpc_t tpc, scom_t t, size_t nt);
 
 /* temporary */
 DECLF void seek_sort(uteseek_t);

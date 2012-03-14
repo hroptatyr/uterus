@@ -61,13 +61,24 @@ TESTS += slut.3.ut
 TESTS += slut.4.ut
 
 ## test the core api
+LIBUTERUS = $(abs_top_builddir)/src/libuterus.la
 check_PROGRAMS += core-file-1
 check_PROGRAMS += core-file-2
+check_PROGRAMS += core-file-3
+check_PROGRAMS += core-file-4
 
-core_file_1_LDFLAGS = $(AM_LDFLAGS) -luterus
-core_file_2_LDFLAGS = $(AM_LDFLAGS) -luterus
+core_file_1_LDFLAGS = $(AM_LDFLAGS) -static
+core_file_1_LDADD = $(LIBUTERUS)
+core_file_2_LDFLAGS = $(AM_LDFLAGS) -static
+core_file_2_LDADD = $(LIBUTERUS)
+core_file_3_LDFLAGS = $(AM_LDFLAGS) -static
+core_file_3_LDADD = $(LIBUTERUS)
+core_file_4_LDFLAGS = $(AM_LDFLAGS) -static
+core_file_4_LDADD = $(LIBUTERUS)
 TESTS += core-file-1
 TESTS += core-file-2
+TESTS += core-file-3
+TESTS += core-file-4
 
 
 .NOTPARALLEL:

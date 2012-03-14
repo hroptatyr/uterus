@@ -63,11 +63,17 @@ TESTS += slut.4.ut
 ## test the core api
 check_PROGRAMS += core-file-1
 check_PROGRAMS += core-file-2
+check_PROGRAMS += core-file-3
+check_PROGRAMS += core-file-4
 
-core_file_1_LDFLAGS = $(AM_LDFLAGS) -luterus
-core_file_2_LDFLAGS = $(AM_LDFLAGS) -luterus
+core_file_1_LDFLAGS = $(AM_LDFLAGS) -static -luterus
+core_file_2_LDFLAGS = $(AM_LDFLAGS) -static -luterus
+core_file_3_LDFLAGS = $(AM_LDFLAGS) -static -luterus
+core_file_4_LDFLAGS = $(AM_LDFLAGS) -static -luterus
 TESTS += core-file-1
 TESTS += core-file-2
+TESTS += core-file-3
+TESTS += core-file-4
 
 
 .NOTPARALLEL:

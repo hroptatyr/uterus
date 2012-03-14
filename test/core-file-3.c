@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <uterus.h>
 
+/* like core-file-2 but writes sandwich-2 ticks */
 int
 main(void)
 {
@@ -12,23 +13,24 @@ main(void)
 	char *fn;
 
 	if ((ctx = ute_mktemp(UO_RDWR)) == NULL) {
-		perror("core-file-2");
+		perror("core-file-3");
 		res = 1;
 		goto out;
 	}
 	if ((cfn = ute_fn(ctx)) == NULL) {
-		perror("core-file-2");
+		perror("core-file-3");
 		res = 1;
 		goto out;
 	}
 	fn = strdup(cfn);
 
 	for (size_t i = 0; i < 200; i++) {
-		struct sl1t_s foo;
+		struct scdl_s foo;
 
 		/* set at least the tick type so ute_add_tick()
 		 * knows that this is a sl1t */
 		scom_thdr_set_ttf(AS_SCOM_THDR(&foo), SL1T_TTF_UNK);
+		scom_thdr_set_linked(AS_SCOM_THDR(&foo));
 		ute_add_tick(ctx, AS_SCOM(&foo));
 	}
 	ute_close(ctx);
@@ -38,4 +40,4 @@ out:
 	return res;
 }
 
-/* core-file-2.c ends here */
+/* core-file-3.c ends here */

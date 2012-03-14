@@ -492,6 +492,10 @@ idxsort(scom_t p, size_t nticks)
 	}
 	/* reuse m to compute the next 2-power */
 	m = __ilog2_ceil(j);
+	/* check if m is a 2-power indeed */
+	assert((m & (m - 1)) == 0);
+	/* ... and a ceil */
+	assert(m >= j);
 	/* fill scp up with naughts */
 	memset(keys + j, 0, (m - j) * sizeof(*keys));
 
@@ -509,10 +513,23 @@ idxsort(scom_t p, size_t nticks)
 static void
 collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 {
+/* collating is the process of putting the satellite data along with
+ * the sorted keys again
+ * SRC is an array of keys and satellite data and
+ * PI is the permutation to apply */
 	/* skip 0 idxs first */
 	size_t j;
 
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
+
+#if defined DEBUG_FLAG && 0
+	/* since idxsort used 2-powers and we don't allow 0 skeys
+	 * the sum of J and NTICKS should be a 2-power
+	 * we use the identity 1 + \sum_i 2^i = 2^{i+1} to detect a 2-power */
+	size_t ni = j + nticks;
+	assert(((ni - 1) & ni) == 0);
+	/* this turns out to be wrong in the case of variadic tick sizes */
+#endif	/* DEBUG_FLAG */
 
 	for (size_t i = 0, bsz, tsz; i < nticks; j++, i += tsz) {
 		sidx_t idx = pi_sidx(pi + j);

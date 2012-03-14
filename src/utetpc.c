@@ -159,7 +159,7 @@ tpc_add(utetpc_t tpc, scom_t t, size_t nt)
 /* supports variadic ticks */
 	uint64_t skey = tick_sortkey(t);
 
-	if (UNLIKELY(tpc_full_p(tpc) || !tpc_can_hold_p(tpc, nt))) {
+	if (UNLIKELY(tpc_full_p(tpc) || !tpc_can_hold_p(tpc, nt) || !skey)) {
 		return;
 	}
 	memcpy(tpc->sk.sp + tpc->sk.si, t, nt * sizeof(*tpc->sk.sp));

@@ -875,6 +875,15 @@ seek_sort(uteseek_t sk)
 	/* get us another map */
 	new = mmap(NULL, sk->sz, PROT_MEM, MAP_MEM, -1, 0);
 
+#if defined DEBUG_FLAG
+	/* randomise the rest of the seek page */
+	{
+		size_t rest_bsz = sk->sz - sk->si * sizeof(*sk->sp);
+		UDEBUG("seek_sort(): randomising %zu bytes\n", rest_bsz);
+		memset(sk->sp + sk->si, 0x93, rest_bsz);
+	}
+#endif	/* DEBUG_FLAG */
+
 	for (void *tp = sk->sp, *np = new, *ep = sk->sp + sk->si; tp < ep; ) {
 		size_t ntleft = DATDI(ep, tp, tpc_tsz);
 		size_t nticks = min(IDXSORT_SIZE, ntleft);

@@ -793,6 +793,15 @@ ute_flush(utectx_t ctx)
 	if (!tpc_active_p(ctx->tpc)) {
 		return;
 	}
+
+#if defined DEBUG_FLAG
+	const size_t bsz = tpc_byte_size(ctx->tpc);
+	const size_t max = ctx->tpc->sk.sz;
+	size_t nt = (max - bsz) / sizeof(*ctx->tpc->sk.sp);
+
+	UDEBUG("flushing tpc with %zu ticks breathing space\n", nt);
+#endif	/* DEBUG_FLAG */
+
 	/* also sort and diskify the currently active tpc */
 	if (!tpc_sorted_p(ctx->tpc)) {
 		tpc_sort(ctx->tpc);

@@ -47,13 +47,17 @@ main(int argc, char *argv[])
 	fn = strdup(cfn);
 
 	for (size_t i = 0; i < max; i++) {
-		struct scdl_s foo = {0};
+		/* make sure we have breathing space */
+		struct sndwch_s stor[2];
+
+		/* initialise */
+		memset(stor, 0x93 + i, sizeof(stor));
 
 		/* set at least the tick type so ute_add_tick()
 		 * knows that this is a sl1t */
-		scom_thdr_set_ttf(AS_SCOM_THDR(&foo), SL1T_TTF_UNK);
-		scom_thdr_set_linked(AS_SCOM_THDR(&foo));
-		ute_add_tick(ctx, AS_SCOM(&foo));
+		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SL1T_TTF_UNK);
+		scom_thdr_set_linked(AS_SCOM_THDR(stor));
+		ute_add_tick(ctx, AS_SCOM(stor));
 	}
 	ute_close(ctx);
 	puts(fn);

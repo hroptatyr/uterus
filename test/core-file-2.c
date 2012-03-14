@@ -46,12 +46,16 @@ main(int argc, char *argv[])
 	fn = strdup(cfn);
 
 	for (size_t i = 0; i < max; i++) {
-		struct sl1t_s foo = {0};
+		/* make sure we have breathing space */
+		struct sndwch_s stor[1];
+
+		/* initialise */
+		memset(stor, 0x93 + i, sizeof(stor));
 
 		/* set at least the tick type so ute_add_tick()
 		 * knows that this is a sl1t */
-		scom_thdr_set_ttf(AS_SCOM_THDR(&foo), SL1T_TTF_UNK);
-		ute_add_tick(ctx, AS_SCOM(&foo));
+		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SL1T_TTF_UNK);
+		ute_add_tick(ctx, AS_SCOM(stor));
 	}
 	ute_close(ctx);
 	puts(fn);

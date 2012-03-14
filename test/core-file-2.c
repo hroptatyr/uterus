@@ -3,13 +3,35 @@
 #include <stdio.h>
 #include <uterus.h>
 
+#if defined DEBUG_FLAG
+# define UDEBUG(args...)	fprintf(stderr, args)
+#else
+# define UDEBUG(args...)
+#endif	/* DEBUG_FLAG */
+
+static unsigned int
+snarf_nticks(int argc, char *argv[])
+{
+	unsigned int res;
+
+	if (argc == 1 || (res = strtol(argv[1], NULL, 0)) == 0) {
+		/* at least 200 */
+		return 200;
+	}
+	return res;
+}
+
 int
-main(void)
+main(int argc, char *argv[])
 {
 	utectx_t ctx;
 	int res = 0;
 	const char *cfn;
 	char *fn;
+	size_t max;
+
+	max = snarf_nticks(argc, argv);
+	UDEBUG("generating %zu ticks\n", max);
 
 	if ((ctx = ute_mktemp(UO_RDWR)) == NULL) {
 		perror("core-file-2");
@@ -23,8 +45,8 @@ main(void)
 	}
 	fn = strdup(cfn);
 
-	for (size_t i = 0; i < 200; i++) {
-		struct sl1t_s foo;
+	for (size_t i = 0; i < max; i++) {
+		struct sl1t_s foo = {0};
 
 		/* set at least the tick type so ute_add_tick()
 		 * knows that this is a sl1t */

@@ -257,7 +257,7 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 		time_t stmp = scom_thdr_sec(ti);
 
 		/* first off, set the tick size */
-		tsz = scom_thdr_size(ti) / sizeof(struct sndwch_s);
+		tsz = scom_tick_size(ti);
 
 		/* chain of filters, first one loses */
 		if (max_idx && (idx > max_idx || !bitset_get(filtix, idx))) {

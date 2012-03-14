@@ -55,6 +55,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "scommon.h"
+#include "utehdr.h"
 
 #if !defined INCLUDED_utefile_private_h_
 typedef void *utectx_t;

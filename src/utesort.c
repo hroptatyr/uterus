@@ -252,12 +252,15 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 
 #if defined DEBUG_FLAG
 	for (size_t k = start_run, j = 0; k < e; j++, k++) {
+		const size_t sks_nticks = sks[j].sz / sizeof(*sks->sp);
 		uint64_t thresh = 0;
-		for (sidx_t i = 0; i < sks[j].sz / sizeof(*sks->sp);) {
+
+		for (sidx_t i = 0, tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
+
 			assert(thresh <= t->u);
 			thresh = t->u;
-			i += scom_thdr_size(t) / sizeof(*sks->sp);
+			tsz = scom_tick_size(t);
 		}
 	}
 #endif	/* DEBUG_FLAG */
@@ -386,9 +389,9 @@ step_run(struct uteseek_s sks[], unsigned int run, strat_t str)
 /* advance the pointer in the RUN-th run and fetch new stuff if need be */
 	strat_node_t curnd = str->last;
 	scom_t cursc = seek_get_scom(sks + run);
-	size_t tsz = scom_thdr_size(cursc);
+	size_t tsz = scom_tick_size(cursc);
 
-	sks[run].si += tsz / sizeof(*sks->sp);
+	sks[run].si += tsz;
 	if (seek_eof_p(sks + run)) {
 		UDEBUG("run %u out of ticks\n", run);
 		flush_seek(sks + run);
@@ -427,10 +430,11 @@ ute_sort(utectx_t ctx)
 		}
 #if defined DEBUG_FLAG
 		uint64_t thresh = 0;
-		for (size_t i = 0; i < sks[n->pg].si;) {
+		for (size_t i = 0, tsz; i < sks[n->pg].si; i += tsz) {
 			scom_t t = AS_SCOM(sks[n->pg].sp + i);
+
 			assert(thresh <= t->u);
-			i += scom_thdr_size(t) / sizeof(*sks->sp);
+			tsz = scom_tick_size(t);
 		}
 #endif	/* DEBUG_FLAG */
 	}

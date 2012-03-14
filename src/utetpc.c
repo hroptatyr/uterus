@@ -909,7 +909,6 @@ seek_sort(uteseek_t sk)
 		size_t nticks = min(IDXSORT_SIZE, ntleft);
 		perm_idx_t pi = idxsort(tp, nticks);
 
-		UDEBUG("collation of %zu ticks (%zu left)\n", nticks, ntleft);
 		collate(np, tp, pi, nticks);
 		tp = DATI(tp, nticks, tpc_tsz);
 		np = DATI(np, nticks, tpc_tsz);
@@ -921,8 +920,6 @@ seek_sort(uteseek_t sk)
 		void *src = new;
 		for (size_t rsz = 256; sk->si > rsz; rsz *= 2) {
 			void *tmp;
-
-			UDEBUG("b'up round with round size %zu\n", rsz);
 			bup_round(tgt, src, rsz, sk->si);
 			/* swap the roles of src and tgt */
 			tmp = tgt, tgt = src, src = tmp;

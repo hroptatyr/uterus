@@ -142,7 +142,10 @@ DECLF void free_tpc(utetpc_t tpc);
 /**
  * Clear the current page cache. */
 DECLF void clear_tpc(utetpc_t tpc);
-DECLF void tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz);
+
+/**
+ * Add a tick sandwich T to TPC that consists of NT sandwiches */
+DECLF void tpc_add(utetpc_t tpc, scom_t t, size_t nt);
 
 /* temporary */
 DECLF void seek_sort(uteseek_t);

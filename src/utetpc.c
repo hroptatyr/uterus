@@ -154,7 +154,7 @@ clear_tpc(utetpc_t tpc)
 }
 
 DEFUN void
-tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
+tpc_add(utetpc_t tpc, scom_t t, size_t nt)
 {
 /* supports variadic ticks */
 	uint64_t skey = tick_sortkey(t);
@@ -162,9 +162,9 @@ tpc_add_tick(utetpc_t tpc, scom_t t, size_t tsz)
 	if (UNLIKELY(tpc_full_p(tpc))) {
 		return;
 	}
-	memcpy(tpc->sk.sp + tpc->sk.si, t, tsz);
+	memcpy(tpc->sk.sp + tpc->sk.si, t, nt * sizeof(*tpc->sk.sp));
 	/* just add the total byte size as passed on */
-	tpc->sk.si += tsz / sizeof(*tpc->sk.sp);
+	tpc->sk.si += nt;
 
 	/* maybe mark the whole shebang as unsorted */
 	if (UNLIKELY(skey < tpc->last)) {

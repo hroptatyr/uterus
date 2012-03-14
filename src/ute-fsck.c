@@ -130,7 +130,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 		last.u = ti->u;
 
 		/* determine the length for the increment */
-		tsz = scom_thdr_size(ti);
+		tsz = scom_byte_size(ti);
 	}
 	/* deal with issues that need page-wise dealing */
 	if (issues & ISS_UNSORTED) {

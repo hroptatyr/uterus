@@ -142,27 +142,28 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
 		/* we need to flip the ti */
-		for (size_t i = 0; i < ute_nticks(hdl);) {
+		for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
 			char buf[64];
 			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 			scom_t ti = ute_seek(hdl, i);
-			size_t tsz;
+			size_t bsz;
 
 			/* promote the old header, copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
-			tsz = scom_thdr_size(nu_ti);
+			tsz = scom_tick_size(nu_ti);
+			bsz = scom_byte_size(nu_ti);
 			/* copy the rest of the tick into the buffer */
-			memcpy(buf + sizeof(*nu_ti), ti + 1, tsz - sizeof(*ti));
+			memcpy(buf + sizeof(*nu_ti), ti + 1, bsz - sizeof(*ti));
 			/* now to what we always do */
 			prf(ctx, nu_ti);
-			i += tsz / sizeof(struct sndwch_s);
 		}
 	} else {
 		/* no flips in this one */
-		for (size_t i = 0; i < ute_nticks(hdl);) {
+		for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
 			scom_t ti = ute_seek(hdl, i);
+
 			prf(ctx, ti);
-			i += scom_thdr_size(ti) / sizeof(struct sndwch_s);
+			tsz = scom_tick_size(ti);
 		}
 	}
 	/* oh right, close the handle */
@@ -188,7 +189,7 @@ prpg(pr_ctx_t ctx, char *tpg, size_t tsz, ssize_t(*prf)(pr_ctx_t, scom_t))
 	while (tpg < eot) {
 		scom_t ti = (void*)tpg;
 		prf(ctx, ti);
-		tpg += scom_thdr_size(ti);
+		tpg += scom_byte_size(ti);
 	}
 	return res;
 }

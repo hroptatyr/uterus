@@ -583,6 +583,9 @@ merge_bup(
 			tgt = DATA(tgt, bszr);
 		}
 	}
+	/* the end pointers must match exactly, otherwise we copied too much */
+	assert(srcl == elp || srcr == erp);
+
 	if (srcl < elp) {
 		/* not all left ticks */
 		size_t sz = DATCD(elp, srcl);

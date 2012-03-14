@@ -9,26 +9,6 @@
 # define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
-static inline unsigned int
-popcnt(long unsigned int val)
-{
-/* lauradoux implementation */
-	uint64_t x = val;
-	const uint64_t m1  = UINT64_C(0x5555555555555555);
-	const uint64_t m2  = UINT64_C(0x3333333333333333);
-	const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
-	const uint64_t h01 = UINT64_C(0x0101010101010101);
-
-	/* count the bits of the remaining bytes (MAX 29*8) using 
-	 * "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
-	 * the code uses wikipedia's 64-bit popcount_3() implementation:
-	 * http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation */
-	x =  x       - ((x >> 1)  & m1);
-	x = (x & m2) + ((x >> 2)  & m2);
-	x = (x       +  (x >> 4)) & m4;
-	return (unsigned int)((x * h01) >> 56);
-}
-
 static unsigned int
 snarf_nticks(int argc, char *argv[])
 {
@@ -42,11 +22,8 @@ snarf_nticks(int argc, char *argv[])
 }
 
 static void
-my_add_tick(utectx_t ctx, scom_t t, size_t n)
+my_add_tick(utectx_t ctx, scom_t t, size_t n __attribute__((unused)))
 {
-	if (popcnt(n) == 2U) {
-		UDEBUG("tick %zu\n", n);
-	}
 	return (void)ute_add_tick(ctx, t);
 }
 
@@ -79,6 +56,9 @@ main(int argc, char *argv[])
 	for (sidx_t tot = 0; tot < max;) {
 		/* make sure we have breathing space */
 		struct sndwch_s stor[4];
+
+		/* initialise */
+		memset(stor, 0x93 + tot, sizeof(stor));
 
 #define YIELD	(size_t)random() % 256U && tot < max
 #define ute_add_tick(c, t)	my_add_tick(c, t, tot)

@@ -838,17 +838,18 @@ ute_empty_slut(utectx_t ctx)
 void
 ute_add_tick(utectx_t ctx, scom_t t)
 {
-/* the big question here is if we want to allow arbitrary ticks as in
- * can T be of type scdl too? */
+	size_t tsz = scom_tick_size(t);
+
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
-	} else if (tpc_full_p(ctx->tpc)) {
+	} else if (tpc_full_p(ctx->tpc) ||
+		   !tpc_can_hold_p(ctx->tpc, tsz)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);
 	}
-	/* we sort the tick question for now by passing on the size of T */
-	tpc_add_tick(ctx->tpc, t, scom_byte_size(t));
+	/* and now it's just passing on everything to the tpc adder */
+	tpc_add(ctx->tpc, t, tsz);
 	return;
 }
 
@@ -863,8 +864,8 @@ ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);
 	}
-	/* we sort the tick question for now by passing on the size of T */
-	tpc_add_tick(ctx->tpc, src, nticks * sizeof(*ctx->tpc->sk.sp));
+	/* this needs looping! */
+	tpc_add(ctx->tpc, src, nticks);
 	return;
 }
 

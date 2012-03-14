@@ -80,6 +80,9 @@ main(int argc, char *argv[])
 		/* make sure we have breathing space */
 		struct sndwch_s stor[4];
 
+		/* initialise */
+		memset(stor, 0x93 + tot, sizeof(stor));
+
 #define YIELD	(size_t)random() % 256U && tot < max
 #define ute_add_tick(c, t)	my_add_tick(c, t, tot)
 		/* start off with single sandwiches */

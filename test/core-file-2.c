@@ -25,6 +25,10 @@ main(void)
 
 	for (size_t i = 0; i < 200; i++) {
 		struct sl1t_s foo;
+
+		/* set at least the tick type so ute_add_tick()
+		 * knows that this is a sl1t */
+		scom_thdr_set_ttf(AS_SCOM_THDR(&foo), SL1T_TTF_UNK);
 		ute_add_tick(ctx, AS_SCOM(&foo));
 	}
 	ute_close(ctx);

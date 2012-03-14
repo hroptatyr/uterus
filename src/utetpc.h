@@ -104,6 +104,13 @@ tpc_full_p(utetpc_t tpc)
 	return tpc->sk.si >= tpc->sk.sz / sizeof(*tpc->sk.sp);
 }
 
+static inline bool
+tpc_can_hold_p(utetpc_t tpc, size_t nt)
+{
+/* whether there's space for NT more sandwiches in TPC */
+	return tpc->sk.si + nt <= tpc->sk.sz / sizeof(*tpc->sk.sp);
+}
+
 /**
  * Return non-false if all ticks in the page are sorted. */
 static inline bool

@@ -250,18 +250,6 @@ scom_thdr_copy(scom_thdr_t tgt, scom_t src)
 	return;
 }
 
-static inline size_t
-scom_size(scom_t t)
-{
-	return !scom_thdr_linked(t) ? 1 : 2;
-}
-
-static inline size_t
-scom_byte_size(scom_t t)
-{
-	return scom_size(t) * 4 * sizeof(uint32_t);
-}
-
 
 /* msec overloading */
 #define SCOM_NEXIST	(1023)
@@ -321,25 +309,29 @@ scom_thdr_mark_padding(scom_thdr_t t)
 
 
 /* helpers for variadically-sized ticks */
-#include "sl1t.h"
-#include "scdl.h"
-
-#if defined __STRUCT_SL1T_S_DEFINED && defined __STRUCT_SCDL_S_DEFINED
+/**
+ * Return the size of T in ticks (multiples of struct sndwch_s). */
 static inline __attribute__((pure)) size_t
-scom_thdr_size(scom_t t)
+scom_tick_size(scom_t t)
 {
-/* return the size in bytes of the tick in question */
 	if (!(scom_thdr_ttf(t) & (SCOM_FLAG_LM | SCOM_FLAG_L2M))) {
-		return sizeof(struct sl1t_s);
+		return 1UL;
 	} else if (scom_thdr_ttf(t) & SCOM_FLAG_LM) {
-		return sizeof(struct scdl_s);
+		return 2UL;
 	} else if (scom_thdr_ttf(t) & SCOM_FLAG_L2M) {
-		return sizeof(struct sbatcdl_s);
+		return 4UL;
 	} else {
-		return 0;
+		return 0UL;
 	}
 }
-#endif	/* __STRUCT_SL1T_S_DEFINED && __STRUCT_SCDL_S_DEFINED */
+
+/**
+ * Return the size of T in bytes. */
+static inline __attribute__((pure)) size_t
+scom_byte_size(scom_t t)
+{
+	return scom_tick_size(t) * sizeof(struct sndwch_s);
+}
 
 
 /* promotion for ute versions */

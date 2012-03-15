@@ -613,7 +613,8 @@ merge_bup(
 		}
 	}
 	/* the end pointers must match exactly, otherwise we copied too much */
-	assert(srcl == elp || srcr == erp);
+	assert(!(srcl > elp));
+	assert(!(srcr > erp));
 
 	if (srcl < elp) {
 		/* not all left ticks */

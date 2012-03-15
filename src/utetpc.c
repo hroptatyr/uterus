@@ -705,11 +705,13 @@ static struct sndwch_s*
 seek_last_sndwch(uteseek_t sk)
 {
 	const size_t probsz = sizeof(*sk->sp);
+	sndwch_t tp;
 
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
 	}
-	return sk->sp + algn_tick(sk, sk->sz / probsz - 1);
+	for (tp = sk->sp + sk->sz / probsz - 1;	!AS_SCOM(tp)->u; tp--);
+	return sk->sp + algn_tick(sk, tp - sk->sp);
 }
 
 

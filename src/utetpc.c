@@ -548,7 +548,6 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 	/* skip 0 idxs first */
 	size_t j;
 
-	UDEBUG("collation of %zu ticks\n", nticks);
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
 
 #if defined DEBUG_FLAG && 0
@@ -590,7 +589,6 @@ merge_bup(void *tgt, sndwch_t spl, size_t ntl, sndwch_t spr, size_t ntr)
 	sndwch_t elp = spl + ntl;
 	sndwch_t erp = spr + ntr;
 
-	UDEBUG("merge_bup() l %zu  r %zu\n", ntl, ntr);
 	while (spl < elp && spr < erp) {
 		if (spl->key <= spr->key) {
 			size_t tsz = scom_tick_size(AS_SCOM(spl));
@@ -617,13 +615,11 @@ merge_bup(void *tgt, sndwch_t spl, size_t ntl, sndwch_t spr, size_t ntr)
 	if (spl < elp) {
 		/* not all left ticks */
 		size_t sz = elp - spl;
-		UDEBUG("copying %zu left left-overs\n", sz);
 		memcpy(tp, spl, sz * sizeof(*spl));
 		tp += sz;
 	} else if (spr < erp) {
 		/* right ticks left */
 		size_t sz = erp - spr;
-		UDEBUG("copying %zu right left-overs\n", sz);
 		memcpy(tp, spr, sz * sizeof(*spr));
 		tp += sz;
 	} else {
@@ -638,7 +634,6 @@ bup_round(void *tgt, const void *src, size_t rsz, uint32_t *offs, size_t noffs)
 	struct sndwch_s *tp = tgt;
 	sndwch_t sp = src;
 
-	UDEBUG("bup_round with round-size %zu over %zu offsets\n", rsz, noffs);
 	for (size_t i = 0, tot; i < noffs; i += rsz, sp += tot, tp += tot) {
 		/* get the nticks of the left and right sides */
 		uint32_t ntl = offs[i];
@@ -956,10 +951,6 @@ seek_sort(uteseek_t sk)
 		collate(np, tp, pi, nticks);
 	}
 
-	for (size_t j = 0; j < noffs; j++) {
-		UDEBUG("offs %zu is %u\n", j, new->offs[j]);
-	}
-
 	/* now in NEW->data there's sorted pages consisting of 256
 	 * *scom*s each the tick offsets are in NEW->offs, there's a
 	 * maximum of 1024 offsets (thats MAX_TICKS_PER_TPC / 256)
@@ -982,8 +973,7 @@ seek_sort(uteseek_t sk)
 		if (sk->sp == tgt) {
 			/* oh, we were about to copy shit into tgt
 			 * just copy the rest so it ends up in seek space */
-			memcpy(sk->sp, data, sk->si * sizeof(*sk->sp));
-			UDEBUG("rsz, copied %zu ticks\n", sk->si);
+			memcpy(sk->sp, data, sk->sz);
 		}
 		/* munmap()ing is the same in either case */
 		munmap(new, sizeof(*new) + sk->sz);

@@ -401,12 +401,6 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 
 #define min(x, y)	(x < y ? x : y)
 
-static inline size_t
-min_size_t(size_t x, size_t y)
-{
-	return min(x, y);
-}
-
 /* not reentrant, fixme */
 static perm_idx_t __gidx = MAP_FAILED;
 #define SCRATCH_SIZE	(IDXSORT_SIZE * 2 * sizeof(*__gidx))
@@ -505,41 +499,46 @@ merge_all(size_t nticks)
 	return;
 }
 
-static perm_idx_t MAYBE_NOINLINE
-idxsort(scom_t p, size_t nticks)
+static size_t MAYBE_NOINLINE
+idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 {
+/* sort stuff in the range [p, ep) */
 	perm_idx_t keys = get_scratch();
-	size_t m = min(nticks, IDXSORT_SIZE);
-	size_t j = 0;
+	const size_t max = IDXSORT_SIZE;
+	size_t nsc = 0;
+	size_t nt = 0;
+	size_t m_2p = 0;
 
-	for (size_t i = 0, tsz, bsz; i < m; j++, i += tsz) {
+	for (size_t tsz; nsc < max && sp + nt < ep; nsc++, nt += tsz) {
+		scom_t p = AS_SCOM(sp + nt);
 		tsz = scom_tick_size(p);
-		bsz = scom_byte_size(p);
 
-		put_pi(keys + j, p, i);
-		p = DATCA(p, bsz);
+		/* produce a mapping SCOM |-> TICK */
+		put_pi(keys + nsc, p, nt);
 	}
-	/* reuse m to compute the next 2-power */
-	m = __ilog2_ceil(j);
-	/* check if m is a 2-power indeed */
-	assert((m & (m - 1)) == 0);
+	UDEBUG("idxsort on %zu scoms and %zu ticks\n", nsc, nt);
+	/* compute the next 2-power */
+	m_2p = __ilog2_ceil(nsc);
+	/* check if m_2p is a 2-power indeed */
+	assert((m_2p & (m_2p - 1)) == 0);
 	/* ... and a ceil */
-	assert(m >= j);
+	assert(m_2p >= nsc);
 	/* fill scp up with naughts */
-	memset(keys + j, 0, (m - j) * sizeof(*keys));
+	memset(keys + nsc, 0, (m_2p - nsc) * sizeof(*keys));
 
 	/* use the local index in scp to do pornsort */
-	for (size_t i = 0; i < j; i += 4) {
+	for (size_t i = 0; i < nsc; i += 4) {
 		uint8_t perm = pornsort_perm(keys + i);
 		pornsort_apply(keys + i, perm);
 	}
 
 	/* merge steps, up to the next 2-power */
-	merge_all(m);
-	return keys;
+	merge_all(m_2p);
+	*pip = keys;
+	return nt;
 }
 
-static void
+static void MAYBE_NOINLINE
 collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 {
 /* collating is the process of putting the satellite data along with
@@ -583,74 +582,72 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 }
 
 static void* MAYBE_NOINLINE
-merge_bup(
-	void *tgt,
-	const void *srcl, size_t nticksl,
-	const void *srcr, size_t nticksr)
+merge_bup(void *tgt, sndwch_t spl, size_t ntl, sndwch_t spr, size_t ntr)
 {
-/* merge left source SRCL and right source SRCR into tgt. */
-	const void *elp = DATCI(srcl, nticksl, sizeof(struct sndwch_s));
-	const void *erp = DATCI(srcr, nticksr, sizeof(struct sndwch_s));
+/* merge left source SPL and right source SPR into tgt. */
+	struct sndwch_s *tp = tgt;
+	sndwch_t elp = spl + ntl;
+	sndwch_t erp = spr + ntr;
 
-	while (srcl < elp && srcr < erp) {
-		uint64_t sl = ((const uint64_t*)srcl)[0];
-		uint64_t sr = ((const uint64_t*)srcr)[0];
+	while (spl < elp && spr < erp) {
+		if (spl->key <= spr->key) {
+			size_t tsz = scom_tick_size(AS_SCOM(spl));
 
-		if (sl <= sr) {
-			size_t bszl = scom_byte_size(srcl);
 			/* copy the left tick */
-			memcpy(tgt, srcl, bszl);
+			memcpy(tp, spl, tsz * sizeof(*spl));
 			/* step things */
-			srcl = DATCA(srcl, bszl);
-			tgt = DATA(tgt, bszl);
+			spl += tsz;
+			tp += tsz;
 		} else {
-			size_t bszr = scom_byte_size(srcr);
+			size_t tsz = scom_tick_size(AS_SCOM(spr));
+
 			/* use the right guy */
-			memcpy(tgt, srcr, bszr);
+			memcpy(tp, spr, tsz * sizeof(*spr));
 			/* step things */
-			srcr = DATCA(srcr, bszr);
-			tgt = DATA(tgt, bszr);
+			spr += tsz;
+			tp += tsz;
 		}
 	}
 	/* the end pointers must match exactly, otherwise we copied too much */
-	assert(!(srcl > elp));
-	assert(!(srcr > erp));
+	assert(!(spl > elp));
+	assert(!(spr > erp));
 
-	if (srcl < elp) {
+	if (spl < elp) {
 		/* not all left ticks */
-		size_t sz = DATCD(elp, srcl);
-		memcpy(tgt, srcl, sz);
-		tgt = DATA(tgt, sz);
-	} else if (srcr < erp) {
+		size_t sz = elp - spl;
+		memcpy(tp, spl, sz * sizeof(*spl));
+		tp += sz;
+	} else if (spr < erp) {
 		/* right ticks left */
-		size_t sz = DATCD(erp, srcr);
-		memcpy(tgt, srcr, sz);
-		tgt = DATA(tgt, sz);
+		size_t sz = erp - spr;
+		memcpy(tp, spr, sz * sizeof(*spr));
+		tp += sz;
 	} else {
 		;
 	}
-	return tgt;
+	return tp;
 }
 
 static void MAYBE_NOINLINE
-bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
+bup_round(void *tgt, const void *src, size_t rsz, uint32_t *offs, size_t noffs)
 {
-	void *tp = tgt;
-	void *npl = src;
-	void *npr = DATI(src, rsz, sizeof(struct sndwch_s));
+	struct sndwch_s *tp = tgt;
+	sndwch_t sp = src;
 
-	/* do i really need both npl and npr? */
-	while (ntleft > rsz) {
-		size_t ntr = min_size_t(ntleft, 2 * rsz);
-		/* there's both a left and a right side */
-		tp = merge_bup(tp, npl, rsz, npr, ntr - rsz);
-		/* step down counters and step up pointers */
-		npl = DATI(npl, 2 * rsz, sizeof(struct sndwch_s));
-		npr = DATI(npr, 2 * rsz, sizeof(struct sndwch_s));
-		ntleft -= ntr;
+	for (size_t i = 0, tot; i < noffs; i += rsz, sp += tot, tp += tot) {
+		/* get the nticks of the left and right sides */
+		uint32_t ntl = offs[i];
+		uint32_t ntr = offs[i + rsz / 2];
+		/* set up the pointers from src */
+		sndwch_t npl = sp;
+		sndwch_t npr = sp + ntl;
+
+		/* the actual merge */
+		(void)merge_bup(tp, npl, ntl, npr, ntr);
+		/* compute new offsets for later rounds */
+		tot = ntl + ntr;
+		offs[i] = tot;
 	}
-	/* possibly ntleft ticks stuck */
-	memcpy(tp, npl, ntleft * sizeof(struct sndwch_s));
 	return;
 }
 
@@ -708,11 +705,13 @@ static struct sndwch_s*
 seek_last_sndwch(uteseek_t sk)
 {
 	const size_t probsz = sizeof(*sk->sp);
+	sndwch_t tp;
 
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
 	}
-	return sk->sp + algn_tick(sk, sk->sz / probsz - 1);
+	for (tp = sk->sp + sk->sz / probsz - 1;	!AS_SCOM(tp)->u; tp--);
+	return sk->sp + algn_tick(sk, tp - sk->sp);
 }
 
 
@@ -919,11 +918,17 @@ DEFUN void
 seek_sort(uteseek_t sk)
 {
 /* simplified merge sort */
-	const size_t tpc_tsz = sizeof(*sk->sp);
-	void *new;
+	struct {
+		/* one page for SCOM->TICK offsets */
+		uint32_t offs[1024];
+		struct sndwch_s data[];
+	} *new;
+	struct sndwch_s *np;
+	sndwch_t tp, ep;
+	size_t noffs = 0;
 
 	/* get us another map */
-	new = mmap(NULL, sk->sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, sizeof(*new) + sk->sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
@@ -934,33 +939,46 @@ seek_sort(uteseek_t sk)
 	}
 #endif	/* DEBUG_FLAG */
 
-	for (void *tp = sk->sp, *np = new, *ep = sk->sp + sk->si; tp < ep; ) {
-		size_t ntleft = DATDI(ep, tp, tpc_tsz);
-		size_t nticks = min(IDXSORT_SIZE, ntleft);
-		perm_idx_t pi = idxsort(tp, nticks);
+	np = new->data;
+	tp = sk->sp;
+	ep = sk->sp + sk->si;
+	for (size_t nticks; tp < ep; tp += nticks, np += nticks) {
+		perm_idx_t pi;
 
+		/* sort 256 (or less) *scom*s */
+		nticks = idxsort(&pi, tp, ep);
+		/* store the value of nticks in the offset array */
+		new->offs[noffs++] = nticks;
+		/* now collate */
 		collate(np, tp, pi, nticks);
-		tp = DATI(tp, nticks, tpc_tsz);
-		np = DATI(np, nticks, tpc_tsz);
 	}
-	/* now in NEW there's sorted pages consisting of 256 ticks each
+
+	/* now in NEW->data there's sorted pages consisting of 256
+	 * *scom*s each the tick offsets are in NEW->offs, there's a
+	 * maximum of 1024 offsets (thats MAX_TICKS_PER_TPC / 256)
 	 * we now use a bottom-up merge step */
 	{
+		void *const data = new->data;
 		void *tgt = sk->sp;
-		void *src = new;
-		for (size_t rsz = 256; sk->si > rsz; rsz *= 2) {
-			void *tmp;
-			bup_round(tgt, src, rsz, sk->si);
-			/* swap the roles of src and tgt */
-			tmp = tgt, tgt = src, src = tmp;
+		void *src = data;
+
+		for (size_t rsz = 2; rsz < 2 * noffs; rsz *= 2) {
+			/* ordinary bottom-up merge round */
+			bup_round(tgt, src, rsz, new->offs, noffs);
+			{
+				/* swap the roles of src and tgt */
+				void *tmp = tgt;
+				tgt = src;
+				src = tmp;
+			}
 		}
 		if (sk->sp == tgt) {
 			/* oh, we were about to copy shit into tgt
 			 * just copy the rest so it ends up in seek space */
-			memcpy(sk->sp, new, sk->sz);
+			memcpy(sk->sp, data, sk->sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, sk->sz);
+		munmap(new, sizeof(*new) + sk->sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

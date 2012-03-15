@@ -544,7 +544,7 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 	return nt;
 }
 
-static void
+static void MAYBE_NOINLINE
 collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 {
 /* collating is the process of putting the satellite data along with

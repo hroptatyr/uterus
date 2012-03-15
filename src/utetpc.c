@@ -922,11 +922,17 @@ DEFUN void
 seek_sort(uteseek_t sk)
 {
 /* simplified merge sort */
-	const size_t tpc_tsz = sizeof(*sk->sp);
-	void *new;
+	struct {
+		/* one page for SCOM->TICK offsets */
+		uint32_t offs[1024];
+		struct sndwch_s data[];
+	} *new;
+	struct sndwch_s *np;
+	sndwch_t tp, ep;
+	size_t noffs = 0;
 
 	/* get us another map */
-	new = mmap(NULL, sk->sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, sizeof(*new) + sk->sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
@@ -937,34 +943,46 @@ seek_sort(uteseek_t sk)
 	}
 #endif	/* DEBUG_FLAG */
 
-	for (void *tp = sk->sp, *np = new, *ep = sk->sp + sk->si; tp < ep; ) {
-		size_t nticks;
+	np = new->data;
+	tp = sk->sp;
+	ep = sk->sp + sk->si;
+	for (size_t nticks; tp < ep; tp += nticks, np += nticks) {
 		perm_idx_t pi;
 
+		/* sort 256 (or less) *scom*s */
 		nticks = idxsort(&pi, tp, ep);
-		UDEBUG("collation of %zu ticks\n", nticks);
+		/* store the value of nticks in the offset array */
+		new->offs[noffs++] = nticks;
+		/* now collate */
 		collate(np, tp, pi, nticks);
-		tp = DATI(tp, nticks, tpc_tsz);
-		np = DATI(np, nticks, tpc_tsz);
 	}
-	/* now in NEW there's sorted pages consisting of 256 ticks each
+
+	/* now in NEW->data there's sorted pages consisting of 256
+	 * *scom*s each the tick offsets are in NEW->offs, there's a
+	 * maximum of 1024 offsets (thats MAX_TICKS_PER_TPC / 256)
 	 * we now use a bottom-up merge step */
 	{
+		void *const data = new->data;
 		void *tgt = sk->sp;
-		void *src = new;
-		for (size_t rsz = 256; sk->si > rsz; rsz *= 2) {
-			void *tmp;
-			bup_round(tgt, src, rsz, sk->si);
-			/* swap the roles of src and tgt */
-			tmp = tgt, tgt = src, src = tmp;
+		void *src = data;
+
+		for (size_t rsz = 2; rsz < 2 * noffs; rsz *= 2) {
+			/* ordinary bottom-up merge round */
+			bup_round(tgt, src, rsz, new->offs, noffs);
+			{
+				/* swap the roles of src and tgt */
+				void *tmp = tgt;
+				tgt = src;
+				src = tmp;
+			}
 		}
 		if (sk->sp == tgt) {
 			/* oh, we were about to copy shit into tgt
 			 * just copy the rest so it ends up in seek space */
-			memcpy(sk->sp, new, sk->sz);
+			memcpy(sk->sp, data, sk->sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, sk->sz);
+		munmap(new, sizeof(*new) + sk->sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

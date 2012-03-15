@@ -52,6 +52,8 @@ typedef union scom_thdr_u *scom_thdr_t;
 typedef const union scom_thdr_u *scom_t;
 #define AS_SCOM(x)		((scom_t)(x))
 
+typedef const struct sndwch_s *sndwch_t;
+
 /* this time baloney belongs to somewhere else */
 struct time_sms_s {
 	uint32_t sec;

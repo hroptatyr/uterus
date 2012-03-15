@@ -63,6 +63,31 @@ static const char ute_vers[][8] = {
 	"UTE+v0.2",
 };
 
+#if defined DEBUG_FLAG
+/* not the best of ideas to have output printing in a lib */
+#include <stdarg.h>
+#include <stdio.h>
+#include <errno.h>
+static void
+__attribute__((format(printf, 2, 3)))
+error(int eno, const char *fmt, ...)
+{
+	va_list vap;
+
+	va_start(vap, fmt);
+	fputs("utefile.c: ", stderr);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+	if (eno || errno) {
+		fputc(':', stderr);
+		fputc(' ', stderr);
+		fputs(strerror(eno ?: errno), stderr);
+	}
+	fputc('\n', stderr);
+	return;
+}
+#endif	/* DEBUG_FLAG */
+
 
 /* aux */
 static char*
@@ -839,6 +864,17 @@ void
 ute_add_tick(utectx_t ctx, scom_t t)
 {
 	size_t tsz = scom_tick_size(t);
+
+#if defined DEBUG_FLAG
+	/* never trust your users, inspect the tick */
+	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
+		error(0, "\
+this version of uterus cannot cope with tick type %x", t->ttf);
+		return;
+	} else if (UNLIKELY(t->u == 0ULL)) {
+		error(0, "naught tick");
+	}
+#endif	/* DEBUG_FLAG */
 
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */

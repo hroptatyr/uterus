@@ -588,74 +588,72 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 }
 
 static void* MAYBE_NOINLINE
-merge_bup(
-	void *tgt,
-	const void *srcl, size_t nticksl,
-	const void *srcr, size_t nticksr)
+merge_bup(void *tgt, sndwch_t spl, size_t ntl, sndwch_t spr, size_t ntr)
 {
-/* merge left source SRCL and right source SRCR into tgt. */
-	const void *elp = DATCI(srcl, nticksl, sizeof(struct sndwch_s));
-	const void *erp = DATCI(srcr, nticksr, sizeof(struct sndwch_s));
+/* merge left source SPL and right source SPR into tgt. */
+	struct sndwch_s *tp = tgt;
+	sndwch_t elp = spl + ntl;
+	sndwch_t erp = spr + ntr;
 
-	while (srcl < elp && srcr < erp) {
-		uint64_t sl = ((const uint64_t*)srcl)[0];
-		uint64_t sr = ((const uint64_t*)srcr)[0];
+	while (spl < elp && spr < erp) {
+		if (spl->key <= spr->key) {
+			size_t tsz = scom_tick_size(AS_SCOM(spl));
 
-		if (sl <= sr) {
-			size_t bszl = scom_byte_size(srcl);
 			/* copy the left tick */
-			memcpy(tgt, srcl, bszl);
+			memcpy(tp, spl, tsz * sizeof(*spl));
 			/* step things */
-			srcl = DATCA(srcl, bszl);
-			tgt = DATA(tgt, bszl);
+			spl += tsz;
+			tp += tsz;
 		} else {
-			size_t bszr = scom_byte_size(srcr);
+			size_t tsz = scom_tick_size(AS_SCOM(spr));
+
 			/* use the right guy */
-			memcpy(tgt, srcr, bszr);
+			memcpy(tp, spr, tsz * sizeof(*spr));
 			/* step things */
-			srcr = DATCA(srcr, bszr);
-			tgt = DATA(tgt, bszr);
+			spr += tsz;
+			tp += tsz;
 		}
 	}
 	/* the end pointers must match exactly, otherwise we copied too much */
-	assert(!(srcl > elp));
-	assert(!(srcr > erp));
+	assert(!(spl > elp));
+	assert(!(spr > erp));
 
-	if (srcl < elp) {
+	if (spl < elp) {
 		/* not all left ticks */
-		size_t sz = DATCD(elp, srcl);
-		memcpy(tgt, srcl, sz);
-		tgt = DATA(tgt, sz);
-	} else if (srcr < erp) {
+		size_t sz = elp - spl;
+		memcpy(tp, spl, sz * sizeof(*spl));
+		tp += sz;
+	} else if (spr < erp) {
 		/* right ticks left */
-		size_t sz = DATCD(erp, srcr);
-		memcpy(tgt, srcr, sz);
-		tgt = DATA(tgt, sz);
+		size_t sz = erp - spr;
+		memcpy(tp, spr, sz * sizeof(*spr));
+		tp += sz;
 	} else {
 		;
 	}
-	return tgt;
+	return tp;
 }
 
 static void MAYBE_NOINLINE
-bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
+bup_round(void *tgt, const void *src, size_t rsz, uint32_t *offs, size_t noffs)
 {
-	void *tp = tgt;
-	void *npl = src;
-	void *npr = DATI(src, rsz, sizeof(struct sndwch_s));
+	struct sndwch_s *tp = tgt;
+	sndwch_t sp = src;
 
-	/* do i really need both npl and npr? */
-	while (ntleft > rsz) {
-		size_t ntr = min_size_t(ntleft, 2 * rsz);
-		/* there's both a left and a right side */
-		tp = merge_bup(tp, npl, rsz, npr, ntr - rsz);
-		/* step down counters and step up pointers */
-		npl = DATI(npl, 2 * rsz, sizeof(struct sndwch_s));
-		npr = DATI(npr, 2 * rsz, sizeof(struct sndwch_s));
-		ntleft -= ntr;
+	for (size_t i = 0, tot; i < noffs; i += rsz, sp += tot, tp += tot) {
+		/* get the nticks of the left and right sides */
+		uint32_t ntl = offs[i];
+		uint32_t ntr = offs[i + rsz / 2];
+		/* set up the pointers from src */
+		sndwch_t npl = sp;
+		sndwch_t npr = sp + ntl;
+
+		/* the actual merge */
+		(void)merge_bup(tp, npl, ntl, npr, ntr);
+		/* compute new offsets for later rounds */
+		tot = ntl + ntr;
+		offs[i] = tot;
 	}
-	/* possibly ntleft ticks stuck */
-	memcpy(tp, npl, ntleft * sizeof(struct sndwch_s));
 	return;
 }
 

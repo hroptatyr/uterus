@@ -53,9 +53,10 @@ main(int argc, char *argv[])
 	}
 	fn = strdup(cfn);
 
-	for (sidx_t tot = 0; tot < max;) {
+	for (sidx_t tot = 0, totnt = 0; tot < max;) {
 		/* make sure we have breathing space */
 		struct sndwch_s stor[4];
+		size_t sngl = 0, dbl = 0, quad = 0;
 
 		/* initialise */
 		memset(stor, 0x93 + tot, sizeof(stor));
@@ -64,21 +65,25 @@ main(int argc, char *argv[])
 #define ute_add_tick(c, t)	my_add_tick(c, t, tot)
 		/* start off with single sandwiches */
 		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SL1T_TTF_UNK);
-		for (sidx_t i = 0; i < YIELD; i++, tot++) {
+		for (sidx_t i = 0; i < YIELD; i++, tot++, sngl++) {
 			ute_add_tick(ctx, AS_SCOM(stor));
 		}
 
 		/* go for double sandwiches now */
 		scom_thdr_set_linked(AS_SCOM_THDR(stor));
-		for (sidx_t i = 0; i < YIELD; i++, tot++) {
+		for (sidx_t i = 0; i < YIELD; i++, tot++, dbl++) {
 			ute_add_tick(ctx, AS_SCOM(stor));
 		}
 
 		/* and double-doubles */
 		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SCOM_FLAG_L2M);
-		for (sidx_t i = 0; i < YIELD; i++, tot++) {
+		for (sidx_t i = 0; i < YIELD; i++, tot++, quad++) {
 			ute_add_tick(ctx, AS_SCOM(stor));
 		}
+
+		totnt += sngl + 2 * dbl + 4 * quad;
+		UDEBUG("%zus %zud %zuq\t%zut\t%zu\n",
+		       sngl, dbl, quad, totnt, tot);
 #undef YIELD
 	}
 	ute_close(ctx);

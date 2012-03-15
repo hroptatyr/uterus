@@ -878,8 +878,10 @@ ute_add_tick(utectx_t ctx, scom_t t)
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
 		error(0, "\
-this version of uterus cannot cope with tick type %x\n", t->ttf);
+this version of uterus cannot cope with tick type %x", t->ttf);
 		return;
+	} else if (UNLIKELY(t->u == 0ULL)) {
+		error(0, "naught tick");
 	}
 #endif	/* DEBUG_FLAG */
 

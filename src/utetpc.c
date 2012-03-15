@@ -50,6 +50,8 @@
 # include <assert.h>
 # include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define scom_tick_size		__local_scom_tick_size
+# define scom_byte_size		__local_scom_byte_size
 # define MAYBE_NOINLINE		__attribute__((noinline))
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
@@ -115,6 +117,31 @@ tick_sortkey(scom_t t)
 	/* using scom v0.2 now */
 	return t->u;
 }
+
+/* one more for debugging */
+#if defined scom_tick_size
+static inline size_t
+__local_scom_tick_size(scom_t t)
+{
+	assert((t->ttf & 0x30U) != 0x30U);
+
+	if (!(scom_thdr_ttf(t) & (SCOM_FLAG_LM | SCOM_FLAG_L2M))) {
+		return 1UL;
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_LM) {
+		return 2UL;
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_L2M) {
+		return 4UL;
+	} else {
+		return 0UL;
+	}
+}
+
+static inline size_t
+__local_scom_byte_size(scom_t t)
+{
+	return __local_scom_tick_size(t) * sizeof(struct sndwch_s);
+}
+#endif	/* scom_tick_size */
 
 /* calloc like signature */
 DEFUN void
@@ -902,7 +929,7 @@ seek_sort(uteseek_t sk)
 	{
 		size_t rest_bsz = sk->sz - sk->si * sizeof(*sk->sp);
 		UDEBUG("seek_sort(): randomising %zu bytes\n", rest_bsz);
-		memset(sk->sp + sk->si, 0x93, rest_bsz);
+		memset(sk->sp + sk->si, -1, rest_bsz);
 	}
 #endif	/* DEBUG_FLAG */
 

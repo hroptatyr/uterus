@@ -401,12 +401,6 @@ pornsort_apply(struct perm_idx_s p[4], uint8_t perm)
 
 #define min(x, y)	(x < y ? x : y)
 
-static inline size_t
-min_size_t(size_t x, size_t y)
-{
-	return min(x, y);
-}
-
 /* not reentrant, fixme */
 static perm_idx_t __gidx = MAP_FAILED;
 #define SCRATCH_SIZE	(IDXSORT_SIZE * 2 * sizeof(*__gidx))

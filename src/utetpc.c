@@ -50,9 +50,11 @@
 # include <assert.h>
 # include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define MAYBE_NOINLINE		__attribute__((noinline))
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
 # define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 
 #if !defined UNUSED
@@ -412,7 +414,7 @@ fini_scratch(void)
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 merge_up(perm_idx_t tgt, perm_idx_t src, int step, int max)
 {
 /* bottom up merge steps, for arrays of scidx's */
@@ -440,7 +442,7 @@ merge_up(perm_idx_t tgt, perm_idx_t src, int step, int max)
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 merge_all(size_t nticks)
 {
 	perm_idx_t src = get_scratch();
@@ -476,7 +478,7 @@ merge_all(size_t nticks)
 	return;
 }
 
-static perm_idx_t
+static perm_idx_t MAYBE_NOINLINE
 idxsort(scom_t p, size_t nticks)
 {
 	perm_idx_t keys = get_scratch();
@@ -553,7 +555,7 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 	return;
 }
 
-static void*
+static void* MAYBE_NOINLINE
 merge_bup(
 	void *tgt,
 	const void *srcl, size_t nticksl,
@@ -602,7 +604,7 @@ merge_bup(
 	return tgt;
 }
 
-static void
+static void MAYBE_NOINLINE
 bup_round(void *tgt, void *src, size_t rsz, size_t ntleft)
 {
 	void *tp = tgt;

@@ -505,38 +505,43 @@ merge_all(size_t nticks)
 	return;
 }
 
-static perm_idx_t MAYBE_NOINLINE
-idxsort(scom_t p, size_t nticks)
+static size_t MAYBE_NOINLINE
+idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 {
+/* sort stuff in the range [p, ep) */
 	perm_idx_t keys = get_scratch();
-	size_t m = min(nticks, IDXSORT_SIZE);
-	size_t j = 0;
+	const size_t max = IDXSORT_SIZE;
+	size_t nsc = 0;
+	size_t nt = 0;
+	size_t m_2p = 0;
 
-	for (size_t i = 0, tsz, bsz; i < m; j++, i += tsz) {
+	for (size_t tsz; nsc < max && sp + nt < ep; nsc++, nt += tsz) {
+		scom_t p = AS_SCOM(sp + nt);
 		tsz = scom_tick_size(p);
-		bsz = scom_byte_size(p);
 
-		put_pi(keys + j, p, i);
-		p = DATCA(p, bsz);
+		/* produce a mapping SCOM |-> TICK */
+		put_pi(keys + nsc, p, nt);
 	}
-	/* reuse m to compute the next 2-power */
-	m = __ilog2_ceil(j);
-	/* check if m is a 2-power indeed */
-	assert((m & (m - 1)) == 0);
+	UDEBUG("idxsort on %zu scoms and %zu ticks\n", nsc, nt);
+	/* compute the next 2-power */
+	m_2p = __ilog2_ceil(nsc);
+	/* check if m_2p is a 2-power indeed */
+	assert((m_2p & (m_2p - 1)) == 0);
 	/* ... and a ceil */
-	assert(m >= j);
+	assert(m_2p >= nsc);
 	/* fill scp up with naughts */
-	memset(keys + j, 0, (m - j) * sizeof(*keys));
+	memset(keys + nsc, 0, (m_2p - nsc) * sizeof(*keys));
 
 	/* use the local index in scp to do pornsort */
-	for (size_t i = 0; i < j; i += 4) {
+	for (size_t i = 0; i < nsc; i += 4) {
 		uint8_t perm = pornsort_perm(keys + i);
 		pornsort_apply(keys + i, perm);
 	}
 
 	/* merge steps, up to the next 2-power */
-	merge_all(m);
-	return keys;
+	merge_all(m_2p);
+	*pip = keys;
+	return nt;
 }
 
 static void
@@ -935,10 +940,11 @@ seek_sort(uteseek_t sk)
 #endif	/* DEBUG_FLAG */
 
 	for (void *tp = sk->sp, *np = new, *ep = sk->sp + sk->si; tp < ep; ) {
-		size_t ntleft = DATDI(ep, tp, tpc_tsz);
-		size_t nticks = min(IDXSORT_SIZE, ntleft);
-		perm_idx_t pi = idxsort(tp, nticks);
+		size_t nticks;
+		perm_idx_t pi;
 
+		nticks = idxsort(&pi, tp, ep);
+		UDEBUG("collation of %zu ticks\n", nticks);
 		collate(np, tp, pi, nticks);
 		tp = DATI(tp, nticks, tpc_tsz);
 		np = DATI(np, nticks, tpc_tsz);

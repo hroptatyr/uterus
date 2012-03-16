@@ -433,6 +433,9 @@ ute_sort(utectx_t ctx)
 	uint64_t check = 0ULL;
 #endif	/* DEBUG_FLAG */
 
+	/* tpc might be in there as well */
+	npages += tpc_has_ticks_p(ctx->tpc);
+
 	/* this is to obtain a merge strategy,
 	 * we have several outcomes:
 	 * - merge k-way, where k is the number of pages

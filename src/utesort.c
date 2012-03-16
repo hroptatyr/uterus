@@ -63,9 +63,11 @@
 # include <assert.h>
 # include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define MAYBE_NOINLINE		__attribute__((noinline))
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
 # define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 
 
@@ -242,25 +244,36 @@ min_size_t(size_t x, size_t y)
 }
 
 static void
-load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
+load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 {
-	size_t e = min_size_t(end_run, ute_npages(ctx));
-	for (size_t k = start_run, i = 0; k < e; i++, k++) {
+	size_t e = min_size_t(end, npg);
+	for (size_t k = sta, i = 0; k < e; i++, k++) {
 		/* set up page i */
 		seek_page(sks + i, ctx, k);
 	}
 
 #if defined DEBUG_FLAG
-	for (size_t k = start_run, j = 0; k < e; j++, k++) {
-		const size_t sks_nticks = sks[j].sz / sizeof(*sks->sp);
+	for (size_t k = sta, j = 0; k < e; j++, k++) {
+		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
+		sidx_t i = 0;
 
-		for (sidx_t i = 0, tsz; i < sks_nticks; i += tsz) {
+		for (sidx_t tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
+			if (t->u == 0) {
+				/* naught tick, means there should be
+				 * nothing but naught ticks from now on */
+				break;
+			}
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);
+		}
+		/* check for naught ticks at the end */
+		for (; i < sks_nticks; i++) {
+			scom_t naught = AS_SCOM(sks[j].sp + i);
+			assert(naught->u == 0ULL);
 		}
 	}
 #endif	/* DEBUG_FLAG */
@@ -268,17 +281,17 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 }
 
 static void
-dump_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
+dump_runs(uteseek_t sks, utectx_t UNUSED(ctx), sidx_t s, sidx_t e, size_t npg)
 {
-	size_t e = min_size_t(end_run, ute_npages(ctx));
-	for (size_t i = 0, k = start_run; k < e; i++, k++) {
+	e = min_size_t(e, npg);
+	for (size_t i = 0, k = s; k < e; i++, k++) {
 		/* set up page i */
 		flush_seek(sks + i);
 	}
 	return;
 }
 
-static strat_t
+static strat_t MAYBE_NOINLINE
 sort_strat(utectx_t ctx)
 {
 /* could be configurable */
@@ -290,22 +303,25 @@ sort_strat(utectx_t ctx)
 	strat_t s;
 	struct __strat_clo_s sc[1];
 
+	UDEBUG("generating a sort strategy for %zu (+%zd) pages\n",
+	       npages, (ssize_t)tpc_has_ticks_p(ctx->tpc));
 	npages += tpc_has_ticks_p(ctx->tpc);
 	for (size_t j = 0; j < npages; j += NRUNS) {
 		/* initialise the seeks */
-		load_runs(sks, ctx, j, j + NRUNS);
+		load_runs(sks, ctx, j, j + NRUNS, npages);
 
 		/* obtain intervals */
 		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
 			scom_t sb = seek_first_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
+			assert(sb && se);
 			assert(sb->u <= se->u);
 			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}
 
 		/* finish off the seeks */
-		dump_runs(sks, ctx, j, j + NRUNS);
+		dump_runs(sks, ctx, j, j + NRUNS, npages);
 	}
 	/* run the strategy evaluator */
 	s = xnew(struct strat_s);
@@ -380,7 +396,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 static bool
 seek_eof_p(uteseek_t sk)
 {
-	return sk->si * sizeof(*sk->sp) >= sk->sz;
+	return sk->si >= sk->szrw / sizeof(*sk->sp);
 }
 
 static void
@@ -417,6 +433,9 @@ ute_sort(utectx_t ctx)
 	uint64_t check = 0ULL;
 #endif	/* DEBUG_FLAG */
 
+	/* tpc might be in there as well */
+	npages += tpc_has_ticks_p(ctx->tpc);
+
 	/* this is to obtain a merge strategy,
 	 * we have several outcomes:
 	 * - merge k-way, where k is the number of pages
@@ -441,7 +460,7 @@ ute_sort(utectx_t ctx)
 
 	/* let's assume we have an all-way merge */
 	sks = xnew_array(struct uteseek_s, npages);
-	load_runs(sks, ctx, 0, npages);
+	load_runs(sks, ctx, 0, npages, npages);
 
 	hdl = ute_open(ctx->fname, UO_CREAT | UO_TRUNC);
 
@@ -475,7 +494,7 @@ ute_sort(utectx_t ctx)
 	/* close the ute file */
 	ute_close(hdl);
 	/* dump the pages */
-	dump_runs(sks, ctx, 0, npages);
+	dump_runs(sks, ctx, 0, npages, npages);
 	free(sks);
 
 	/* free the strategy */

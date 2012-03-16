@@ -151,10 +151,10 @@ make_tpc(utetpc_t tpc, size_t nsndwchs)
 
 	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
 	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
-		tpc->sk.sz = sz;
+		tpc->sk.szrw = sz;
 		tpc->sk.si = 0;
 	} else {
-		tpc->sk.sz = 0;
+		tpc->sk.szrw = 0;
 		tpc->sk.si = -1;
 	}
 	return;
@@ -165,10 +165,10 @@ free_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		/* seek points to something => munmap first */
-		munmap(tpc->sk.sp, tpc->sk.sz);
+		munmap(tpc->sk.sp, tpc_max_size(tpc));
 	}
 	tpc->sk.si = -1;
-	tpc->sk.sz = 0;
+	tpc->sk.szrw = 0;
 	tpc->sk.sp = NULL;
 	return;
 }
@@ -178,6 +178,7 @@ clear_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		tpc->sk.si = 0;
+		tpc->sk.rewound = 0;
 	}
 	return;
 }
@@ -499,6 +500,10 @@ merge_all(size_t nticks)
 	return;
 }
 
+#if defined DEBUG_FLAG
+static size_t nleading_naughts = 0;
+#endif	/* DEBUG_FLAG */
+
 static size_t MAYBE_NOINLINE
 idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 {
@@ -513,10 +518,16 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 		scom_t p = AS_SCOM(sp + nt);
 		tsz = scom_tick_size(p);
 
+		/* there must be no naught ticks in the map */
+		assert(p->u);
 		/* produce a mapping SCOM |-> TICK */
 		put_pi(keys + nsc, p, nt);
 	}
 	UDEBUG("idxsort on %zu scoms and %zu ticks\n", nsc, nt);
+	/* there must be one tick for this to work */
+	assert(nt > 0);
+	/* and if there's one tick there should be one scom */
+	assert(nsc > 0);
 	/* compute the next 2-power */
 	m_2p = __ilog2_ceil(nsc);
 	/* check if m_2p is a 2-power indeed */
@@ -534,7 +545,20 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 
 	/* merge steps, up to the next 2-power */
 	merge_all(m_2p);
+
+	/* keys should be in ascending order now */
+	for (size_t i = 1; i < nsc; i++) {
+		assert(keys[i].skey >= keys[i - 1].skey);
+	}
+	/* last one should contain at least a non-naught key
+	 * or else we have been doing this shit for nothing */
+	assert(keys[m_2p - 1].skey);
+
+	/* assign results and off we pop */
 	*pip = keys;
+#if defined DEBUG_FLAG
+	nleading_naughts = m_2p - nsc;
+#endif	/* DEBUG_FLAG */
 	return nt;
 }
 
@@ -550,13 +574,10 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
 
-#if defined DEBUG_FLAG && 0
+#if defined DEBUG_FLAG
 	/* since idxsort used 2-powers and we don't allow 0 skeys
-	 * the sum of J and NTICKS should be a 2-power
-	 * we use the identity 1 + \sum_i 2^i = 2^{i+1} to detect a 2-power */
-	size_t ni = j + nticks;
-	assert(((ni - 1) & ni) == 0);
-	/* this turns out to be wrong in the case of variadic tick sizes */
+	 * J should be the same as nleading_naughts as set in idxsort() */
+	assert(j == nleading_naughts);
 #endif	/* DEBUG_FLAG */
 
 	for (size_t i = 0, bsz, tsz; i < nticks; j++, i += tsz) {
@@ -704,14 +725,15 @@ algn_tick(uteseek_t sk, sidx_t ix)
 static struct sndwch_s*
 seek_last_sndwch(uteseek_t sk)
 {
-	const size_t probsz = sizeof(*sk->sp);
-	sndwch_t tp;
-
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
+	} else if (UNLIKELY(sk->szrw - sk->rewound == 0)) {
+		return NULL;
+	} else {
+		const size_t probsz = sizeof(*sk->sp);
+		sndwch_t tp = sk->sp + sk->szrw / probsz - 1;
+		return sk->sp + algn_tick(sk, tp - sk->sp);
 	}
-	for (tp = sk->sp + sk->sz / probsz - 1;	!AS_SCOM(tp)->u; tp--);
-	return sk->sp + algn_tick(sk, tp - sk->sp);
 }
 
 
@@ -750,7 +772,7 @@ seek_key(uteseek_t sk, scidx_t key)
 
 	/* binsrch, try the middle */
 	for (typeof(sp) bosp = sk->sp,
-		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
+		     eosp = sk->sp + sk->szrw / sizeof(*sp); bosp < eosp; ) {
 		sidx_t diam = (eosp - bosp) / 2;
 
 		sp = sk->sp + algn_tick(sk, (bosp - sk->sp) + diam);
@@ -767,7 +789,7 @@ seek_key(uteseek_t sk, scidx_t key)
 	}
 	/* must be the offending tick, update index and return */
 	sk->si = sp - sk->sp;
-	assert(sk->si * sizeof(*sk->sp) < sk->sz);
+	assert(sk->si < sk->szrw / sizeof(*sk->sp));
 	return AS_SCOM(sp);
 }
 
@@ -776,9 +798,9 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {
 /* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
 	void *tp = tgt->sp + tgt->si;
-	void *eot = DATA(tgt->sp, tgt->sz);
+	void *eot = tgt->sp + tgt->szrw / sizeof(*tgt->sp);
 	void *sp = src->sp + src->si;
-	void *eos = DATA(src->sp, src->sz);
+	void *eos = src->sp + src->szrw / sizeof(*tgt->sp);
 	void *rp = swp->sk.sp;
 	void *eor = swp->sk.sp + swp->sk.si;
 
@@ -814,7 +836,7 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 		}
 	}
 	/* adapt tgt idx, according to the assertion, that's quite simple */
-	tgt->si = tgt->sz / sizeof(*tgt->sp);
+	tgt->si = tgt->szrw / sizeof(*tgt->sp);
 	return;
 }
 
@@ -871,9 +893,9 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 /* we perform this on a seek as we need the ticks sorted
  * also, this is in-situ if TGT == SK. */
 	void *tp = tgt->sp + tgt->si;
-	void *eot = DATA(tgt->sp, tgt->sz);
+	void *eot = tgt->sp + tgt->szrw / sizeof(*sk->sp);
 	void *sp = sk->sp + sk->si;
-	void *eos = DATA(sk->sp, sk->sz);
+	void *eos = sk->sp + sk->szrw / sizeof(*sk->sp);
 	sidx_t res = 0;
 
 	while (tp < eot && sp < eos) {
@@ -926,16 +948,17 @@ seek_sort(uteseek_t sk)
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
+	size_t sk_sz = sk->szrw - sk->rewound;
 
 	/* get us another map */
-	new = mmap(NULL, sizeof(*new) + sk->sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
 	{
-		size_t rest_bsz = sk->sz - sk->si * sizeof(*sk->sp);
-		UDEBUG("seek_sort(): randomising %zu bytes\n", rest_bsz);
-		memset(sk->sp + sk->si, -1, rest_bsz);
+		size_t rbsz = sk_sz - (sk->si - sk->rewound) * sizeof(*sk->sp);
+		UDEBUG("seek_sort(): randomising %zu bytes\n", rbsz);
+		memset(sk->sp + sk->si, -1, rbsz);
 	}
 #endif	/* DEBUG_FLAG */
 
@@ -975,10 +998,10 @@ seek_sort(uteseek_t sk)
 		if (sk->sp == tgt) {
 			/* oh, we were about to copy shit into tgt
 			 * just copy the rest so it ends up in seek space */
-			memcpy(sk->sp, data, sk->sz);
+			memcpy(sk->sp, data, sk_sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, sizeof(*new) + sk->sz);
+		munmap(new, sizeof(*new) + sk_sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

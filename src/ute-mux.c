@@ -108,19 +108,20 @@ ute_mux(mux_ctx_t ctx)
 		const size_t bsz = UTE_BLKSZ(hdl);
 		const size_t tsz = sizeof(*sk->sp);
 		const size_t psz = bsz * tsz;
+		size_t sk_sz;
 
 		seek_page(sk, hdl, i);
-		if (sk->sz < psz) {
+		if ((sk_sz = seek_size(sk)) < psz) {
 			/* half page, just add it to the tpc */
-			const size_t nticks = sk->sz / sizeof(*sk->sp);
+			const size_t nticks = sk_sz / sizeof(*sk->sp);
 			ute_add_ticks(ctx->wrr, sk->sp, nticks);
-		} else if (!ute_extend(ctx->wrr, sk->sz)) {
+		} else if (!ute_extend(ctx->wrr, sk_sz)) {
 			/* file extending fucked */
 			error(0, "cannot extend file");
 		} else {
 			/* just mmap into target space */
 			seek_page(sk + 1, ctx->wrr, wrr_npg++);
-			memcpy(sk[1].sp, sk[0].sp, sk->sz);
+			memcpy(sk[1].sp, sk[0].sp, sk_sz);
 			flush_seek(sk + 1);
 		}
 		flush_seek(sk);

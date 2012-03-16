@@ -720,15 +720,15 @@ algn_tick(uteseek_t sk, sidx_t ix)
 static struct sndwch_s*
 seek_last_sndwch(uteseek_t sk)
 {
-	const size_t probsz = sizeof(*sk->sp);
-	sndwch_t tp;
-
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
 	} else if (UNLIKELY(sk->sz == 0)) {
 		return NULL;
+	} else {
+		const size_t probsz = sizeof(*sk->sp);
+		sndwch_t tp = sk->sp + sk->sz / probsz - 1;
+		return sk->sp + algn_tick(sk, tp - sk->sp);
 	}
-	return sk->sp + algn_tick(sk, tp - sk->sp);
 }
 
 

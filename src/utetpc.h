@@ -53,16 +53,41 @@
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
+#endif	/* !UNLIKELY */
+#if !defined LIKELY
+# define LIKELY(_x)	__builtin_expect((_x), 1)
 #endif	/* !LIKELY */
 
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
 
+#if defined _Generic
+/* C11 only, fucking gcc hurry up! */
+# define STRUCT_ILOG2B(x)			\
+	_Generic((x),				\
+		 default: 1,			\
+		 struct sndwch_s 4,		\
+		)
+#else  /* _Generic */
+# define STRUCT_ILOG2B(x)			\
+	/* we know it's sndwch */		\
+	4
+#endif	/* _Generic */
+
 struct uteseek_s {
 	/** index into data (in sandwiches) */
 	sidx_t si;
-	/** total alloc'd size of the page (in bytes) */
-	size_t sz;
+	union {
+		/** total alloc'd size of the page (in bytes) */
+		size_t sz;
+		/** size-fiddled indicator, this is to reflect
+		 * that we mmap()ed more space than SZ says but then
+		 * had to rewind it to not expose naught padding ticks
+		 * at the end of the page
+		 * this is possible because all data should be aligned
+		 * to sndwch_t size anyway */
+		size_t rewound:STRUCT_ILOG2B(struct sndwch_s);
+	};
 	/** the actual page data */
 	struct sndwch_s *sp;
 	/** page we're on */
@@ -85,6 +110,30 @@ struct utetpc_s {
 
 #define TPC_FL_UNSORTED		0x01
 #define TPC_FL_NEEDMRG		0x02
+
+static inline __attribute__((pure)) bool
+seek_rewound_p(uteseek_t sk)
+{
+	return sk->rewound != 0;
+}
+
+static inline size_t
+seek_size(uteseek_t sk)
+{
+	return LIKELY(!seek_rewound_p(sk) ?
+		      /* no fiddling needed */
+		      sk->sz :
+		      /* we can unwind max 15 ticks! */
+		      sk->sz + sk->rewound * sizeof(*sk->sp));
+}
+
+static inline void
+seek_set_rewind(uteseek_t sk, size_t nticks)
+{
+/* consider SK rewound by NTICKS ticks */
+	sk->rewound = nticks;
+	return;
+}
 
 static inline bool
 tpc_active_p(utetpc_t tpc)

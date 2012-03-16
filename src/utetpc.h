@@ -79,7 +79,7 @@ struct uteseek_s {
 	sidx_t si;
 	union {
 		/** total alloc'd size of the page (in bytes) */
-		size_t sz;
+		size_t szrw;
 		/** size-fiddled indicator, this is to reflect
 		 * that we mmap()ed more space than SZ says but then
 		 * had to rewind it to not expose naught padding ticks
@@ -122,16 +122,16 @@ seek_size(uteseek_t sk)
 {
 	return LIKELY(!seek_rewound_p(sk) ?
 		      /* no fiddling needed */
-		      sk->sz :
+		      sk->szrw :
 		      /* we can unwind max 15 ticks! */
-		      sk->sz + sk->rewound * sizeof(*sk->sp));
+		      sk->szrw - sk->rewound + sk->rewound * sizeof(*sk->sp));
 }
 
 static inline void
 seek_rewind(uteseek_t sk, size_t nticks)
 {
 /* consider SK rewound by NTICKS ticks */
-	sk->sz -= nticks * sizeof(*sk->sp);
+	sk->szrw -= nticks * sizeof(*sk->sp);
 	sk->rewound = nticks;
 	return;
 }
@@ -139,7 +139,7 @@ seek_rewind(uteseek_t sk, size_t nticks)
 static inline bool
 tpc_active_p(utetpc_t tpc)
 {
-	return tpc->sk.sz > 0;
+	return tpc->sk.szrw - tpc->sk.rewound > 0;
 }
 
 static inline bool
@@ -151,14 +151,14 @@ tpc_has_ticks_p(utetpc_t tpc)
 static inline bool
 tpc_full_p(utetpc_t tpc)
 {
-	return tpc->sk.si >= tpc->sk.sz / sizeof(*tpc->sk.sp);
+	return tpc->sk.si >= tpc->sk.szrw / sizeof(*tpc->sk.sp);
 }
 
 static inline bool
 tpc_can_hold_p(utetpc_t tpc, size_t nt)
 {
 /* whether there's space for NT more sandwiches in TPC */
-	return tpc->sk.si + nt <= tpc->sk.sz / sizeof(*tpc->sk.sp);
+	return tpc->sk.si + nt <= tpc->sk.szrw / sizeof(*tpc->sk.sp);
 }
 
 /**
@@ -235,7 +235,7 @@ tpc_byte_size(utetpc_t tpc)
 static inline size_t
 tpc_max_size(utetpc_t tpc)
 {
-	return tpc->sk.sz;
+	return seek_size(&tpc->sk);
 }
 
 /**
@@ -283,7 +283,7 @@ DECLF scom_t seek_last_scom(uteseek_t sk);
 static inline scom_t
 seek_get_scom(uteseek_t sk)
 {
-	if (UNLIKELY(sk->si * sizeof(*sk->sp) >= sk->sz)) {
+	if (UNLIKELY(sk->si >= sk->szrw / sizeof(*sk->sp))) {
 		return NULL;
 	}
 	return AS_SCOM(sk->sp + sk->si);

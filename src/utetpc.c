@@ -151,10 +151,10 @@ make_tpc(utetpc_t tpc, size_t nsndwchs)
 
 	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
 	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
-		tpc->sk.sz = sz;
+		tpc->sk.szrw = sz;
 		tpc->sk.si = 0;
 	} else {
-		tpc->sk.sz = 0;
+		tpc->sk.szrw = 0;
 		tpc->sk.si = -1;
 	}
 	return;
@@ -165,10 +165,10 @@ free_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		/* seek points to something => munmap first */
-		munmap(tpc->sk.sp, tpc->sk.sz);
+		munmap(tpc->sk.sp, tpc_max_size(tpc));
 	}
 	tpc->sk.si = -1;
-	tpc->sk.sz = 0;
+	tpc->sk.szrw = 0;
 	tpc->sk.sp = NULL;
 	return;
 }
@@ -723,11 +723,11 @@ seek_last_sndwch(uteseek_t sk)
 {
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
-	} else if (UNLIKELY(sk->sz == 0)) {
+	} else if (UNLIKELY(sk->szrw - sk->rewound == 0)) {
 		return NULL;
 	} else {
 		const size_t probsz = sizeof(*sk->sp);
-		sndwch_t tp = sk->sp + sk->sz / probsz - 1;
+		sndwch_t tp = sk->sp + sk->szrw / probsz - 1;
 		return sk->sp + algn_tick(sk, tp - sk->sp);
 	}
 }
@@ -768,7 +768,7 @@ seek_key(uteseek_t sk, scidx_t key)
 
 	/* binsrch, try the middle */
 	for (typeof(sp) bosp = sk->sp,
-		     eosp = DATA(sk->sp, sk->sz); bosp < eosp; ) {
+		     eosp = sk->sp + sk->szrw / sizeof(*sp); bosp < eosp; ) {
 		sidx_t diam = (eosp - bosp) / 2;
 
 		sp = sk->sp + algn_tick(sk, (bosp - sk->sp) + diam);
@@ -785,7 +785,7 @@ seek_key(uteseek_t sk, scidx_t key)
 	}
 	/* must be the offending tick, update index and return */
 	sk->si = sp - sk->sp;
-	assert(sk->si * sizeof(*sk->sp) < sk->sz);
+	assert(sk->si < sk->szrw / sizeof(*sk->sp));
 	return AS_SCOM(sp);
 }
 
@@ -794,9 +794,9 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 {
 /* merge stuff from SRC and SWP into TGT, leftovers will be put in SWP */
 	void *tp = tgt->sp + tgt->si;
-	void *eot = DATA(tgt->sp, tgt->sz);
+	void *eot = tgt->sp + tgt->szrw / sizeof(*tgt->sp);
 	void *sp = src->sp + src->si;
-	void *eos = DATA(src->sp, src->sz);
+	void *eos = src->sp + src->szrw / sizeof(*tgt->sp);
 	void *rp = swp->sk.sp;
 	void *eor = swp->sk.sp + swp->sk.si;
 
@@ -832,7 +832,7 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 		}
 	}
 	/* adapt tgt idx, according to the assertion, that's quite simple */
-	tgt->si = tgt->sz / sizeof(*tgt->sp);
+	tgt->si = tgt->szrw / sizeof(*tgt->sp);
 	return;
 }
 
@@ -889,9 +889,9 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 /* we perform this on a seek as we need the ticks sorted
  * also, this is in-situ if TGT == SK. */
 	void *tp = tgt->sp + tgt->si;
-	void *eot = DATA(tgt->sp, tgt->sz);
+	void *eot = tgt->sp + tgt->szrw / sizeof(*sk->sp);
 	void *sp = sk->sp + sk->si;
-	void *eos = DATA(sk->sp, sk->sz);
+	void *eos = sk->sp + sk->szrw / sizeof(*sk->sp);
 	sidx_t res = 0;
 
 	while (tp < eot && sp < eos) {
@@ -944,7 +944,7 @@ seek_sort(uteseek_t sk)
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
-	size_t sk_sz = sk->sz - sk->rewound;
+	size_t sk_sz = sk->szrw - sk->rewound;
 
 	/* get us another map */
 	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);

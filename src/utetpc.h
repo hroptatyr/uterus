@@ -216,6 +216,9 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 static inline scom_t
 seek_first_scom(uteseek_t sk)
 {
+	if (UNLIKELY(!AS_SCOM(sk->sp)->u)) {
+		return NULL;
+	}
 	return AS_SCOM(sk->sp);
 }
 

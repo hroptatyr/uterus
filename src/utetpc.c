@@ -513,10 +513,16 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 		scom_t p = AS_SCOM(sp + nt);
 		tsz = scom_tick_size(p);
 
+		/* there must be no naught ticks in the map */
+		assert(p->u);
 		/* produce a mapping SCOM |-> TICK */
 		put_pi(keys + nsc, p, nt);
 	}
 	UDEBUG("idxsort on %zu scoms and %zu ticks\n", nsc, nt);
+	/* there must be one tick for this to work */
+	assert(nt > 0);
+	/* and if there's one tick there should be one scom */
+	assert(nsc > 0);
 	/* compute the next 2-power */
 	m_2p = __ilog2_ceil(nsc);
 	/* check if m_2p is a 2-power indeed */
@@ -534,6 +540,16 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 
 	/* merge steps, up to the next 2-power */
 	merge_all(m_2p);
+
+	/* keys should be in ascending order now */
+	for (size_t i = 1; i < nsc; i++) {
+		assert(keys[i].skey >= keys[i - 1].skey);
+	}
+	/* last one should contain at least a non-naught key
+	 * or else we have been doing this shit for nothing */
+	assert(keys[nsc - 1].skey);
+
+	/* assign results and off we pop */
 	*pip = keys;
 	return nt;
 }
@@ -709,8 +725,9 @@ seek_last_sndwch(uteseek_t sk)
 
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
+	} else if (UNLIKELY(sk->sz == 0)) {
+		return NULL;
 	}
-	for (tp = sk->sp + sk->sz / probsz - 1;	!AS_SCOM(tp)->u; tp--);
 	return sk->sp + algn_tick(sk, tp - sk->sp);
 }
 

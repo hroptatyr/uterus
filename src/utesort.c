@@ -63,9 +63,11 @@
 # include <assert.h>
 # include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define MAYBE_NOINLINE		__attribute__((noinline))
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
 # define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 
 
@@ -254,13 +256,24 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	for (size_t k = start_run, j = 0; k < e; j++, k++) {
 		const size_t sks_nticks = sks[j].sz / sizeof(*sks->sp);
 		uint64_t thresh = 0;
+		sidx_t i = 0;
 
-		for (sidx_t i = 0, tsz; i < sks_nticks; i += tsz) {
+		for (sidx_t tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
+			if (t->u == 0) {
+				/* naught tick, means there should be
+				 * nothing but naught ticks from now on */
+				break;
+			}
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);
+		}
+		/* check for naught ticks at the end */
+		for (; i < sks_nticks; i++) {
+			scom_t naught = AS_SCOM(sks[j].sp + i);
+			assert(naught->u == 0ULL);
 		}
 	}
 #endif	/* DEBUG_FLAG */
@@ -278,7 +291,7 @@ dump_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	return;
 }
 
-static strat_t
+static strat_t MAYBE_NOINLINE
 sort_strat(utectx_t ctx)
 {
 /* could be configurable */
@@ -290,6 +303,8 @@ sort_strat(utectx_t ctx)
 	strat_t s;
 	struct __strat_clo_s sc[1];
 
+	UDEBUG("generating a sort strategy for %zu (+%zu) pages\n",
+	       npages, tpc_has_ticks_p(ctx->tpc));
 	npages += tpc_has_ticks_p(ctx->tpc);
 	for (size_t j = 0; j < npages; j += NRUNS) {
 		/* initialise the seeks */
@@ -300,6 +315,7 @@ sort_strat(utectx_t ctx)
 			scom_t sb = seek_first_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
+			assert(sb && se);
 			assert(sb->u <= se->u);
 			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}

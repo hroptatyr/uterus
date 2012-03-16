@@ -313,6 +313,11 @@ sort_strat(utectx_t ctx)
 			scom_t sb = seek_first_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
+			/* if one of them is NULL both of them are */
+			if (UNLIKELY(sb == NULL || se == NULL)) {
+				assert(sb == NULL && se == NULL);
+				continue;
+			}
 			assert(sb->u <= se->u);
 			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}

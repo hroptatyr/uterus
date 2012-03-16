@@ -225,7 +225,9 @@ DECLF void fini_tpc(void);
 static inline size_t
 tpc_byte_size(utetpc_t tpc)
 {
-	return tpc->sk.si * sizeof(*tpc->sk.sp);
+/* account for rewind bits */
+	size_t nrw = tpc->sk.rewound;
+	return (tpc->sk.si + nrw) * sizeof(*tpc->sk.sp);
 }
 
 /**

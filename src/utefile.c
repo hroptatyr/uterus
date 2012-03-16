@@ -893,9 +893,11 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
-	} else if (tpc_full_p(ctx->tpc) ||
-		   !tpc_can_hold_p(ctx->tpc, tsz)) {
-		/* oh current tpc is full, flush and start over */
+	} else if (!tpc_can_hold_p(ctx->tpc, tsz)) {
+		/* great, compute the number of leap ticks */
+		uteseek_t sk = &ctx->tpc->sk;
+		size_t nleap = sk->sz / sizeof(*sk->sp) - sk->si;
+		seek_rewind(sk, nleap);
 		ute_flush(ctx);
 	}
 	/* and now it's just passing on everything to the tpc adder */

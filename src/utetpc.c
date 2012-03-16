@@ -500,6 +500,10 @@ merge_all(size_t nticks)
 	return;
 }
 
+#if defined DEBUG_FLAG
+static size_t nleading_naughts = 0;
+#endif	/* DEBUG_FLAG */
+
 static size_t MAYBE_NOINLINE
 idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 {
@@ -552,6 +556,9 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 
 	/* assign results and off we pop */
 	*pip = keys;
+#if defined DEBUG_FLAG
+	nleading_naughts = m_2p - nsc;
+#endif	/* DEBUG_FLAG */
 	return nt;
 }
 
@@ -567,13 +574,10 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
 
-#if defined DEBUG_FLAG && 0
+#if defined DEBUG_FLAG
 	/* since idxsort used 2-powers and we don't allow 0 skeys
-	 * the sum of J and NTICKS should be a 2-power
-	 * we use the identity 1 + \sum_i 2^i = 2^{i+1} to detect a 2-power */
-	size_t ni = j + nticks;
-	assert(((ni - 1) & ni) == 0);
-	/* this turns out to be wrong in the case of variadic tick sizes */
+	 * J should be the same as nleading_naughts as set in idxsort() */
+	assert(j == nleading_naughts);
 #endif	/* DEBUG_FLAG */
 
 	for (size_t i = 0, bsz, tsz; i < nticks; j++, i += tsz) {

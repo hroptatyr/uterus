@@ -313,6 +313,7 @@ sort_strat(utectx_t ctx)
 			scom_t sb = seek_first_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
+			assert(sb && se);
 			assert(sb->u <= se->u);
 			itree_add(it, sb->u, se->u, AS_VOID_PTR(k));
 		}

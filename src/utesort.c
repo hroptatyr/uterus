@@ -63,9 +63,11 @@
 # include <assert.h>
 # include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define MAYBE_NOINLINE		__attribute__((noinline))
 #else  /* !DEBUG_FLAG */
 # define UDEBUG(args...)
 # define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 
 
@@ -289,7 +291,7 @@ dump_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	return;
 }
 
-static strat_t
+static strat_t MAYBE_NOINLINE
 sort_strat(utectx_t ctx)
 {
 /* could be configurable */

@@ -951,9 +951,9 @@ seek_sort(uteseek_t sk)
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
 	{
-		size_t rest_bsz = sk->sz - sk->si * sizeof(*sk->sp);
-		UDEBUG("seek_sort(): randomising %zu bytes\n", rest_bsz);
-		memset(sk->sp + sk->si, -1, rest_bsz);
+		size_t rbsz = sk->sz - (sk->si - sk->rewound) * sizeof(*sk->sp);
+		UDEBUG("seek_sort(): randomising %zu bytes\n", rbsz);
+		memset(sk->sp + sk->si, -1, rbsz);
 	}
 #endif	/* DEBUG_FLAG */
 

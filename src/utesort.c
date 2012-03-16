@@ -254,7 +254,7 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 
 #if defined DEBUG_FLAG
 	for (size_t k = start_run, j = 0; k < e; j++, k++) {
-		const size_t sks_nticks = sks[j].sz / sizeof(*sks->sp);
+		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
 		sidx_t i = 0;
 
@@ -396,7 +396,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 static bool
 seek_eof_p(uteseek_t sk)
 {
-	return sk->si * sizeof(*sk->sp) >= sk->sz;
+	return sk->si >= sk->szrw / sizeof(*sk->sp);
 }
 
 static void

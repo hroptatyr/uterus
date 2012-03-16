@@ -548,7 +548,7 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 	}
 	/* last one should contain at least a non-naught key
 	 * or else we have been doing this shit for nothing */
-	assert(keys[nsc - 1].skey);
+	assert(keys[m_2p - 1].skey);
 
 	/* assign results and off we pop */
 	*pip = keys;

@@ -131,6 +131,7 @@ static inline void
 seek_set_rewind(uteseek_t sk, size_t nticks)
 {
 /* consider SK rewound by NTICKS ticks */
+	sk->sz -= nticks * sizeof(*sk->sp);
 	sk->rewound = nticks;
 	return;
 }

@@ -200,10 +200,14 @@ creat_hdr(utectx_t ctx)
 void
 flush_seek(uteseek_t sk)
 {
+/* the psz code will go eventually and be replaced with the rewound stuff
+ * we're currently preparing in the tpc/seek api */
 	if (sk->sz > 0) {
-		/* seek points to something => munmap first */
-		munmap(sk->sp, sk->sz);
+		/* munmap given the computed page size, later to be replaced
+		 * by seek_size(sk) which will account for tick rewindings */
+		munmap(sk->sp, seek_size(sk));
 	}
+	/* bit of cleaning up */
 	sk->si = -1;
 	sk->sz = 0;
 	sk->sp = NULL;
@@ -217,7 +221,8 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	size_t off = page_offset(ctx, pg);
 	int pflags = __pflags(ctx);
 	size_t psz;
-	void *tmp;
+	sndwch_t sp;
+	sidx_t nt = 0;
 
 	/* trivial checks */
 	if (UNLIKELY(off > ctx->fsz)) {
@@ -229,15 +234,24 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		}
 	}
 	/* create a new seek */
-	tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
-	if (UNLIKELY(tmp == MAP_FAILED)) {
-		return;
+	{
+		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
+		if (UNLIKELY(tmp == MAP_FAILED)) {
+			return;
+		}
+		sk->sp = tmp;
 	}
-	sk->sp = tmp;
 	sk->si = 0;
 	sk->sz = psz;
 	sk->pg = pg;
 	sk->fl = 0;
+
+	/* check if there's lone naughts at the end of the page */
+	for (sp = sk->sp + sk->sz / sizeof(*sk->sp);
+	     !AS_SCOM(sp - 1)->u && scom_tick_size(AS_SCOM(sp - 2)) == 1;
+	     sp--, nt++);
+	/* sp should point to the scom after the last non-naught tick */
+	seek_rewind(sk, nt);
 	return;
 wipe:
 	memset(sk, 0, sizeof(*sk));
@@ -879,9 +893,11 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
-	} else if (tpc_full_p(ctx->tpc) ||
-		   !tpc_can_hold_p(ctx->tpc, tsz)) {
-		/* oh current tpc is full, flush and start over */
+	} else if (!tpc_can_hold_p(ctx->tpc, tsz)) {
+		/* great, compute the number of leap ticks */
+		uteseek_t sk = &ctx->tpc->sk;
+		size_t nleap = sk->sz / sizeof(*sk->sp) - sk->si;
+		seek_rewind(sk, nleap);
 		ute_flush(ctx);
 	}
 	/* and now it's just passing on everything to the tpc adder */

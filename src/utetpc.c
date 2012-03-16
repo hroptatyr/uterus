@@ -728,13 +728,6 @@ seek_last_sndwch(uteseek_t sk)
 	} else if (UNLIKELY(sk->sz == 0)) {
 		return NULL;
 	}
-	for (tp = sk->sp + sk->sz / probsz - 1;
-	     tp >= sk->sp && !AS_SCOM(tp)->u; tp--);
-	if (UNLIKELY(tp < sk->sp)) {
-		return NULL;
-	} else if (tp == sk->sp) {
-		return sk->sp;
-	}
 	return sk->sp + algn_tick(sk, tp - sk->sp);
 }
 

@@ -303,8 +303,8 @@ sort_strat(utectx_t ctx)
 	strat_t s;
 	struct __strat_clo_s sc[1];
 
-	UDEBUG("generating a sort strategy for %zu (+%zu) pages\n",
-	       npages, tpc_has_ticks_p(ctx->tpc));
+	UDEBUG("generating a sort strategy for %zu (+%zd) pages\n",
+	       npages, (ssize_t)tpc_has_ticks_p(ctx->tpc));
 	npages += tpc_has_ticks_p(ctx->tpc);
 	for (size_t j = 0; j < npages; j += NRUNS) {
 		/* initialise the seeks */

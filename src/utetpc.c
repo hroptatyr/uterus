@@ -944,14 +944,15 @@ seek_sort(uteseek_t sk)
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
+	size_t sk_sz = sk->sz - sk->rewound;
 
 	/* get us another map */
-	new = mmap(NULL, sizeof(*new) + sk->sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
 	{
-		size_t rbsz = sk->sz - (sk->si - sk->rewound) * sizeof(*sk->sp);
+		size_t rbsz = sk_sz - (sk->si - sk->rewound) * sizeof(*sk->sp);
 		UDEBUG("seek_sort(): randomising %zu bytes\n", rbsz);
 		memset(sk->sp + sk->si, -1, rbsz);
 	}
@@ -993,10 +994,10 @@ seek_sort(uteseek_t sk)
 		if (sk->sp == tgt) {
 			/* oh, we were about to copy shit into tgt
 			 * just copy the rest so it ends up in seek space */
-			memcpy(sk->sp, data, sk->sz);
+			memcpy(sk->sp, data, sk_sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, sizeof(*new) + sk->sz);
+		munmap(new, sizeof(*new) + sk_sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

@@ -254,13 +254,24 @@ load_runs(struct uteseek_s *sks, utectx_t ctx, sidx_t start_run, sidx_t end_run)
 	for (size_t k = start_run, j = 0; k < e; j++, k++) {
 		const size_t sks_nticks = sks[j].sz / sizeof(*sks->sp);
 		uint64_t thresh = 0;
+		sidx_t i = 0;
 
-		for (sidx_t i = 0, tsz; i < sks_nticks; i += tsz) {
+		for (sidx_t tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
+			if (t->u == 0) {
+				/* naught tick, means there should be
+				 * nothing but naught ticks from now on */
+				break;
+			}
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);
+		}
+		/* check for naught ticks at the end */
+		for (; i < sks_nticks; i++) {
+			scom_t naught = AS_SCOM(sks[j].sp + i);
+			assert(naught->u == 0ULL);
 		}
 	}
 #endif	/* DEBUG_FLAG */

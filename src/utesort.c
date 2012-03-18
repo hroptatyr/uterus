@@ -263,6 +263,7 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 
 			/* the seeker should not give us trailing naughts */
 			assert(t->u);
+			assert((t->ttf & 0x30U) != 0x30U);
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);

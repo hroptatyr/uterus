@@ -346,6 +346,22 @@ flush_tpc(utectx_t ctx)
 	size_t sz = tpc_byte_size(ctx->tpc);
 	sidx_t off = ctx->fsz; 
 
+#if defined DEBUG_FLAG
+	/* tpc should be sorted now and contain no randomised data */
+	{
+		uint64_t thresh = 0;
+		uteseek_t sk = &ctx->tpc->sk;
+
+		for (sidx_t i = 0, tsz; i < sk->si; i += tsz) {
+			scom_t t = AS_SCOM(sk->sp + i);
+
+			assert((t->ttf & 0x30U) != 0x30U);
+			assert(thresh <= t->u);
+			thresh = t->u;
+			tsz = scom_tick_size(t);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	/* extend to take SZ additional bytes */
 	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
 		return;

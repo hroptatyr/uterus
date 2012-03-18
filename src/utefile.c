@@ -276,6 +276,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->fl = 0;
 
 	/* check if there's lone naughts at the end of the page */
+	assert(sk->szrw / sizeof(*sk->sp) > 0);
 	for (sp = sk->sp + sk->szrw / sizeof(*sk->sp);
 	     !AS_SCOM(sp - 1)->u && scom_tick_size(AS_SCOM(sp - 2)) == 1;
 	     sp--, nt++);

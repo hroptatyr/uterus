@@ -370,7 +370,7 @@ flush_tpc(utectx_t ctx)
 	if (p == MAP_FAILED) {
 		return;
 	}
-	memcpy(p, ctx->tpc->sk.sp, sz);
+	memcpy(p, ctx->tpc->sk.sp, ctx->tpc->sk.si * sizeof(*ctx->tpc->sk.sp));
 	munmap(p, sz);
 
 	/* store the largest-value-to-date */

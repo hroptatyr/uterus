@@ -243,7 +243,7 @@ min_size_t(size_t x, size_t y)
 	return x < y ? x : y;
 }
 
-static void
+static void MAYBE_NOINLINE
 load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 {
 	size_t e = min_size_t(end, npg);

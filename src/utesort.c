@@ -247,9 +247,9 @@ static void MAYBE_NOINLINE
 load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 {
 	size_t e = min_size_t(end, npg);
-	for (size_t k = sta, i = 0; k < e; i++, k++) {
+	for (size_t k = sta, j = 0; k < e; j++, k++) {
 		/* set up page i */
-		seek_page(sks + i, ctx, k);
+		seek_page(sks + j, ctx, k);
 	}
 
 #if defined DEBUG_FLAG

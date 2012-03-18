@@ -53,6 +53,8 @@
 # include <assert.h>
 # include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define scom_tick_size		__local_scom_tick_size
+# define scom_byte_size		__local_scom_byte_size
 #else
 # define UDEBUG(args...)
 # define assert(args...)
@@ -90,6 +92,30 @@ error(int eno, const char *fmt, ...)
 	return;
 }
 #endif	/* DEBUG_FLAG */
+
+#if defined scom_tick_size
+static inline size_t
+__local_scom_tick_size(scom_t t)
+{
+	assert((t->ttf & 0x30U) != 0x30U);
+
+	if (!(scom_thdr_ttf(t) & (SCOM_FLAG_LM | SCOM_FLAG_L2M))) {
+		return 1UL;
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_LM) {
+		return 2UL;
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_L2M) {
+		return 4UL;
+	} else {
+		return 0UL;
+	}
+}
+
+static inline size_t
+__local_scom_byte_size(scom_t t)
+{
+	return __local_scom_tick_size(t) * sizeof(struct sndwch_s);
+}
+#endif	/* scom_tick_size */
 
 
 /* aux */

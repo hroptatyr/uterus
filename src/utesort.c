@@ -261,19 +261,11 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 		for (sidx_t tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
-			if (t->u == 0) {
-				/* naught tick, means there should be
-				 * nothing but naught ticks from now on */
-				break;
-			}
+			/* the seeker should not give us trailing naughts */
+			assert(t->u);
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);
-		}
-		/* check for naught ticks at the end */
-		for (; i < sks_nticks; i++) {
-			scom_t naught = AS_SCOM(sks[j].sp + i);
-			assert(naught->u == 0ULL);
 		}
 	}
 #endif	/* DEBUG_FLAG */

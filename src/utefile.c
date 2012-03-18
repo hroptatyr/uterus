@@ -50,9 +50,12 @@
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
 #if defined DEBUG_FLAG
+# include <assert.h>
+# include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
 #else
 # define UDEBUG(args...)
+# define assert(args...)
 #endif	/* DEBUG_FLAG */
 
 #define SMALLEST_LVTD	(0)

@@ -55,9 +55,11 @@
 # define UDEBUG(args...)	fprintf(stderr, args)
 # define scom_tick_size		__local_scom_tick_size
 # define scom_byte_size		__local_scom_byte_size
+# define MAYBE_NOINLINE		__attribute__((noinline))
 #else
 # define UDEBUG(args...)
 # define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 
 #define SMALLEST_LVTD	(0)

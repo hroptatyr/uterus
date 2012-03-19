@@ -50,10 +50,18 @@
 #define countof(x)	(sizeof(x) / sizeof(*x))
 
 #if defined DEBUG_FLAG
+# include <assert.h>
+# include <stdio.h>
 # define UDEBUG(args...)	fprintf(stderr, args)
+# define scom_tick_size		__local_scom_tick_size
+# define scom_byte_size		__local_scom_byte_size
+# define MAYBE_NOINLINE		__attribute__((noinline))
 #else
 # define UDEBUG(args...)
+# define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
+#define UDEBUGvv(args...)
 
 #define SMALLEST_LVTD	(0)
 
@@ -63,7 +71,6 @@ static const char ute_vers[][8] = {
 	"UTE+v0.2",
 };
 
-#if defined DEBUG_FLAG
 /* not the best of ideas to have output printing in a lib */
 #include <stdarg.h>
 #include <stdio.h>
@@ -86,7 +93,30 @@ error(int eno, const char *fmt, ...)
 	fputc('\n', stderr);
 	return;
 }
-#endif	/* DEBUG_FLAG */
+
+#if defined scom_tick_size
+static inline size_t
+__local_scom_tick_size(scom_t t)
+{
+	assert((t->ttf & 0x30U) != 0x30U);
+
+	if (!(scom_thdr_ttf(t) & (SCOM_FLAG_LM | SCOM_FLAG_L2M))) {
+		return 1UL;
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_LM) {
+		return 2UL;
+	} else if (scom_thdr_ttf(t) & SCOM_FLAG_L2M) {
+		return 4UL;
+	} else {
+		return 0UL;
+	}
+}
+
+static inline size_t
+__local_scom_byte_size(scom_t t)
+{
+	return __local_scom_tick_size(t) * sizeof(struct sndwch_s);
+}
+#endif	/* scom_tick_size */
 
 
 /* aux */
@@ -247,10 +277,13 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sk->fl = 0;
 
 	/* check if there's lone naughts at the end of the page */
+	assert(sk->szrw / sizeof(*sk->sp) > 0);
+	UDEBUGvv("inspecting %zu ticks\n", sk->szrw / sizeof(*sk->sp));
 	for (sp = sk->sp + sk->szrw / sizeof(*sk->sp);
-	     !AS_SCOM(sp - 1)->u && scom_tick_size(AS_SCOM(sp - 2)) == 1;
+	     sp > sk->sp && sp[-1].key == -1ULL && sp[-1].sat == -1ULL;
 	     sp--, nt++);
 	/* sp should point to the scom after the last non-naught tick */
+	UDEBUGvv("rewinding %zu ticks\n", nt);
 	seek_rewind(sk, nt);
 	return;
 wipe:
@@ -336,13 +369,31 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
-static void
+static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
 	void *p;
 	size_t sz = tpc_byte_size(ctx->tpc);
+	sidx_t si = ctx->tpc->sk.si;
+	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
 	sidx_t off = ctx->fsz; 
 
+#if defined DEBUG_FLAG
+	/* tpc should be sorted now and contain no randomised data */
+	{
+		uint64_t thresh = 0;
+		uteseek_t sk = &ctx->tpc->sk;
+
+		for (sidx_t i = 0, tsz; i < si; i += tsz) {
+			scom_t t = AS_SCOM(sk->sp + i);
+
+			assert((t->ttf & 0x30U) != 0x30U);
+			assert(thresh <= t->u);
+			thresh = t->u;
+			tsz = scom_tick_size(t);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	/* extend to take SZ additional bytes */
 	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
 		return;
@@ -351,7 +402,12 @@ flush_tpc(utectx_t ctx)
 	if (p == MAP_FAILED) {
 		return;
 	}
-	memcpy(p, ctx->tpc->sk.sp, sz);
+	assert(sisz <= sz);
+	memcpy(p, ctx->tpc->sk.sp, sisz);
+	/* memset the rest with the marker tick */
+	if (sisz < sz) {
+		memset((char*)p + sisz, -1, sz - sisz);
+	}
 	munmap(p, sz);
 
 	/* store the largest-value-to-date */
@@ -879,19 +935,19 @@ ute_empty_slut(utectx_t ctx)
 void
 ute_add_tick(utectx_t ctx, scom_t t)
 {
-	size_t tsz = scom_tick_size(t);
+	size_t tsz;
 
-#if defined DEBUG_FLAG
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
 		error(0, "\
 this version of uterus cannot cope with tick type %x", t->ttf);
 		return;
-	} else if (UNLIKELY(t->u == 0ULL)) {
-		error(0, "naught tick");
+	} else if (UNLIKELY(t->u == -1ULL)) {
+		error(0, "invalid tick");
 	}
-#endif	/* DEBUG_FLAG */
 
+	/* post tick inspection */
+	tsz = scom_tick_size(t);
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));

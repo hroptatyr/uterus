@@ -243,13 +243,13 @@ min_size_t(size_t x, size_t y)
 	return x < y ? x : y;
 }
 
-static void
+static void MAYBE_NOINLINE
 load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 {
 	size_t e = min_size_t(end, npg);
-	for (size_t k = sta, i = 0; k < e; i++, k++) {
+	for (size_t k = sta, j = 0; k < e; j++, k++) {
 		/* set up page i */
-		seek_page(sks + i, ctx, k);
+		seek_page(sks + j, ctx, k);
 	}
 
 #if defined DEBUG_FLAG
@@ -261,19 +261,12 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 		for (sidx_t tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
-			if (t->u == 0) {
-				/* naught tick, means there should be
-				 * nothing but naught ticks from now on */
-				break;
-			}
+			/* the seeker should not give us trailing naughts */
+			assert(t->u);
+			assert((t->ttf & 0x30U) != 0x30U);
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);
-		}
-		/* check for naught ticks at the end */
-		for (; i < sks_nticks; i++) {
-			scom_t naught = AS_SCOM(sks[j].sp + i);
-			assert(naught->u == 0ULL);
 		}
 	}
 #endif	/* DEBUG_FLAG */

@@ -58,6 +58,8 @@
 # define assert(args...)
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
+/* for serious debugging */
+#define UDEBUGvv(args...)
 
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
@@ -178,7 +180,8 @@ clear_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		tpc->sk.si = 0;
-		tpc->sk.rewound = 0;
+		/* reset size to full tpc size again */
+		tpc->sk.szrw += tpc->sk.rewound * sizeof(*tpc->sk.sp);
 	}
 	return;
 }
@@ -523,7 +526,7 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 		/* produce a mapping SCOM |-> TICK */
 		put_pi(keys + nsc, p, nt);
 	}
-	UDEBUG("idxsort on %zu scoms and %zu ticks\n", nsc, nt);
+	UDEBUGvv("idxsort on %zu scoms and %zu ticks\n", nsc, nt);
 	/* there must be one tick for this to work */
 	assert(nt > 0);
 	/* and if there's one tick there should be one scom */
@@ -549,6 +552,7 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 	/* keys should be in ascending order now */
 	for (size_t i = 1; i < nsc; i++) {
 		assert(keys[i].skey >= keys[i - 1].skey);
+		assert(keys[i].skey != 0xffffffffffffffff);
 	}
 	/* last one should contain at least a non-naught key
 	 * or else we have been doing this shit for nothing */
@@ -573,6 +577,8 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
 	size_t j;
 
 	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
+
+	UDEBUGvv("%zu leading naught ticks (of %zu)\n", j, nticks);
 
 #if defined DEBUG_FLAG
 	/* since idxsort used 2-powers and we don't allow 0 skeys
@@ -957,7 +963,7 @@ seek_sort(uteseek_t sk)
 	/* randomise the rest of the seek page */
 	{
 		size_t rbsz = sk_sz - (sk->si - sk->rewound) * sizeof(*sk->sp);
-		UDEBUG("seek_sort(): randomising %zu bytes\n", rbsz);
+		UDEBUGvv("seek_sort(): randomising %zu bytes\n", rbsz);
 		memset(sk->sp + sk->si, -1, rbsz);
 	}
 #endif	/* DEBUG_FLAG */
@@ -980,6 +986,24 @@ seek_sort(uteseek_t sk)
 	 * *scom*s each the tick offsets are in NEW->offs, there's a
 	 * maximum of 1024 offsets (thats MAX_TICKS_PER_TPC / 256)
 	 * we now use a bottom-up merge step */
+#if defined DEBUG_FLAG
+	/* check for randomisation leaks */
+	{
+		size_t tot = 0;
+
+		/* determine the number of ticks */
+		for (size_t i = 0; i < noffs; i++) {
+			tot += new->offs[i];
+		}
+		UDEBUGvv("a total of %zu ticks to be b'up sorted\n", tot);
+
+		for (sndwch_t foo = new->data, bar = foo + tot;
+		     foo < bar; foo += scom_tick_size(AS_SCOM(foo))) {
+			assert(AS_SCOM(foo)->u != 0ULL);
+			assert(AS_SCOM(foo)->u != -1ULL);
+		}
+	}
+#endif	/* DEBUG_FLAG */
 	{
 		void *const data = new->data;
 		void *tgt = sk->sp;
@@ -1010,6 +1034,8 @@ seek_sort(uteseek_t sk)
 		for (sidx_t i = 0, tsz; i < sk->si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
 
+			assert(t->u);
+			assert(t->u != -1ULL);
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);

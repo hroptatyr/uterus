@@ -184,6 +184,7 @@ clear_tpc(utetpc_t tpc)
 		tpc->sk.si = 0;
 		/* reset size to full tpc size again */
 		tpc->sk.szrw += tpc->sk.rewound * sizeof(*tpc->sk.sp);
+		tpc->sk.rewound = 0;
 	}
 	return;
 }

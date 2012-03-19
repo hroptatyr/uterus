@@ -549,6 +549,7 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 	/* keys should be in ascending order now */
 	for (size_t i = 1; i < nsc; i++) {
 		assert(keys[i].skey >= keys[i - 1].skey);
+		assert(keys[i].skey != 0xffffffffffffffff);
 	}
 	/* last one should contain at least a non-naught key
 	 * or else we have been doing this shit for nothing */
@@ -983,12 +984,19 @@ seek_sort(uteseek_t sk)
 #if defined DEBUG_FLAG
 	/* check for randomisation leaks */
 	{
-		static const char inval[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
-		size_t tot_o = 0;
+		size_t tot = 0;
+
+		/* determine the number of ticks */
 		for (size_t i = 0; i < noffs; i++) {
-			tot_o += new->offs[i] * sizeof(struct sndwch_s);
+			tot += new->offs[i];
 		}
-		assert(memmem(new->data, tot_o, inval, sizeof(inval)) == NULL);
+		UDEBUG("a total of %zu ticks to be b'up sorted\n", tot);
+
+		for (sndwch_t foo = new->data, bar = foo + tot;
+		     foo < bar; foo += scom_tick_size(AS_SCOM(foo))) {
+			assert(AS_SCOM(foo)->u != 0ULL);
+			assert(AS_SCOM(foo)->u != -1ULL);
+		}
 	}
 #endif	/* DEBUG_FLAG */
 	{
@@ -1021,6 +1029,8 @@ seek_sort(uteseek_t sk)
 		for (sidx_t i = 0, tsz; i < sk->si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
 
+			assert(t->u);
+			assert(t->u != -1ULL);
 			assert(thresh <= t->u);
 			thresh = t->u;
 			tsz = scom_tick_size(t);

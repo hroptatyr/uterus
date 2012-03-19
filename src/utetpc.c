@@ -980,6 +980,17 @@ seek_sort(uteseek_t sk)
 	 * *scom*s each the tick offsets are in NEW->offs, there's a
 	 * maximum of 1024 offsets (thats MAX_TICKS_PER_TPC / 256)
 	 * we now use a bottom-up merge step */
+#if defined DEBUG_FLAG
+	/* check for randomisation leaks */
+	{
+		static const char inval[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
+		size_t tot_o = 0;
+		for (size_t i = 0; i < noffs; i++) {
+			tot_o += new->offs[i] * sizeof(struct sndwch_s);
+		}
+		assert(memmem(new->data, tot_o, inval, sizeof(inval)) == NULL);
+	}
+#endif	/* DEBUG_FLAG */
 	{
 		void *const data = new->data;
 		void *tgt = sk->sp;

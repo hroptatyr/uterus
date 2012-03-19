@@ -405,13 +405,6 @@ flush_tpc(utectx_t ctx)
 	}
 	assert(sisz <= sz);
 	memcpy(p, ctx->tpc->sk.sp, sisz);
-#if defined DEBUG_FLAG
-	/* check for randomisation leaks */
-	{
-		static const char inval[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
-		assert(memmem(p, sz, inval, sizeof(inval)) == NULL);
-	}
-#endif	/* DEBUG_FLAG */
 	munmap(p, sz);
 
 	/* store the largest-value-to-date */

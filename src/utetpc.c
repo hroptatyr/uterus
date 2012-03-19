@@ -184,6 +184,7 @@ clear_tpc(utetpc_t tpc)
 		tpc->sk.si = 0;
 		/* reset size to full tpc size again */
 		tpc->sk.szrw += tpc->sk.rewound * sizeof(*tpc->sk.sp);
+		tpc->sk.rewound = 0;
 	}
 	return;
 }
@@ -524,7 +525,8 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 		tsz = scom_tick_size(p);
 
 		/* there must be no naught ticks in the map */
-		assert(p->u);
+		assert(p->u != 0ULL);
+		assert(p->u != -1ULL);
 		/* produce a mapping SCOM |-> TICK */
 		put_pi(keys + nsc, p, nt);
 	}
@@ -564,6 +566,10 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 	*pip = keys;
 #if defined DEBUG_FLAG
 	nleading_naughts = m_2p - nsc;
+	for (size_t i = 0; i < nleading_naughts; i++) {
+		assert(keys[i].skey == 0ULL);
+		assert(keys[i].si == 0U);
+	}
 #endif	/* DEBUG_FLAG */
 	return nt;
 }
@@ -576,9 +582,10 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
  * SRC is an array of keys and satellite data and
  * PI is the permutation to apply */
 	/* skip 0 idxs first */
-	size_t j;
+	size_t j = 0;
 
-	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
+	for (const size_t max = nticks >= 256 ? 256 : __ilog2_ceil(nticks);
+	     j < max && pi_skey(pi + j) == 0ULL; j++);
 
 	UDEBUGvv("%zu leading naught ticks (of %zu)\n", j, nticks);
 
@@ -956,7 +963,10 @@ seek_sort(uteseek_t sk)
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
-	size_t sk_sz = sk->szrw - sk->rewound;
+	size_t sk_sz = seek_size(sk);
+
+	/* we never hand out bigger pages */
+	assert(sk_sz <= 4096U * 1024U);
 
 	/* get us another map */
 	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
@@ -964,7 +974,7 @@ seek_sort(uteseek_t sk)
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
 	{
-		size_t rbsz = sk_sz - (sk->si - sk->rewound) * sizeof(*sk->sp);
+		size_t rbsz = sk_sz - sk->si * sizeof(*sk->sp);
 		UDEBUGvv("seek_sort(): randomising %zu bytes\n", rbsz);
 		memset(sk->sp + sk->si, -1, rbsz);
 	}

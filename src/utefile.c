@@ -280,9 +280,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
 	for (sp = sk->sp + sk->szrw / sizeof(*sk->sp);
-	     sp - 1 > sk->sp &&
-		     !AS_SCOM(sp - 1)->u &&
-		     scom_tick_size(AS_SCOM(sp - 2)) == 1;
+	     sp > sk->sp && sp[-1].key == -1ULL && sp[-1].sat == -1ULL;
 	     sp--, nt++);
 	/* sp should point to the scom after the last non-naught tick */
 	seek_rewind(sk, nt);
@@ -405,6 +403,10 @@ flush_tpc(utectx_t ctx)
 	}
 	assert(sisz <= sz);
 	memcpy(p, ctx->tpc->sk.sp, sisz);
+	/* memset the rest with the marker tick */
+	if (sisz < sz) {
+		memset((char*)p + sisz, -1, sz - sisz);
+	}
 	munmap(p, sz);
 
 	/* store the largest-value-to-date */

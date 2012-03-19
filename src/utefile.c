@@ -61,7 +61,10 @@
 # define assert(args...)
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
-#define UDEBUGvv(args...)
+/* for serious debugging */
+#if !defined UDEBUGvv
+# define UDEBUGvv(args...)
+#endif	/* !UDEBUGvv */
 
 #define SMALLEST_LVTD	(0)
 

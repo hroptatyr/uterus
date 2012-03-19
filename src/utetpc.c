@@ -59,7 +59,9 @@
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 /* for serious debugging */
-#define UDEBUGvv(args...)
+#if !defined UDEBUGvv
+# define UDEBUGvv(args...)
+#endif	/* !UDEBUGvv */
 
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x

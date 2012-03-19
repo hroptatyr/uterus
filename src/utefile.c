@@ -826,24 +826,24 @@ ute_open(const char *path, int oflags)
 utectx_t
 ute_mktemp(int oflags)
 {
-	char *tmpnam;
+	char *tmpfn;
 	int resfd;
 
 	/* get a tmp name template for mkstemp() */
-	tmpnam = ute_tmpnam();
+	tmpfn = ute_tmpnam();
 	/* now open it ... */
-	resfd = mkstemp(tmpnam);
-	chmod(tmpnam, 0644);
+	resfd = mkstemp(tmpfn);
+	chmod(tmpfn, 0644);
 	/* wipe and check for anon */
 	if ((oflags &= UO_ANON)) {
 		/* ... and unlink it if ANON is set */
-		unlink(tmpnam);
+		unlink(tmpfn);
 	}
 	oflags |= UO_CREAT;
 	oflags |= UO_TRUNC;
 	oflags |= UO_RDWR;
 	oflags |= O_EXCL;
-	return make_utectx(tmpnam, resfd, oflags);
+	return make_utectx(tmpfn, resfd, oflags);
 }
 
 #if defined USE_UTE_SORT

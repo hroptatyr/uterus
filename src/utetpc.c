@@ -581,9 +581,10 @@ collate(void *tgt, const void *src, perm_idx_t pi, size_t nticks)
  * SRC is an array of keys and satellite data and
  * PI is the permutation to apply */
 	/* skip 0 idxs first */
-	size_t j;
+	size_t j = 0;
 
-	for (j = 0; j < nticks && pi_skey(pi + j) == 0ULL; j++);
+	for (const size_t max = nticks >= 256 ? 256 : __ilog2_ceil(nticks);
+	     j < max && pi_skey(pi + j) == 0ULL; j++);
 
 	UDEBUGvv("%zu leading naught ticks (of %zu)\n", j, nticks);
 

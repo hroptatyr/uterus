@@ -524,7 +524,8 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 		tsz = scom_tick_size(p);
 
 		/* there must be no naught ticks in the map */
-		assert(p->u);
+		assert(p->u != 0ULL);
+		assert(p->u != -1ULL);
 		/* produce a mapping SCOM |-> TICK */
 		put_pi(keys + nsc, p, nt);
 	}
@@ -564,6 +565,10 @@ idxsort(perm_idx_t *pip, sndwch_t sp, sndwch_t ep)
 	*pip = keys;
 #if defined DEBUG_FLAG
 	nleading_naughts = m_2p - nsc;
+	for (size_t i = 0; i < nleading_naughts; i++) {
+		assert(keys[i].skey == 0ULL);
+		assert(keys[i].si == 0U);
+	}
 #endif	/* DEBUG_FLAG */
 	return nt;
 }

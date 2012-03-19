@@ -61,6 +61,7 @@
 # define assert(args...)
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
+#define UDEBUGvv(args...)
 
 #define SMALLEST_LVTD	(0)
 
@@ -279,10 +280,12 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
+	UDEBUGvv("inspecting %zu ticks\n", sk->szrw / sizeof(*sk->sp));
 	for (sp = sk->sp + sk->szrw / sizeof(*sk->sp);
 	     sp > sk->sp && sp[-1].key == -1ULL && sp[-1].sat == -1ULL;
 	     sp--, nt++);
 	/* sp should point to the scom after the last non-naught tick */
+	UDEBUGvv("rewinding %zu ticks\n", nt);
 	seek_rewind(sk, nt);
 	return;
 wipe:

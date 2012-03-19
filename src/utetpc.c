@@ -964,6 +964,9 @@ seek_sort(uteseek_t sk)
 	size_t noffs = 0;
 	size_t sk_sz = seek_size(sk);
 
+	/* we never hand out bigger pages */
+	assert(sk_sz <= 4096U * 1024U);
+
 	/* get us another map */
 	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 

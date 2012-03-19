@@ -944,8 +944,8 @@ ute_add_tick(utectx_t ctx, scom_t t)
 		error(0, "\
 this version of uterus cannot cope with tick type %x", t->ttf);
 		return;
-	} else if (UNLIKELY(t->u == 0ULL)) {
-		error(0, "naught tick");
+	} else if (UNLIKELY(t->u == -1ULL)) {
+		error(0, "invalid tick");
 	}
 
 	/* post tick inspection */

@@ -370,11 +370,13 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
-static void
+static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
 	void *p;
 	size_t sz = tpc_byte_size(ctx->tpc);
+	sidx_t si = ctx->tpc->sk.si;
+	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
 	sidx_t off = ctx->fsz; 
 
 #if defined DEBUG_FLAG
@@ -383,7 +385,7 @@ flush_tpc(utectx_t ctx)
 		uint64_t thresh = 0;
 		uteseek_t sk = &ctx->tpc->sk;
 
-		for (sidx_t i = 0, tsz; i < sk->si; i += tsz) {
+		for (sidx_t i = 0, tsz; i < si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
 
 			assert((t->ttf & 0x30U) != 0x30U);
@@ -401,7 +403,8 @@ flush_tpc(utectx_t ctx)
 	if (p == MAP_FAILED) {
 		return;
 	}
-	memcpy(p, ctx->tpc->sk.sp, ctx->tpc->sk.si * sizeof(*ctx->tpc->sk.sp));
+	assert(sisz <= sz);
+	memcpy(p, ctx->tpc->sk.sp, sisz);
 	munmap(p, sz);
 
 	/* store the largest-value-to-date */

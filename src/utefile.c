@@ -932,9 +932,8 @@ ute_empty_slut(utectx_t ctx)
 void
 ute_add_tick(utectx_t ctx, scom_t t)
 {
-	size_t tsz = scom_tick_size(t);
+	size_t tsz;
 
-#if defined DEBUG_FLAG
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
 		error(0, "\
@@ -943,8 +942,9 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 	} else if (UNLIKELY(t->u == 0ULL)) {
 		error(0, "naught tick");
 	}
-#endif	/* DEBUG_FLAG */
 
+	/* post tick inspection */
+	tsz = scom_tick_size(t);
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
 		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));

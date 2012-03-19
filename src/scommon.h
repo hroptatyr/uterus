@@ -165,6 +165,8 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 #define SL1T_TTF_STL	5
 /* auction price offer, is 'k' in char representations */
 #define SL1T_TTF_AUC	6
+/* little `candle', just a bid and an ask price */
+#define SL1T_TTF_BIDASK	7
 /* 64 bit values start here, these aren't real ticks as their
  * values could actually be computed */
 /* sheer volume, i.e. number of securites traded, is 'v' in char repr */

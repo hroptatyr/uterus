@@ -180,7 +180,8 @@ clear_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
 		tpc->sk.si = 0;
-		tpc->sk.rewound = 0;
+		/* reset size to full tpc size again */
+		tpc->sk.szrw += tpc->sk.rewound * sizeof(*tpc->sk.sp);
 	}
 	return;
 }

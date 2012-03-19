@@ -71,7 +71,6 @@ static const char ute_vers[][8] = {
 	"UTE+v0.2",
 };
 
-#if defined DEBUG_FLAG
 /* not the best of ideas to have output printing in a lib */
 #include <stdarg.h>
 #include <stdio.h>
@@ -94,7 +93,6 @@ error(int eno, const char *fmt, ...)
 	fputc('\n', stderr);
 	return;
 }
-#endif	/* DEBUG_FLAG */
 
 #if defined scom_tick_size
 static inline size_t

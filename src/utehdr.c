@@ -66,6 +66,7 @@ bump_header(struct utehdr2_s *hdr)
 	const char *ver = ute_vers[UTE_VERSION_02];
 	const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
 	memcpy(hdr, ver, vsz);
+	hdr->endin = endian_indicator;
 	return;
 }
 

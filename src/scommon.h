@@ -154,7 +154,7 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 
 
 /* ttf, tick type, flavour and flags */
-#define SL1T_TTF_UNK	0
+#define SCOM_TTF_UNK	0
 /* the next 3 consist of price and size, ui32 each */
 #define SL1T_TTF_BID	1
 #define SL1T_TTF_ASK	2

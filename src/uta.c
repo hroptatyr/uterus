@@ -431,7 +431,7 @@ pr(pr_ctx_t pctx, scom_t st)
 		p += __pr_snap(p, st);
 		break;
 
-	case SL1T_TTF_UNK:
+	case SCOM_TTF_UNK:
 	default:
 		break;
 	}

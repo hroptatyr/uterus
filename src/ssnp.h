@@ -110,7 +110,7 @@ ssnp_ttf(const_ssnp_t t)
 	if (ttf == SBAP_FLAVOUR || ttf == SSNP_FLAVOUR) {
 		return ttf;
 	}
-	return SL1T_TTF_UNK;
+	return SCOM_TTF_UNK;
 }
 
 static inline void

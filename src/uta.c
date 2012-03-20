@@ -57,6 +57,7 @@
 /* so we know about ticks, candles and snapshots */
 #include "sl1t.h"
 #include "scdl.h"
+#include "ssnp.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -286,7 +287,7 @@ fputn(FILE *whither, const char *p, size_t n)
 static size_t
 __pr_snap(char *tgt, scom_t st)
 {
-	const_ssnap_t snp = (const void*)st;
+	const_ssnp_t snp = (const void*)st;
 	char *p = tgt;
 
 	/* bid price */
@@ -294,22 +295,25 @@ __pr_snap(char *tgt, scom_t st)
 	*p++ = '\t';
 	/* ask price */
 	p += ffff_m30_s(p, (m30_t)snp->ap);
-	*p++ = '\t';
-	/* bid quantity */
-	p += ffff_m30_s(p, (m30_t)snp->bq);
-	*p++ = '\t';
-	/* ask quantity */
-	p += ffff_m30_s(p, (m30_t)snp->aq);
-	*p++ = '\t';
-	/* volume-weighted trade price */
-	p += sprintf(p, "%08x", snp->tvpr);
-	*p++ = '|';
-	p += ffff_m30_s(p, (m30_t)snp->tvpr);
-	*p++ = '\t';
-	/* trade quantity */
-	p += sprintf(p, "%08x", snp->tq);
-	*p++ = '|';
-	p += ffff_m30_s(p, (m30_t)snp->tq);
+	if (scom_thdr_ttf(st) == SSNP_FLAVOUR) {
+		/* real snaps reach out further */
+		*p++ = '\t';
+		/* bid quantity */
+		p += ffff_m30_s(p, (m30_t)snp->bq);
+		*p++ = '\t';
+		/* ask quantity */
+		p += ffff_m30_s(p, (m30_t)snp->aq);
+		*p++ = '\t';
+		/* volume-weighted trade price */
+		p += sprintf(p, "%08x", snp->tvpr);
+		*p++ = '|';
+		p += ffff_m30_s(p, (m30_t)snp->tvpr);
+		*p++ = '\t';
+		/* trade quantity */
+		p += sprintf(p, "%08x", snp->tq);
+		*p++ = '|';
+		p += ffff_m30_s(p, (m30_t)snp->tq);
+	}
 	return p - tgt;
 }
 
@@ -422,7 +426,8 @@ pr(pr_ctx_t pctx, scom_t st)
 		break;
 
 		/* snaps */
-	case SL1T_TTF_UNK | SCOM_FLAG_LM:
+	case SSNP_FLAVOUR:
+	case SBAP_FLAVOUR:
 		p += __pr_snap(p, st);
 		break;
 

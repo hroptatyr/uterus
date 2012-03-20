@@ -10,7 +10,7 @@ COMMENT="same as mux.b.ariva but needs sorting"
 
 ## STDOUT
 
-## outfile sum
-OUTFILE_SHA1="372f1361798c7e05ba52c5674e60076d6a52c5c6"
+## reffile
+REFFILE="mux.5.ref.ute"
 
 ## mux.5.ut ends here

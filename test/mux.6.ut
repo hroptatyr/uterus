@@ -10,7 +10,7 @@ COMMENT="broken ariva file"
 
 ## STDOUT
 
-## outfile sum
-OUTFILE_SHA1="4a79c7e68ccb0c02fb19a5e977a80d9f5be12b94"
+## reffile
+REFFILE="mux.6.ref.ute"
 
 ## mux.6.ut ends here

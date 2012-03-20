@@ -10,6 +10,6 @@ CMDLINE="mux -f dukas '${INFILE}' -o '${OUTFILE}'"
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="910a50f2f173d5d419c9066fa096007543b0584e"
+OUTFILE_SHA1="077fd87ab3946de75f788b1d06afd3d0732a2ce0"
 
 ## mux.1.ut ends here

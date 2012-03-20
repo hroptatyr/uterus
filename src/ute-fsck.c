@@ -90,9 +90,10 @@ verbprf(const char *UNUSED_nodbg(fmt), ...)
 
 /* actual fscking */
 enum {
-	ISS_NO_ISSUES,
-	ISS_OLD_VER,
-	ISS_UNSORTED,
+	ISS_NO_ISSUES = 0,
+	ISS_OLD_VER = 1,
+	ISS_UNSORTED = 2,
+	ISS_NO_ENDIAN = 4,
 };
 
 static int
@@ -162,9 +163,15 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	}
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
-		/* we need to flip the ti */
+		/* we need to flip the ti,
+		 * don't bother checking the endianness in this case as
+		 * no UTEv0.1 files will have that */
 		printf("file `%s' needs upgrading (ute format 0.1) ...\n", fn);
 		issues |= ISS_OLD_VER;
+	} else if (UNLIKELY(ute_endianness(hdl) == UTE_ENDIAN_UNK)) {
+		/* great, we MUST assume it's little endian */
+		printf("file `%s' has no endianness indicator ...\n", fn);
+		issues |= ISS_NO_ENDIAN;
 	}
 	/* go through the pages manually */
 	npg = ute_npages(hdl);

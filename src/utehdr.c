@@ -83,4 +83,15 @@ utehdr_version(utehdr2_t hdr)
 	return UTE_VERSION_UNK;
 }
 
+ute_end_t
+utehdr_endianness(utehdr2_t hdr)
+{
+	if (hdr->endia[0] == '>' && hdr->endia[1] == '<') {
+		return UTE_ENDIAN_LITTLE;
+	} else if (hdr->endia[0] == '<' && hdr->endia[1] == '>') {
+		return UTE_ENDIAN_BIG;
+	}
+	return UTE_ENDIAN_UNK;
+}
+
 /* utehdr.c ends here */

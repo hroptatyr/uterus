@@ -72,8 +72,18 @@ typedef enum {
 	UTE_VERSION_02,
 } ute_ver_t;
 
+typedef enum {
+	UTE_ENDIAN_UNK,
+	UTE_ENDIAN_LITTLE,
+	UTE_ENDIAN_BIG,
+} ute_end_t;
+
 
 /* public api */
 extern ute_ver_t utehdr_version(utehdr2_t);
+
+/**
+ * Return the endianness used in the file that's headed by HDR. */
+extern ute_end_t utehdr_endianness(utehdr2_t hdr);
 
 #endif	/* INCLUDED_utehdr_h_ */

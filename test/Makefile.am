@@ -38,6 +38,16 @@ EXTRA_DIST += mux.e.ariva
 EXTRA_DIST += mux.f.ibhist.xml
 EXTRA_DIST += mux.g.ibhist.xml
 
+EXTRA_DIST += mux.4.ref.ute
+EXTRA_DIST += mux.5.ref.ute
+EXTRA_DIST += mux.6.ref.ute
+EXTRA_DIST += mux.7.ref.ute
+EXTRA_DIST += mux.8.ref.ute
+EXTRA_DIST += mux.9.ref.ute
+EXTRA_DIST += mux.10.ref.ute
+EXTRA_DIST += mux.11.ref.ute
+EXTRA_DIST += mux.12.ref.ute
+
 TESTS += print.1.ut
 TESTS += print.2.ut
 EXTRA_DIST += print.a.ute
@@ -47,6 +57,9 @@ EXTRA_DIST += print.d.ute
 
 TESTS += shnot.1.ut
 TESTS += shnot.2.ut
+
+EXTRA_DIST += shnot.1.ref.ute
+EXTRA_DIST += shnot.2.ref.ute
 
 TESTS += fsck.1.ut
 TESTS += fsck.2.ut

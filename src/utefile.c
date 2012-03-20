@@ -1059,4 +1059,11 @@ ute_version(utectx_t ctx)
 	return utehdr_version(ctx->hdrp);
 }
 
+ute_end_t
+ute_endianness(utectx_t ctx)
+{
+/* return the number of symbols tracked in the ute file */
+	return utehdr_endianness(ctx->hdrp);
+}
+
 /* utefile.c ends here */

@@ -162,6 +162,10 @@ extern const char *ute_fn(utectx_t ctx);
  * Return the ute version of the file associated with CTX. */
 extern ute_ver_t ute_version(utectx_t ctx);
 
+/**
+ * Return the endianness used in the file associated with CTX. */
+extern ute_end_t ute_endianness(utectx_t ctx);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

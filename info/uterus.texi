@@ -329,7 +329,7 @@ value   name   indicates
 0x0004  fix    a fixing tick
 0x0005  stl    a settlement tick
 0x0006  auc    an auction tick
-0x0007  div    a dividend tick
+0x0007  bidask a tick to capture both bid and ask price, snap shot
 0x0008  vol    a (pure) volume tick (uses m62 payloads)
 0x0009  vpr    a price volume tick (uses m62 payloads)
 0x000a  vwp    a VWAP tick (vpr divided by vol)

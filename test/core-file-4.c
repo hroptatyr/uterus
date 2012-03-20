@@ -64,7 +64,7 @@ main(int argc, char *argv[])
 #define YIELD	(size_t)random() % 256U && tot < max
 #define ute_add_tick(c, t)	my_add_tick(c, t, tot)
 		/* start off with single sandwiches */
-		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SL1T_TTF_UNK);
+		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SCOM_TTF_UNK);
 		for (sidx_t i = 0; i < YIELD; i++, tot++, sngl++) {
 			ute_add_tick(ctx, AS_SCOM(stor));
 		}

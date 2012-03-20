@@ -62,6 +62,7 @@
 /* we need to look into ticks and tick packets */
 #include "sl1t.h"
 #include "scdl.h"
+#include "ssnp.h"
 
 #define SUSHI_MODE		1
 #define TRUE_OPEN		1
@@ -86,7 +87,7 @@ typedef struct xsnap_s *xsnap_t;
 
 /* extended ssnap */
 struct xsnap_s {
-	struct ssnap_s sn[1];
+	struct ssnp_s sn[1];
 	m62_t nt;
 	m62_t qpri;
 };
@@ -136,7 +137,7 @@ xsnap_push_l1t(xsnap_t s, const_sl1t_t t)
 }
 
 static void
-xsnap_push_snp(xsnap_t s, const_ssnap_t snp)
+xsnap_push_snp(xsnap_t s, const_ssnp_t snp)
 {
 	s->sn->bp = snp->bp;
 	s->sn->ap = snp->ap;
@@ -264,7 +265,7 @@ static void
 write_snap(shnot_ctx_t ctx, uint16_t cidx)
 {
 	xsnap_t xn;
-	ssnap_t sn;
+	ssnp_t sn;
 	uint16_t nidx;
 	time_t ts;
 

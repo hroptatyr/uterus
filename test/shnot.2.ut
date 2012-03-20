@@ -8,6 +8,7 @@ CMDLINE="shnot -i 1 -o '${OUTFILE}' '${INFILE}'"
 ## STDIN
  
 ## STDOUT
-OUTFILE_SHA1="304535076361eecdef076e0f3e1d0d331a85e6fe"
+OUTFILE_SHA1="5793d218dedbd6ad8678097cf0cd7ef4742ef187"
+## was 304535076361eecdef076e0f3e1d0d331a85e6fe before ssnp got introduced
 
 ## shnot.2.ut ends here

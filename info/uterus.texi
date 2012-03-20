@@ -284,8 +284,8 @@ The header consists of following data (and widths)
 offset   width   slot  description
 0x0000   32bits  sec   unix timestamp of the tick
 0x0004   10bits  msec  millisecond part of the timestamp
+0x000x   16bits  idx   index, used to distinguish several time series
 0x000x    6bits  ttf   tick type and flags
-0x0007   16bits  idx   index, used to distinguish several time series
 0x0008   var.          tick payloads
 @end verbatim
 
@@ -339,6 +339,50 @@ value   name   indicates
 0x000e  g64    a generic tick using 1 64bit payload
 0x000f  reserved
 @end verbatim
+
+The scom header is designed to be maximally useful.  When dealing with
+large amounts of instruments it's most likely for storage reasons and
+probably over a long period of time with a lot of different events (read
+tick types).  In that case millisecond resolution should suffice, as
+should the maximum number of instruments.
+
+However, as technology progresses, in particular latency and bandwidth,
+millisecond resolution might prove to be coarse.  For these applications
+there's a @samp{us} version of the scom header:
+
+@verbatim
+Header:
+-------
+The header consists of following data (and widths)
+offset   width   slot  description
+0x0000   32bits  sec   unix timestamp of the tick
+0x0004   20bits  usec  microsecond part of the timestamp
+0x000x    6bits  idx   index, used to distinguish several time series
+0x000x    6bits  ttf   tick type and flags
+0x0008   var.          tick payloads
+@end verbatim
+
+Where the tick type and flags are defined as above.  However, ute files
+using the @samp{us} version of the scom can only track 64 instruments in
+one file.
+
+And because it's only natural to demand more than what's currently
+feasible there's also a @samp{ns} version of the scom header:
+
+@verbatim
+Header:
+-------
+The header consists of following data (and widths)
+offset   width   slot  description
+0x0000   32bits  sec   unix timestamp of the tick
+0x0004   30bits  nsec  nanosecond part of the timestamp
+0x000x    2bits  ttf   tick type and flags
+0x0008   var.          tick payloads
+@end verbatim
+
+which supports only 1 instrument and only tick types @samp{bid},
+@samp{ask} and @samp{tra}.
+
 
 We now discuss predefined tick types.
 

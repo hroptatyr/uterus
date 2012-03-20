@@ -84,6 +84,29 @@ union scom_thdr_u {
 		uint32_t sec;
 	} __attribute__((packed));
 
+	/* microsecond resolution, can only store up to 64 securities */
+	struct {
+		/* tick type and flags */
+		uint32_t ttf:6;
+		/* an index back into the symtbl */
+		uint32_t idx:6;
+		/* microseconds */
+		uint32_t usec:20;
+		/* +64 */
+		uint32_t sec;
+	} __attribute__((packed)) us;
+
+	/* nanosecond resolution, can only store one security and
+	 * only the tick types bid, ask and tra */
+	struct {
+		/* tick type and flags */
+		uint32_t ttf:2;
+		/* nano-seconds */
+		uint32_t nsec:30;
+		/* +64 */
+		uint32_t sec;
+	} __attribute__((packed)) ns;
+
 	/* seeing as that we're a union now ...
 	 * stuff this thing with the 0.1 version of the header */
 	struct {
@@ -154,7 +177,7 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 
 
 /* ttf, tick type, flavour and flags */
-#define SL1T_TTF_UNK	0
+#define SCOM_TTF_UNK	0
 /* the next 3 consist of price and size, ui32 each */
 #define SL1T_TTF_BID	1
 #define SL1T_TTF_ASK	2
@@ -165,6 +188,8 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 #define SL1T_TTF_STL	5
 /* auction price offer, is 'k' in char representations */
 #define SL1T_TTF_AUC	6
+/* little `candle', just a bid and an ask price */
+#define SL1T_TTF_BIDASK	7
 /* 64 bit values start here, these aren't real ticks as their
  * values could actually be computed */
 /* sheer volume, i.e. number of securites traded, is 'v' in char repr */

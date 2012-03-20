@@ -55,7 +55,7 @@ main(int argc, char *argv[])
 
 		/* set at least the tick type so ute_add_tick()
 		 * knows that this is a sl1t */
-		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SL1T_TTF_UNK);
+		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SCOM_TTF_UNK);
 		scom_thdr_set_linked(AS_SCOM_THDR(stor));
 		ute_add_tick(ctx, AS_SCOM(stor));
 	}

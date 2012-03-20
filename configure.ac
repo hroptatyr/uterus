@@ -32,6 +32,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 ## the build chain
 AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC
+AC_C_BIGENDIAN
 SXE_CHECK_CFLAGS
 SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness

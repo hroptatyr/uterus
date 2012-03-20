@@ -79,6 +79,11 @@ struct sl1t_s {
 			uint32_t pri;
 			uint32_t qty;
 		};
+		/* BIDASKs */
+		struct {
+			uint32_t bp;
+			uint32_t ap;
+		};
 	} __attribute__((aligned(8)));
 };
 #define __STRUCT_SL1T_S_DEFINED

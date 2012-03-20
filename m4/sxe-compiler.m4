@@ -333,7 +333,7 @@ AC_DEFUN([SXE_CHECK_CC], [dnl
 
 	AC_HEADER_STDC
 
-	for i in "gnu1x" "c1x" "gnu99" "c99"; do
+	for i in "gnu11" "c11" "gnu1x" "c1x" "gnu99" "c99"; do
 		SXE_CHECK_COMPILER_FLAGS([-std="${i}"], [
 			std="-std=${i}"
 			break

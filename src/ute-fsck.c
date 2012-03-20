@@ -40,6 +40,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
@@ -84,6 +85,23 @@ verbprf(const char *UNUSED_nodbg(fmt), ...)
 	vfprintf(stderr, fmt, vap);
 	va_end(vap);
 #endif	/* DEBUG_FLAG */
+	return;
+}
+
+static void
+__attribute__((format(printf, 2, 3)))
+error(int eno, const char *fmt, ...)
+{
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+	if (eno || errno) {
+		fputc(':', stderr);
+		fputc(' ', stderr);
+		fputs(strerror(eno ?: errno), stderr);
+	}
+	fputc('\n', stderr);
 	return;
 }
 
@@ -158,7 +176,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	int issues = 0;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
-		fprintf(stderr, "cannot open file `%s'\n", fn);
+		error(0, "cannot open file `%s'", fn);
 		return -1;
 	}
 	/* check for ute version */
@@ -211,6 +229,11 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		bump_header(hdl->hdrp);
 		ute_flush(hdl);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
+	} else if ((issues & ISS_NO_ENDIAN) && !ctx->dryp) {
+		/* just bump the header again */
+		bump_header(hdl->hdrp);
+		ute_flush(hdl);
+		printf(" ... `%s' endian indicator added\n", fn);
 	}
 	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
 		/* just to be sure */

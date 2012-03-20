@@ -50,7 +50,12 @@ typedef const struct utehdr2_s *utehdr2_t;
 struct utehdr2_s {
 	char magic[4];
 	char version[4];
-	uint32_t flags;
+	/* endianness indicator, should be 0x9c35 on be and 359c on le */
+	union {
+		uint16_t endin;
+		char endia[sizeof(uint16_t) / sizeof(char)];
+	};
+	uint16_t flags;
 	uint32_t ploff;
 	/* slut info, off:16 len:8  */
 	uint32_t slut_sz;

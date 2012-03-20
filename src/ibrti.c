@@ -304,7 +304,7 @@ check_ibrti_tl(ibrti_tl_t t)
 	if (t->p.v == 0 && t->P.v == 0) {
 		return false;
 	}
-	if (ibtl_ttf(t) == SL1T_TTF_UNK) {
+	if (ibtl_ttf(t) == SCOM_TTF_UNK) {
 		return false;
 	}
 	/* bother our caches */
@@ -371,7 +371,7 @@ parse_rTI_tick_type(char buf)
 	case '8':
 		return SL1T_TTF_VOL;
 	default:
-		return SL1T_TTF_UNK;
+		return SCOM_TTF_UNK;
 	}
 }
 
@@ -405,10 +405,10 @@ parse_tline(ibrti_tl_t tgt, const char *line)
 		_tgt = parse_rTI_tick_type(_cursor[0]);		\
 		_cursor++;					\
 	} else if (LIKELY(_cursor[2] == '\0')) {		\
-		_tgt = SL1T_TTF_UNK;				\
+		_tgt = SCOM_TTF_UNK;				\
 		_cursor += 2;					\
 	} else {						\
-		_tgt = SL1T_TTF_UNK;				\
+		_tgt = SCOM_TTF_UNK;				\
 	}
 #define RDPRI(_into, _else)						\
 	/* care about \N */						\
@@ -465,7 +465,7 @@ parse_tline(ibrti_tl_t tgt, const char *line)
 		break;
 	}
 	default:
-	case SL1T_TTF_UNK:
+	case SCOM_TTF_UNK:
 		break;
 	}
 
@@ -528,7 +528,7 @@ write_tick(mux_ctx_t UNUSED(ctx), ibrti_tl_t tl)
 		sl1t_set_ttf(t, ibtl_ttf(tl));
 		t->w[0] = tl->v.v;
 		break;
-	case SL1T_TTF_UNK:
+	case SCOM_TTF_UNK:
 	default:
 		return;
 	}
@@ -628,7 +628,7 @@ ibrti_pr(pr_ctx_t pctx, scom_t st)
 		/* just one huge value, will there be a m62? */
 		p += ffff_m62_s(p, (m62_t)t->w[0]);
 		break;
-	case SL1T_TTF_UNK:
+	case SCOM_TTF_UNK:
 	default:
 		break;
 	}

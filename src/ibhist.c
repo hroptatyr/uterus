@@ -134,7 +134,7 @@ inspect_qry(utectx_t UNUSED(hdl), const char **attr)
 				ttf |= SL1T_TTF_TRA;
 				break;
 			default:
-				ttf = SL1T_TTF_UNK;
+				ttf = SCOM_TTF_UNK;
 				break;
 			}
 			/* write back to forming space */

@@ -308,7 +308,7 @@ main(int argc, char *argv[])
 	switch (argi->flavour_arg) {
 	default:
 	case flavour__NULL:
-		opts->tt = SL1T_TTF_UNK;
+		opts->tt = SCOM_TTF_UNK;
 		break;
 	case flavour_arg_b:
 		opts->tt = SL1T_TTF_BID;

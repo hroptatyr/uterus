@@ -84,6 +84,29 @@ union scom_thdr_u {
 		uint32_t sec;
 	} __attribute__((packed));
 
+	/* microsecond resolution, can only store up to 64 securities */
+	struct {
+		/* tick type and flags */
+		uint32_t ttf:6;
+		/* an index back into the symtbl */
+		uint32_t idx:6;
+		/* microseconds */
+		uint32_t usec:20;
+		/* +64 */
+		uint32_t sec;
+	} __attribute__((packed)) us;
+
+	/* nanosecond resolution, can only store one security and
+	 * only the tick types bid, ask and tra */
+	struct {
+		/* tick type and flags */
+		uint32_t ttf:2;
+		/* nano-seconds */
+		uint32_t nsec:30;
+		/* +64 */
+		uint32_t sec;
+	} __attribute__((packed)) ns;
+
 	/* seeing as that we're a union now ...
 	 * stuff this thing with the 0.1 version of the header */
 	struct {

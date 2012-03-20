@@ -598,6 +598,20 @@ A tick file gathers several tick pages.  The principal layout is
 described above.  Tick files consist of chronologically ascending sorted
 tick pages.
 
+@verbatim
+Header:
+-------
+The header consists of following data (and widths)
+offset   size  slot    description
+0x0000   4b    magic   magic string, @code{UTE+}
+0x0004   4b    ver     version identifier, @code{v0.2} at the moment
+0x0008   2b    endian  endianness indicator, the integer @code{0x3c3e}
+                       which on big-E systems translates to @code{<>}
+                       and on little-endian systems to @code{><}
+0x000a
+0x0010   4b    slut_sz size of the symbol look up table in bytes
+@end verbatim
+
 
 @heading Slut details
 

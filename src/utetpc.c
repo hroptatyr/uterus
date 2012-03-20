@@ -856,10 +856,10 @@ merge_2tpc(uteseek_t tgt, uteseek_t src, utetpc_t swp)
 }
 
 /* for the tilman compression, which doesn't really belong here */
-#include "scdl.h"
+#include "ssnp.h"
 
 static bool
-ssnap_compressiblep(const_ssnap_t t1, const_ssnap_t t2)
+ssnp_compressiblep(const_ssnp_t t1, const_ssnp_t t2)
 {
 	/* make use of the fact that snaps have no notion
 	 * of bid and ask and that scom-v0.2 is nice */
@@ -873,9 +873,9 @@ ssnap_compressiblep(const_ssnap_t t1, const_ssnap_t t2)
 }
 
 static void
-ssnap_compress(ssnap_t tgt, const_ssnap_t s1, const_ssnap_t s2)
+ssnp_compress(ssnp_t tgt, const_ssnp_t s1, const_ssnp_t s2)
 {
-	struct ssnap_s tmp = {
+	struct ssnp_s tmp = {
 		.hdr = s1->hdr->u
 	};
 
@@ -919,16 +919,16 @@ tilman_1comp(uteseek_t tgt, uteseek_t sk)
 		case SSNP_FLAVOUR: {
 			void *nex;
 
-			bsz = sizeof(struct ssnap_s);
+			bsz = sizeof(struct ssnp_s);
 			if (UNLIKELY((nex = DATA(sp, bsz)) >= eos)) {
 				/* best to fuck off */
 				goto condens;
-			} else if (!ssnap_compressiblep(sp, nex)) {
+			} else if (!ssnp_compressiblep(sp, nex)) {
 				/* what a pity */
 				goto condens;
 			}
 			/* yay we can compress the guys */
-			ssnap_compress(tp, sp, nex);
+			ssnp_compress(tp, sp, nex);
 			/* update pointers */
 			tp = DATA(tp, bsz);
 			sp = DATA(nex, bsz);

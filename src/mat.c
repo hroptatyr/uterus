@@ -50,6 +50,7 @@
 /* so we know about ticks, candles and snapshots */
 #include "sl1t.h"
 #include "scdl.h"
+#include "ssnp.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -512,8 +513,8 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 
 	switch (ttf) {
 		/* we only process shnots here */
-	case SL1T_TTF_UNK | SCOM_FLAG_LM: {
-		const_ssnap_t snp = (const void*)st;
+	case SSNP_FLAVOUR: {
+		const_ssnp_t snp = (const void*)st;
 		double bp;
 		double ap;
 		double bq;

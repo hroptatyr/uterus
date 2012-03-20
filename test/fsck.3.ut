@@ -9,6 +9,7 @@ CMDLINE="fsck -n '${INFILE}'"
 ## STDOUT
 stdout=$(mktemp)
 cat <<EOF > "${stdout}"
+file \`${INFILE}' has no endianness indicator ...
 file \`${INFILE}' page 0 needs sorting ...
 EOF
 

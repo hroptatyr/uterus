@@ -52,6 +52,10 @@ TESTS += fsck.1.ut
 TESTS += fsck.2.ut
 TESTS += fsck.3.ut
 TESTS += fsck.4.ut
+TESTS += fsck.5.ut
+TESTS += fsck.6.ut
+TESTS += fsck.7.ut
+TESTS += fsck.8.ut
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 

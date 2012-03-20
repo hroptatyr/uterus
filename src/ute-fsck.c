@@ -40,6 +40,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
@@ -87,12 +88,30 @@ verbprf(const char *UNUSED_nodbg(fmt), ...)
 	return;
 }
 
+static void
+__attribute__((format(printf, 2, 3)))
+error(int eno, const char *fmt, ...)
+{
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+	if (eno || errno) {
+		fputc(':', stderr);
+		fputc(' ', stderr);
+		fputs(strerror(eno ?: errno), stderr);
+	}
+	fputc('\n', stderr);
+	return;
+}
+
 
 /* actual fscking */
 enum {
-	ISS_NO_ISSUES,
-	ISS_OLD_VER,
-	ISS_UNSORTED,
+	ISS_NO_ISSUES = 0,
+	ISS_OLD_VER = 1,
+	ISS_UNSORTED = 2,
+	ISS_NO_ENDIAN = 4,
 };
 
 static int
@@ -157,14 +176,20 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	int issues = 0;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
-		fprintf(stderr, "cannot open file `%s'\n", fn);
+		error(0, "cannot open file `%s'", fn);
 		return -1;
 	}
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
-		/* we need to flip the ti */
+		/* we need to flip the ti,
+		 * don't bother checking the endianness in this case as
+		 * no UTEv0.1 files will have that */
 		printf("file `%s' needs upgrading (ute format 0.1) ...\n", fn);
 		issues |= ISS_OLD_VER;
+	} else if (UNLIKELY(ute_endianness(hdl) == UTE_ENDIAN_UNK)) {
+		/* great, we MUST assume it's little endian */
+		printf("file `%s' has no endianness indicator ...\n", fn);
+		issues |= ISS_NO_ENDIAN;
 	}
 	/* go through the pages manually */
 	npg = ute_npages(hdl);
@@ -204,6 +229,11 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		bump_header(hdl->hdrp);
 		ute_flush(hdl);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
+	} else if ((issues & ISS_NO_ENDIAN) && !ctx->dryp) {
+		/* just bump the header again */
+		bump_header(hdl->hdrp);
+		ute_flush(hdl);
+		printf(" ... `%s' endian indicator added\n", fn);
 	}
 	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
 		/* just to be sure */

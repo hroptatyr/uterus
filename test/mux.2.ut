@@ -10,6 +10,6 @@ CMDLINE="mux --name 'TESJPY' -f dukas '${INFILE}' -o '${OUTFILE}'"
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="64e5601ccdb9d2fb42b3489edd1ed71ff4495b00"
+OUTFILE_SHA1="0077525211277f1c03215debbf7f09c83711a4c7"
 
 ## mux.2.ut ends here

@@ -10,6 +10,6 @@ CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="9b6c473046b4199b9cc9d0d8f723ded8caab94e9"
+REFFILE="mux.4.ref.ute"
 
 ## mux.4.ut ends here

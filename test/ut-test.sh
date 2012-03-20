@@ -167,6 +167,11 @@ stdin=$(find_file "${stdin}")
 stdout=$(find_file "${stdout}")
 stderr=$(find_file "${stderr}")
 
+## for binary reference files
+if test -n "${REFFILE}"; then
+	REFFILE=$(find_file "${REFFILE}")
+fi
+
 ## check if we used a CMDFILE instead of CMDLINE
 if test -n "${CMDFILE}"; then
 	CMDFILE=$(find_file "${CMDFILE}")
@@ -203,7 +208,15 @@ fi
 
 ## check if we need to hash stuff
 if test -r "${OUTFILE}"; then
-	if test -n "${OUTFILE_SHA1}"; then
+	if test -r "${REFFILE}"; then
+		ref=$(mktemp)
+		act=$(mktemp)
+		xxd "${REFFILE}" > "${ref}"
+		xxd "${OUTFILE}" > "${act}"
+		diff -u "${ref}" "${act}" || fail=1
+		rm -f "${ref}" "${act}"
+
+	elif test -n "${OUTFILE_SHA1}"; then
 		sha1sum "${OUTFILE}" |
 		while read sum rest; do
 			if test "${sum}" != "${OUTFILE_SHA1}"; then

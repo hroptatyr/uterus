@@ -6,11 +6,12 @@ OUTFILE="testload.ute"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 cat <<EOF > "${CMDFILE}"
 cat '${INFILE}' | "\${TOOL}" mux -f ariva -o '${OUTFILE}' -
+EOF
 ## STDIN
 
 ## STDOUT
 
-## outfile sum
-OUTFILE_SHA1="9b6c473046b4199b9cc9d0d8f723ded8caab94e9"
+## reference
+REFFILE="mux.11.ref.ute"
 
 ## mux.11.ut ends here

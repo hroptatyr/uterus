@@ -9,7 +9,7 @@ CMDLINE="mux -f ibhist '${INFILE}' -o '${OUTFILE}'"
 
 ## STDOUT
 
-## outfile sum
-OUTFILE_SHA1="ee2df91bbf022b0645a13c4fc9f99a4a8ad3a983"
+## reference file
+REFFILE="mux.9.ref.ute"
 
 ## mux.9.ut ends here

@@ -264,12 +264,18 @@ size_t s(char*, m62_t);
 
 BEWARE: uterus does not provide arithmetics for m30 and m62 numbers!
 
-@heading Ticks
+@heading Scoms
 
-Ticks are the envelopes of tick payloads in the sense that they give
-them their meanings.  The tick layer is flexible and extensible apart
-from the tick header which will not change in future versions due to its
-importance.
+Scoms are the envelopes of tick payloads in the sense that they give
+them their meanings.  The name @samp{scom} is short for @emph{sparse
+common} as it represents the common part of all tick payloads.  The term
+scom (and in particular its C type @code{scom_t}) may also refer to the
+scom header and stands in front of a chunk of memory of variable length.
+
+Tick payloads are then said to come as sandwich, the one half being the
+scom header, the other halves being satellite data, or the actual
+payload.  The satellite data content is flexible and extensible while
+its shape is largely determined by the scom in front of it.
 
 @verbatim
 Header:
@@ -278,8 +284,8 @@ The header consists of following data (and widths)
 offset   width   slot  description
 0x0000   32bits  sec   unix timestamp of the tick
 0x0004   10bits  msec  millisecond part of the timestamp
+0x000x   16bits  idx   index, used to distinguish several time series
 0x000x    6bits  ttf   tick type and flags
-0x0007   16bits  idx   index, used to distinguish several time series
 0x0008   var.          tick payloads
 @end verbatim
 
@@ -323,7 +329,7 @@ value   name   indicates
 0x0004  fix    a fixing tick
 0x0005  stl    a settlement tick
 0x0006  auc    an auction tick
-0x0007  div    a dividend tick
+0x0007  bidask a tick to capture both bid and ask price, snap shot
 0x0008  vol    a (pure) volume tick (uses m62 payloads)
 0x0009  vpr    a price volume tick (uses m62 payloads)
 0x000a  vwp    a VWAP tick (vpr divided by vol)
@@ -333,6 +339,50 @@ value   name   indicates
 0x000e  g64    a generic tick using 1 64bit payload
 0x000f  reserved
 @end verbatim
+
+The scom header is designed to be maximally useful.  When dealing with
+large amounts of instruments it's most likely for storage reasons and
+probably over a long period of time with a lot of different events (read
+tick types).  In that case millisecond resolution should suffice, as
+should the maximum number of instruments.
+
+However, as technology progresses, in particular latency and bandwidth,
+millisecond resolution might prove to be coarse.  For these applications
+there's a @samp{us} version of the scom header:
+
+@verbatim
+Header:
+-------
+The header consists of following data (and widths)
+offset   width   slot  description
+0x0000   32bits  sec   unix timestamp of the tick
+0x0004   20bits  usec  microsecond part of the timestamp
+0x000x    6bits  idx   index, used to distinguish several time series
+0x000x    6bits  ttf   tick type and flags
+0x0008   var.          tick payloads
+@end verbatim
+
+Where the tick type and flags are defined as above.  However, ute files
+using the @samp{us} version of the scom can only track 64 instruments in
+one file.
+
+And because it's only natural to demand more than what's currently
+feasible there's also a @samp{ns} version of the scom header:
+
+@verbatim
+Header:
+-------
+The header consists of following data (and widths)
+offset   width   slot  description
+0x0000   32bits  sec   unix timestamp of the tick
+0x0004   30bits  nsec  nanosecond part of the timestamp
+0x000x    2bits  ttf   tick type and flags
+0x0008   var.          tick payloads
+@end verbatim
+
+which supports only 1 instrument and only tick types @samp{bid},
+@samp{ask} and @samp{tra}.
+
 
 We now discuss predefined tick types.
 
@@ -547,6 +597,20 @@ hugepage support this is going to be 268435456 ticks (or 4 GB).
 A tick file gathers several tick pages.  The principal layout is
 described above.  Tick files consist of chronologically ascending sorted
 tick pages.
+
+@verbatim
+Header:
+-------
+The header consists of following data (and widths)
+offset   size  slot    description
+0x0000   4b    magic   magic string, @code{UTE+}
+0x0004   4b    ver     version identifier, @code{v0.2} at the moment
+0x0008   2b    endian  endianness indicator, the integer @code{0x3c3e}
+                       which on big-E systems translates to @code{<>}
+                       and on little-endian systems to @code{><}
+0x000a
+0x0010   4b    slut_sz size of the symbol look up table in bytes
+@end verbatim
 
 
 @heading Slut details

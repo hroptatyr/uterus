@@ -11,4 +11,6 @@ CMDLINE="shnot -i 60 -o '${OUTFILE}' '${INFILE}'"
 OUTFILE_SHA1="d7d194727109066fb4982c37f9c59c6c319470c3"
 ## was 96906caa8ec3ceb88d700f130c4f24fb80a5ff16 before ssnp got introduced
 
+REFFILE="shnot.1.ref.ute"
+
 ## shnot.1.ut ends here

@@ -1,0 +1,12 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.4.ref.ute"
+CMDLINE="fsck -n '${INFILE}'"
+
+## STDIN
+
+## STDOUT
+stdout=$(mktemp)
+
+## fsck.5.ut ends here

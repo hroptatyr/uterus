@@ -48,7 +48,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "scommon.h"
-#include "sl1t.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -56,9 +55,6 @@ extern "C" {
 
 typedef struct scdl_s *scdl_t;
 typedef const struct scdl_s *const_scdl_t;
-
-typedef struct ssnap_s *ssnap_t;
-typedef const struct ssnap_s *const_ssnap_t;
 
 typedef struct sbatcdl_s *sbatcdl_t;
 typedef const struct sbatcdl_s *const_sbatcdl_t;
@@ -84,25 +80,6 @@ struct scdl_s {
 	} __attribute__((aligned(8)));
 };
 #define __STRUCT_SCDL_S_DEFINED
-
-/**
- * Snaps are useful for tools like the trading engine. */
-struct ssnap_s {
-	union scom_thdr_u hdr[1];
-	union {
-		uint32_t v[6];
-		uint64_t w[3];
-		struct {
-			uint32_t bp;
-			uint32_t ap;
-			uint32_t bq;
-			uint32_t aq;
-			uint32_t tvpr;
-			uint32_t tq;
-		};
-	} __attribute__((aligned(8)));
-};
-#define __STRUCT_SSNAP_S_DEFINED
 
 /**
  * BAT-OHLC,V candles, 4 sl1ts wide. */
@@ -138,8 +115,6 @@ struct sbatcdl_s {
 /* header glue */
 /* this makes OHLC{V,S,K} candles use the scom link mode */
 #define SCDL_FLAVOUR	SCOM_FLAG_LM
-/* this is genuinely the type of snapshots */
-#define SSNP_FLAVOUR	SCOM_FLAG_LM
 
 static inline __attribute__((pure)) uint16_t
 scdl_ttf(const_scdl_t t)
@@ -194,20 +169,6 @@ scdl_tblidx(const_scdl_t c)
 
 static inline void
 scdl_set_tblidx(scdl_t c, uint16_t i)
-{
-	scom_thdr_set_tblidx(c->hdr, i);
-	return;
-}
-
-
-static inline uint16_t
-ssnap_tblidx(const_ssnap_t c)
-{
-	return scom_thdr_tblidx(c->hdr);
-}
-
-static inline void
-ssnap_set_tblidx(ssnap_t c, uint16_t i)
 {
 	scom_thdr_set_tblidx(c->hdr, i);
 	return;

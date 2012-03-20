@@ -230,7 +230,7 @@ static inline bool
 cdl_snp_p(scom_t t)
 {
 	return (scom_thdr_ttf(t) & SCDL_FLAVOUR) ||
-		(scom_thdr_ttf(t) & SSNP_FLAVOUR);
+		(scom_thdr_ttf(t) == SSNP_FLAVOUR);
 }
 
 static inline bool

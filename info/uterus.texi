@@ -264,12 +264,18 @@ size_t s(char*, m62_t);
 
 BEWARE: uterus does not provide arithmetics for m30 and m62 numbers!
 
-@heading Ticks
+@heading Scoms
 
-Ticks are the envelopes of tick payloads in the sense that they give
-them their meanings.  The tick layer is flexible and extensible apart
-from the tick header which will not change in future versions due to its
-importance.
+Scoms are the envelopes of tick payloads in the sense that they give
+them their meanings.  The name @samp{scom} is short for @emph{sparse
+common} as it represents the common part of all tick payloads.  The term
+scom (and in particular its C type @code{scom_t}) may also refer to the
+scom header and stands in front of a chunk of memory of variable length.
+
+Tick payloads are then said to come as sandwich, the one half being the
+scom header, the other halves being satellite data, or the actual
+payload.  The satellite data content is flexible and extensible while
+its shape is largely determined by the scom in front of it.
 
 @verbatim
 Header:

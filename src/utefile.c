@@ -47,8 +47,6 @@
 #include "utetpc.h"
 #include "mem.h"
 
-#define countof(x)	(sizeof(x) / sizeof(*x))
-
 #if defined DEBUG_FLAG
 # include <assert.h>
 # include <stdio.h>
@@ -67,12 +65,6 @@
 #endif	/* !UDEBUGvv */
 
 #define SMALLEST_LVTD	(0)
-
-static const char ute_vers[][8] = {
-	"UTE+v0.0",
-	"UTE+v0.1",
-	"UTE+v0.2",
-};
 
 /* not the best of ideas to have output printing in a lib */
 #include <stdarg.h>
@@ -197,16 +189,6 @@ close_hdr(utectx_t ctx)
 		munmap((void*)ctx->hdrp, sizeof(*ctx->hdrp));
 	}
 	ctx->hdrp = NULL;
-	return;
-}
-
-/* secret public function */
-void
-bump_header(struct utehdr2_s *hdr)
-{
-	const char *ver = ute_vers[UTE_VERSION_02];
-	const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
-	memcpy(hdr, ver, vsz);
 	return;
 }
 
@@ -1074,14 +1056,7 @@ ute_ver_t
 ute_version(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	const size_t vsz = sizeof(ute_vers[0]);
-	for (size_t i = countof(ute_vers); --i > 0; ) {
-		const char *ver = ute_vers[i];
-		if (memcmp(ctx->hdrp->magic, ver, vsz) == 0) {
-			return (ute_ver_t)(i);
-		}
-	}
-	return UTE_VERSION_UNK;
+	return utehdr_version(ctx->hdrp);
 }
 
 /* utefile.c ends here */

@@ -44,7 +44,42 @@
 #include <sys/stat.h>
 #include <string.h>
 #include "utehdr.h"
+#include "utefile-private.h"
 
-/* nothing here yet */
+#if !defined countof
+# define countof(x)	(sizeof(x) / sizeof(*x))
+#endif	/* countof */
+
+/* printed representations of the UTE_VERSION */
+static const char ute_vers[][8] = {
+	"UTE+v0.0",
+	"UTE+v0.1",
+	"UTE+v0.2",
+};
+
+/* endian-ness indicator <> on big-E machines, >< on little-Es */
+static const uint16_t endian_indicator = 0x3c3e;
+
+void
+bump_header(struct utehdr2_s *hdr)
+{
+	const char *ver = ute_vers[UTE_VERSION_02];
+	const size_t vsz = sizeof(ute_vers[UTE_VERSION_02]);
+	memcpy(hdr, ver, vsz);
+	return;
+}
+
+ute_ver_t
+utehdr_version(utehdr2_t hdr)
+{
+	const size_t vsz = sizeof(ute_vers[0]);
+	for (size_t i = countof(ute_vers); --i > 0; ) {
+		const char *ver = ute_vers[i];
+		if (memcmp(hdr->magic, ver, vsz) == 0) {
+			return (ute_ver_t)(i);
+		}
+	}
+	return UTE_VERSION_UNK;
+}
 
 /* utehdr.c ends here */

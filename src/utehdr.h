@@ -72,4 +72,8 @@ typedef enum {
 	UTE_VERSION_02,
 } ute_ver_t;
 
+
+/* public api */
+extern ute_ver_t utehdr_version(utehdr2_t);
+
 #endif	/* INCLUDED_utehdr_h_ */

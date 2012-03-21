@@ -57,7 +57,17 @@ testfile="${1}"
 xrealpath()
 {
 	readlink -f "${1}" 2>/dev/null || \
-		realpath "${1}" 2>/dev/null
+	realpath "${1}" 2>/dev/null || \
+	( cd "$(dirname "${1}")" || exit 1
+		tmp_target="$(basename "${1}")"
+		# Iterate down a (possible) chain of symlinks
+		while test -L "${tmp_target}"; do
+			tmp_target="$(readlink "${tmp_target}")"
+			cd "$(dirname "${tmp_target}")" || exit 1
+			tmp_target="$(basename "${tmp_target}")"
+		done
+		echo "$(pwd -P || pwd)/${tmp_target}"
+	) 2>/dev/null
 }
 
 ## setup
@@ -152,6 +162,28 @@ exec_echo()
 	return ${ret}
 }
 
+hexdiff()
+{
+	local file1="${1}"
+	local file2="${2}"
+	local tmp1=$(mktemp)
+	local tmp2=$(mktemp)
+
+	hextool()
+	{
+		local file="${1}"
+		command -p "hexdump" -C "${file}" || \
+			command -p "xxd" "${file}" || \
+			command -p "od" -A x -v -t x2 "${file}"
+	}
+
+	hextool "${file1}" > "${tmp1}"
+	hextool "${file2}" > "${tmp2}"
+	diff -u "${tmp1}" "${tmp2}"
+
+	rm -f "${tmp1}" "${tmp2}"
+}
+
 ## check if everything's set
 if test -z "${TOOL}"; then
 	echo "variable \${TOOL} not set" >&2
@@ -207,28 +239,30 @@ elif test -s "${tool_stderr}"; then
 fi
 
 ## check if we need to hash stuff
-if test -r "${OUTFILE}"; then
-	if test -r "${REFFILE}"; then
-		ref=$(mktemp)
-		act=$(mktemp)
-		xxd "${REFFILE}" > "${ref}"
-		xxd "${OUTFILE}" > "${act}"
-		diff -u "${ref}" "${act}" || fail=1
-		rm -f "${ref}" "${act}"
+if test -r "${OUTFILE}" -a -r "${REFFILE}"; then
+	## check for differing files
+	if ! diff -q "${REFFILE}" "${OUTFILE}"; then
+		## failed due to diff -q returning non-nil
+		fail=1
+		hexdiff "${REFFILE}" "${OUTFILE}"
+	fi
 
-	elif test -n "${OUTFILE_SHA1}"; then
-		sha1sum "${OUTFILE}" |
-		while read sum rest; do
-			if test "${sum}" != "${OUTFILE_SHA1}"; then
-				cat <<EOF >&2
+elif test -r "${OUTFILE}" -a -n "${OUTFILE_SHA1}"; then
+	sha1sum "${OUTFILE}" |
+	while read sum rest; do
+		if test "${sum}" != "${OUTFILE_SHA1}"; then
+			cat <<EOF >&2
 outfile (${OUTFILE}) hashes do not match:
 SHOULD BE: ${OUTFILE_SHA1}
 ACTUAL:    ${sum}
 EOF
-				exit 1
-			fi
-		done || fail=1
-	fi
+			exit 1
+		fi
+	done || fail=1
+
+else
+	## everything's fine innit?
+	:
 fi
 
 myexit ${fail}

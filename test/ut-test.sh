@@ -229,29 +229,30 @@ elif test -s "${tool_stderr}"; then
 fi
 
 ## check if we need to hash stuff
-if test -r "${OUTFILE}"; then
-	if test -r "${REFFILE}" && ! diff -q "${REFFILE}" "${OUTFILE}"; then
-		## failed already due to diff -q returning non-nil
+if test -r "${OUTFILE}" -a -r "${REFFILE}"; then
+	## check for differing files
+	if ! diff -q "${REFFILE}" "${OUTFILE}"; then
+		## failed due to diff -q returning non-nil
 		fail=1
 		hexdiff "${REFFILE}" "${OUTFILE}"
+	fi
 
-	elif test -r "${REFFILE}"; then
-		## so the diff did succeed
-		:
-
-	elif test -n "${OUTFILE_SHA1}"; then
-		sha1sum "${OUTFILE}" |
-		while read sum rest; do
-			if test "${sum}" != "${OUTFILE_SHA1}"; then
-				cat <<EOF >&2
+elif test -r "${OUTFILE}" -a -n "${OUTFILE_SHA1}"; then
+	sha1sum "${OUTFILE}" |
+	while read sum rest; do
+		if test "${sum}" != "${OUTFILE_SHA1}"; then
+			cat <<EOF >&2
 outfile (${OUTFILE}) hashes do not match:
 SHOULD BE: ${OUTFILE_SHA1}
 ACTUAL:    ${sum}
 EOF
-				exit 1
-			fi
-		done || fail=1
-	fi
+			exit 1
+		fi
+	done || fail=1
+
+else
+	## everything's fine innit?
+	:
 fi
 
 myexit ${fail}

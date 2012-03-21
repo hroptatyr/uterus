@@ -208,7 +208,7 @@ fi
 
 ## check if we need to hash stuff
 if test -r "${OUTFILE}"; then
-	if test -r "${REFFILE}"; then
+       if test -r "${REFFILE}" && ! diff -q "${REFFILE}" "${OUTFILE}"; then
 		ref=$(mktemp)
 		act=$(mktemp)
 		xxd "${REFFILE}" > "${ref}"

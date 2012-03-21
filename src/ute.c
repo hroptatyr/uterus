@@ -48,9 +48,6 @@
 #include "utefile.h"
 #include "sl1t.h"
 
-/* for our options parser */
-#include "version.h"
-
 #if !defined UNUSED
 # define UNUSED(_x)	__attribute__((unused)) _x
 #endif	/* !UNUSED */
@@ -89,7 +86,7 @@ DEFCMD(sort)(int UNUSED(argc), char *argv[])
 
 DEFCMD(version)(int UNUSED(argc), char *UNUSED(argv)[])
 {
-	puts("ute " UTE_VERSION);
+	puts("ute " PACKAGE_VERSION);
 	return 0;
 }
 

@@ -52,7 +52,7 @@ header_HEADERS =
 noinst_LIBRARIES =
 EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
 
-BUILT_SOURCES = version.h
+BUILT_SOURCES =
 GGO_HELPERS = common.ggo.in
 
 DSO_LDFLAGS = -shared
@@ -204,9 +204,6 @@ ute_LTLIBRARIES += forexfactory.la
 forexfactory_la_SOURCES = forexfactory.c
 forexfactory_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 forexfactory_la_LIBADD = libuterus.la
-
-version.h: $(top_builddir)/.version
-	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)

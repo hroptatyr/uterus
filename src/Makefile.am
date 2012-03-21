@@ -200,6 +200,11 @@ ibhist_la_LIBADD = libuterus.la
 ibhist_la_LIBADD += $(expat_LIBS)
 endif
 
+ute_LTLIBRARIES += forexfactory.la
+forexfactory_la_SOURCES = forexfactory.c
+forexfactory_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
+forexfactory_la_LIBADD = libuterus.la
+
 version.h: $(top_builddir)/.version
 	sed 's/^/#define UTE_VERSION	"/; s/$$/"/' $< > $@
 

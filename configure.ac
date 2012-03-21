@@ -2,7 +2,7 @@ AC_PREREQ([2.63])
 
 m4_define([GIT_VERSION_GEN], [dnl
 pushdef([version], [m4_esyscmd([./git-version-gen])])[]dnl
-ifelse([]version[], [], [0.2.0], []version[])[]dnl
+ifelse([]version[], [], [0.2.1], []version[])[]dnl
 popdef([version])[]dnl
 ])
 AC_INIT([uterus], [GIT_VERSION_GEN], [https://github.com/hroptatyr/uterus])

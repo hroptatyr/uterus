@@ -1,6 +1,6 @@
 /*** module.h -- libtool based DSO system
  *
- * Copyright (C) 2005 - 2012 Sebastian Freundt
+ * Copyright (C) 2005-2012 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

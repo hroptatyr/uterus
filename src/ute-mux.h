@@ -1,6 +1,6 @@
 /*** ute-mux.h -- muxing external sources
  *
- * Copyright (C) 2009 - 2012 Sebastian Freundt
+ * Copyright (C) 2009-2012 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

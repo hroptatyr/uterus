@@ -1,10 +1,10 @@
 /*** ute-print.c -- ute tick printer
  *
- * Copyright (C) 2010 - 2012 Sebastian Freundt
+ * Copyright (C) 2010-2012 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
- * This file is part of sushi/uterus.
+ * This file is part of uterus.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

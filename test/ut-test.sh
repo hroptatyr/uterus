@@ -152,6 +152,28 @@ exec_echo()
 	return ${ret}
 }
 
+hexdiff()
+{
+	local file1="${1}"
+	local file2="${2}"
+	local tmp1=$(mktemp)
+	local tmp2=$(mktemp)
+
+	hextool()
+	{
+		local file="${1}"
+		command -p "hexdump" -C "${file}" || \
+			command -p "xxd" "${file}" || \
+			command -p "od" -A x -v -t x2 "${file}"
+	}
+
+	hextool "${file1}" > "${tmp1}"
+	hextool "${file2}" > "${tmp2}"
+	diff -u "${tmp1}" "${tmp2}"
+
+	rm -f "${tmp1}" "${tmp2}"
+}
+
 ## check if everything's set
 if test -z "${TOOL}"; then
 	echo "variable \${TOOL} not set" >&2
@@ -208,13 +230,14 @@ fi
 
 ## check if we need to hash stuff
 if test -r "${OUTFILE}"; then
-       if test -r "${REFFILE}" && ! diff -q "${REFFILE}" "${OUTFILE}"; then
-		ref=$(mktemp)
-		act=$(mktemp)
-		xxd "${REFFILE}" > "${ref}"
-		xxd "${OUTFILE}" > "${act}"
-		diff -u "${ref}" "${act}" || fail=1
-		rm -f "${ref}" "${act}"
+	if test -r "${REFFILE}" && ! diff -q "${REFFILE}" "${OUTFILE}"; then
+		## failed already due to diff -q returning non-nil
+		fail=1
+		hexdiff "${REFFILE}" "${OUTFILE}"
+
+	elif test -r "${REFFILE}"; then
+		## so the diff did succeed
+		:
 
 	elif test -n "${OUTFILE_SHA1}"; then
 		sha1sum "${OUTFILE}" |

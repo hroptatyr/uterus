@@ -35,6 +35,9 @@
  *
  ***/
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdbool.h>
 #include <fcntl.h>
@@ -51,6 +54,7 @@
 #endif	/* countof */
 
 /* printed representations of the UTE_VERSION */
+static const size_t magic_len = 4;
 static const char ute_vers[][8] = {
 	"UTE+v0.0",
 	"UTE+v0.1",
@@ -92,6 +96,25 @@ utehdr_endianness(utehdr2_t hdr)
 		return UTE_ENDIAN_BIG;
 	}
 	return UTE_ENDIAN_UNK;
+}
+
+int
+utehdr_check_magic(utehdr2_t hdr)
+{
+	return !memcmp(hdr->magic, *ute_vers, magic_len) ? 0 : -1;
+}
+
+int
+utehdr_check_endianness(utehdr2_t hdr)
+{
+#if !defined WORDS_BIGENDIAN
+	/* for a moment we accept files without endianness indicator too
+	 * only when we're on a little-E box though */
+	if (UNLIKELY(!hdr->endin)) {
+		return 0;
+	}
+#endif	/* WORDS_BIGENDIAN */
+	return hdr->endin == endian_indicator ? 0 : -1;
 }
 
 /* utehdr.c ends here */

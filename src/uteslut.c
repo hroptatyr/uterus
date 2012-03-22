@@ -94,11 +94,11 @@ resize_i2s(uteslut_t s, size_t at_least)
 	size_t old, new;
 
 	/* alloc stepping is 128, 1024, 8192, 65536 */
-	if (at_least > 8192) {
+	if (at_least >= 8192) {
 		at_least = 65536;
-	} else if (at_least > 1024) {
+	} else if (at_least >= 1024) {
 		at_least = 8192;
-	} else if (at_least > 128) {
+	} else if (at_least >= 128) {
 		at_least = 1024;
 	} else {
 		at_least = 128;

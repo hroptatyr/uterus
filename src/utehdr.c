@@ -35,6 +35,9 @@
  *
  ***/
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdbool.h>
 #include <fcntl.h>
@@ -104,10 +107,13 @@ utehdr_check_magic(utehdr2_t hdr)
 int
 utehdr_check_endianness(utehdr2_t hdr)
 {
-	/* for a moment we accept files without endianness indicator too */
+#if !defined WORDS_BIGENDIAN
+	/* for a moment we accept files without endianness indicator too
+	 * only when we're on a little-E box though */
 	if (UNLIKELY(!hdr->endin)) {
 		return 0;
 	}
+#endif	/* WORDS_BIGENDIAN */
 	return hdr->endin == endian_indicator ? 0 : -1;
 }
 

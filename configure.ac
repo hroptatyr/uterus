@@ -41,8 +41,24 @@ SXE_CHECK_LIBLTDL
 ## we need C11 anon structs
 SXE_CHECK_ANON_STRUCTS
 
+## check for byteorder utils
+AC_CHECK_HEADERS([endian.h sys/endian.h byteorder.h arpa/inet.h netinet/in.h])
+
 ## check for mkostemp
 SXE_FUNC_MKOSTEMP
+
+## check for working c1x features
+SXE_CHECK_ANON_STRUCTS([
+	AC_DEFINE([__C1X], [1], [Whether c1x work])
+	], [
+	AC_MSG_WARN([C compiler unusable
+
+uterus make extensive use of c11 anonymous structs/unions but your
+compiler does not fully support them.
+Change either the CFLAGS or the compiler.
+Good day.
+])
+])
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 

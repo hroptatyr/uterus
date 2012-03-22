@@ -86,4 +86,12 @@ extern ute_ver_t utehdr_version(utehdr2_t);
  * Return the endianness used in the file that's headed by HDR. */
 extern ute_end_t utehdr_endianness(utehdr2_t hdr);
 
+/**
+ * Check the magic string in HDR.  Return -1 if the magic string is broken. */
+extern int utehdr_check_magic(utehdr2_t hdr);
+
+/**
+ * Check the endianness of HDR.  Return -1 if it doesn't match. */
+extern int utehdr_check_endianness(utehdr2_t hdr);
+
 #endif	/* INCLUDED_utehdr_h_ */

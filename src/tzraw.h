@@ -41,7 +41,6 @@
 #include <stdint.h>
 /* for lil endian conversions */
 #include <endian.h>
-#include <byteswap.h>
 #include <limits.h>
 
 /*
@@ -216,7 +215,7 @@ extern int32_t zif_local_time(zif_t z, int32_t t);
 static inline size_t
 zif_ntrans(zif_t z)
 {
-	return bswap_32(z->hdr->tzh_timecnt);
+	return be32toh(z->hdr->tzh_timecnt);
 }
 
 /**
@@ -225,7 +224,7 @@ static inline int32_t
 zif_trans(zif_t z, int n)
 {
 /* no bound check! */
-	return zif_ntrans(z) > 0 ? (int32_t)bswap_32(z->trs[n]) : INT_MIN;
+	return zif_ntrans(z) > 0 ? be32toh(z->trs[n]) : INT_MIN;
 }
 
 /**
@@ -233,7 +232,7 @@ zif_trans(zif_t z, int n)
 static inline size_t
 zif_ntypes(zif_t z)
 {
-	return bswap_32(z->hdr->tzh_typecnt);
+	return be32toh(z->hdr->tzh_typecnt);
 }
 
 /**
@@ -254,7 +253,7 @@ zif_trdtl(zif_t z, int n)
 	struct ztrdtl_s res;
 	uint8_t idx = zif_type(z, n);
 	res = z->tda[idx];
-	res.offs = bswap_32(z->tda[idx].offs);
+	res.offs = be32toh(z->tda[idx].offs);
 	return res;
 }
 
@@ -265,7 +264,7 @@ zif_troffs(zif_t z, int n)
 {
 /* no bound check! */
 	uint8_t idx = zif_type(z, n);
-	return bswap_32(z->tda[idx].offs);
+	return be32toh(z->tda[idx].offs);
 }
 
 /**
@@ -289,7 +288,7 @@ zif_spec(zif_t z, int n)
 	uint8_t jdx = z->tda[idx].abbr;
 
 	res.since = zif_trans(z, n);
-	res.offs = bswap_32(z->tda[idx].offs);
+	res.offs = be32toh(z->tda[idx].offs);
 	res.dstp = z->tda[idx].dstp;
 	res.name = z->zn + jdx;
 	return res;

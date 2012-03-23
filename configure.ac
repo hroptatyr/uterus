@@ -42,7 +42,7 @@ SXE_CHECK_LIBLTDL
 SXE_CHECK_ANON_STRUCTS
 
 ## check for byteorder utils
-AC_CHECK_HEADERS([endian.h sys/endian.h byteorder.h arpa/inet.h netinet/in.h])
+AC_CHECK_HEADERS([endian.h sys/endian.h byteorder.h byteswap.h])
 
 ## check for mkostemp
 SXE_FUNC_MKOSTEMP

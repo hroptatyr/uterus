@@ -56,6 +56,10 @@
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !UNLIKELY */
 
+#if !defined MAP_ANONYMOUS && defined MAP_ANON
+# define MAP_ANONYMOUS	(MAP_ANON)
+#endif	/* MAP_ANON->MAP_ANONYMOUS */
+
 static int
 __open_zif(const char *file)
 {
@@ -72,7 +76,8 @@ __open_zif(const char *file)
 		char *new, *tmp;
 
 		new = alloca(tzd_len + 1 + len);
-		tmp = mempcpy(new, tzdir, tzd_len);
+		memcpy(new, tzdir, tzd_len);
+		tmp = new + tzd_len;
 		*tmp++ = '/';
 		memcpy(tmp, file, len);
 		file = new;
@@ -83,20 +88,22 @@ __open_zif(const char *file)
 static zif_t
 __read_zif(int fd)
 {
-	zif_t res;
+	struct zif_s tmp;
 	struct stat st;
-	void *map;
+	zif_t res;
 
 	if (fstat(fd, &st) < 0) {
 		return NULL;
 	}
-	res = malloc(sizeof(*res));
-	res->mpsz = st.st_size;
-	res->fd = fd;
-	map = mmap(NULL, res->mpsz, PROT_READ, MAP_SHARED, fd, 0);
-	if (map != MAP_FAILED) {
-		res->hdr = map;
+	tmp.mpsz = st.st_size;
+	tmp.fd = fd;
+	tmp.hdr = mmap(NULL, tmp.mpsz, PROT_READ, MAP_SHARED, fd, 0);
+	if (tmp.hdr == MAP_FAILED) {
+		return NULL;
 	}
+	/* otherwise generate an output structure */
+	res = malloc(sizeof(*res));
+	*res = tmp;
 	return res;
 }
 
@@ -161,7 +168,7 @@ zif_inst(zif_t z)
 	}
 	sz = z->mpsz + sizeof(*z);
 
-	map = mmap(NULL, sz, PROT_MEMMAP, MAP_MEMMAP, 0, 0);
+	map = mmap(NULL, sz, PROT_MEMMAP, MAP_MEMMAP, -1, 0);
 	if (map != MAP_FAILED) {
 		/* we mmap'ped ourselves a slightly larger struct
 		 * res + 1 points to the header*/

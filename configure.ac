@@ -47,6 +47,9 @@ AC_CHECK_HEADERS([endian.h sys/endian.h byteorder.h byteswap.h])
 ## check for mkostemp
 SXE_FUNC_MKOSTEMP
 
+## check for tzfile.h
+AC_CHECK_HEADERS([tzfile.h])
+
 ## check for working c1x features
 SXE_CHECK_ANON_STRUCTS([
 	AC_DEFINE([__C1X], [1], [Whether c1x work])

@@ -3,7 +3,7 @@
 @comment  node-name,  next,  previous,  up
 
 @ifinfo
-@dircategory uterus
+@dircategory Financial applications
 @direntry
 * uterus: (uterus).             Universal tick encoders.
 @end direntry

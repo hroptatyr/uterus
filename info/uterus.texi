@@ -46,7 +46,7 @@ in the section entitled "GNU Free Documentation License".
 @page
 
 @node Top
-@top dateutils
+@top uterus
 
 uterus is a universal tick encoder library to efficiently transport and
 store huge amounts of tick data.

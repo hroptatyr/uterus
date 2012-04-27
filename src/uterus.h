@@ -43,8 +43,10 @@
 #include "scommon.h"
 /* level-1 ticks of all sorts */
 #include "sl1t.h"
-/* candles, snapshots, bat-packs */
+/* candles, bat-packs */
 #include "scdl.h"
+/* snapshots */
+#include "ssnp.h"
 
 #ifdef __cplusplus
 extern "C" {

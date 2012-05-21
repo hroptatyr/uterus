@@ -23,3 +23,4 @@ libltdl/
 version.h
 texinfo.tex
 *.info
+test-driver

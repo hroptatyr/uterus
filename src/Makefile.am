@@ -206,6 +206,11 @@ forexfactory_la_SOURCES = forexfactory.c
 forexfactory_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 forexfactory_la_LIBADD = libuterus.la
 
+ute_LTLIBRARIES += fxstreet.la
+fxstreet_la_SOURCES = fxstreet.c
+fxstreet_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
+fxstreet_la_LIBADD = libuterus.la
+
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)
 	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*

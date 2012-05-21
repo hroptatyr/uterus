@@ -145,6 +145,20 @@ parse_ymdhmstz(const char *buf, zif_t z, char sep)
 }
 
 
+#define STMSG(x)	{.str = x, .len = sizeof(x) - 1}
+	/* check if it's one of the status messages */
+	static const struct {
+		const char *str;
+		const size_t len;
+	} stmsgs[] = {
+		STMSG("nothing"),
+		STMSG("wakey wakey"),
+		STMSG("restart"),
+		STMSG("C-c"),
+		STMSG("suspend"),
+		STMSG("rotate"),
+	};
+
 static bool
 parse_line(mux_ctx_t ctx, fxst_msg_t msg)
 {
@@ -231,6 +245,11 @@ parse_line(mux_ctx_t ctx, fxst_msg_t msg)
 	return true;
 
 bugger:
+	for (unsigned int i = 0; i < countof(stmsgs); i++) {
+		if (strncmp(cursor, stmsgs[i].str, stmsgs[i].len) == 0) {
+			return false;
+		}
+	}
 	/* declare the line fucked */
 	fputs("line b0rked\n> ", stderr);
 	fputs(line, stderr);

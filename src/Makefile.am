@@ -216,7 +216,7 @@ fxstreet_la_LIBADD = libuterus.la
 	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*
 
 ## for dist or dist check we need binaries, so help2man can work
-dist-hook: $(bin_PROGRAMS)
+dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)
 
 # 
 # Help the developers get nice post-processed source files

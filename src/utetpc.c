@@ -186,8 +186,8 @@ clear_tpc(utetpc_t tpc)
 	if (tpc_active_p(tpc)) {
 		tpc->sk.si = 0;
 		/* reset size to full tpc size again */
-		tpc->sk.szrw += tpc->sk.rewound * sizeof(*tpc->sk.sp);
-		tpc->sk.rewound = 0;
+		tpc->sk.szrw += tpc_rewound(tpc) * sizeof(*tpc->sk.sp);
+		tpc->sk.szrw = tpc_set_rewound(tpc, 0);
 	}
 	return;
 }
@@ -745,7 +745,7 @@ seek_last_sndwch(uteseek_t sk)
 {
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
-	} else if (UNLIKELY(sk->szrw - sk->rewound == 0)) {
+	} else if (UNLIKELY(sk->szrw - seek_rewound(sk) == 0)) {
 		return NULL;
 	} else {
 		const size_t probsz = sizeof(*sk->sp);

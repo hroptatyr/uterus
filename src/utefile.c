@@ -244,10 +244,12 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 
 	/* trivial checks */
 	if (UNLIKELY(off > ctx->fsz)) {
+		UDEBUGvv("offset %zu out of bounds (%zu)\n", off, ctx->fsz);
 		goto wipe;
 	} else if (UNLIKELY((psz = page_size(ctx, pg)) == 0)) {
 		/* could be tpc space */
 		if ((psz += tpc_byte_size(ctx->tpc)) == 0) {
+			UDEBUGvv("tpc space of size %zu\n", psz);
 			goto wipe;
 		}
 	}

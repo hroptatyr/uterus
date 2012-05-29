@@ -117,6 +117,18 @@
 # endif
 #endif	/* !be64toh */
 
+#if !defined le64toh
+# if defined letoh64
+#  define le64toh	letoh64
+# elif defined WORDS_BIGENDIAN && defined __bswap_64
+#  define le64toh(x)	__bswap_64(x)
+# elif defined WORDS_BIGENDIAN	/* && !__bswap_64 */
+#  error cannot figure out how to convert little-endian uint64_t to host
+# else	/* we should be on little endian anyway */
+#  define le64toh(x)	(x)
+# endif
+#endif	/* !le64toh */
+
 /* we could technically include byteswap.h and to the swap ourselves
  * in the missing cases.  Instead we'll just leave it as is and wait
  * for bug reports. */

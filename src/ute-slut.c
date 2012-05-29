@@ -36,10 +36,14 @@
  ***/
 
 /** test client for libuterus */
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 

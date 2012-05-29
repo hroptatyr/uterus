@@ -36,6 +36,9 @@
  ***/
 
 #define UTESORT_C
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -296,8 +299,8 @@ sort_strat(utectx_t ctx)
 	strat_t s;
 	struct __strat_clo_s sc[1];
 
-	UDEBUG("generating a sort strategy for %zu (+%zd) pages\n",
-	       npages, (ssize_t)tpc_has_ticks_p(ctx->tpc));
+	UDEBUG("generating a sort strategy for %zu (+%d) pages\n",
+	       npages, tpc_has_ticks_p(ctx->tpc));
 	npages += tpc_has_ticks_p(ctx->tpc);
 	for (size_t j = 0; j < npages; j += NRUNS) {
 		/* initialise the seeks */
@@ -365,7 +368,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 	}
 #if defined DEBUG_FLAG
 	/* there must be no more minimal pages */
-	for (strat_node_t nd = curnd; nd = nd->next; ) {
+	for (strat_node_t nd = curnd; (nd = nd->next); ) {
 		for (size_t i = 0; i < nd->cnt; i++) {
 			scom_t sh;
 			uint32_t pg = nd->pgs[i];
@@ -440,15 +443,6 @@ ute_sort(utectx_t ctx)
 		for (uint32_t i = 0; i < n->cnt; i++) {
 			UDEBUG("  page %u\n", n->pgs[i]);
 		}
-#if defined DEBUG_FLAG
-		uint64_t thresh = 0;
-		for (size_t i = 0, tsz; i < sks[n->pg].si; i += tsz) {
-			scom_t t = AS_SCOM(sks[n->pg].sp + i);
-
-			assert(thresh <= t->u);
-			tsz = scom_tick_size(t);
-		}
-#endif	/* DEBUG_FLAG */
 	}
 
 	/* let's assume we have an all-way merge */

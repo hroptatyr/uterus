@@ -36,6 +36,9 @@
  ***/
 
 /** test client for libuterus */
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -319,7 +322,7 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->extract_symbol_given) {
-		ctx->syms = argi->extract_symbol_arg;
+		ctx->syms = (const char*const*)argi->extract_symbol_arg;
 		/* quick count */
 		for (const char *const *p = ctx->syms; *p; p++, ctx->nsyms++);
 	}

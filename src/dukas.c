@@ -35,6 +35,9 @@
  *
  ***/
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,10 +45,10 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <netinet/in.h>
 #include <time.h>
 #include <string.h>
 
+#include "boobs.h"
 #include "scommon.h"
 #include "sl1t.h"
 #include "scdl.h"
@@ -54,9 +57,6 @@
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 
-#if !defined htonll
-# define htonll(x)	ntohll(x)
-#endif	/* !htonll */
 #if !defined LIKELY
 # define LIKELY(_x)	__builtin_expect((_x), 1)
 #endif	/* !LIKELY */
@@ -113,22 +113,6 @@ struct dcbi5_s {
 
 
 /* little helpers */
-static inline int64_t
-ntohll2(int32_t upper, int32_t lower)
-{
-	int64_t up64 = ntohl(upper);
-	int64_t lo64 = ntohl(lower);
-	return (up64 << 32) | lo64;
-}
-
-static inline int64_t
-ntohll(int64_t in)
-{
-	int32_t upper = (int32_t)(in & 0xffffffff);
-	int32_t lower = (int32_t)(in >> 32);
-	return ntohll2(upper, lower);
-}
-
 static m30_t
 __m30_get_dukas(uint32_t val)
 {
@@ -158,11 +142,11 @@ rd1(int f, struct dc_s *b)
 	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
 		return false;
 	}
-	b->ts = ntohll(b->ts);
-	b->ap.i = ntohll(b->ap.i);
-	b->bp.i = ntohll(b->bp.i);
-	b->aq.i = ntohll(b->aq.i);
-	b->bq.i = ntohll(b->bq.i);
+	b->ts = be64toh(b->ts);
+	b->ap.i = be64toh(b->ap.i);
+	b->bp.i = be64toh(b->bp.i);
+	b->aq.i = be64toh(b->aq.i);
+	b->bq.i = be64toh(b->bq.i);
 	return true;
 }
 
@@ -172,11 +156,11 @@ rd1bi5(int f, struct dqbi5_s *b)
 	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
 		return false;
 	}
-	b->ts = ntohl(b->ts);
-	b->ap = ntohl(b->ap);
-	b->bp = ntohl(b->bp);
-	b->aq.i = ntohl(b->aq.i);
-	b->bq.i = ntohl(b->bq.i);
+	b->ts = be32toh(b->ts);
+	b->ap = be32toh(b->ap);
+	b->bp = be32toh(b->bp);
+	b->aq.i = be32toh(b->aq.i);
+	b->bq.i = be32toh(b->bq.i);
 	return true;
 }
 
@@ -186,12 +170,12 @@ rd1c(int f, struct dcc_s *b)
 	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
 		return false;
 	}
-	b->ts = ntohll(b->ts);
-	b->o.i = ntohll(b->o.i);
-	b->c.i = ntohll(b->c.i);
-	b->l.i = ntohll(b->l.i);
-	b->h.i = ntohll(b->h.i);
-	b->v.i = ntohll(b->v.i);
+	b->ts = be64toh(b->ts);
+	b->o.i = be64toh(b->o.i);
+	b->c.i = be64toh(b->c.i);
+	b->l.i = be64toh(b->l.i);
+	b->h.i = be64toh(b->h.i);
+	b->v.i = be64toh(b->v.i);
 	return true;
 }
 
@@ -201,12 +185,12 @@ rd1cbi5(int f, struct dcbi5_s *b)
 	if (UNLIKELY(read(f, b, sizeof(*b)) <= 0)) {
 		return false;
 	}
-	b->ts = ntohl(b->ts);
-	b->o = ntohl(b->o);
-	b->c = ntohl(b->c);
-	b->l = ntohl(b->l);
-	b->h = ntohl(b->h);
-	b->v.i = ntohl(b->v.i);
+	b->ts = be32toh(b->ts);
+	b->o = be32toh(b->o);
+	b->c = be32toh(b->c);
+	b->l = be32toh(b->l);
+	b->h = be32toh(b->h);
+	b->v.i = be32toh(b->v.i);
 	return true;
 }
 
@@ -337,8 +321,8 @@ proc_l1bi5(mux_ctx_t ctx)
 	/* the only thing we can make assumptions about is the timestamp
 	 * we check the two stamps in bi5 and compare their distance */
 	{
-		uint32_t ts0 = ntohl(buf->bi5[0].ts);
-		uint32_t ts1 = ntohl(buf->bi5[1].ts);
+		uint32_t ts0 = be32toh(buf->bi5[0].ts);
+		uint32_t ts1 = be32toh(buf->bi5[1].ts);
 
 		if (ts1 - ts0 > 60/*min*/ * 60/*sec*/ * 1000/*msec*/) {
 			/* definitely old_fmt */
@@ -347,16 +331,16 @@ proc_l1bi5(mux_ctx_t ctx)
 
 		/* quickly polish the probe */
 		buf->bi5[0].ts = ts0;
-		buf->bi5[0].ap = ntohl(buf->bi5[0].ap);
-		buf->bi5[0].bp = ntohl(buf->bi5[0].bp);
-		buf->bi5[0].aq.i = ntohl(buf->bi5[0].aq.i);
-		buf->bi5[0].bq.i = ntohl(buf->bi5[0].bq.i);
+		buf->bi5[0].ap = be32toh(buf->bi5[0].ap);
+		buf->bi5[0].bp = be32toh(buf->bi5[0].bp);
+		buf->bi5[0].aq.i = be32toh(buf->bi5[0].aq.i);
+		buf->bi5[0].bq.i = be32toh(buf->bi5[0].bq.i);
 
 		buf->bi5[1].ts = ts1;
-		buf->bi5[1].ap = ntohl(buf->bi5[1].ap);
-		buf->bi5[1].bp = ntohl(buf->bi5[1].bp);
-		buf->bi5[1].aq.i = ntohl(buf->bi5[1].aq.i);
-		buf->bi5[1].bq.i = ntohl(buf->bi5[1].bq.i);
+		buf->bi5[1].ap = be32toh(buf->bi5[1].ap);
+		buf->bi5[1].bp = be32toh(buf->bi5[1].bp);
+		buf->bi5[1].aq.i = be32toh(buf->bi5[1].aq.i);
+		buf->bi5[1].bq.i = be32toh(buf->bi5[1].bq.i);
 	}
 	/* re-use the probe data */
 	write_tick_bi5(ctx, buf->bi5 + 0);
@@ -367,11 +351,11 @@ proc_l1bi5(mux_ctx_t ctx)
 	return;
 old_fmt:
 	/* polish the probe */
-	buf->bin->ts = ntohll(buf->bin->ts);
-	buf->bin->ap.i = ntohll(buf->bin->ap.i);
-	buf->bin->bp.i = ntohll(buf->bin->bp.i);
-	buf->bin->aq.i = ntohll(buf->bin->aq.i);
-	buf->bin->bq.i = ntohll(buf->bin->bq.i);
+	buf->bin->ts = be64toh(buf->bin->ts);
+	buf->bin->ap.i = be64toh(buf->bin->ap.i);
+	buf->bin->bp.i = be64toh(buf->bin->bp.i);
+	buf->bin->aq.i = be64toh(buf->bin->aq.i);
+	buf->bin->bq.i = be64toh(buf->bin->bq.i);
 	/* main loop */
 	do {
 		write_tick(ctx, buf->bin);
@@ -399,8 +383,8 @@ proc_cdbi5(mux_ctx_t ctx)
 	/* again we can only make assumptions about the timestamps
 	 * check the two stamps in bi5 and compare their distance */
 	{
-		uint32_t ts0 = ntohl(buf->bi5[0].ts);
-		uint32_t ts1 = ntohl(buf->bi5[1].ts);
+		uint32_t ts0 = be32toh(buf->bi5[0].ts);
+		uint32_t ts1 = be32toh(buf->bi5[1].ts);
 
 		if ((cdl_len = ts1 - ts0) > 60/*min*/ * 60/*sec*/) {
 			/* definitely old_fmt */
@@ -409,18 +393,18 @@ proc_cdbi5(mux_ctx_t ctx)
 
 		/* quickly polish the probe */
 		buf->bi5[0].ts = ts0;
-		buf->bi5[0].o = ntohl(buf->bi5[0].o);
-		buf->bi5[0].c = ntohl(buf->bi5[0].c);
-		buf->bi5[0].l = ntohl(buf->bi5[0].l);
-		buf->bi5[0].h = ntohl(buf->bi5[0].h);
-		buf->bi5[0].v.i = ntohl(buf->bi5[0].v.i);
+		buf->bi5[0].o = be32toh(buf->bi5[0].o);
+		buf->bi5[0].c = be32toh(buf->bi5[0].c);
+		buf->bi5[0].l = be32toh(buf->bi5[0].l);
+		buf->bi5[0].h = be32toh(buf->bi5[0].h);
+		buf->bi5[0].v.i = be32toh(buf->bi5[0].v.i);
 
 		buf->bi5[1].ts = ts1;
-		buf->bi5[1].o = ntohl(buf->bi5[1].o);
-		buf->bi5[1].c = ntohl(buf->bi5[1].c);
-		buf->bi5[1].l = ntohl(buf->bi5[1].l);
-		buf->bi5[1].h = ntohl(buf->bi5[1].h);
-		buf->bi5[1].v.i = ntohl(buf->bi5[1].v.i);
+		buf->bi5[1].o = be32toh(buf->bi5[1].o);
+		buf->bi5[1].c = be32toh(buf->bi5[1].c);
+		buf->bi5[1].l = be32toh(buf->bi5[1].l);
+		buf->bi5[1].h = be32toh(buf->bi5[1].h);
+		buf->bi5[1].v.i = be32toh(buf->bi5[1].v.i);
 	}
 	/* re-use the probe data */
 	write_cdl_bi5(ctx, buf->bi5 + 0, cdl_len);
@@ -432,12 +416,12 @@ proc_cdbi5(mux_ctx_t ctx)
 
 old_fmt:
 	/* polish the probe */
-	buf->bin->ts = ntohll(buf->bin->ts);
-	buf->bin->o.i = ntohll(buf->bin->o.i);
-	buf->bin->c.i = ntohll(buf->bin->c.i);
-	buf->bin->l.i = ntohll(buf->bin->l.i);
-	buf->bin->h.i = ntohll(buf->bin->h.i);
-	buf->bin->v.i = ntohll(buf->bin->v.i);
+	buf->bin->ts = be64toh(buf->bin->ts);
+	buf->bin->o.i = be64toh(buf->bin->o.i);
+	buf->bin->c.i = be64toh(buf->bin->c.i);
+	buf->bin->l.i = be64toh(buf->bin->l.i);
+	buf->bin->h.i = be64toh(buf->bin->h.i);
+	buf->bin->v.i = be64toh(buf->bin->v.i);
 	if (!rd1c(ctx->infd, buf->bin + 1)) {
 		/* assume a day candle and exit */
 		write_cdl(ctx, buf->bin, 86400U);

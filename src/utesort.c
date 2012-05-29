@@ -443,15 +443,6 @@ ute_sort(utectx_t ctx)
 		for (uint32_t i = 0; i < n->cnt; i++) {
 			UDEBUG("  page %u\n", n->pgs[i]);
 		}
-#if defined DEBUG_FLAG
-		uint64_t thresh = 0;
-		for (size_t i = 0, tsz; i < sks[n->pg].si; i += tsz) {
-			scom_t t = AS_SCOM(sks[n->pg].sp + i);
-
-			assert(thresh <= t->u);
-			tsz = scom_tick_size(t);
-		}
-#endif	/* DEBUG_FLAG */
 	}
 
 	/* let's assume we have an all-way merge */

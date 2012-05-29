@@ -197,6 +197,12 @@ prpg(pr_ctx_t ctx, char *tpg, size_t tsz, ssize_t(*prf)(pr_ctx_t, scom_t))
 	return res;
 }
 
+static size_t
+get_slut_sz(utehdr2_t p)
+{
+	return p->slut_sz;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -293,7 +299,7 @@ main(int argc, char *argv[])
 			goto fina;
 		}
 		/* otherwise try our harderst */
-		slsz = ((utehdr2_t)pg)->slut_sz;
+		slsz = get_slut_sz((void*)pg);
 		while ((nrd = rdpg(pg, 4096, STDIN_FILENO)) > 0) {
 			if (UNLIKELY((size_t)nrd < sizeof(pg))) {
 				/* last page then? */

@@ -233,7 +233,7 @@ flush_seek(uteseek_t sk)
 	return;
 }
 
-void
+int
 seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
 	size_t off = page_offset(ctx, pg);
@@ -255,7 +255,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	{
 		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
 		if (UNLIKELY(tmp == MAP_FAILED)) {
-			return;
+			return -1;
 		}
 		sk->sp = tmp;
 	}
@@ -273,10 +273,10 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	/* sp should point to the scom after the last non-naught tick */
 	UDEBUGvv("rewinding %zu ticks\n", nt);
 	seek_rewind(sk, nt);
-	return;
+	return 0;
 wipe:
 	memset(sk, 0, sizeof(*sk));
-	return;
+	return 0;
 }
 
 #if !defined USE_UTE_SORT

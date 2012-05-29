@@ -322,7 +322,7 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->extract_symbol_given) {
-		ctx->syms = argi->extract_symbol_arg;
+		ctx->syms = (const char*const*)argi->extract_symbol_arg;
 		/* quick count */
 		for (const char *const *p = ctx->syms; *p; p++, ctx->nsyms++);
 	}

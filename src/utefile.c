@@ -177,8 +177,8 @@ cache_hdr(utectx_t ctx)
 		return 0;
 	}
 	/* otherwise something's fucked */
-err_out:
 	munmap(res, sz);
+err_out:
 	ctx->hdrp = NULL;
 	ctx->slut_sz = 0;
 	return -1;
@@ -304,7 +304,7 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	void *tmp;
 
 	/* create a new seek */
-	tmp = mmap(NULL, psz, PROT_MEM, MAP_MEM, 0, 0);
+	tmp = mmap(NULL, psz, PROT_MEM, MAP_MEM, -1, 0);
 	if (UNLIKELY(tmp == MAP_FAILED)) {
 		return;
 	}

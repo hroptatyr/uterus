@@ -157,7 +157,7 @@ make_tpc(utetpc_t tpc, size_t nsndwchs)
 {
 	size_t sz = nsndwchs * sizeof(struct sndwch_s);
 
-	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, 0, 0);
+	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, -1, 0);
 	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
 		tpc->sk.szrw = sz;
 		tpc->sk.si = 0;

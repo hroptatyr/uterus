@@ -406,7 +406,7 @@ init_buckets(shnot_ctx_t ctx, utectx_t hdl, bkts_t bkt)
 		size_t sz = (nsyms_hdl + 1) * sizeof(*snap);
 
 		if (snap == NULL) {
-			bkt->snap = mmap(snap, sz, PMEM, FMEM, 0, 0);
+			bkt->snap = mmap(snap, sz, PMEM, FMEM, -1, 0);
 		} else {
 			size_t old = (nsyms_bkt + 1) * sizeof(*snap);
 			bkt->snap = mremap(snap, old, sz, MREMAP_MAYMOVE);

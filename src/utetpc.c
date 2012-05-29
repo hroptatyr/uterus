@@ -41,6 +41,7 @@
 #endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -969,7 +970,7 @@ seek_sort(uteseek_t sk)
 	size_t sk_sz = seek_size(sk);
 
 	/* we never hand out bigger pages */
-	assert(sk_sz <= 4096U * 1024U);
+	assert(sk_sz <= sysconf(_SC_PAGESIZE) * 1024U);
 
 	/* get us another map */
 	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);

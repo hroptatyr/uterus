@@ -220,16 +220,20 @@ flush_seek(uteseek_t sk)
 {
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
-	if (sk->szrw > 0) {
+	if (sk->szrw > 0 && !(sk->fl & SEEK_FL_OFFSET_SKEWED)) {
 		/* munmap given the computed page size, later to be replaced
 		 * by seek_size(sk) which will account for tick rewindings */
 		munmap(sk->sp, seek_size(sk));
+	} else if (sk->szrw > 0) {
+		/* ah brilliant, means the offset is skewed */
+		munmap((char*)sk->sp - sizeof(struct utehdr2_s), seek_size(sk));
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
 	sk->szrw = 0;
 	sk->sp = NULL;
 	sk->pg = -1;
+	sk->fl = 0;
 	return;
 }
 
@@ -260,13 +264,20 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 			return -1;
 		}
 		sk->sp = tmp;
+		sk->fl = 0;
 	} else {
-		return -1;
+		size_t nu_off = off - off % ctx->pgsz;
+		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, nu_off);
+		if (UNLIKELY(tmp == MAP_FAILED)) {
+			return -1;
+		}
+		assert(off % ctx->pgsz == sizeof(struct utehdr2_s));
+		sk->sp = (void*)((char*)tmp + off % ctx->pgsz);
+		sk->fl = SEEK_FL_OFFSET_SKEWED;
 	}
 	sk->si = 0;
 	sk->szrw = psz;
 	sk->pg = pg;
-	sk->fl = 0;
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);

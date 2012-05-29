@@ -98,6 +98,8 @@ struct uteseek_s {
 	uint32_t fl;
 };
 
+#define SEEK_FL_OFFSET_SKEWED	0x04
+
 struct utetpc_s {
 	struct uteseek_s sk;
 	/* this used to indicate the last seen value in the tick page

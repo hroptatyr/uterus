@@ -961,7 +961,7 @@ seek_sort(uteseek_t sk)
 /* simplified merge sort */
 	struct {
 		/* one page for SCOM->TICK offsets */
-		uint32_t offs[1024];
+		uint32_t offs[sysconf(_SC_PAGESIZE) / sizeof(uint32_t)];
 		struct sndwch_s data[];
 	} *new;
 	struct sndwch_s *np;

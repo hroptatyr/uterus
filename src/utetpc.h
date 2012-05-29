@@ -80,6 +80,7 @@ struct uteseek_s {
 	union {
 		/** total alloc'd size of the page (in bytes) */
 		size_t szrw;
+#if 0
 		/** size-fiddled indicator, this is to reflect
 		 * that we mmap()ed more space than SZ says but then
 		 * had to rewind it to not expose naught padding ticks
@@ -87,6 +88,7 @@ struct uteseek_s {
 		 * this is possible because all data should be aligned
 		 * to sndwch_t size anyway */
 		size_t rewound:STRUCT_ILOG2B(struct sndwch_s);
+#endif	/* 0 */
 	};
 	/** the actual page data */
 	struct sndwch_s *sp;
@@ -95,6 +97,8 @@ struct uteseek_s {
 	/** general page flags */
 	uint32_t fl;
 };
+
+#define SEEK_FL_OFFSET_SKEWED	0x04
 
 struct utetpc_s {
 	struct uteseek_s sk;
@@ -111,20 +115,37 @@ struct utetpc_s {
 #define TPC_FL_UNSORTED		0x01
 #define TPC_FL_NEEDMRG		0x02
 
+static inline __attribute__((pure)) size_t
+seek_rewound(uteseek_t sk)
+{
+	return sk->szrw & ((1 << STRUCT_ILOG2B(struct sndwch_s)) - 1);
+}
+
+static inline __attribute__((pure)) size_t
+seek_set_rewound(uteseek_t sk, size_t n)
+{
+	const unsigned int mask = (1 << STRUCT_ILOG2B(struct sndwch_s)) - 1;
+	size_t clsz = sk->szrw & ~mask;
+	return clsz | (n & mask);
+}
+
 static inline __attribute__((pure)) bool
 seek_rewound_p(uteseek_t sk)
 {
-	return sk->rewound != 0;
+	return seek_rewound(sk) != 0;
 }
 
 static inline size_t
 seek_size(uteseek_t sk)
 {
-	return LIKELY(!seek_rewound_p(sk) ?
-		      /* no fiddling needed */
-		      sk->szrw :
-		      /* we can unwind max 15 ticks! */
-		      sk->szrw - sk->rewound + sk->rewound * sizeof(*sk->sp));
+	if (LIKELY(!seek_rewound_p(sk))) {
+		/* no fiddling needed */
+		return sk->szrw;
+	} else {
+		/* we can unwind max 15 ticks! */
+		size_t rwnd = seek_rewound(sk);
+		return sk->szrw - rwnd + rwnd * sizeof(*sk->sp);
+	}
 }
 
 static inline void
@@ -132,14 +153,28 @@ seek_rewind(uteseek_t sk, size_t nticks)
 {
 /* consider SK rewound by NTICKS ticks */
 	sk->szrw -= nticks * sizeof(*sk->sp);
-	sk->rewound = nticks;
+	sk->szrw = seek_set_rewound(sk, nticks);
 	return;
+}
+
+static inline __attribute__((pure)) size_t
+tpc_rewound(utetpc_t tpc)
+{
+	return tpc->sk.szrw & ((1 << STRUCT_ILOG2B(struct sndwch_s)) - 1);
+}
+
+static inline __attribute__((pure)) size_t
+tpc_set_rewound(utetpc_t tpc, size_t n)
+{
+	const unsigned int mask = (1 << STRUCT_ILOG2B(struct sndwch_s)) - 1;
+	size_t clsz = tpc->sk.szrw & ~mask;
+	return clsz | (n & mask);
 }
 
 static inline bool
 tpc_active_p(utetpc_t tpc)
 {
-	return tpc->sk.szrw - tpc->sk.rewound > 0;
+	return tpc->sk.szrw - tpc_rewound(tpc) > 0;
 }
 
 static inline bool
@@ -226,7 +261,7 @@ static inline size_t
 tpc_byte_size(utetpc_t tpc)
 {
 /* account for rewind bits */
-	size_t nrw = tpc->sk.rewound;
+	size_t nrw = tpc_rewound(tpc);
 	return (tpc->sk.si + nrw) * sizeof(*tpc->sk.sp);
 }
 

@@ -36,6 +36,9 @@
  ***/
 
 #define UTEFILE_C
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -217,20 +220,24 @@ flush_seek(uteseek_t sk)
 {
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
-	if (sk->szrw > 0) {
+	if (sk->szrw > 0 && !(sk->fl & SEEK_FL_OFFSET_SKEWED)) {
 		/* munmap given the computed page size, later to be replaced
 		 * by seek_size(sk) which will account for tick rewindings */
 		munmap(sk->sp, seek_size(sk));
+	} else if (sk->szrw > 0) {
+		/* ah brilliant, means the offset is skewed */
+		munmap((char*)sk->sp - sizeof(struct utehdr2_s), seek_size(sk));
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
 	sk->szrw = 0;
 	sk->sp = NULL;
 	sk->pg = -1;
+	sk->fl = 0;
 	return;
 }
 
-void
+int
 seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
 	size_t off = page_offset(ctx, pg);
@@ -241,25 +248,36 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 
 	/* trivial checks */
 	if (UNLIKELY(off > ctx->fsz)) {
+		UDEBUGvv("offset %zu out of bounds (%zu)\n", off, ctx->fsz);
 		goto wipe;
 	} else if (UNLIKELY((psz = page_size(ctx, pg)) == 0)) {
 		/* could be tpc space */
 		if ((psz += tpc_byte_size(ctx->tpc)) == 0) {
+			UDEBUGvv("tpc space of size %zu\n", psz);
 			goto wipe;
 		}
 	}
 	/* create a new seek */
-	{
+	if (LIKELY(off % ctx->pgsz == 0)) {
 		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
 		if (UNLIKELY(tmp == MAP_FAILED)) {
-			return;
+			return -1;
 		}
 		sk->sp = tmp;
+		sk->fl = 0;
+	} else {
+		size_t nu_off = off - off % ctx->pgsz;
+		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, nu_off);
+		if (UNLIKELY(tmp == MAP_FAILED)) {
+			return -1;
+		}
+		assert(off % ctx->pgsz == sizeof(struct utehdr2_s));
+		sk->sp = (void*)((char*)tmp + off % ctx->pgsz);
+		sk->fl = SEEK_FL_OFFSET_SKEWED;
 	}
 	sk->si = 0;
 	sk->szrw = psz;
 	sk->pg = pg;
-	sk->fl = 0;
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
@@ -270,10 +288,10 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	/* sp should point to the scom after the last non-naught tick */
 	UDEBUGvv("rewinding %zu ticks\n", nt);
 	seek_rewind(sk, nt);
-	return;
+	return 0;
 wipe:
 	memset(sk, 0, sizeof(*sk));
-	return;
+	return 0;
 }
 
 #if !defined USE_UTE_SORT

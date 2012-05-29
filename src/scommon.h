@@ -74,6 +74,16 @@ union scom_thdr_u {
 	uint64_t u;
 	/* struct in order of significance */
 	struct {
+#if defined WORDS_BIGENDIAN
+		/* secs first */
+		uint32_t sec;
+		/* millisecs is the standard these days */
+		uint32_t msec:10;
+		/* an index back into the symtbl */
+		uint32_t idx:16;
+		/* tick type and flags */
+		uint32_t ttf:6;
+#else  /* !WORDS_BIGENDIAN */
 		/* tick type and flags */
 		uint32_t ttf:6;
 		/* an index back into the symtbl */
@@ -82,10 +92,21 @@ union scom_thdr_u {
 		uint32_t msec:10;
 		/* +64 */
 		uint32_t sec;
+#endif	/* WORDS_BIGENDIAN */
 	} __attribute__((packed));
 
 	/* microsecond resolution, can only store up to 64 securities */
 	struct {
+#if defined WORDS_BIGENDIAN
+		/* +64 */
+		uint32_t sec;
+		/* microseconds */
+		uint32_t usec:20;
+		/* an index back into the symtbl */
+		uint32_t idx:6;
+		/* tick type and flags */
+		uint32_t ttf:6;
+#else  /* !WORDS_BIGENDIAN */
 		/* tick type and flags */
 		uint32_t ttf:6;
 		/* an index back into the symtbl */
@@ -94,22 +115,42 @@ union scom_thdr_u {
 		uint32_t usec:20;
 		/* +64 */
 		uint32_t sec;
+#endif	/* WORDS_BIGENDIAN */
 	} __attribute__((packed)) us;
 
 	/* nanosecond resolution, can only store one security and
 	 * only the tick types bid, ask and tra */
 	struct {
+#if defined WORDS_BIGENDIAN
+		/* +64 */
+		uint32_t sec;
+		/* nano-seconds */
+		uint32_t nsec:30;
+		/* tick type and flags */
+		uint32_t ttf:2;
+#else  /* !WORDS_BIGENDIAN */
 		/* tick type and flags */
 		uint32_t ttf:2;
 		/* nano-seconds */
 		uint32_t nsec:30;
 		/* +64 */
 		uint32_t sec;
+#endif	/* WORDS_BIGENDIAN */
 	} __attribute__((packed)) ns;
 
 	/* seeing as that we're a union now ...
 	 * stuff this thing with the 0.1 version of the header */
 	struct {
+#if defined WORDS_BIGENDIAN
+		/* an index back into the symtbl */
+		uint16_t idx;
+		/* tick type and flags */
+		uint16_t ttf:6;
+		/* millisecs is the standard these days */
+		uint16_t msec:10;
+		/* +64 */
+		uint32_t sec;
+#else  /* !WORDS_BIGENDIAN */
 		/* +64 */
 		uint32_t sec;
 		/* millisecs is the standard these days */
@@ -118,6 +159,7 @@ union scom_thdr_u {
 		uint16_t ttf:6;
 		/* an index back into the symtbl */
 		uint16_t idx;
+#endif	/* WORDS_BIGENDIAN */
 	} __attribute__((packed)) v01;
 } __attribute__((transparent_union));
 

@@ -36,8 +36,12 @@
  ***/
 
 #define UTETPC_C
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stddef.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -183,8 +187,8 @@ clear_tpc(utetpc_t tpc)
 	if (tpc_active_p(tpc)) {
 		tpc->sk.si = 0;
 		/* reset size to full tpc size again */
-		tpc->sk.szrw += tpc->sk.rewound * sizeof(*tpc->sk.sp);
-		tpc->sk.rewound = 0;
+		tpc->sk.szrw += tpc_rewound(tpc) * sizeof(*tpc->sk.sp);
+		tpc->sk.szrw = tpc_set_rewound(tpc, 0);
 	}
 	return;
 }
@@ -742,7 +746,7 @@ seek_last_sndwch(uteseek_t sk)
 {
 	if (UNLIKELY(sk->sp == NULL)) {
 		return NULL;
-	} else if (UNLIKELY(sk->szrw - sk->rewound == 0)) {
+	} else if (UNLIKELY(sk->szrw - seek_rewound(sk) == 0)) {
 		return NULL;
 	} else {
 		const size_t probsz = sizeof(*sk->sp);
@@ -955,21 +959,20 @@ DEFUN void
 seek_sort(uteseek_t sk)
 {
 /* simplified merge sort */
-	struct {
-		/* one page for SCOM->TICK offsets */
-		uint32_t offs[1024];
-		struct sndwch_s data[];
-	} *new;
+	const size_t pgsz = sysconf(_SC_PAGESIZE);
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
 	size_t sk_sz = seek_size(sk);
+	void *new;
+#define new_data	((struct sndwch_s*)((char*)new + pgsz))
+#define new_offs	((uint32_t*)(new))
 
 	/* we never hand out bigger pages */
-	assert(sk_sz <= 4096U * 1024U);
+	assert(sk_sz <= pgsz * 1024U);
 
 	/* get us another map */
-	new = mmap(NULL, sizeof(*new) + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
@@ -980,7 +983,7 @@ seek_sort(uteseek_t sk)
 	}
 #endif	/* DEBUG_FLAG */
 
-	np = new->data;
+	np = new_data;
 	tp = sk->sp;
 	ep = sk->sp + sk->si;
 	for (size_t nticks; tp < ep; tp += nticks, np += nticks) {
@@ -989,7 +992,7 @@ seek_sort(uteseek_t sk)
 		/* sort 256 (or less) *scom*s */
 		nticks = idxsort(&pi, tp, ep);
 		/* store the value of nticks in the offset array */
-		new->offs[noffs++] = nticks;
+		new_offs[noffs++] = nticks;
 		/* now collate */
 		collate(np, tp, pi, nticks);
 	}
@@ -1005,11 +1008,11 @@ seek_sort(uteseek_t sk)
 
 		/* determine the number of ticks */
 		for (size_t i = 0; i < noffs; i++) {
-			tot += new->offs[i];
+			tot += new_offs[i];
 		}
 		UDEBUGvv("a total of %zu ticks to be b'up sorted\n", tot);
 
-		for (sndwch_t foo = new->data, bar = foo + tot;
+		for (sndwch_t foo = new_data, bar = foo + tot;
 		     foo < bar; foo += scom_tick_size(AS_SCOM(foo))) {
 			assert(AS_SCOM(foo)->u != 0ULL);
 			assert(AS_SCOM(foo)->u != -1ULL);
@@ -1017,13 +1020,13 @@ seek_sort(uteseek_t sk)
 	}
 #endif	/* DEBUG_FLAG */
 	{
-		void *const data = new->data;
+		void *const data = new_data;
 		void *tgt = sk->sp;
 		void *src = data;
 
 		for (size_t rsz = 2; rsz < 2 * noffs; rsz *= 2) {
 			/* ordinary bottom-up merge round */
-			bup_round(tgt, src, rsz, new->offs, noffs);
+			bup_round(tgt, src, rsz, new_offs, noffs);
 			{
 				/* swap the roles of src and tgt */
 				void *tmp = tgt;
@@ -1037,7 +1040,7 @@ seek_sort(uteseek_t sk)
 			memcpy(sk->sp, data, sk_sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, sizeof(*new) + sk_sz);
+		munmap(new, pgsz + sk_sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */
@@ -1054,6 +1057,8 @@ seek_sort(uteseek_t sk)
 		}
 	}
 #endif	/* DEBUG_FLAG */
+#undef new_offs
+#undef new_data
 	return;
 }
 

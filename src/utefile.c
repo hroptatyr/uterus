@@ -254,12 +254,14 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		}
 	}
 	/* create a new seek */
-	{
+	if (LIKELY(off % ctx->pgsz == 0)) {
 		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
 		if (UNLIKELY(tmp == MAP_FAILED)) {
 			return -1;
 		}
 		sk->sp = tmp;
+	} else {
+		return -1;
 	}
 	sk->si = 0;
 	sk->szrw = psz;

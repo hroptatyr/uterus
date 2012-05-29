@@ -103,6 +103,20 @@
 # endif
 #endif	/* !htole32 */
 
+#if !defined be64toh
+# if defined betoh64
+#  define be64toh	betoh64
+# elif defined WORDS_BIGENDIAN
+#  define be64toh(x)	(x)
+# elif defined __bswap_64
+#  define be64toh(x)	__bswap_64(x)
+# else	/* FUCK */
+/* technically we could use the __bswap_32 and do it ourselves
+ * but I'm not in the mood */
+#  error cannot figure out how to convert big-endian uint64_t to host
+# endif
+#endif	/* !be64toh */
+
 /* we could technically include byteswap.h and to the swap ourselves
  * in the missing cases.  Instead we'll just leave it as is and wait
  * for bug reports. */

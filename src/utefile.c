@@ -417,15 +417,15 @@ flush_tpc(utectx_t ctx)
 	}
 #endif	/* DEBUG_FLAG */
 	assert(sisz <= sz);
-	/* extend to take SISZ additional bytes */
-	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sisz)) {
+	/* extend to take SZ additional bytes */
+	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
 	{
 		sidx_t ix = fsz % __pgsz;
 		size_t foff = prev_multiple_of(fsz, __pgsz);
-		size_t mpsz = next_multiple_of(ix + sisz, __pgsz);
+		size_t mpsz = next_multiple_of(ix + sz, __pgsz);
 		char *p;
 
 		p = mmap(NULL, mpsz, PROT_FLUSH, MAP_FLUSH, ctx->fd, foff);
@@ -433,6 +433,10 @@ flush_tpc(utectx_t ctx)
 			return;
 		}
 		memcpy(p + ix, ctx->tpc->sk.sp, sisz);
+		/* memset the rest with the marker tick */
+		if (sisz < sz) {
+			memset(p + ix + sisz, -1, sz - sisz);
+		}
 		munmap(p, mpsz);
 	}
 

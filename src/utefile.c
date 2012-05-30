@@ -69,6 +69,8 @@
 
 #define SMALLEST_LVTD	(0)
 
+size_t __pgsz;
+
 /* not the best of ideas to have output printing in a lib */
 #include <stdarg.h>
 #include <stdio.h>
@@ -220,13 +222,10 @@ flush_seek(uteseek_t sk)
 {
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
-	if (sk->szrw > 0 && !(sk->fl & SEEK_FL_OFFSET_SKEWED)) {
+	if (sk->szrw > 0) {
 		/* munmap given the computed page size, later to be replaced
 		 * by seek_size(sk) which will account for tick rewindings */
 		munmap(sk->sp, seek_size(sk));
-	} else if (sk->szrw > 0) {
-		/* ah brilliant, means the offset is skewed */
-		munmap((char*)sk->sp - sizeof(struct utehdr2_s), seek_size(sk));
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
@@ -258,26 +257,24 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		}
 	}
 	/* create a new seek */
-	if (LIKELY(off % ctx->pgsz == 0)) {
+	assert(off % __pgsz == 0);
+	{
 		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
+
 		if (UNLIKELY(tmp == MAP_FAILED)) {
 			return -1;
 		}
+		/* prepare sk */
 		sk->sp = tmp;
-		sk->fl = 0;
-	} else {
-		size_t nu_off = off - off % ctx->pgsz;
-		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, nu_off);
-		if (UNLIKELY(tmp == MAP_FAILED)) {
-			return -1;
+		if (pg == 0) {
+			sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+		} else {
+			sk->si = 0;
 		}
-		assert(off % ctx->pgsz == sizeof(struct utehdr2_s));
-		sk->sp = (void*)((char*)tmp + off % ctx->pgsz);
-		sk->fl = SEEK_FL_OFFSET_SKEWED;
+		sk->szrw = psz;
+		sk->pg = pg;
+		sk->fl = 0;
 	}
-	sk->si = 0;
-	sk->szrw = psz;
-	sk->pg = pg;
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
@@ -329,6 +326,19 @@ reseek(utectx_t ctx, sidx_t i)
 	seek_page(ctx->seek, ctx, p);
 	ctx->seek->si = o;
 	return;
+}
+
+static inline sidx_t
+index_to_tpc_index(utectx_t ctx, sidx_t i)
+{
+/* Return the index of I within the tpc hold
+ * we just assume that tpc will never have more than UTE_BLKSZ ticks */
+	/* calculations in bytes */
+	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
+	if (tot_off >= ctx->fsz) {
+		return (tot_off - ctx->fsz) / sizeof(*ctx->seek->sp);
+	}
+	return 0;
 }
 
 /* seek to */
@@ -579,13 +589,7 @@ tilman_comp(utectx_t ctx)
 	}
 	/* tpg + 1 is now the final page count, sk[1] holds the offset
 	 * trunc the file accordingly */
-	{
-		const size_t bsz = UTE_BLKSZ(ctx);
-		const size_t tsz = sizeof(*sk->sp);
-		const size_t tot = sizeof(struct utehdr2_s) +
-			(tpg * bsz + sk[1].si) * tsz;
-		ute_trunc(ctx, tot);
-	}
+	ute_trunc(ctx, (tpg * UTE_BLKSZ + sk[1].si) * sizeof(*sk->sp));
 	return;
 }
 
@@ -595,7 +599,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 	size_t sk_sz = seek_size(sk);
 
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
+		make_tpc(ctx->tpc, UTE_BLKSZ);
 	}
 	/* copy the last page */
 	memcpy(ctx->tpc->sk.sp, sk->sp, sk_sz);
@@ -691,7 +695,6 @@ load_slut(utectx_t ctx)
 static void
 ute_init(utectx_t ctx)
 {
-	ctx->pgsz = (size_t)sysconf(_SC_PAGESIZE);
 	flush_seek(ctx->seek);
 	/* yikes, this is a bit confusing, we use the free here to
 	 * initialise the tpc */
@@ -744,6 +747,9 @@ make_utectx(const char *fn, int fd, int oflags)
 		/* user didn't request creation, so fuck off here */
 		return NULL;
 	}
+
+	/* set global page size */
+	__pgsz = (size_t)sysconf(_SC_PAGESIZE);
 
 	/* start creating the result */
 	res = calloc(1, sizeof(*res));
@@ -953,7 +959,7 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 	tsz = scom_tick_size(t);
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
+		make_tpc(ctx->tpc, UTE_BLKSZ);
 	} else if (!tpc_can_hold_p(ctx->tpc, tsz)) {
 		/* great, compute the number of leap ticks */
 		uteseek_t sk = &ctx->tpc->sk;
@@ -972,7 +978,7 @@ ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
 {
 	if (!tpc_active_p(ctx->tpc)) {
 		/* is this case actually possible? */
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
+		make_tpc(ctx->tpc, UTE_BLKSZ);
 	} else if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);

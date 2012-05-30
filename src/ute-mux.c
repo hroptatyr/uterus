@@ -108,13 +108,11 @@ ute_mux(mux_ctx_t ctx)
 	 * 2.2. go through the ticks and adapt tbl idxs if need be  */
 	for (size_t i = 0; i < ute_npages(hdl); i++) {
 		struct uteseek_s sk[2];
-		const size_t bsz = UTE_BLKSZ(hdl);
-		const size_t tsz = sizeof(*sk->sp);
-		const size_t psz = bsz * tsz;
+		const size_t pgsz = UTE_BLKSZ * sizeof(*sk->sp);
 		size_t sk_sz;
 
 		seek_page(sk, hdl, i);
-		if ((sk_sz = seek_size(sk)) < psz) {
+		if ((sk_sz = seek_size(sk)) < pgsz) {
 			/* half page, just add it to the tpc */
 			const size_t nticks = sk_sz / sizeof(*sk->sp);
 			ute_add_ticks(ctx->wrr, sk->sp, nticks);

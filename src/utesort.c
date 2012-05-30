@@ -60,8 +60,6 @@
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
 
-#define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
-
 #if defined DEBUG_FLAG
 # include <assert.h>
 # include <stdio.h>

@@ -123,17 +123,15 @@ __local_scom_byte_size(scom_t t)
 static char*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
-	int pgsz = sysconf(_SC_PAGESIZE);
-	sidx_t ofp = off / pgsz, ofi = off % pgsz;
-	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * pgsz);
+	sidx_t ofp = off / __pgsz, ofi = off % __pgsz;
+	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * __pgsz);
 	return LIKELY(p != MAP_FAILED) ? p + ofi : NULL;
 }
 
 static void
 munmap_any(char *map, off_t off, size_t len)
 {
-	int pgsz = sysconf(_SC_PAGESIZE);
-	sidx_t ofi = off % pgsz;
+	sidx_t ofi = off % __pgsz;
 	munmap(map - ofi, len + ofi);
 	return;
 }

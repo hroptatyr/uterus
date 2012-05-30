@@ -60,8 +60,6 @@
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
 
-#define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
-
 #if defined DEBUG_FLAG
 # include <assert.h>
 # include <stdio.h>
@@ -259,9 +257,8 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 	for (size_t k = sta, j = 0; k < e; j++, k++) {
 		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
-		sidx_t i = 0;
 
-		for (sidx_t tsz; i < sks_nticks; i += tsz) {
+		for (sidx_t i = sks[j].si, tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
 			/* the seeker should not give us trailing naughts */
@@ -308,7 +305,7 @@ sort_strat(utectx_t ctx)
 
 		/* obtain intervals */
 		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
-			scom_t sb = seek_first_scom(sks + i);
+			scom_t sb = seek_get_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
 			assert(sb && se);

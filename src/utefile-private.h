@@ -57,8 +57,6 @@ typedef struct utectx_s *utectx_t;
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
 
-#define UTE_BLKSZ(ctx)	(64 * (ctx)->pgsz)
-
 /* goodness */
 #include "utefile.h"
 #include "utehdr.h"
@@ -79,7 +77,7 @@ struct utectx_s {
 	/* tick pages cache */
 	struct utetpc_s tpc[1];
 	/* page size */
-	uint32_t pgsz;
+	uint32_t pad;
 	/* whether pages are unsorted et al. */
 	uint16_t flags;
 	/* file access and open flags */
@@ -114,100 +112,56 @@ extern void ute_add_ticks(utectx_t ctx, const void *p, size_t nticks);
 static inline size_t
 ute_npages(utectx_t ctx)
 {
-/* oh oh oh */
-	/* metadata size */
-	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	size_t nt = (ctx->fsz - aux_sz) / sizeof(*ctx->seek->sp);
-	return nt / UTE_BLKSZ(ctx) + (nt % UTE_BLKSZ(ctx) ? 1 : 0);
+/* Return the number of tick pages.
+ * The first tick page always contains the header. */
+	/* GUESS is the file size expressed in ticks */
+	size_t guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
+	return guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 }
 
 static inline uint32_t
 page_of_index(utectx_t ctx, sidx_t i)
 {
-/* return the page where the tick with index I is to be found */
-/* oh oh oh */
-	size_t bsz = UTE_BLKSZ(ctx);
-	uint32_t pg = i / bsz;
-	return pg;
+/* Return the page where the tick with index I is to be found. */
+	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	return (uint32_t)(i / UTE_BLKSZ);
 }
 
 static inline uint32_t
 offset_of_index(utectx_t ctx, sidx_t i)
 {
-/* return the offset of the I-th tick in its page. */
-/* oh oh oh */
-	size_t bsz = UTE_BLKSZ(ctx);
-	uint32_t o = i % bsz;
-	return o;
-}
-
-static inline size_t
-page_size(utectx_t ctx, uint32_t page)
-{
-/* return the size of the PAGE-th page in CTX. */
-/* oh oh oh */
-	const size_t bsz = UTE_BLKSZ(ctx);
-	const size_t tsz = sizeof(*ctx->seek->sp);
-	const size_t psz = bsz * tsz;
-	const size_t tot = sizeof(struct utehdr2_s) + page * psz;
-
-	if (LIKELY(tot + psz <= ctx->fsz)) {
-		return psz;
-	}
-	/* otherwise check if the page is beyond eof */
-	if (LIKELY(ctx->fsz - tot <= psz)) {
-		return ctx->fsz - tot;
-	}
-	/* otherwise the page is beyond */
-	return 0;
+/* Return the offset of the I-th tick in its page. */
+	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	return (uint32_t)(i % UTE_BLKSZ);
 }
 
 static inline size_t
 page_offset(utectx_t ctx, uint32_t page)
 {
-/* return the absolute file offset of the PAGE-th page in CTX. */
-/* oh oh oh */
-	const size_t bsz = UTE_BLKSZ(ctx);
-	const size_t tsz = sizeof(*ctx->seek->sp);
-	const size_t psz = bsz * tsz;
-	const size_t tot = sizeof(struct utehdr2_s) + page * psz;
-	return tot;
+/* Return the absolute file offset of the PAGE-th page in CTX. */
+	return page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
 }
 
 static inline bool
 index_past_eof_p(utectx_t ctx, sidx_t i)
 {
-/* could do this in terms of page_size() */
-/* oh oh oh */
-	const size_t bsz = UTE_BLKSZ(ctx);
-	const size_t tsz = sizeof(*ctx->seek->sp);
-	const uint32_t p = page_of_index(ctx, i);
-	const uint32_t o = offset_of_index(ctx, i);
-	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
-	return tot >= ctx->fsz + tpc_byte_size(ctx->tpc);
+/* Return true if I has no allocated space in CTX */
+	/* calculations in bytes */
+	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
+	size_t tot_tpc = tpc_byte_size(ctx->tpc);
+	/* assume file is trunc'd to last settled page */
+	return tot_off >= ctx->fsz + tot_tpc;
 }
 
 static inline bool
 index_in_tpc_space_p(utectx_t ctx, sidx_t i)
 {
-/* could do this in terms of page_size() */
-/* oh oh oh */
-	const size_t bsz = UTE_BLKSZ(ctx);
-	const size_t tsz = sizeof(*ctx->seek->sp);
-	const uint32_t p = page_of_index(ctx, i);
-	const uint32_t o = offset_of_index(ctx, i);
-	const size_t tot = sizeof(struct utehdr2_s) + p * bsz * tsz + o;
+/* Return true if I is not on the disk but in the tpc hold. */
+	/* calculations in bytes */
+	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
+	size_t tot_tpc = tpc_byte_size(ctx->tpc);
 	/* assume file is trunc'd to last settled page */
-	return tot >= ctx->fsz && tot <= ctx->fsz + tpc_byte_size(ctx->tpc);
-}
-
-static inline sidx_t
-index_to_tpc_index(utectx_t ctx, sidx_t i)
-{
-/* we just assume that tpc will never have more than UTE_BLKSZ ticks */
-	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	sidx_t nticks = (ctx->fsz - aux_sz) / sizeof(*ctx->seek->sp);
-	return i - nticks;
+	return tot_off >= ctx->fsz && tot_off < ctx->fsz + tot_tpc;
 }
 
 static inline bool

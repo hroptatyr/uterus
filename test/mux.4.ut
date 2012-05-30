@@ -9,7 +9,23 @@ CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
 
 ## STDOUT
 
+big_endian_p()
+{
+	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
+	if test "${ind}" = "0"; then
+		return 0
+	elif test "${ind}" = "1"; then
+		return 1
+	else
+		return 2
+	fi
+}
+
 ## outfile sum
-REFFILE="mux.4.ref.ute"
+if big_endian_p; then
+	REFFILE="mux.4.ref.beute"
+else
+	REFFILE="mux.4.ref.ute"
+fi
 
 ## mux.4.ut ends here

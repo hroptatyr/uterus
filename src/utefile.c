@@ -225,7 +225,7 @@ flush_seek(uteseek_t sk)
 	if (sk->szrw > 0) {
 		/* munmap given the computed page size, later to be replaced
 		 * by seek_size(sk) which will account for tick rewindings */
-		munmap(sk->sp, seek_size(sk));
+		munmap(sk->sp, seek_byte_size(sk));
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
@@ -596,7 +596,7 @@ tilman_comp(utectx_t ctx)
 static void
 tpc_from_seek(utectx_t ctx, uteseek_t sk)
 {
-	size_t sk_sz = seek_size(sk);
+	size_t sk_sz = seek_byte_size(sk);
 
 	if (!tpc_active_p(ctx->tpc)) {
 		make_tpc(ctx->tpc, UTE_BLKSZ);

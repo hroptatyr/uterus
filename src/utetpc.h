@@ -134,7 +134,7 @@ seek_rewound_p(uteseek_t sk)
 }
 
 static inline size_t
-seek_size(uteseek_t sk)
+seek_byte_size(uteseek_t sk)
 {
 	if (LIKELY(!seek_rewound_p(sk))) {
 		/* no fiddling needed */
@@ -144,6 +144,12 @@ seek_size(uteseek_t sk)
 		size_t rwnd = seek_rewound(sk);
 		return sk->szrw - rwnd + rwnd * sizeof(*sk->sp);
 	}
+}
+
+static inline size_t
+seek_tick_size(uteseek_t sk)
+{
+	return seek_byte_size(sk) / sizeof(*sk->sp);
 }
 
 static inline void
@@ -268,7 +274,7 @@ tpc_byte_size(utetpc_t tpc)
 static inline size_t
 tpc_max_size(utetpc_t tpc)
 {
-	return seek_size(&tpc->sk);
+	return seek_byte_size(&tpc->sk);
 }
 
 /**

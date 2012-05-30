@@ -112,7 +112,7 @@ ute_mux(mux_ctx_t ctx)
 		size_t sk_sz;
 
 		seek_page(sk, hdl, i);
-		if ((sk_sz = seek_size(sk)) < pgsz) {
+		if ((sk_sz = seek_byte_size(sk)) < pgsz) {
 			/* half page, just add it to the tpc */
 			const size_t nticks = sk_sz / sizeof(*sk->sp);
 			ute_add_ticks(ctx->wrr, sk->sp, nticks);

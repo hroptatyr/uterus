@@ -963,7 +963,7 @@ seek_sort(uteseek_t sk)
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
-	size_t sk_sz = seek_size(sk);
+	size_t sk_sz = seek_byte_size(sk);
 	void *new;
 #define new_data	((struct sndwch_s*)((char*)new + pgsz))
 #define new_offs	((uint32_t*)(new))

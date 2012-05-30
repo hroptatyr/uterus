@@ -380,14 +380,25 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
+static inline size_t
+next_multiple_of(size_t foo, size_t mul)
+{
+	return foo % mul ? foo + mul - foo % mul : foo;
+}
+
+static inline size_t
+prev_multiple_of(size_t foo, size_t mul)
+{
+	return foo - foo % mul;
+}
+
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
-	void *p;
 	size_t sz = tpc_byte_size(ctx->tpc);
 	sidx_t si = ctx->tpc->sk.si;
 	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
-	sidx_t off = ctx->fsz; 
+	size_t fsz = ctx->fsz;
 
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now and contain no randomised data */
@@ -405,21 +416,25 @@ flush_tpc(utectx_t ctx)
 		}
 	}
 #endif	/* DEBUG_FLAG */
-	/* extend to take SZ additional bytes */
-	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
-		return;
-	}
-	p = mmap(NULL, sz, PROT_FLUSH, MAP_FLUSH, ctx->fd, off);
-	if (p == MAP_FAILED) {
-		return;
-	}
 	assert(sisz <= sz);
-	memcpy(p, ctx->tpc->sk.sp, sisz);
-	/* memset the rest with the marker tick */
-	if (sisz < sz) {
-		memset((char*)p + sisz, -1, sz - sisz);
+	/* extend to take SISZ additional bytes */
+	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sisz)) {
+		return;
 	}
-	munmap(p, sz);
+	/* span a map covering the SZ new bytes */
+	{
+		sidx_t ix = fsz % __pgsz;
+		size_t foff = prev_multiple_of(fsz, __pgsz);
+		size_t mpsz = next_multiple_of(ix + sisz, __pgsz);
+		char *p;
+
+		p = mmap(NULL, mpsz, PROT_FLUSH, MAP_FLUSH, ctx->fd, foff);
+		if (p == MAP_FAILED) {
+			return;
+		}
+		memcpy(p + ix, ctx->tpc->sk.sp, sisz);
+		munmap(p, mpsz);
+	}
 
 	/* store the largest-value-to-date */
 	store_lvtd(ctx);

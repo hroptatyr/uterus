@@ -651,7 +651,11 @@ load_last_tpc(utectx_t ctx)
 
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
-	ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	if (ctx->fsz > tpc_byte_size(ctx->tpc) + ctx->slut_sz) {
+		ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	} else {
+		ctx->fsz -= ctx->slut_sz;
+	}
 	return;
 wipeout:
 	memset(ctx->tpc, 0, sizeof(*ctx->tpc));
@@ -799,9 +803,9 @@ make_utectx(const char *fn, int fd, int oflags)
 		/* load the slut, must be first, as we need to shrink
 		 * the file accordingly */
 		load_slut(res);
-		/* load the last page as tpc */
-		load_last_tpc(res);
 	}
+	/* load the last page as tpc */
+	load_last_tpc(res);
 	return res;
 }
 
@@ -962,10 +966,8 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 
 	/* post tick inspection */
 	tsz = scom_tick_size(t);
-	if (!tpc_active_p(ctx->tpc)) {
-		/* is this case actually possible? */
-		make_tpc(ctx->tpc, UTE_BLKSZ);
-	} else if (!tpc_can_hold_p(ctx->tpc, tsz)) {
+	assert(tpc_active_p(ctx->tpc));
+	if (!tpc_can_hold_p(ctx->tpc, tsz)) {
 		/* great, compute the number of leap ticks */
 		uteseek_t sk = &ctx->tpc->sk;
 		size_t nleap = sk->szrw / sizeof(*sk->sp) - sk->si;
@@ -981,10 +983,8 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 void
 ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
 {
-	if (!tpc_active_p(ctx->tpc)) {
-		/* is this case actually possible? */
-		make_tpc(ctx->tpc, UTE_BLKSZ);
-	} else if (tpc_full_p(ctx->tpc)) {
+	assert(tpc_active_p(ctx->tpc));
+	if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);
 	}

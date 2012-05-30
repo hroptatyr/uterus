@@ -304,7 +304,11 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		return;
 	}
 	sk->sp = tmp;
-	sk->si = 0;
+	if (pg == 0) {
+		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	} else {
+		sk->si = 0;
+	}
 	sk->sz = psz;
 	sk->pg = pg;
 	sk->fl = 0;

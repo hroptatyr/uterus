@@ -963,7 +963,7 @@ ute_close(utectx_t ctx)
 void
 ute_flush(utectx_t ctx)
 {
-	if (!tpc_active_p(ctx->tpc)) {
+	if (!tpc_active_p(ctx->tpc) || !tpc_has_ticks_p(ctx->tpc)) {
 		return;
 	}
 	/* also sort and diskify the currently active tpc */

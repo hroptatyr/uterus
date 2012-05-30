@@ -155,15 +155,19 @@ __local_scom_byte_size(scom_t t)
 DEFUN void
 make_tpc(utetpc_t tpc, size_t nsndwchs)
 {
-	size_t sz = nsndwchs * sizeof(struct sndwch_s);
+	/* this should really be the next UTE_BLKSZ multiple of NSNDWCHS */
+	size_t sz = UTE_BLKSZ * sizeof(*tpc->sk.sp);
 
 	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, -1, 0);
 	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
 		tpc->sk.szrw = sz;
 		tpc->sk.si = 0;
+		/* we (ab)use the pg slot for the sandwich count */
+		tpc->sk.pg = nsndwchs;
 	} else {
 		tpc->sk.szrw = 0;
 		tpc->sk.si = -1;
+		tpc->sk.cap = 0;
 	}
 	return;
 }
@@ -172,12 +176,15 @@ DEFUN void
 free_tpc(utetpc_t tpc)
 {
 	if (tpc_active_p(tpc)) {
-		/* seek points to something => munmap first */
-		munmap(tpc->sk.sp, tpc_max_size(tpc));
+		/* seek points to something -> munmap first
+		 * we should probably determine the size of the tpc using the
+		 * CAP slot and round it to the next UTE_BLKSZ multiple */
+		munmap(tpc->sk.sp, UTE_BLKSZ);
 	}
 	tpc->sk.si = -1;
 	tpc->sk.szrw = 0;
 	tpc->sk.sp = NULL;
+	tpc->sk.cap = 0;
 	return;
 }
 
@@ -959,20 +966,19 @@ DEFUN void
 seek_sort(uteseek_t sk)
 {
 /* simplified merge sort */
-	const size_t pgsz = sysconf(_SC_PAGESIZE);
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
-	size_t sk_sz = seek_size(sk);
+	size_t sk_sz = seek_byte_size(sk);
 	void *new;
-#define new_data	((struct sndwch_s*)((char*)new + pgsz))
+#define new_data	((struct sndwch_s*)((char*)new + __pgsz))
 #define new_offs	((uint32_t*)(new))
 
 	/* we never hand out bigger pages */
-	assert(sk_sz <= pgsz * 1024U);
+	assert(sk_sz <= UTE_BLKSZ * sizeof(*sk->sp));
 
 	/* get us another map */
-	new = mmap(NULL, pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, __pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
@@ -1040,7 +1046,7 @@ seek_sort(uteseek_t sk)
 			memcpy(sk->sp, data, sk_sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, pgsz + sk_sz);
+		munmap(new, __pgsz + sk_sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

@@ -121,10 +121,10 @@ static int
 fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_size(sk);
+	const size_t sk_sz = seek_byte_size(sk);
 	int issues = 0;
 
-	for (size_t i = 0, tsz; i < sk_sz; i += tsz) {
+	for (size_t i = sk->si, tsz; i < sk_sz; i += tsz) {
 		char buf[64];
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);

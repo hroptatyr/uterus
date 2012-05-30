@@ -58,6 +58,9 @@
 # define LIKELY(_x)	__builtin_expect((_x), 1)
 #endif	/* !LIKELY */
 
+extern size_t __pgsz;
+#define UTE_BLKSZ	(64 * __pgsz)
+
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
 
@@ -92,13 +95,15 @@ struct uteseek_s {
 	};
 	/** the actual page data */
 	struct sndwch_s *sp;
-	/** page we're on */
-	uint32_t pg;
+	union {
+		/** page we're on */
+		uint32_t pg;
+		/** in the context of tpcs this is the tick capacity */
+		uint32_t cap;
+	};
 	/** general page flags */
 	uint32_t fl;
 };
-
-#define SEEK_FL_OFFSET_SKEWED	0x04
 
 struct utetpc_s {
 	struct uteseek_s sk;
@@ -136,7 +141,7 @@ seek_rewound_p(uteseek_t sk)
 }
 
 static inline size_t
-seek_size(uteseek_t sk)
+seek_byte_size(uteseek_t sk)
 {
 	if (LIKELY(!seek_rewound_p(sk))) {
 		/* no fiddling needed */
@@ -146,6 +151,12 @@ seek_size(uteseek_t sk)
 		size_t rwnd = seek_rewound(sk);
 		return sk->szrw - rwnd + rwnd * sizeof(*sk->sp);
 	}
+}
+
+static inline size_t
+seek_tick_size(uteseek_t sk)
+{
+	return seek_byte_size(sk) / sizeof(*sk->sp);
 }
 
 static inline void
@@ -186,14 +197,14 @@ tpc_has_ticks_p(utetpc_t tpc)
 static inline bool
 tpc_full_p(utetpc_t tpc)
 {
-	return tpc->sk.si >= tpc->sk.szrw / sizeof(*tpc->sk.sp);
+	return tpc->sk.si >= tpc->sk.cap;
 }
 
 static inline bool
 tpc_can_hold_p(utetpc_t tpc, size_t nt)
 {
 /* whether there's space for NT more sandwiches in TPC */
-	return tpc->sk.si + nt <= tpc->sk.szrw / sizeof(*tpc->sk.sp);
+	return tpc->sk.si + nt <= tpc->sk.cap;
 }
 
 /**
@@ -270,7 +281,7 @@ tpc_byte_size(utetpc_t tpc)
 static inline size_t
 tpc_max_size(utetpc_t tpc)
 {
-	return seek_size(&tpc->sk);
+	return seek_byte_size(&tpc->sk);
 }
 
 /**
@@ -296,17 +307,6 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 		return NULL;
 	}
 	return AS_SCOM(tpc->sk.sp + i);
-}
-
-/**
- * Return the first tick in SK. */
-static inline scom_t
-seek_first_scom(uteseek_t sk)
-{
-	if (UNLIKELY(!AS_SCOM(sk->sp)->u)) {
-		return NULL;
-	}
-	return AS_SCOM(sk->sp);
 }
 
 /**

@@ -250,7 +250,17 @@ if test -r "${OUTFILE}" -a -r "${REFFILE}"; then
 elif test -r "${OUTFILE}" -a -n "${OUTFILE_SHA1}"; then
 	sha1sum "${OUTFILE}" |
 	while read sum rest; do
-		if test "${sum}" != "${OUTFILE_SHA1}"; then
+		check_sum()
+		{
+			for i; do
+				if test "${sum}" = "${i}"; then
+					return 0
+				fi
+			done
+			return 1
+		}
+
+		if ! check_sum ${OUTFILE_SHA1}; then
 			cat <<EOF >&2
 outfile (${OUTFILE}) hashes do not match:
 SHOULD BE: ${OUTFILE_SHA1}

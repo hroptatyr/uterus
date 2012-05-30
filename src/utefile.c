@@ -69,6 +69,8 @@
 
 #define SMALLEST_LVTD	(0)
 
+size_t __pgsz;
+
 /* not the best of ideas to have output printing in a lib */
 #include <stdarg.h>
 #include <stdio.h>
@@ -121,17 +123,15 @@ __local_scom_byte_size(scom_t t)
 static char*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
-	int pgsz = sysconf(_SC_PAGESIZE);
-	sidx_t ofp = off / pgsz, ofi = off % pgsz;
-	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * pgsz);
+	sidx_t ofp = off / __pgsz, ofi = off % __pgsz;
+	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * __pgsz);
 	return LIKELY(p != MAP_FAILED) ? p + ofi : NULL;
 }
 
 static void
 munmap_any(char *map, off_t off, size_t len)
 {
-	int pgsz = sysconf(_SC_PAGESIZE);
-	sidx_t ofi = off % pgsz;
+	sidx_t ofi = off % __pgsz;
 	munmap(map - ofi, len + ofi);
 	return;
 }
@@ -220,13 +220,10 @@ flush_seek(uteseek_t sk)
 {
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
-	if (sk->szrw > 0 && !(sk->fl & SEEK_FL_OFFSET_SKEWED)) {
+	if (sk->szrw > 0) {
 		/* munmap given the computed page size, later to be replaced
 		 * by seek_size(sk) which will account for tick rewindings */
-		munmap(sk->sp, seek_size(sk));
-	} else if (sk->szrw > 0) {
-		/* ah brilliant, means the offset is skewed */
-		munmap((char*)sk->sp - sizeof(struct utehdr2_s), seek_size(sk));
+		munmap(sk->sp, seek_byte_size(sk));
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
@@ -240,9 +237,9 @@ flush_seek(uteseek_t sk)
 int
 seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
+	size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 	size_t off = page_offset(ctx, pg);
 	int pflags = __pflags(ctx);
-	size_t psz;
 	sndwch_t sp;
 	sidx_t nt = 0;
 
@@ -250,34 +247,34 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	if (UNLIKELY(off > ctx->fsz)) {
 		UDEBUGvv("offset %zu out of bounds (%zu)\n", off, ctx->fsz);
 		goto wipe;
-	} else if (UNLIKELY((psz = page_size(ctx, pg)) == 0)) {
+	} else if (UNLIKELY(off + pgsz >= ctx->fsz)) {
 		/* could be tpc space */
-		if ((psz += tpc_byte_size(ctx->tpc)) == 0) {
-			UDEBUGvv("tpc space of size %zu\n", psz);
+		if ((pgsz = ctx->fsz - off) == 0) {
+			/* tpc space */
+			UDEBUGvv("tpc space (%zub)\n", tpc_byte_size(ctx->tpc));
 			goto wipe;
 		}
 	}
-	/* create a new seek */
-	if (LIKELY(off % ctx->pgsz == 0)) {
-		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
+	/* make sure we respect the semantics of mmap() */
+	assert(off % __pgsz == 0);
+	{
+		/* create a new seek */
+		void *tmp = mmap(NULL, pgsz, pflags, MAP_SHARED, ctx->fd, off);
+
 		if (UNLIKELY(tmp == MAP_FAILED)) {
 			return -1;
 		}
+		/* prepare sk */
 		sk->sp = tmp;
-		sk->fl = 0;
-	} else {
-		size_t nu_off = off - off % ctx->pgsz;
-		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, nu_off);
-		if (UNLIKELY(tmp == MAP_FAILED)) {
-			return -1;
+		if (pg == 0) {
+			sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+		} else {
+			sk->si = 0;
 		}
-		assert(off % ctx->pgsz == sizeof(struct utehdr2_s));
-		sk->sp = (void*)((char*)tmp + off % ctx->pgsz);
-		sk->fl = SEEK_FL_OFFSET_SKEWED;
+		sk->szrw = pgsz;
+		sk->pg = pg;
+		sk->fl = 0;
 	}
-	sk->si = 0;
-	sk->szrw = psz;
-	sk->pg = pg;
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
@@ -295,6 +292,24 @@ wipe:
 }
 
 #if !defined USE_UTE_SORT
+static inline size_t
+page_size(utectx_t ctx, uint32_t page)
+{
+/* Return the size (in bytes) of the PAGE-th page in CTX. */
+	const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	const size_t tot = page * pgsz;
+
+	if (LIKELY(tot + pgsz <= ctx->fsz)) {
+		return pgsz;
+	}
+	/* otherwise check if the page is beyond eof */
+	if (LIKELY(tot + pgsz >= ctx->fsz)) {
+		return ctx->fsz - tot;
+	}
+	/* otherwise the page is beyond */
+	return 0;
+}
+
 static void
 seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
@@ -309,7 +324,11 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		return;
 	}
 	sk->sp = tmp;
-	sk->si = 0;
+	if (pg == 0) {
+		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	} else {
+		sk->si = 0;
+	}
 	sk->sz = psz;
 	sk->pg = pg;
 	sk->fl = 0;
@@ -329,6 +348,19 @@ reseek(utectx_t ctx, sidx_t i)
 	seek_page(ctx->seek, ctx, p);
 	ctx->seek->si = o;
 	return;
+}
+
+static inline sidx_t
+index_to_tpc_index(utectx_t ctx, sidx_t i)
+{
+/* Return the index of I within the tpc hold
+ * we just assume that tpc will never have more than UTE_BLKSZ ticks */
+	/* calculations in bytes */
+	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
+	if (tot_off >= ctx->fsz) {
+		return (tot_off - ctx->fsz) / sizeof(*ctx->seek->sp);
+	}
+	return 0;
 }
 
 /* seek to */
@@ -372,14 +404,25 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
+static inline size_t
+next_multiple_of(size_t foo, size_t mul)
+{
+	return foo % mul ? foo + mul - foo % mul : foo;
+}
+
+static inline size_t
+prev_multiple_of(size_t foo, size_t mul)
+{
+	return foo - foo % mul;
+}
+
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
-	void *p;
 	size_t sz = tpc_byte_size(ctx->tpc);
 	sidx_t si = ctx->tpc->sk.si;
 	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
-	sidx_t off = ctx->fsz; 
+	size_t fsz = ctx->fsz;
 
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now and contain no randomised data */
@@ -397,27 +440,37 @@ flush_tpc(utectx_t ctx)
 		}
 	}
 #endif	/* DEBUG_FLAG */
+	assert(sisz <= sz);
 	/* extend to take SZ additional bytes */
 	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
 		return;
 	}
-	p = mmap(NULL, sz, PROT_FLUSH, MAP_FLUSH, ctx->fd, off);
-	if (p == MAP_FAILED) {
-		return;
+	/* span a map covering the SZ new bytes */
+	{
+		sidx_t ix = fsz % __pgsz;
+		size_t foff = prev_multiple_of(fsz, __pgsz);
+		size_t mpsz = next_multiple_of(ix + sz, __pgsz);
+		char *p;
+
+		p = mmap(NULL, mpsz, PROT_FLUSH, MAP_FLUSH, ctx->fd, foff);
+		if (p == MAP_FAILED) {
+			return;
+		}
+		memcpy(p + ix, ctx->tpc->sk.sp, sisz);
+		/* memset the rest with the marker tick */
+		if (sisz < sz) {
+			memset(p + ix + sisz, -1, sz - sisz);
+		}
+		munmap(p, mpsz);
 	}
-	assert(sisz <= sz);
-	memcpy(p, ctx->tpc->sk.sp, sisz);
-	/* memset the rest with the marker tick */
-	if (sisz < sz) {
-		memset((char*)p + sisz, -1, sz - sisz);
-	}
-	munmap(p, sz);
 
 	/* store the largest-value-to-date */
 	store_lvtd(ctx);
 
 	/* munmap the tpc? */
 	clear_tpc(ctx->tpc);
+	/* ah, this also means we can now use the full capacity */
+	ctx->tpc->sk.cap = UTE_BLKSZ;
 	return;
 }
 
@@ -527,6 +580,7 @@ mrg:
 }
 #endif	/* USE_UTE_SORT */
 
+#if defined AUTO_TILMAN_COMP
 static bool
 seek_eof_p(uteseek_t sk)
 {
@@ -579,40 +633,49 @@ tilman_comp(utectx_t ctx)
 	}
 	/* tpg + 1 is now the final page count, sk[1] holds the offset
 	 * trunc the file accordingly */
-	{
-		const size_t bsz = UTE_BLKSZ(ctx);
-		const size_t tsz = sizeof(*sk->sp);
-		const size_t tot = sizeof(struct utehdr2_s) +
-			(tpg * bsz + sk[1].si) * tsz;
-		ute_trunc(ctx, tot);
-	}
+	ute_trunc(ctx, (tpg * UTE_BLKSZ + sk[1].si) * sizeof(*sk->sp));
 	return;
 }
+#endif	/* AUTO_TILMAN_COMP */
 
-static void
+static void MAYBE_NOINLINE
 tpc_from_seek(utectx_t ctx, uteseek_t sk)
 {
-	size_t sk_sz = seek_size(sk);
+	size_t sk_sz = seek_byte_size(sk);
+	const size_t cp_sz = sk_sz - sk->si * sizeof(*sk->sp);
 
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
+		if (sk->pg == 0) {
+			const size_t hdr = sizeof(*ctx->hdrp) / sizeof(*sk->sp);
+			make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
+		} else {
+			make_tpc(ctx->tpc, UTE_BLKSZ);
+		}
 	}
-	/* copy the last page */
-	memcpy(ctx->tpc->sk.sp, sk->sp, sk_sz);
-	/* ... and set the new length */
-	ctx->tpc->sk.si = sk_sz / sizeof(*sk->sp);
-	/* store the first value as ctx's lvtd and the last as tpc's last */
-	{
-		scom_t frst = seek_first_scom(sk);
+	if (cp_sz) {
+		/* copy the last page, from index sk->si onwards */
+		memcpy(ctx->tpc->sk.sp, sk->sp + sk->si, cp_sz);
+		/* ... and set the new length */
+		ctx->tpc->sk.si = cp_sz / sizeof(*sk->sp);
+	}
+
+	if (cp_sz) {
+		/* store the first value as ctx's lvtd
+		 * and the last as tpc's last */
+		scom_t frst = seek_get_scom(sk);
 		scom_t last = seek_last_scom(sk);
 
 		ctx->lvtd = ctx->tpc->least = frst->u;
 		ctx->tpc->last = last->u;
+	} else {
+		/* otherwise rinse */
+		ctx->lvtd = ctx->tpc->least = 0;
+		ctx->tpc->last = 0;
 	}
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file
@@ -642,7 +705,11 @@ load_last_tpc(utectx_t ctx)
 
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
-	ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	if (ctx->fsz > tpc_byte_size(ctx->tpc) + ctx->slut_sz) {
+		ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
+	} else {
+		ctx->fsz -= ctx->slut_sz;
+	}
 	return;
 wipeout:
 	memset(ctx->tpc, 0, sizeof(*ctx->tpc));
@@ -691,7 +758,6 @@ load_slut(utectx_t ctx)
 static void
 ute_init(utectx_t ctx)
 {
-	ctx->pgsz = (size_t)sysconf(_SC_PAGESIZE);
 	flush_seek(ctx->seek);
 	/* yikes, this is a bit confusing, we use the free here to
 	 * initialise the tpc */
@@ -745,6 +811,9 @@ make_utectx(const char *fn, int fd, int oflags)
 		return NULL;
 	}
 
+	/* set global page size */
+	__pgsz = (size_t)sysconf(_SC_PAGESIZE);
+
 	/* start creating the result */
 	res = calloc(1, sizeof(*res));
 
@@ -788,9 +857,9 @@ make_utectx(const char *fn, int fd, int oflags)
 		/* load the slut, must be first, as we need to shrink
 		 * the file accordingly */
 		load_slut(res);
-		/* load the last page as tpc */
-		load_last_tpc(res);
 	}
+	/* load the last page as tpc */
+	load_last_tpc(res);
 	return res;
 }
 
@@ -869,13 +938,17 @@ ute_close(utectx_t ctx)
 #endif	/* USE_UTE_SORT */
 		ute_unset_unsorted(ctx);
 	}
+#if defined AUTO_TILMAN_COMP
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
+#endif	/* AUTO_TILMAN_COMP */
 	/* serialse the slut */
 	flush_slut(ctx);
 	/* ... and finalise */
 	free_slut(ctx->slut);
 
+	/* close the tpc */
+	free_tpc(ctx->tpc);
 	/* finish our tpc session */
 	fini_tpc();
 	/* finish our slut session */
@@ -890,7 +963,7 @@ ute_close(utectx_t ctx)
 void
 ute_flush(utectx_t ctx)
 {
-	if (!tpc_active_p(ctx->tpc)) {
+	if (!tpc_active_p(ctx->tpc) || !tpc_has_ticks_p(ctx->tpc)) {
 		return;
 	}
 	/* also sort and diskify the currently active tpc */
@@ -951,10 +1024,8 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 
 	/* post tick inspection */
 	tsz = scom_tick_size(t);
-	if (!tpc_active_p(ctx->tpc)) {
-		/* is this case actually possible? */
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
-	} else if (!tpc_can_hold_p(ctx->tpc, tsz)) {
+	assert(tpc_active_p(ctx->tpc));
+	if (!tpc_can_hold_p(ctx->tpc, tsz)) {
 		/* great, compute the number of leap ticks */
 		uteseek_t sk = &ctx->tpc->sk;
 		size_t nleap = sk->szrw / sizeof(*sk->sp) - sk->si;
@@ -970,10 +1041,8 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 void
 ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
 {
-	if (!tpc_active_p(ctx->tpc)) {
-		/* is this case actually possible? */
-		make_tpc(ctx->tpc, UTE_BLKSZ(ctx));
-	} else if (tpc_full_p(ctx->tpc)) {
+	assert(tpc_active_p(ctx->tpc));
+	if (tpc_full_p(ctx->tpc)) {
 		/* oh current tpc is full, flush and start over */
 		ute_flush(ctx);
 	}

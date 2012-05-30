@@ -305,7 +305,7 @@ sort_strat(utectx_t ctx)
 
 		/* obtain intervals */
 		for (size_t i = 0, k = j; i < NRUNS && k < npages; i++, k++) {
-			scom_t sb = seek_first_scom(sks + i);
+			scom_t sb = seek_get_scom(sks + i);
 			scom_t se = seek_last_scom(sks + i);
 
 			assert(sb && se);

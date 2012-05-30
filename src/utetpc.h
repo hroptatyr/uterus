@@ -310,17 +310,6 @@ tpc_get_scom(utetpc_t tpc, sidx_t i)
 }
 
 /**
- * Return the first tick in SK. */
-static inline scom_t
-seek_first_scom(uteseek_t sk)
-{
-	if (UNLIKELY(!AS_SCOM(sk->sp + sk->si)->u)) {
-		return NULL;
-	}
-	return AS_SCOM(sk->sp + sk->si);
-}
-
-/**
  * Return the last tick in a sought page. */
 DECLF scom_t seek_last_scom(uteseek_t sk);
 

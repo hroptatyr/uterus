@@ -632,7 +632,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 	if (cp_sz) {
 		/* store the first value as ctx's lvtd
 		 * and the last as tpc's last */
-		scom_t frst = seek_first_scom(sk);
+		scom_t frst = seek_get_scom(sk);
 		scom_t last = seek_last_scom(sk);
 
 		ctx->lvtd = ctx->tpc->least = frst->u;

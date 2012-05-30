@@ -593,6 +593,7 @@ clone_seek(uteseek_t tgt, uteseek_t src)
 	return;
 }
 
+#if defined AUTO_TILMAN_COMP
 static void
 tilman_comp(utectx_t ctx)
 {
@@ -635,6 +636,7 @@ tilman_comp(utectx_t ctx)
 	ute_trunc(ctx, (tpg * UTE_BLKSZ + sk[1].si) * sizeof(*sk->sp));
 	return;
 }
+#endif	/* AUTO_TILMAN_COMP */
 
 static void MAYBE_NOINLINE
 tpc_from_seek(utectx_t ctx, uteseek_t sk)
@@ -936,8 +938,10 @@ ute_close(utectx_t ctx)
 #endif	/* USE_UTE_SORT */
 		ute_unset_unsorted(ctx);
 	}
+#if defined AUTO_TILMAN_COMP
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
+#endif	/* AUTO_TILMAN_COMP */
 	/* serialse the slut */
 	flush_slut(ctx);
 	/* ... and finalise */

@@ -975,7 +975,7 @@ seek_sort(uteseek_t sk)
 #define new_offs	((uint32_t*)(new))
 
 	/* we never hand out bigger pages */
-	assert(sk_sz <= pgsz * 1024U);
+	assert(sk_sz <= UTE_BLKSZ * sizeof(*sk->sp));
 
 	/* get us another map */
 	new = mmap(NULL, __pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);

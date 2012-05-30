@@ -249,11 +249,9 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		goto wipe;
 	} else if (UNLIKELY(off + pgsz >= ctx->fsz)) {
 		/* could be tpc space */
-		if (!tpc_active_p(ctx->tpc)) {
-			pgsz = ctx->fsz - off;
-		} else if ((pgsz = tpc_byte_size(ctx->tpc)) == 0) {
+		if ((pgsz = ctx->fsz - off) == 0) {
 			/* tpc space */
-			UDEBUGvv("tpc space of size %zu\n", pgsz);
+			UDEBUGvv("tpc space (%zub)\n", tpc_byte_size(ctx->tpc));
 			goto wipe;
 		}
 	}

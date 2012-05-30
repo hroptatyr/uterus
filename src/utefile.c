@@ -608,10 +608,11 @@ tilman_comp(utectx_t ctx)
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 tpc_from_seek(utectx_t ctx, uteseek_t sk)
 {
 	size_t sk_sz = seek_byte_size(sk);
+	const size_t cp_sz = sk_sz - sk->si * sizeof(*sk->sp);
 
 	if (!tpc_active_p(ctx->tpc)) {
 		if (sk->pg == 0) {
@@ -621,25 +622,30 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 			make_tpc(ctx->tpc, UTE_BLKSZ);
 		}
 	}
-	{
+	if (cp_sz) {
 		/* copy the last page, from index sk->si onwards */
-		const size_t cp_sz = sk_sz - sk->si * sizeof(*sk->sp);
 		memcpy(ctx->tpc->sk.sp, sk->sp + sk->si, cp_sz);
 		/* ... and set the new length */
 		ctx->tpc->sk.si = cp_sz / sizeof(*sk->sp);
 	}
-	/* store the first value as ctx's lvtd and the last as tpc's last */
-	{
+
+	if (cp_sz) {
+		/* store the first value as ctx's lvtd
+		 * and the last as tpc's last */
 		scom_t frst = seek_first_scom(sk);
 		scom_t last = seek_last_scom(sk);
 
 		ctx->lvtd = ctx->tpc->least = frst->u;
 		ctx->tpc->last = last->u;
+	} else {
+		/* otherwise rinse */
+		ctx->lvtd = ctx->tpc->least = 0;
+		ctx->tpc->last = 0;
 	}
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file

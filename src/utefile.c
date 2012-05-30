@@ -580,6 +580,7 @@ mrg:
 }
 #endif	/* USE_UTE_SORT */
 
+#if defined AUTO_TILMAN_COMP
 static bool
 seek_eof_p(uteseek_t sk)
 {
@@ -593,7 +594,6 @@ clone_seek(uteseek_t tgt, uteseek_t src)
 	return;
 }
 
-#if defined AUTO_TILMAN_COMP
 static void
 tilman_comp(utectx_t ctx)
 {

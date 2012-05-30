@@ -57,9 +57,6 @@ typedef struct utectx_s *utectx_t;
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !LIKELY */
 
-extern size_t __pgsz;
-#define UTE_BLKSZ	(64 * __pgsz)
-
 /* goodness */
 #include "utefile.h"
 #include "utehdr.h"

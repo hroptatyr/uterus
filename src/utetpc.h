@@ -58,6 +58,9 @@
 # define LIKELY(_x)	__builtin_expect((_x), 1)
 #endif	/* !LIKELY */
 
+extern size_t __pgsz;
+#define UTE_BLKSZ	(64 * __pgsz)
+
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
 

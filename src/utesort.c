@@ -257,9 +257,8 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 	for (size_t k = sta, j = 0; k < e; j++, k++) {
 		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
-		sidx_t i = 0;
 
-		for (sidx_t tsz; i < sks_nticks; i += tsz) {
+		for (sidx_t i = sks[j].si, tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
 			/* the seeker should not give us trailing naughts */

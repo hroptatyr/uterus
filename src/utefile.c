@@ -599,7 +599,12 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 	size_t sk_sz = seek_byte_size(sk);
 
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, sk_sz - sk->si * sizeof(*sk->sp));
+		if (sk->pg == 0) {
+			const size_t hdr = sizeof(*ctx->hdrp) / sizeof(*sk->sp);
+			make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
+		} else {
+			make_tpc(ctx->tpc, UTE_BLKSZ);
+		}
 	}
 	/* copy the last page */
 	memcpy(ctx->tpc->sk.sp, sk->sp, sk_sz);

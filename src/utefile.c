@@ -243,19 +243,23 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sndwch_t sp;
 	sidx_t nt = 0;
 
-	/* make sure we respect the semantics of mmap() */
-	assert(off % __pgsz == 0);
-
 	/* trivial checks */
 	if (UNLIKELY(off > ctx->fsz)) {
 		UDEBUGvv("offset %zu out of bounds (%zu)\n", off, ctx->fsz);
 		goto wipe;
-	} else if (UNLIKELY(off + pgsz >= ctx->fsz &&
-			    (pgsz = tpc_byte_size(ctx->tpc)) == 0)) {
-		/* tpc space */
-		UDEBUGvv("tpc space of size %zu\n", pgsz);
-		goto wipe;
-	} else {
+	} else if (UNLIKELY(off + pgsz >= ctx->fsz)) {
+		/* could be tpc space */
+		if (!tpc_active_p(ctx->tpc)) {
+			pgsz = ctx->fsz - off;
+		} else if ((pgsz = tpc_byte_size(ctx->tpc)) == 0) {
+			/* tpc space */
+			UDEBUGvv("tpc space of size %zu\n", pgsz);
+			goto wipe;
+		}
+	}
+	/* make sure we respect the semantics of mmap() */
+	assert(off % __pgsz == 0);
+	{
 		/* create a new seek */
 		void *tmp = mmap(NULL, pgsz, pflags, MAP_SHARED, ctx->fd, off);
 

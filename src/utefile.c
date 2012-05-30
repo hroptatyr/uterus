@@ -426,6 +426,8 @@ flush_tpc(utectx_t ctx)
 
 	/* munmap the tpc? */
 	clear_tpc(ctx->tpc);
+	/* ah, this also means we can now use the full capacity */
+	ctx->tpc->sk.cap = UTE_BLKSZ;
 	return;
 }
 

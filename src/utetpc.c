@@ -966,20 +966,19 @@ DEFUN void
 seek_sort(uteseek_t sk)
 {
 /* simplified merge sort */
-	const size_t pgsz = sysconf(_SC_PAGESIZE);
 	struct sndwch_s *np;
 	sndwch_t tp, ep;
 	size_t noffs = 0;
 	size_t sk_sz = seek_byte_size(sk);
 	void *new;
-#define new_data	((struct sndwch_s*)((char*)new + pgsz))
+#define new_data	((struct sndwch_s*)((char*)new + __pgsz))
 #define new_offs	((uint32_t*)(new))
 
 	/* we never hand out bigger pages */
 	assert(sk_sz <= pgsz * 1024U);
 
 	/* get us another map */
-	new = mmap(NULL, pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, __pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
@@ -1047,7 +1046,7 @@ seek_sort(uteseek_t sk)
 			memcpy(sk->sp, data, sk_sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, pgsz + sk_sz);
+		munmap(new, __pgsz + sk_sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

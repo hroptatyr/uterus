@@ -947,6 +947,8 @@ ute_close(utectx_t ctx)
 	/* ... and finalise */
 	free_slut(ctx->slut);
 
+	/* close the tpc */
+	free_tpc(ctx->tpc);
 	/* finish our tpc session */
 	fini_tpc();
 	/* finish our slut session */

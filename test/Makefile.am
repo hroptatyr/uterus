@@ -40,6 +40,7 @@ EXTRA_DIST += mux.f.ibhist.xml
 EXTRA_DIST += mux.g.ibhist.xml
 
 EXTRA_DIST += mux.4.ref.ute
+EXTRA_DIST += mux.4.ref.beute
 EXTRA_DIST += mux.5.ref.ute
 EXTRA_DIST += mux.6.ref.ute
 EXTRA_DIST += mux.7.ref.ute

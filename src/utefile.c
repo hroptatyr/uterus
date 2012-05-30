@@ -237,27 +237,27 @@ flush_seek(uteseek_t sk)
 int
 seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {
+	size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 	size_t off = page_offset(ctx, pg);
 	int pflags = __pflags(ctx);
-	size_t psz;
 	sndwch_t sp;
 	sidx_t nt = 0;
+
+	/* make sure we respect the semantics of mmap() */
+	assert(off % __pgsz == 0);
 
 	/* trivial checks */
 	if (UNLIKELY(off > ctx->fsz)) {
 		UDEBUGvv("offset %zu out of bounds (%zu)\n", off, ctx->fsz);
 		goto wipe;
-	} else if (UNLIKELY((psz = page_size(ctx, pg)) == 0)) {
-		/* could be tpc space */
-		if ((psz += tpc_byte_size(ctx->tpc)) == 0) {
-			UDEBUGvv("tpc space of size %zu\n", psz);
-			goto wipe;
-		}
-	}
-	/* create a new seek */
-	assert(off % __pgsz == 0);
-	{
-		void *tmp = mmap(NULL, psz, pflags, MAP_SHARED, ctx->fd, off);
+	} else if (UNLIKELY(off + pgsz >= ctx->fsz &&
+			    (pgsz = tpc_byte_size(ctx->tpc)) == 0)) {
+		/* tpc space */
+		UDEBUGvv("tpc space of size %zu\n", pgsz);
+		goto wipe;
+	} else {
+		/* create a new seek */
+		void *tmp = mmap(NULL, pgsz, pflags, MAP_SHARED, ctx->fd, off);
 
 		if (UNLIKELY(tmp == MAP_FAILED)) {
 			return -1;
@@ -269,7 +269,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		} else {
 			sk->si = 0;
 		}
-		sk->szrw = psz;
+		sk->szrw = pgsz;
 		sk->pg = pg;
 		sk->fl = 0;
 	}
@@ -290,6 +290,24 @@ wipe:
 }
 
 #if !defined USE_UTE_SORT
+static inline size_t
+page_size(utectx_t ctx, uint32_t page)
+{
+/* Return the size (in bytes) of the PAGE-th page in CTX. */
+	const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	const size_t tot = page * pgsz;
+
+	if (LIKELY(tot + pgsz <= ctx->fsz)) {
+		return pgsz;
+	}
+	/* otherwise check if the page is beyond eof */
+	if (LIKELY(tot + pgsz >= ctx->fsz)) {
+		return ctx->fsz - tot;
+	}
+	/* otherwise the page is beyond */
+	return 0;
+}
+
 static void
 seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 {

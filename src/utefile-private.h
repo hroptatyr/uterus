@@ -136,28 +136,6 @@ offset_of_index(utectx_t ctx, sidx_t i)
 }
 
 static inline size_t
-page_size(utectx_t ctx, uint32_t page)
-{
-/* Return the size (in bytes) of the PAGE-th page in CTX. */
-	const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
-	const size_t tot = page * pgsz;
-
-	if (LIKELY(tot + pgsz <= ctx->fsz)) {
-		if (page) {
-			return pgsz;
-		} else {
-			return pgsz - sizeof(*ctx->hdrp);
-		}
-	}
-	/* otherwise check if the page is beyond eof */
-	if (LIKELY(ctx->fsz - tot <= pgsz)) {
-		return ctx->fsz - tot;
-	}
-	/* otherwise the page is beyond */
-	return 0;
-}
-
-static inline size_t
 page_offset(utectx_t ctx, uint32_t page)
 {
 /* Return the absolute file offset of the PAGE-th page in CTX. */

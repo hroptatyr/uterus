@@ -580,6 +580,7 @@ mrg:
 }
 #endif	/* USE_UTE_SORT */
 
+#if defined AUTO_TILMAN_COMP
 static bool
 seek_eof_p(uteseek_t sk)
 {
@@ -635,6 +636,7 @@ tilman_comp(utectx_t ctx)
 	ute_trunc(ctx, (tpg * UTE_BLKSZ + sk[1].si) * sizeof(*sk->sp));
 	return;
 }
+#endif	/* AUTO_TILMAN_COMP */
 
 static void MAYBE_NOINLINE
 tpc_from_seek(utectx_t ctx, uteseek_t sk)
@@ -936,13 +938,17 @@ ute_close(utectx_t ctx)
 #endif	/* USE_UTE_SORT */
 		ute_unset_unsorted(ctx);
 	}
+#if defined AUTO_TILMAN_COMP
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
+#endif	/* AUTO_TILMAN_COMP */
 	/* serialse the slut */
 	flush_slut(ctx);
 	/* ... and finalise */
 	free_slut(ctx->slut);
 
+	/* close the tpc */
+	free_tpc(ctx->tpc);
 	/* finish our tpc session */
 	fini_tpc();
 	/* finish our slut session */
@@ -957,7 +963,7 @@ ute_close(utectx_t ctx)
 void
 ute_flush(utectx_t ctx)
 {
-	if (!tpc_active_p(ctx->tpc)) {
+	if (!tpc_active_p(ctx->tpc) || !tpc_has_ticks_p(ctx->tpc)) {
 		return;
 	}
 	/* also sort and diskify the currently active tpc */

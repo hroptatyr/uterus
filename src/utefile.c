@@ -599,7 +599,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 	size_t sk_sz = seek_byte_size(sk);
 
 	if (!tpc_active_p(ctx->tpc)) {
-		make_tpc(ctx->tpc, UTE_BLKSZ);
+		make_tpc(ctx->tpc, sk_sz - sk->si * sizeof(*sk->sp));
 	}
 	/* copy the last page */
 	memcpy(ctx->tpc->sk.sp, sk->sp, sk_sz);

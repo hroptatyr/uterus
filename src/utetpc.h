@@ -95,8 +95,12 @@ struct uteseek_s {
 	};
 	/** the actual page data */
 	struct sndwch_s *sp;
-	/** page we're on */
-	uint32_t pg;
+	union {
+		/** page we're on */
+		uint32_t pg;
+		/** in the context of tpcs this is the tick capacity */
+		uint32_t cap;
+	};
 	/** general page flags */
 	uint32_t fl;
 };
@@ -193,14 +197,14 @@ tpc_has_ticks_p(utetpc_t tpc)
 static inline bool
 tpc_full_p(utetpc_t tpc)
 {
-	return tpc->sk.si >= tpc->sk.szrw / sizeof(*tpc->sk.sp);
+	return tpc->sk.si >= tpc->sk.cap;
 }
 
 static inline bool
 tpc_can_hold_p(utetpc_t tpc, size_t nt)
 {
 /* whether there's space for NT more sandwiches in TPC */
-	return tpc->sk.si + nt <= tpc->sk.szrw / sizeof(*tpc->sk.sp);
+	return tpc->sk.si + nt <= tpc->sk.cap;
 }
 
 /**

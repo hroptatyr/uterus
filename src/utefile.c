@@ -606,10 +606,13 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 			make_tpc(ctx->tpc, UTE_BLKSZ);
 		}
 	}
-	/* copy the last page */
-	memcpy(ctx->tpc->sk.sp, sk->sp, sk_sz);
-	/* ... and set the new length */
-	ctx->tpc->sk.si = sk_sz / sizeof(*sk->sp);
+	{
+		/* copy the last page, from index sk->si onwards */
+		const size_t cp_sz = sk_sz - sk->si * sizeof(*sk->sp);
+		memcpy(ctx->tpc->sk.sp, sk->sp + sk->si, cp_sz);
+		/* ... and set the new length */
+		ctx->tpc->sk.si = cp_sz / sizeof(*sk->sp);
+	}
 	/* store the first value as ctx's lvtd and the last as tpc's last */
 	{
 		scom_t frst = seek_first_scom(sk);

@@ -124,6 +124,18 @@ extern void ute_add_tick(utectx_t ctx, scom_t t);
 extern size_t ute_nticks(utectx_t ctx);
 
 /**
+ * Convenience macro to traverse all ticks in a file CTX.
+ * This version assumes that the number of ticks in CTX does not change
+ * during the traversal.  The current tick is I. */
+#define UTE_ITER(i, __ctx)						\
+	for (sidx_t __i = 0, __tsz, __nt = ute_nticks(__ctx);		\
+	     __tsz = 1/*just in case*/, __i < __nt;			\
+	     __i += __tsz)						\
+		for (scom_t i = ute_seek(__ctx, __i);			\
+		     i/*will be NULL for illegal ticks*/;		\
+		     __tsz = scom_tick_size(i), i = 0)
+
+/**
  * Return the number of symbols tracked in CTX. */
 extern size_t ute_nsyms(utectx_t ctx);
 

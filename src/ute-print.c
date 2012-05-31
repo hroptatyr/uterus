@@ -43,13 +43,6 @@
 #include <fcntl.h>
 #include "utefile.h"
 
-/* we're just as good as rudi, aren't we? */
-#if defined DEBUG_FLAG
-# include <assert.h>
-#else  /* !DEBUG_FLAG */
-# define assert(args...)
-#endif	/* DEBUG_FLAG */
-
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
@@ -63,6 +56,15 @@
 #include "scommon.h"
 #include "sl1t.h"
 #include "scdl.h"
+
+/* we're just as good as rudi, aren't we? */
+#if defined DEBUG_FLAG
+# include <assert.h>
+# define MAYBE_NOINLINE		__attribute__((noinline))
+#else  /* !DEBUG_FLAG */
+# define assert(args...)
+# define MAYBE_NOINLINE
+#endif	/* DEBUG_FLAG */
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -131,7 +133,7 @@ print_mudems(void)
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 {
 	void *hdl;
@@ -151,6 +153,11 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			scom_t ti = ute_seek(hdl, i);
 			size_t bsz;
 
+			if (UNLIKELY(ti == NULL)) {
+				tsz = 1;
+				continue;
+			}
+
 			/* promote the old header, copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
 			tsz = scom_tick_size(nu_ti);
@@ -162,11 +169,8 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 		}
 	} else {
 		/* no flips in this one */
-		for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
-			scom_t ti = ute_seek(hdl, i);
-
+		UTE_ITER(ti, hdl) {
 			prf(ctx, ti);
-			tsz = scom_tick_size(ti);
 		}
 	}
 	/* oh right, close the handle */

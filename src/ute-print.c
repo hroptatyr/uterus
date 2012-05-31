@@ -152,6 +152,11 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			scom_t ti = ute_seek(hdl, i);
 			size_t bsz;
 
+			if (UNLIKELY(ti == NULL)) {
+				tsz = 1;
+				continue;
+			}
+
 			/* promote the old header, copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
 			tsz = scom_tick_size(nu_ti);

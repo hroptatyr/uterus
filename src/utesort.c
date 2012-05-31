@@ -70,6 +70,10 @@
 # define assert(args...)
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
+/* for serious debugging */
+#if !defined UDEBUGvv
+# define UDEBUGvv(args...)
+#endif	/* !UDEBUGvv */
 
 
 /* sorter */
@@ -202,7 +206,7 @@ __strat_cb(it_node_t itnd, void *clo)
 	cc->cnt = 0;
 	itree_find_sups_cb(it, lo, hi, __cnt, cc);
 	if (cc->cnt > 1) {
-		UDEBUG("uh oh, page %u is subset of some other page\n", pg);
+		UDEBUG("page %u is subset of %zu other pages\n", pg, cc->cnt);
 		return;
 	}
 	cc->cnt = 0;
@@ -258,6 +262,7 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
 
+		UDEBUGvv("sks[%zu].si = %zu/%zu\n", j, sks[j].si, sks_nticks);
 		for (sidx_t i = sks[j].si, tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
@@ -323,6 +328,26 @@ sort_strat(utectx_t ctx)
 	/* load the strat cb closure */
 	sc->strat = s;
 	itree_trav_in_order(it, __strat_cb, sc);
+
+	/* check if the strategy actually produced results */
+	if (s->first == NULL) {
+		/* this is actually possible when all pages have the same
+		 * min and max value, so they're all supseteq's of each other
+		 * anyway, in this case we just add the first page to the
+		 * strategy and the other ones as children */
+		strat_node_t sn;
+
+		assert(s->last == NULL);
+		sn = xmalloc(sizeof(*sn) + npages * sizeof(int));
+		sn->pg = 0;
+		sn->cnt = npages;
+		sn->next = NULL;
+		for (unsigned int i = 0; i < npages; i++) {
+			sn->pgs[i] = i;
+		}
+		/* actually attach the cell to our strategy */
+		s->first = s->last = sn;
+	}
 
 	/* blast the itree to nirvana */
 	free_itree(it);
@@ -451,6 +476,7 @@ ute_sort(utectx_t ctx)
 	/* prepare the strategy, we use the last cell as iterator */
 	str->last = str->first;
 	/* ALL-way merge */
+	assert(min_run(sks, npages, str) >= 0);
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
 		scom_t t = seek_get_scom(sks + j);
 

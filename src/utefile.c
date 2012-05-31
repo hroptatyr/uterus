@@ -1029,6 +1029,9 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 		/* great, compute the number of leap ticks */
 		uteseek_t sk = &ctx->tpc->sk;
 		size_t nleap = sk->szrw / sizeof(*sk->sp) - sk->si;
+
+		assert(sk->szrw / sizeof(*sk->sp) >= sk->si);
+		UDEBUGvv("tpc full (has: %zut/%zut)\n", sk->si, sk->si + nleap);
 		seek_rewind(sk, nleap);
 		ute_flush(ctx);
 	}

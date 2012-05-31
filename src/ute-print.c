@@ -163,11 +163,8 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 		}
 	} else {
 		/* no flips in this one */
-		for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
-			scom_t ti = ute_seek(hdl, i);
-
+		UTE_ITER(ti, hdl) {
 			prf(ctx, ti);
-			tsz = scom_tick_size(ti);
 		}
 	}
 	/* oh right, close the handle */

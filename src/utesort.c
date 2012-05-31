@@ -449,6 +449,7 @@ ute_sort(utectx_t ctx)
 	strat_t str;
 #if defined DEBUG_FLAG
 	uint64_t check = 0ULL;
+	size_t ntadd = 0;
 #endif	/* DEBUG_FLAG */
 
 	/* tpc might be in there as well */
@@ -486,6 +487,7 @@ ute_sort(utectx_t ctx)
 		}
 		assert(check <= t->u);
 		check = t->u;
+		ntadd++;
 #endif	/* DEBUG_FLAG */
 
 		/* add that bloke */
@@ -497,6 +499,8 @@ ute_sort(utectx_t ctx)
 
 	/* something must have gone utterly wrong */
 	assert(ute_sorted_p(hdl));
+
+	UDEBUG("added %zu ticks\n", ntadd);
 
 	/* clone the slut */
 	ute_clone_slut(hdl, ctx);

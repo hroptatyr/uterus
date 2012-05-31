@@ -63,6 +63,7 @@
 # define MAYBE_NOINLINE		__attribute__((noinline))
 #else  /* !DEBUG_FLAG */
 # define assert(args...)
+# define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 
 #if !defined UNLIKELY

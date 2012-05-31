@@ -70,6 +70,10 @@
 # define assert(args...)
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
+/* for serious debugging */
+#if !defined UDEBUGvv
+# define UDEBUGvv(args...)
+#endif	/* !UDEBUGvv */
 
 
 /* sorter */
@@ -258,6 +262,7 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
 
+		UDEBUGvv("sks[%zu].si = %zu/%zu\n", j, sks[j].si, sks_nticks);
 		for (sidx_t i = sks[j].si, tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 

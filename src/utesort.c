@@ -206,7 +206,7 @@ __strat_cb(it_node_t itnd, void *clo)
 	cc->cnt = 0;
 	itree_find_sups_cb(it, lo, hi, __cnt, cc);
 	if (cc->cnt > 1) {
-		UDEBUG("uh oh, page %u is subset of some other page\n", pg);
+		UDEBUG("page %u is subset of %zu other pages\n", pg, cc->cnt);
 		return;
 	}
 	cc->cnt = 0;

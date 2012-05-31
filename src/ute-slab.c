@@ -254,13 +254,9 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
 
-	for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
-		scom_t ti = ute_seek(hdl, i);
+	UTE_ITER(ti, hdl) {
 		uint16_t idx = scom_thdr_tblidx(ti);
 		time_t stmp = scom_thdr_sec(ti);
-
-		/* first off, set the tick size */
-		tsz = scom_tick_size(ti);
 
 		/* chain of filters, first one loses */
 		if (max_idx && (idx > max_idx || !bitset_get(filtix, idx))) {

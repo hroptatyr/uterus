@@ -383,7 +383,7 @@ min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
 
 		if ((sh = seek_get_scom(sks + pg)) == NULL) {
 			continue;
-		} else if (sh->u < min) {
+		} else if (sh->u <= min) {
 			res = pg;
 			min = sh->u;
 		}

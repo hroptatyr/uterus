@@ -329,6 +329,26 @@ sort_strat(utectx_t ctx)
 	sc->strat = s;
 	itree_trav_in_order(it, __strat_cb, sc);
 
+	/* check if the strategy actually produced results */
+	if (s->first == NULL) {
+		/* this is actually possible when all pages have the same
+		 * min and max value, so they're all supseteq's of each other
+		 * anyway, in this case we just add the first page to the
+		 * strategy and the other ones as children */
+		strat_node_t sn;
+
+		assert(s->last == NULL);
+		sn = xmalloc(sizeof(*sn) + npages * sizeof(int));
+		sn->pg = 0;
+		sn->cnt = npages;
+		sn->next = NULL;
+		for (unsigned int i = 0; i < npages; i++) {
+			sn->pgs[i] = i;
+		}
+		/* actually attach the cell to our strategy */
+		s->first = s->last = sn;
+	}
+
 	/* blast the itree to nirvana */
 	free_itree(it);
 	return s;
@@ -456,6 +476,7 @@ ute_sort(utectx_t ctx)
 	/* prepare the strategy, we use the last cell as iterator */
 	str->last = str->first;
 	/* ALL-way merge */
+	assert(min_run(sks, npages, str) >= 0);
 	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
 		scom_t t = seek_get_scom(sks + j);
 

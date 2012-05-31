@@ -43,13 +43,6 @@
 #include <fcntl.h>
 #include "utefile.h"
 
-/* we're just as good as rudi, aren't we? */
-#if defined DEBUG_FLAG
-# include <assert.h>
-#else  /* !DEBUG_FLAG */
-# define assert(args...)
-#endif	/* DEBUG_FLAG */
-
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
@@ -63,6 +56,14 @@
 #include "scommon.h"
 #include "sl1t.h"
 #include "scdl.h"
+
+/* we're just as good as rudi, aren't we? */
+#if defined DEBUG_FLAG
+# include <assert.h>
+# define MAYBE_NOINLINE		__attribute__((noinline))
+#else  /* !DEBUG_FLAG */
+# define assert(args...)
+#endif	/* DEBUG_FLAG */
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -131,7 +132,7 @@ print_mudems(void)
 	return;
 }
 
-static void
+static void MAYBE_NOINLINE
 pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 {
 	void *hdl;

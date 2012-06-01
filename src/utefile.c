@@ -1012,6 +1012,9 @@ void
 ute_add_tick(utectx_t ctx, scom_t t)
 {
 	size_t tsz;
+#if defined DEBUG_FLAG
+	sidx_t pre;
+#endif	/* DEBUG_FLAG */
 
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
@@ -1024,6 +1027,7 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 
 	/* post tick inspection */
 	tsz = scom_tick_size(t);
+	assert(tsz);
 	assert(tpc_active_p(ctx->tpc));
 	if (!tpc_can_hold_p(ctx->tpc, tsz)) {
 		/* great, compute the number of leap ticks */
@@ -1036,7 +1040,11 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 		ute_flush(ctx);
 	}
 	/* and now it's just passing on everything to the tpc adder */
+#if defined DEBUG_FLAG
+	pre = ctx->tpc->sk.si;
+#endif	/* DEBUG_FLAG */
 	tpc_add(ctx->tpc, t, tsz);
+	assert(ctx->tpc->sk.si == pre + tsz);
 	return;
 }
 

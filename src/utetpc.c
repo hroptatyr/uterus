@@ -207,6 +207,19 @@ tpc_add(utetpc_t tpc, scom_t t, size_t nt)
 	uint64_t skey = tick_sortkey(t);
 
 	if (UNLIKELY(tpc_full_p(tpc) || !tpc_can_hold_p(tpc, nt) || !skey)) {
+#if defined DEBUG_FLAG
+		UDEBUG("not adding tick, reason: ");
+		if (tpc_full_p(tpc)) {
+			UDEBUG(" tpc_full");
+		}
+		if (!tpc_can_hold_p(tpc, nt)) {
+			UDEBUG(" !tpc_can_hold");
+		}
+		if (!skey) {
+			UDEBUG(" skey==0");
+		}
+		UDEBUG("\n");
+#endif	/* DEBUG_FLAG */
 		return;
 	}
 	memcpy(tpc->sk.sp + tpc->sk.si, t, nt * sizeof(*tpc->sk.sp));

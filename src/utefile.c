@@ -184,7 +184,7 @@ cache_hdr(utectx_t ctx)
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
 		return 0;
-	} else if (!utehdr_check_magic(res) && !utehdr_check_endianness(res)) {
+	} else if (!utehdr_check_magic(res)) {
 		/* perfect, magic string fits, endianness matches, I'm happy */
 		return 0;
 	} else if (ctx->oflags & UO_NO_HDR_CHK) {

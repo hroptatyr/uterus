@@ -11,7 +11,12 @@ EOF
 
 ## STDOUT
 
+## outfile sum
+OUTFILE_SHA1="
+8a7ddaec2fdff291e1cec10a863dc11c6943ae3a
+1f34028ca19ffe4c03c7a9e385bdd6400e82c7a7"
+
 ## reference
-REFFILE="mux.11.ref.ute"
+# REFFILE="mux.11.ref.ute"
 
 ## mux.11.ut ends here

@@ -119,7 +119,7 @@ enum {
 };
 
 static int
-fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
+fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
@@ -166,6 +166,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 	}
 	/* deal with issues that need page-wise dealing */
 	if (issues & ISS_UNSORTED) {
+		const char *fn = ute_fn(hdl);
 		printf("file `%s' page %u needs sorting ...\n", fn, sk->pg);
 		if (!ctx->dryp && ctx->outctx == NULL) {
 			/* we need to set seek's si accordingly */
@@ -205,7 +206,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 		/* create a new seek */
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
-		issues |= fsckp(ctx, sk, fn, last);
+		issues |= fsckp(ctx, sk, hdl, last);
 		/* flush the old seek */
 		flush_seek(sk);
 	}
@@ -223,7 +224,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
 		ctx->dryp = true;
-		iss = fsckp(ctx, sk, fn, last);
+		iss = fsckp(ctx, sk, hdl, last);
 		assert(!(iss & ISS_UNSORTED));
 		ctx->dryp = false;
 		/* flush the old seek */

@@ -177,21 +177,15 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 }
 
 static int
-fsck1(fsck_ctx_t ctx, const char *fn)
+fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 {
-	utectx_t hdl, out;
-	const int rdwrfl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
-	const int fl = rdwrfl | UO_NO_LOAD_TPC;
+	utectx_t out;
 	size_t npg;
 	scidx_t last = {
 		.u = 0ULL,
 	};
 	int issues = 0;
 
-	if ((hdl = ute_open(fn, fl)) == NULL) {
-		error(0, "cannot open file `%s'", fn);
-		return -1;
-	}
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
 		/* we need to flip the ti,
@@ -237,6 +231,8 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 #endif	/* DEBUG_FLAG */
 
 	out = ctx->outctx ?: hdl;
+
+	/* print diagnostics */
 	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
 		/* update the header version */
 		const char *ver = hdl->hdrp->version;
@@ -247,17 +243,10 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		bump_header(out->hdrp);
 		printf(" ... `%s' endian indicator added\n", fn);
 	}
-	/* flush should always work */
-	ute_flush(out);
 	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
 		/* just to be sure */
 		printf(" ... `%s' sorting\n", fn);
 		ute_set_unsorted(out);
-	}
-	/* oh right, close the handle */
-	ute_close(hdl);
-	if (ctx->outctx) {
-		ute_close(ctx->outctx);
 	}
 	if ((issues & ISS_UNSORTED) && !ctx->dryp && ute_sorted_p(out)) {
 		printf(" ... `%s' sorted\n", fn);
@@ -311,11 +300,32 @@ main(int argc, char *argv[])
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		if (fsck1(ctx, argi->inputs[j])) {
+		const char *fn = argi->inputs[j];
+		const int fl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
+		utectx_t hdl;
+
+		if ((hdl = ute_open(fn, fl | UO_NO_LOAD_TPC)) == NULL) {
+			error(0, "cannot open file `%s'", fn);
+			res = 1;
+			continue;
+		}
+
+		/* the actual checking */
+		if (fsck1(ctx, hdl, fn)) {
 			res = 1;
 		}
+
+		/* safe than sorry */
+		if (ctx->outctx) {
+			ute_clone_slut(ctx->outctx, hdl);
+		}
+		/* and that's us */
+		ute_close(hdl);
 	}
 
+	if (ctx->outctx) {
+		ute_close(ctx->outctx);
+	}
 out:
 	fsck_parser_free(argi);
 	return res;

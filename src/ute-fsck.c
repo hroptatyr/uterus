@@ -130,13 +130,19 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 
+		/* determine the length for the increment */
+		tsz = scom_byte_size(ti);
+
 		if (issues & ISS_OLD_VER) {
 			/* promote the old header
 			 * copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
 
 			/* now to what we always do */
-			if (!ctx->dryp) {
+			if (!ctx->dryp && ctx->outctx) {
+				memcpy(nu_ti + 1, ti + 1, tsz - sizeof(*ti));
+				ti = nu_ti;
+			} else if (!ctx->dryp) {
 				/* flush back to our page ... */
 				memcpy(ti, buf, sizeof(*ti));
 			} else {
@@ -154,11 +160,9 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 		last.u = ti->u;
 
 		/* copy the whole shebang when -o|--output is given */
-		if (ctx->outctx) {
+		if (!ctx->dryp && ctx->outctx) {
 			ute_add_tick(ctx->outctx, ti);
 		}
-		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
 	}
 	/* deal with issues that need page-wise dealing */
 	if (issues & ISS_UNSORTED) {

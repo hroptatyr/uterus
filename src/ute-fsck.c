@@ -319,7 +319,7 @@ main(int argc, char *argv[])
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
 		const int fl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
-		const int opfl = UO_NO_LOAD_TPC | UO_NO_HDR_CHK;
+		const int opfl = UO_NO_LOAD_TPC;
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl | opfl)) == NULL) {

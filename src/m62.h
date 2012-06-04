@@ -60,9 +60,14 @@ union m62_u {
 	int64_t v;
 	uint64_t u;
 	struct {
+#if defined WORDS_BIGENDIAN
+		uint8_t expo:2;
 		int64_t mant:62;
-		uint8_t expo:2 __attribute__((packed));
-	};
+#else  /* !WORDS_BIGENDIAN */
+		int64_t mant:62;
+		uint8_t expo:2;
+#endif	/* WORDS_BIGENDIAN */
+	} __attribute__((packed));
 } __attribute__((transparent_union));
 #endif	/* !M62T */
 

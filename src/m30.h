@@ -61,9 +61,14 @@ union m30_u {
 	int32_t v;
 	uint32_t u;
 	struct {
+#if defined WORDS_BIGENDIAN
+		uint8_t expo:2;
 		int32_t mant:30;
-		uint8_t expo:2 __attribute__((packed));
-	};
+#else  /* !WORDS_BIGENDIAN */
+		int32_t mant:30;
+		uint8_t expo:2;
+#endif	/* WORDS_BIGENDIAN */
+	} __attribute__((packed));
 } __attribute__((transparent_union));
 #endif	/* !M30T */
 

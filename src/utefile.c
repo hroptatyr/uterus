@@ -184,7 +184,7 @@ cache_hdr(utectx_t ctx)
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
 		return 0;
-	} else if (!utehdr_check_magic(res) && !utehdr_check_endianness(res)) {
+	} else if (!utehdr_check_magic(res)) {
 		/* perfect, magic string fits, endianness matches, I'm happy */
 		return 0;
 	} else if (ctx->oflags & UO_NO_HDR_CHK) {
@@ -1169,6 +1169,13 @@ ute_endianness(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
 	return utehdr_endianness(ctx->hdrp);
+}
+
+int
+ute_check_endianness(utectx_t ctx)
+{
+/* just fall back to utehdr.h solution */
+	return utehdr_check_endianness(ctx->hdrp);
 }
 
 /* utefile.c ends here */

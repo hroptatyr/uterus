@@ -12,6 +12,6 @@ CMDLINE="mux --refdate 1328605200 -f dukas '${INFILE}' -o '${OUTFILE}'"
 ## outfile sum
 OUTFILE_SHA1="
 846509fe7393a739b37b77028942e5d4df5626b1
-1c59e1875a7c75b4d96f192c001851bfd1259195"
+237cb5eb27215b02fd3f522d30e1dc53fffb429a"
 
 ## mux.3.ut ends here

@@ -135,6 +135,14 @@ extern size_t ute_nticks(utectx_t ctx);
 		     i/*will be NULL for illegal ticks*/;		\
 		     __tsz = scom_tick_size(i), i = 0)
 
+#define UTE_ITER_CUST(i, __tsz, __ctx)					\
+	for (sidx_t __i = 0, __tsz, __nt = ute_nticks(__ctx);		\
+	     __tsz = 1/*just in case*/, __i < __nt;			\
+	     __i += __tsz)						\
+		for (scom_t i = ute_seek(__ctx, __i);			\
+		     i/*will be NULL for illegal ticks*/;		\
+		     i = 0)
+
 /**
  * Return the number of symbols tracked in CTX. */
 extern size_t ute_nsyms(utectx_t ctx);
@@ -177,6 +185,10 @@ extern ute_ver_t ute_version(utectx_t ctx);
 /**
  * Return the endianness used in the file associated with CTX. */
 extern ute_end_t ute_endianness(utectx_t ctx);
+
+/**
+ * Check the endianness of CTX.  Return -1 if it doesn't match. */
+extern int ute_check_endianness(utectx_t ctx);
 
 #ifdef __cplusplus
 }

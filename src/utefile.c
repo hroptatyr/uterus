@@ -1171,4 +1171,11 @@ ute_endianness(utectx_t ctx)
 	return utehdr_endianness(ctx->hdrp);
 }
 
+int
+ute_check_endianness(utectx_t ctx)
+{
+/* just fall back to utehdr.h solution */
+	return utehdr_check_endianness(ctx->hdrp);
+}
+
 /* utefile.c ends here */

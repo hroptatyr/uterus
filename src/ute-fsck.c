@@ -213,7 +213,9 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 #if defined DEBUG_FLAG
 	/* second time lucky, there should be no page related issues anymore */
 	for (size_t p = 0;
-	     !ctx->dryp && p < npg + tpc_has_ticks_p(hdl->tpc); p++) {
+	     !ctx->dryp && ctx->outctx == NULL &&
+		     p < npg + tpc_has_ticks_p(hdl->tpc);
+	     p++) {
 		struct uteseek_s sk[1];
 		int iss = 0;
 

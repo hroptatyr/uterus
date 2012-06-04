@@ -179,7 +179,6 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 static int
 fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 {
-	utectx_t out;
 	size_t npg;
 	scidx_t last = {
 		.u = 0ULL,
@@ -230,25 +229,27 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	}
 #endif	/* DEBUG_FLAG */
 
-	out = ctx->outctx ?: hdl;
-
+	if (ctx->outctx) {
+		hdl = ctx->outctx;
+		fn = ute_fn(ctx->outctx);
+	}
 	/* print diagnostics */
 	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
 		/* update the header version */
 		const char *ver = hdl->hdrp->version;
-		bump_header(out->hdrp);
+		bump_header(hdl->hdrp);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
 	} else if ((issues & ISS_NO_ENDIAN) && !ctx->dryp) {
 		/* just bump the header again */
-		bump_header(out->hdrp);
+		bump_header(hdl->hdrp);
 		printf(" ... `%s' endian indicator added\n", fn);
 	}
 	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
 		/* just to be sure */
 		printf(" ... `%s' sorting\n", fn);
-		ute_set_unsorted(out);
+		ute_set_unsorted(hdl);
 	}
-	if ((issues & ISS_UNSORTED) && !ctx->dryp && ute_sorted_p(out)) {
+	if ((issues & ISS_UNSORTED) && !ctx->dryp && ute_sorted_p(hdl)) {
 		printf(" ... `%s' sorted\n", fn);
 	}
 	return issues;

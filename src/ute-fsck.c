@@ -74,6 +74,7 @@ typedef struct fsck_ctx_s *fsck_ctx_t;
 
 struct fsck_ctx_s {
 	bool dryp;
+	utectx_t outctx;
 };
 
 
@@ -118,16 +119,20 @@ enum {
 };
 
 static int
-fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
+fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
 	int issues = 0;
 
-	for (size_t i = sk->si, tsz; i < sk_sz; i += tsz) {
+	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
 		char buf[64];
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+		uint64_t x;
+
+		/* determine the length for the increment */
+		tsz = scom_byte_size(ti);
 
 		if (issues & ISS_OLD_VER) {
 			/* promote the old header
@@ -135,7 +140,10 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 			scom_promote_v01(nu_ti, ti);
 
 			/* now to what we always do */
-			if (!ctx->dryp) {
+			if (!ctx->dryp && ctx->outctx) {
+				memcpy(nu_ti + 1, ti + 1, tsz - sizeof(*ti));
+				ti = nu_ti;
+			} else if (!ctx->dryp) {
 				/* flush back to our page ... */
 				memcpy(ti, buf, sizeof(*ti));
 			} else {
@@ -144,21 +152,36 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 			}
 		}
 
+		switch (ute_endianness(hdl)) {
+		case UTE_ENDIAN_UNK:
+		case UTE_ENDIAN_LITTLE:
+			x = le64toh(ti->u);
+			break;
+		case UTE_ENDIAN_BIG:
+			x = be64toh(ti->u);
+			break;
+		default:
+			break;
+		}
+
 		/* check for sortedness */
-		if (last.u > ti->u) {
+		if (last.u > x) {
 			verbprf("  tick p%u/%zu  %lx > %lx\n",
-				sk->pg, i / ssz, last.u, ti->u);
+				sk->pg, i / ssz, last.u, x);
 			issues |= ISS_UNSORTED;
 		}
-		last.u = ti->u;
+		last.u = x;
 
-		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
+		/* copy the whole shebang when -o|--output is given */
+		if (!ctx->dryp && ctx->outctx) {
+			ute_add_tick(ctx->outctx, ti);
+		}
 	}
 	/* deal with issues that need page-wise dealing */
 	if (issues & ISS_UNSORTED) {
+		const char *fn = ute_fn(hdl);
 		printf("file `%s' page %u needs sorting ...\n", fn, sk->pg);
-		if (!ctx->dryp) {
+		if (!ctx->dryp && ctx->outctx == NULL) {
 			/* we need to set seek's si accordingly */
 			sk->si = sk_sz / ssz;
 			seek_sort(sk);
@@ -168,20 +191,14 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 }
 
 static int
-fsck1(fsck_ctx_t ctx, const char *fn)
+fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 {
-	utectx_t hdl;
-	const int fl = (ctx->dryp ? UO_RDONLY : UO_RDWR) | UO_NO_LOAD_TPC;
 	size_t npg;
 	scidx_t last = {
 		.u = 0ULL,
 	};
 	int issues = 0;
 
-	if ((hdl = ute_open(fn, fl)) == NULL) {
-		error(0, "cannot open file `%s'", fn);
-		return -1;
-	}
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
 		/* we need to flip the ti,
@@ -202,7 +219,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		/* create a new seek */
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
-		issues |= fsckp(ctx, sk, fn, last);
+		issues |= fsckp(ctx, sk, hdl, last);
 		/* flush the old seek */
 		flush_seek(sk);
 	}
@@ -210,7 +227,9 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 #if defined DEBUG_FLAG
 	/* second time lucky, there should be no page related issues anymore */
 	for (size_t p = 0;
-	     !ctx->dryp && p < npg + tpc_has_ticks_p(hdl->tpc); p++) {
+	     !ctx->dryp && ctx->outctx == NULL &&
+		     p < npg + tpc_has_ticks_p(hdl->tpc);
+	     p++) {
 		struct uteseek_s sk[1];
 		int iss = 0;
 
@@ -218,7 +237,7 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
 		ctx->dryp = true;
-		iss = fsckp(ctx, sk, fn, last);
+		iss = fsckp(ctx, sk, hdl, last);
 		assert(!(iss & ISS_UNSORTED));
 		ctx->dryp = false;
 		/* flush the old seek */
@@ -226,16 +245,19 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 	}
 #endif	/* DEBUG_FLAG */
 
+	if (ctx->outctx) {
+		hdl = ctx->outctx;
+		fn = ute_fn(ctx->outctx);
+	}
+	/* print diagnostics */
 	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
 		/* update the header version */
 		const char *ver = hdl->hdrp->version;
 		bump_header(hdl->hdrp);
-		ute_flush(hdl);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
 	} else if ((issues & ISS_NO_ENDIAN) && !ctx->dryp) {
 		/* just bump the header again */
 		bump_header(hdl->hdrp);
-		ute_flush(hdl);
 		printf(" ... `%s' endian indicator added\n", fn);
 	}
 	if ((issues & ISS_UNSORTED) && !ctx->dryp) {
@@ -243,8 +265,6 @@ fsck1(fsck_ctx_t ctx, const char *fn)
 		printf(" ... `%s' sorting\n", fn);
 		ute_set_unsorted(hdl);
 	}
-	/* oh right, close the handle */
-	ute_close(hdl);
 	if ((issues & ISS_UNSORTED) && !ctx->dryp && ute_sorted_p(hdl)) {
 		printf(" ... `%s' sorted\n", fn);
 	}
@@ -268,7 +288,7 @@ int
 main(int argc, char *argv[])
 {
 	struct fsck_args_info argi[1];
-	struct fsck_ctx_s ctx[1];
+	struct fsck_ctx_s ctx[1] = {0};
 	int res = 0;
 
 	if (fsck_parser(argc, argv, argi)) {
@@ -281,18 +301,49 @@ main(int argc, char *argv[])
 	}
 
 	/* copy interesting stuff into our own context */
-	if (!argi->dry_run_given) {
-		ctx->dryp = false;
-	} else {
+	if (argi->dry_run_given) {
 		ctx->dryp = true;
 	}
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		if (fsck1(ctx, argi->inputs[j])) {
-			res = 1;
+	if (!argi->dry_run_given && argi->output_given) {
+		const int fl = UO_RDWR | UO_CREAT | UO_TRUNC;
+		const char *fn = argi->output_arg;
+
+		if ((ctx->outctx = ute_open(fn, fl)) == NULL) {
+			error(0, "cannot open output file `%s'", fn);
+			res = -1;
+			goto out;
 		}
 	}
 
+	for (unsigned int j = 0; j < argi->inputs_num; j++) {
+		const char *fn = argi->inputs[j];
+		const int fl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
+		const int opfl = UO_NO_LOAD_TPC | UO_NO_HDR_CHK;
+		utectx_t hdl;
+
+		if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
+			error(0, "cannot open file `%s'", fn);
+			res = 1;
+			continue;
+		}
+
+		/* the actual checking */
+		if (fsck1(ctx, hdl, fn)) {
+			res = 1;
+		}
+
+		/* safe than sorry */
+		if (ctx->outctx) {
+			ute_clone_slut(ctx->outctx, hdl);
+		}
+		/* and that's us */
+		ute_close(hdl);
+	}
+
+	if (ctx->outctx) {
+		ute_close(ctx->outctx);
+	}
 out:
 	fsck_parser_free(argi);
 	return res;

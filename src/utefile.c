@@ -142,6 +142,21 @@ __pflags(utectx_t ctx)
 	return PROT_READ | ((ctx->oflags & UO_RDWR) ? PROT_WRITE : 0);
 }
 
+static size_t
+get_slut_size(utehdr2_t hdr)
+{
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->slut_sz);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->slut_sz);
+	default:
+		break;
+	}
+	return 0;
+}
+
 
 /* header caching, also probing */
 static int
@@ -164,7 +179,7 @@ cache_hdr(utectx_t ctx)
 		goto err_out;
 	}
 	/* assign the header ... */
-	ctx->slut_sz = (ctx->hdrp = res)->slut_sz;
+	ctx->slut_sz = get_slut_size((ctx->hdrp = res));
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
@@ -720,7 +735,7 @@ wipeout:
 static char*
 mmap_slut(utectx_t ctx)
 {
-	size_t off = ctx->fsz - ctx->slut_sz;
+	const size_t off = ctx->fsz - ctx->slut_sz;
 	int pflags = __pflags(ctx);
 	return mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ctx->slut_sz);
 }
@@ -728,7 +743,7 @@ mmap_slut(utectx_t ctx)
 static void
 munmap_slut(utectx_t ctx, char *map)
 {
-	size_t off = ctx->fsz - ctx->slut_sz;
+	const size_t off = ctx->fsz - ctx->slut_sz;
 	munmap_any(map, off, ctx->slut_sz);
 	return;
 }

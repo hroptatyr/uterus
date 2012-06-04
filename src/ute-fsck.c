@@ -129,6 +129,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 		char buf[64];
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+		uint64_t x;
 
 		/* determine the length for the increment */
 		tsz = scom_byte_size(ti);
@@ -151,13 +152,25 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 			}
 		}
 
+		switch (ute_endianness(hdl)) {
+		case UTE_ENDIAN_UNK:
+		case UTE_ENDIAN_LITTLE:
+			x = le64toh(ti->u);
+			break;
+		case UTE_ENDIAN_BIG:
+			x = be64toh(ti->u);
+			break;
+		default:
+			break;
+		}
+
 		/* check for sortedness */
-		if (last.u > ti->u) {
+		if (last.u > x) {
 			verbprf("  tick p%u/%zu  %lx > %lx\n",
-				sk->pg, i / ssz, last.u, ti->u);
+				sk->pg, i / ssz, last.u, x);
 			issues |= ISS_UNSORTED;
 		}
-		last.u = ti->u;
+		last.u = x;
 
 		/* copy the whole shebang when -o|--output is given */
 		if (!ctx->dryp && ctx->outctx) {

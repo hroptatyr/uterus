@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include "utefile.h"
+#include "boobs.h"
 
 #define DEFINE_GORY_STUFF
 #include "m30.h"
@@ -136,7 +137,7 @@ print_mudems(void)
 static void MAYBE_NOINLINE
 pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 {
-	void *hdl;
+	utectx_t hdl;
 
 	if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
 		fprintf(stderr, "cannot open file '%s'\n", f);
@@ -146,11 +147,10 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 	ctx->uctx = hdl;
 	/* check for ute version */
 	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
-		/* we need to flip the ti */
-		for (size_t i = 0, tsz; i < ute_nticks(hdl); i += tsz) {
+		UTE_ITER_CUST(ti, tsz, hdl) {
+			/* we need to flip the ti */
 			char buf[64];
 			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
-			scom_t ti = ute_seek(hdl, i);
 			size_t bsz;
 
 			if (UNLIKELY(ti == NULL)) {
@@ -166,6 +166,46 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			memcpy(buf + sizeof(*nu_ti), ti + 1, bsz - sizeof(*ti));
 			/* now to what we always do */
 			prf(ctx, nu_ti);
+		}
+	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
+		/* properly padded for big-e and little-e */
+#define AS_GEN(x)	((struct gen_s*)(x))
+		struct gen_s {
+			union scom_thdr_u scom[1];
+			uint32_t v[14];
+		};
+
+		UTE_ITER_CUST(ti, tsz, hdl) {
+			/* tmp storage for the flip */
+			struct gen_s tmp;
+
+			if (UNLIKELY(ti == NULL)) {
+				tsz = 1;
+				continue;
+			}
+
+			/* swap ti into buf */
+			tmp.scom->u = __bswap_64(ti->u);
+			switch ((tsz = scom_tick_size(tmp.scom))) {
+			case 1:
+				tmp.v[0] = __bswap_32(AS_GEN(ti)->v[0]);
+				tmp.v[1] = __bswap_32(AS_GEN(ti)->v[1]);
+				break;
+			case 2:
+				tmp.v[0] = __bswap_32(AS_GEN(ti)->v[0]);
+				tmp.v[1] = __bswap_32(AS_GEN(ti)->v[1]);
+				tmp.v[2] = __bswap_32(AS_GEN(ti)->v[2]);
+				tmp.v[3] = __bswap_32(AS_GEN(ti)->v[3]);
+				tmp.v[4] = __bswap_32(AS_GEN(ti)->v[4]);
+				tmp.v[5] = __bswap_32(AS_GEN(ti)->v[5]);
+				break;
+			case 4:
+			default:
+				tsz = 1;
+				continue;
+			}
+			/* now to what we always do */
+			prf(ctx, tmp.scom);
 		}
 	} else {
 		/* no flips in this one */

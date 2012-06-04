@@ -119,7 +119,7 @@ enum {
 };
 
 static int
-fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
+fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
@@ -129,6 +129,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 		char buf[64];
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+		uint64_t x;
 
 		/* determine the length for the increment */
 		tsz = scom_byte_size(ti);
@@ -151,13 +152,25 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 			}
 		}
 
+		switch (ute_endianness(hdl)) {
+		case UTE_ENDIAN_UNK:
+		case UTE_ENDIAN_LITTLE:
+			x = le64toh(ti->u);
+			break;
+		case UTE_ENDIAN_BIG:
+			x = be64toh(ti->u);
+			break;
+		default:
+			break;
+		}
+
 		/* check for sortedness */
-		if (last.u > ti->u) {
+		if (last.u > x) {
 			verbprf("  tick p%u/%zu  %lx > %lx\n",
-				sk->pg, i / ssz, last.u, ti->u);
+				sk->pg, i / ssz, last.u, x);
 			issues |= ISS_UNSORTED;
 		}
-		last.u = ti->u;
+		last.u = x;
 
 		/* copy the whole shebang when -o|--output is given */
 		if (!ctx->dryp && ctx->outctx) {
@@ -166,6 +179,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, const char *fn, scidx_t last)
 	}
 	/* deal with issues that need page-wise dealing */
 	if (issues & ISS_UNSORTED) {
+		const char *fn = ute_fn(hdl);
 		printf("file `%s' page %u needs sorting ...\n", fn, sk->pg);
 		if (!ctx->dryp && ctx->outctx == NULL) {
 			/* we need to set seek's si accordingly */
@@ -205,7 +219,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 		/* create a new seek */
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
-		issues |= fsckp(ctx, sk, fn, last);
+		issues |= fsckp(ctx, sk, hdl, last);
 		/* flush the old seek */
 		flush_seek(sk);
 	}
@@ -223,7 +237,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
 		ctx->dryp = true;
-		iss = fsckp(ctx, sk, fn, last);
+		iss = fsckp(ctx, sk, hdl, last);
 		assert(!(iss & ISS_UNSORTED));
 		ctx->dryp = false;
 		/* flush the old seek */
@@ -305,9 +319,10 @@ main(int argc, char *argv[])
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
 		const int fl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
+		const int opfl = UO_NO_LOAD_TPC | UO_NO_HDR_CHK;
 		utectx_t hdl;
 
-		if ((hdl = ute_open(fn, fl | UO_NO_LOAD_TPC)) == NULL) {
+		if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
 			error(0, "cannot open file `%s'", fn);
 			res = 1;
 			continue;

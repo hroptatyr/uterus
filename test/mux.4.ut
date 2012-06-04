@@ -22,10 +22,15 @@ big_endian_p()
 }
 
 ## outfile sum
-if big_endian_p; then
-	REFFILE="mux.4.ref.beute"
-else
-	REFFILE="mux.4.ref.ute"
-fi
+OUTFILE_SHA1="
+8a7ddaec2fdff291e1cec10a863dc11c6943ae3a
+1f34028ca19ffe4c03c7a9e385bdd6400e82c7a7"
+
+## reffiles
+# if big_endian_p; then
+# 	REFFILE="mux.4.ref.beute"
+# else
+# 	REFFILE="mux.4.ref.ute"
+# fi
 
 ## mux.4.ut ends here

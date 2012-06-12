@@ -157,10 +157,16 @@ sl1t_nexist_p(const_sl1t_t t)
 	return scom_thdr_nexist_p(t->hdr);
 }
 
-static inline __attribute__((pure)) bool
-sl1t_halted_p(const_sl1t_t t)
+static inline __attribute__((const, pure)) bool
+sl1t_cont_p(const_sl1t_t t)
 {
-	return scom_thdr_halted_p(t->hdr);
+	return scom_thdr_cont_p(t->hdr);
+}
+
+static inline __attribute__((const, pure)) bool
+sl1t_halt_p(const_sl1t_t t)
+{
+	return scom_thdr_halt_p(t->hdr);
 }
 
 static inline __attribute__((pure)) bool
@@ -187,9 +193,18 @@ sl1t_mark_nexist(sl1t_t t)
 }
 
 static inline void
-sl1t_mark_halted(sl1t_t t)
+sl1t_mark_cont(sl1t_t t)
 {
-	scom_thdr_mark_halted(t->hdr);
+	scom_thdr_mark_cont(t->hdr);
+	/* convenience */
+	t->v[0] = t->v[1] = 0;
+	return;
+}
+
+static inline void
+sl1t_mark_halt(sl1t_t t)
+{
+	scom_thdr_mark_halt(t->hdr);
 	/* convenience */
 	t->v[0] = t->v[1] = 0;
 	return;

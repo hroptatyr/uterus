@@ -322,8 +322,12 @@ scom_thdr_copy(scom_thdr_t tgt, scom_t src)
 
 /* msec overloading */
 #define SCOM_NEXIST	(1023)
-/* 1022 is reserved for unserding, means ONHOLD there */
-#define SCOM_HALTED	(1021)
+/** market continues
+ * The idea is to be sorted to the end of a second. */
+#define SCOM_CONT	(1022)
+/** market halts
+ * The idea is to be sorted to the end of a second. */
+#define SCOM_HALT	(1021)
 #define SCOM_PADDING	(1020)
 #define SCOM_MSEC_VALI	(1000)
 
@@ -333,10 +337,16 @@ scom_thdr_nexist_p(scom_t h)
 	return scom_thdr_msec(h) == SCOM_NEXIST;
 }
 
-static inline __attribute__((pure)) bool
-scom_thdr_halted_p(scom_t h)
+static inline __attribute__((const, pure)) bool
+scom_thdr_cont_p(scom_t h)
 {
-	return scom_thdr_msec(h) == SCOM_HALTED;
+	return scom_thdr_msec(h) == SCOM_CONT;
+}
+
+static inline __attribute__((const, pure)) bool
+scom_thdr_halt_p(scom_t h)
+{
+	return scom_thdr_msec(h) == SCOM_HALT;
 }
 
 static inline __attribute__((pure)) bool
@@ -363,9 +373,16 @@ scom_thdr_mark_nexist(scom_thdr_t t)
 }
 
 static inline void
-scom_thdr_mark_halted(scom_thdr_t t)
+scom_thdr_mark_cont(scom_thdr_t t)
 {
-	scom_thdr_set_msec(t, SCOM_HALTED);
+	scom_thdr_set_msec(t, SCOM_CONT);
+	return;
+}
+
+static inline void
+scom_thdr_mark_halt(scom_thdr_t t)
+{
+	scom_thdr_set_msec(t, SCOM_HALT);
 	return;
 }
 

@@ -12,8 +12,8 @@ COMMENT="broken ariva file"
 
 ## outfile sum
 OUTFILE_SHA1="
-c776564755ad1cc0fc9ff3a37ec680a68afb3a2b
-50f5b4bd4242673b067116ca5c015c50aff00d34"
+679db5c41aa6c38a929a3a96b479710c17118ad3
+9a5d10e59c2df17fb3a834a5923b462d7ee10474"
 
 ## reffile
 # REFFILE="mux.6.ref.ute"

@@ -245,6 +245,14 @@ scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
 /* oi, open interest tick, the number of all open long contracts */
 #define SL1T_TTF_OI	12
 
+/* level2 ticks
+ * level2 works just like level1 but is edge triggered, so to build a
+ * position in the depth, send a price (determines the slot to build)
+ * and a quantity.  To free that slot, send the price to free and
+ * quantity 0. */
+#define SL2T_TTF_BID	13
+#define SL2T_TTF_ASK	14
+
 /* flag that denotes double tick size, used for candles et al. */
 #define SCOM_FLAG_LM	16
 /* flag that denotes quadruple tick size(?) used for level2 ticks */

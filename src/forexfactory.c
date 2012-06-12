@@ -127,39 +127,6 @@ moar_ticks_p(mux_ctx_t ctx)
 }
 
 
-/* date/time magic */
-static struct time_sns_s
-diff_su(uint32_t s, uint16_t ms, struct time_sns_s ts)
-{
-	struct time_sns_s res;
-	if (ts.nsec < ms * 1000000UL) {
-		res.sec = ts.sec - s - 1;
-		res.nsec = 1000000000 + ts.nsec - ms * 1000000;
-	} else {
-		res.sec = ts.sec - s;
-		res.nsec = ts.nsec - ms * 1000000;
-	}
-	return res;
-}
-
-static inline int32_t
-diff_su_ms(uint32_t s, uint16_t ms, struct time_sns_s ts)
-{
-/* return the difference in ms */
-	struct time_sns_s d = diff_su(s, ms, ts);
-	int32_t o = d.sec * 1000 + d.nsec / 1000000;
-	return o;
-}
-
-static inline int32_t
-diff_scom_ms(scom_t t, struct time_sns_s ts)
-{
-	uint32_t s = scom_thdr_sec(t);
-	uint16_t ms = scom_thdr_msec(t);
-	return diff_su_ms(s, ms, ts);
-}
-
-
 static int
 parse_rcv_stmp(ff_msg_t tgt, const char **cursor)
 {

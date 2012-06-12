@@ -350,6 +350,14 @@ __30_1_get_s(const char *p, size_t n, const char *f, size_t m)
 	/* just do it */
 	f += m;
 	switch (m) {
+	case 8:
+		f--;
+	case 7:
+		f--;
+	case 6:
+		f--;
+	case 5:
+		f--;
 	case 4:
 		res += 1 * (*--f & 0x0f);
 	case 3:
@@ -456,7 +464,7 @@ ffff_m30_get_s(const char **nptr)
 	 *   ^        ^^      ^
 	 *   mant mend frac   p
 	 * so frac - mant is the number of integral digits */
-	if ((p - frac) >= 4 && (mend - mant) <= 1 && (mant[0] <= '5')) {
+	if ((p - frac) >= 4 && (mend - mant) <= 1 && (mant[0] < '5')) {
 		r30.expo = 0;
 		r30.mant = __30_0_get_s(mant, frac, p - frac);
 	} else if ((mend - mant) <= 5) {

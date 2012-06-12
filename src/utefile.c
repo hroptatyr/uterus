@@ -94,7 +94,7 @@ error(int eno, const char *fmt, ...)
 	return;
 }
 
-#if defined scom_tick_size
+#if defined scom_tick_size && defined DEBUG_FLAG
 static inline size_t
 __local_scom_tick_size(scom_t t)
 {

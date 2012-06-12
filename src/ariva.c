@@ -700,7 +700,7 @@ write_tick(mux_ctx_t ctx, ariva_tl_t tl)
 
 	if (tl->flags == 2 /*HALTED*/) {
 		sl1t_copy_hdr(tp, (void*)tl);
-		sl1t_mark_halted(tp);
+		sl1t_mark_halt(tp);
 		tp++;
 		goto nomore;
 	}

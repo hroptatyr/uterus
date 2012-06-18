@@ -159,6 +159,8 @@ clone_slut(uteslut_t tgt, uteslut_t src)
 	tgt->stbl = clone_slut_tg(src->stbl);
 	/* clone the i2s table */
 	clone_i2s(tgt, src);
+	/* and make sure we talk the same number of symbols */
+	tgt->nsyms = src->nsyms;
 	return;
 }
 

@@ -81,6 +81,7 @@ AC_SUBST([utedir])
 
 ## output
 AC_CONFIG_FILES([libuterus.pc])
+AC_CONFIG_FILES([uterus.pc])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([info/Makefile])

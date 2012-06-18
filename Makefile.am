@@ -47,7 +47,10 @@ endif
 SUBDIRS += src info test
 
 pkgconfigdir = @libdir@/pkgconfig
-pkgconfig_DATA = libuterus.pc
+pkgconfig_DATA =
+## this will disappear soon and be replaced by uterus.pc entirely
+pkgconfig_DATA += libuterus.pc
+pkgconfig_DATA += uterus.pc
 
 EXTRA_DIST = .version git-version-gen
 

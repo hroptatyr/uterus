@@ -28,7 +28,12 @@ ut_tests += mux.7.ut
 ut_tests += mux.8.ut
 ut_tests += mux.9.ut
 ut_tests += mux.10.ut
-endif
+else  ## !HAVE_EXPAT
+EXTRA_DIST += mux.7.ut
+EXTRA_DIST += mux.8.ut
+EXTRA_DIST += mux.9.ut
+EXTRA_DIST += mux.10.ut
+endif  ## HAVE_EXPAT
 ut_tests += mux.11.ut
 ut_tests += mux.12.ut
 EXTRA_DIST += mux.a.dukasq

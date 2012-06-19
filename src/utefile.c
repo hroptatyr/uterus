@@ -785,7 +785,6 @@ static void
 ute_fini(utectx_t ctx)
 {
 	flush_seek(ctx->seek);
-	free_tpc(ctx->tpc);
 	free(ctx->fname);
 	return;
 }
@@ -943,6 +942,28 @@ ute_prep_sort(utectx_t ctx)
 #endif	/* USE_UTE_SORT */
 
 void
+ute_free(utectx_t ctx)
+{
+	/* ... and finalise */
+	free_slut(ctx->slut);
+	/* finish our slut session */
+	fini_slut();
+
+	/* close the tpc */
+	free_tpc(ctx->tpc);
+	/* finish our tpc session */
+	fini_tpc();
+
+	/* now proceed to closing and finalising */
+	close_hdr(ctx);
+	ute_fini(ctx);
+	close(ctx->fd);
+	ctx->fd = -1;
+	free(ctx);
+	return;
+}
+
+void
 ute_close(utectx_t ctx)
 {
 	/* first make sure we write the stuff */
@@ -960,19 +981,9 @@ ute_close(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 	/* serialse the slut */
 	flush_slut(ctx);
-	/* ... and finalise */
-	free_slut(ctx->slut);
 
-	/* close the tpc */
-	free_tpc(ctx->tpc);
-	/* finish our tpc session */
-	fini_tpc();
-	/* finish our slut session */
-	fini_slut();
-	/* now proceed to closing and finalising */
-	close_hdr(ctx);
-	ute_fini(ctx);
-	close(ctx->fd);
+	/* just destroy the rest */
+	ute_free(ctx);
 	return;
 }
 

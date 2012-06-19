@@ -47,6 +47,7 @@
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
+#include "boobs.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)

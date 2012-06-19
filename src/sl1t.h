@@ -238,6 +238,52 @@ sl1t_set_ttf(sl1t_t t, uint16_t ttf)
 	return;
 }
 
+
+/* price overloading for MKT orders */
+#define SL1T_PRC_MKT	(0xe0000000)
+#define SL1T_M30_MKT	((m30_t){.u = SL1T_PRC_MKT})
+
+static inline __attribute__((const, pure)) bool
+sl1t_mkt_p(sl1t_t t)
+{
+	return t->v[0] == SL1T_PRC_MKT;
+}
+
+static inline __attribute__((const, pure)) bool
+sl1t_mkt_bid_p(sl1t_t t)
+{
+	return sl1t_mkt_p(t) && scom_thdr_ttf(t->hdr) == SL1T_TTF_BID;
+}
+
+static inline __attribute__((const, pure)) bool
+sl1t_mkt_ask_p(sl1t_t t)
+{
+	return sl1t_mkt_p(t) && scom_thdr_ttf(t->hdr) == SL1T_TTF_ASK;
+}
+
+static inline void
+sl1t_set_mkt(sl1t_t t)
+{
+	t->v[0] = SL1T_PRC_MKT;
+	return;
+}
+
+static inline void
+sl1t_set_mkt_bid(sl1t_t t)
+{
+	scom_thdr_set_ttf(t->hdr, SL1T_TTF_BID);
+	sl1t_set_mkt(t);
+	return;
+}
+
+static inline void
+sl1t_set_mkt_ask(sl1t_t t)
+{
+	scom_thdr_set_ttf(t->hdr, SL1T_TTF_ASK);
+	sl1t_set_mkt(t);
+	return;
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

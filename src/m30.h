@@ -53,6 +53,10 @@ extern "C" {
 # endif
 #endif /* __cplusplus */
 
+#if !defined UNLIKELY
+# define UNLIKELY(x)	__builtin_expect((x), 0)
+#endif	/* !UNLIKELY */
+
 #if !defined M30T
 typedef union m30_u m30_t;
 # define M30T
@@ -296,6 +300,9 @@ static const uint8_t __attribute__((unused)) ffff_m30_i_nexpos[] = {
 	/*00->*/8, /*01->*/4, /*10->*/0, /*11->*/-4,
 };
 
+/* special values */
+#define FFFF_M30_MKT	(0xe0000000)
+
 static uint32_t
 __30_23_get_s(const char *p, size_t n)
 {
@@ -439,14 +446,21 @@ ffff_m30_get_s(const char **nptr)
 	r30.expo = 1;
 
 	/* space skipping omitted, rather die if there's a space */
-	if (**nptr == '-') {
+	if (UNLIKELY(**nptr == '-')) {
 		neg = true;
 		mant = *nptr + 1;
-	} else if (**nptr == '+') {
+	} else if (UNLIKELY(**nptr == '+')) {
 		/* only morons do that */
 		mant = *nptr + 1;
 	} else {
 		mant = *nptr;
+	}
+
+	/* check for specials */
+	if (UNLIKELY(mant[0] == 'm' && mant[1] == 'k' && mant[2] == 't')) {
+		*nptr += 3;
+		r30.u = FFFF_M30_MKT;
+		return r30;
 	}
 
 	/* find the decimal point */
@@ -542,8 +556,19 @@ ffff_m30_s(char *restrict buf, m30_t m)
 {
 	char *tmp = buf;
 	bool sign;
-	int8_t nfrac = __m30_nfrac_digits(m);
+	register int8_t nfrac;
 
+	/* special values first */
+	if (UNLIKELY(m.u == FFFF_M30_MKT)) {
+		*tmp++ = 'm';
+		*tmp++ = 'k';
+		*tmp++ = 't';
+		*tmp = '\0';
+		return 3;
+	}
+
+	/* otherwise */
+	nfrac = __m30_nfrac_digits(m);
 	if ((sign = (m.mant < 0))) {
 		m.mant = -m.mant;
 	}

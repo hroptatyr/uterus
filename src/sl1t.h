@@ -240,8 +240,8 @@ sl1t_set_ttf(sl1t_t t, uint16_t ttf)
 
 
 /* price overloading for MKT orders */
-#define SL1T_PRC_MKT	(-1U)
-#define SL1T_M30_MKT	((m30_t){.v = -1})
+#define SL1T_PRC_MKT	(0xe0000000)
+#define SL1T_M30_MKT	((m30_t){.u = SL1T_PRC_MKT})
 
 static inline __attribute__((const, pure)) bool
 sl1t_mkt_p(sl1t_t t)

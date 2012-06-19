@@ -84,8 +84,18 @@ typedef void *utectx_t;
 extern utectx_t ute_open(const char *path, int oflags);
 
 /**
- * Close the context and free associated resources. */
+ * Close the context, do final work and free associated resources.
+ * This is in fact short for:
+ * ute_flush(...);
+ * ute_sort(...);
+ * <flush_slut(...);>
+ * ute_free(...); */
 extern void ute_close(utectx_t);
+
+/**
+ * Free all associated resources immediatedly.
+ * If changes are meant to end up on disk call `ute_close()'. */
+extern void ute_free(utectx_t);
 
 /**
  * Flush pending write operations. */

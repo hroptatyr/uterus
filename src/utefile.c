@@ -49,6 +49,7 @@
 #include "utehdr.h"
 #include "utetpc.h"
 #include "mem.h"
+#include "boobs.h"
 
 #if defined DEBUG_FLAG
 # include <assert.h>

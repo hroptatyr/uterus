@@ -446,10 +446,10 @@ ffff_m30_get_s(const char **nptr)
 	r30.expo = 1;
 
 	/* space skipping omitted, rather die if there's a space */
-	if (**nptr == '-') {
+	if (UNLIKELY(**nptr == '-')) {
 		neg = true;
 		mant = *nptr + 1;
-	} else if (**nptr == '+') {
+	} else if (UNLIKELY(**nptr == '+')) {
 		/* only morons do that */
 		mant = *nptr + 1;
 	} else {

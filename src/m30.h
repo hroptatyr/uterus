@@ -300,6 +300,9 @@ static const uint8_t __attribute__((unused)) ffff_m30_i_nexpos[] = {
 	/*00->*/8, /*01->*/4, /*10->*/0, /*11->*/-4,
 };
 
+/* special values */
+#define FFFF_M30_MKT	(0xe0000000)
+
 static uint32_t
 __30_23_get_s(const char *p, size_t n)
 {
@@ -453,6 +456,13 @@ ffff_m30_get_s(const char **nptr)
 		mant = *nptr;
 	}
 
+	/* check for specials */
+	if (UNLIKELY(mant[0] == 'm' && mant[1] == 'k' && mant[2] == 't')) {
+		*nptr += 3;
+		r30.u = FFFF_M30_MKT;
+		return r30;
+	}
+
 	/* find the decimal point */
 	for (p = mant; *p >= '0' && *p <= '9'; p++);
 	if (*p == '.') {
@@ -546,8 +556,19 @@ ffff_m30_s(char *restrict buf, m30_t m)
 {
 	char *tmp = buf;
 	bool sign;
-	int8_t nfrac = __m30_nfrac_digits(m);
+	register int8_t nfrac;
 
+	/* special values first */
+	if (UNLIKELY(m.u == FFFF_M30_MKT)) {
+		*tmp++ = 'm';
+		*tmp++ = 'k';
+		*tmp++ = 't';
+		*tmp = '\0';
+		return 3;
+	}
+
+	/* otherwise */
+	nfrac = __m30_nfrac_digits(m);
 	if ((sign = (m.mant < 0))) {
 		m.mant = -m.mant;
 	}

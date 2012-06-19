@@ -53,6 +53,10 @@ extern "C" {
 # endif
 #endif /* __cplusplus */
 
+#if !defined UNLIKELY
+# define UNLIKELY(x)	__builtin_expect((x), 0)
+#endif	/* !UNLIKELY */
+
 #if !defined M30T
 typedef union m30_u m30_t;
 # define M30T

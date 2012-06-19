@@ -240,10 +240,13 @@ sl1t_set_ttf(sl1t_t t, uint16_t ttf)
 
 
 /* price overloading for MKT orders */
+#define SL1T_PRC_MKT	(-1U)
+#define SL1T_M30_MKT	((m30_t){.v = -1})
+
 static inline __attribute__((const, pure)) bool
 sl1t_mkt_p(sl1t_t t)
 {
-	return t->v[0] == -1U;
+	return t->v[0] == SL1T_PRC_MKT;
 }
 
 static inline __attribute__((const, pure)) bool
@@ -261,7 +264,7 @@ sl1t_mkt_ask_p(sl1t_t t)
 static inline void
 sl1t_set_mkt(sl1t_t t)
 {
-	t->v[0] = -1U;
+	t->v[0] = SL1T_PRC_MKT;
 	return;
 }
 

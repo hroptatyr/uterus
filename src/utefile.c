@@ -1169,6 +1169,19 @@ ute_fn(utectx_t ctx)
 	return ctx->fname;
 }
 
+void
+ute_set_fn(utectx_t ctx, const char *fn)
+{
+	/* some lusers might want to fool us */
+	if (UNLIKELY(ctx->fname == fn)) {
+		return;
+	}
+	rename(ctx->fname, fn);
+	free(ctx->fname);
+	ctx->fname = strdup(fn);
+	return;
+}
+
 ute_ver_t
 ute_version(utectx_t ctx)
 {

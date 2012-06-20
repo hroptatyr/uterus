@@ -82,6 +82,15 @@ static struct __node_s __nil = {
 };
 static const __node_t nil = &__nil;
 
+/* we need two mutexes, read and write, or sort the deadlock problem
+ * ute_sort() does a itree_trav_in_order() and in the callback it
+ * does a itree_find_*_cb() which then causes a deadlock
+ * HENCE we define: */
+#define pthread_mutex_init(x, y)
+#define pthread_mutex_destroy(x)
+#define pthread_mutex_lock(x)
+#define pthread_mutex_unlock(x)
+
 
 /* nodes, ctor */
 static void

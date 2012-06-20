@@ -261,8 +261,12 @@ tri_cb(const char *sym, uint32_t val, void *clo)
 DEFUN void
 slut_deser(uteslut_t s, void *data, size_t size)
 {
-	/* init the s2i trie */
-	s->stbl = slut_tg_deser(data, size);
+	if (LIKELY(size)) {
+		/* init the s2i trie */
+		s->stbl = slut_tg_deser(data, size);
+	} else {
+		s->stbl = make_slut_tg();
+	}
 	/* init the i2s guy */
 	init_i2s(s, 128);
 	/* traverse the trie and add them symbols */

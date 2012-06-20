@@ -189,6 +189,11 @@ extern uint16_t ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx);
 extern const char *ute_fn(utectx_t ctx);
 
 /**
+ * Set FN as the new file name for CTX.
+ * Caution, this performs a rename() too. */
+extern void ute_set_fn(utectx_t ctx, const char *fn);
+
+/**
  * Return the ute version of the file associated with CTX. */
 extern ute_ver_t ute_version(utectx_t ctx);
 

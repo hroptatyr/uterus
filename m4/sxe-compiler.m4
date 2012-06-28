@@ -1,6 +1,6 @@
 dnl compiler.m4 --- compiler magic
 dnl
-dnl Copyright (C) 2005, 2006, 2007, 2008 Sebastian Freundt
+dnl Copyright (C) 2005-2012 Sebastian Freundt
 dnl Copyright (c) 2005 Steven G. Johnson
 dnl Copyright (c) 2005 Matteo Frigo
 dnl
@@ -117,6 +117,9 @@ AC_DEFUN([SXE_WARNFLAGS], [dnl
 	SXE_CHECK_COMPILER_FLAGS([-qinfo], [
 		warnflags="${warnflags} -qinfo"])
 
+	SXE_CHECK_COMPILER_FLAGS([-Wextra], [
+		warnflags="${warnflags} -Wextra"])
+
 	## Yuck, bad compares have been worth at
 	## least 3 crashes!
 	## Warnings about char subscripts are pretty
@@ -176,6 +179,8 @@ AC_DEFUN([SXE_WARNFLAGS], [dnl
 		warnflags="$warnflags -Wunused-value"])
 	SXE_CHECK_COMPILER_FLAGS([-Wunused], [
 		warnflags="$warnflags -Wunused"])
+	SXE_CHECK_COMPILER_FLAGS([-Wmaybe-uninitialized], [
+		warnflags="${warnflags} -Wmaybe-uninitialized"])
 
 	SXE_CHECK_COMPILER_FLAGS([-Wnopragma], [
 		warnflags="$warnflags -Wnopragma"])

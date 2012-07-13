@@ -49,16 +49,7 @@
 #include "utehdr.h"
 #include "utetpc.h"
 #include "mem.h"
-
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !LIKELY */
+#include "nifty.h"
 
 #if defined DEBUG_FLAG
 # include <assert.h>

@@ -47,6 +47,7 @@
 #include <fcntl.h>
 #include <stdbool.h>
 #include <string.h>
+#include "nifty.h"
 #include "utetpc.h"
 
 /* we're just as good as rudi, aren't we? */
@@ -66,16 +67,6 @@
 #if !defined UDEBUGvv
 # define UDEBUGvv(args...)
 #endif	/* !UDEBUGvv */
-
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !LIKELY */
 
 #define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
@@ -244,6 +235,7 @@ tpc_add(utetpc_t tpc, scom_t t, size_t nt)
 /* sorters */
 #include "scommon.h"
 
+#undef ALGN
 #define DATA(p, i)	((void*)(((char*)(p)) + (i)))
 #define DATCA(p, i)	((const void*)(((const char*)(p)) + (i)))
 #define DATD(p, q)	((size_t)(((char*)(p)) - ((char*)(q))))

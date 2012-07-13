@@ -169,7 +169,7 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 		}
 	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
 		/* properly padded for big-e and little-e */
-#define AS_GEN(x)	((struct gen_s*)(x))
+#define AS_GEN(x)	((const struct gen_s*)(x))
 		struct gen_s {
 			union scom_thdr_u scom[1];
 			uint32_t v[14];

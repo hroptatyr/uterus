@@ -54,18 +54,9 @@
 #include "scdl.h"
 #include "utefile.h"
 #include "ute-mux.h"
+#include "nifty.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
-
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
 
 typedef union {
 	double d;

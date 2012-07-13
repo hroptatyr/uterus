@@ -54,6 +54,7 @@
 #include "utefile.h"
 #include "sl1t.h"
 #include "ute-mux.h"
+#include "nifty.h"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
@@ -61,17 +62,8 @@
 #if defined __INTEL_COMPILER
 # pragma warning(disable:981)
 #endif	/* __INTEL_COMPILER */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
+
 #define MAX_LINE_LEN	512
-#define countof(x)	(sizeof(x) / sizeof(*x))
 
 #define FLAG_INVAL	0x01
 #define FLAG_HALTED	0x02

@@ -40,6 +40,7 @@
 
 #include <stdint.h>
 #include "scommon.h"
+#include "nifty.h"
 
 #undef DECLF
 #undef DEFUN
@@ -50,13 +51,6 @@
 # define DEFUN
 # define DECLF	extern
 #endif	/* STATIC_GUTS */
-
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
 
 extern size_t __pgsz;
 #define UTE_BLKSZ	(64 * __pgsz)

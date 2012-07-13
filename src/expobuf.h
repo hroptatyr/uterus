@@ -49,21 +49,12 @@
 #include <sys/stat.h>
 #include <string.h>
 #include "mem.h"
+#include "nifty.h"
 
 #define NET_BUF_LEN		1280
 #define DISK_BUF_LEN		65536
 #define NBUFFERS		512
 #define EB_PGSZ			(DISK_BUF_LEN * NBUFFERS)
-
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
 
 #define STATIC_EB	1
 

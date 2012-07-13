@@ -39,18 +39,9 @@
 
 #include <string.h>
 #include "scommon.h"
+#include "nifty.h"
 
 #define MAX_LINE_LEN		512
-
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
 
 typedef struct pr_ctx_s *pr_ctx_t;
 typedef struct pr_opt_s *pr_opt_t;

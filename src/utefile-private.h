@@ -38,6 +38,8 @@
 #if !defined INCLUDED_utefile_private_h_
 #define INCLUDED_utefile_private_h_
 
+#include "nifty.h"
+
 #if defined DEBUG_FLAG
 # include <stdio.h>
 # define UTE_DEBUG(args...)	fprintf(stderr, "[ute/file] " args)
@@ -46,16 +48,6 @@
 #endif	/* DEBUG_FLAG */
 
 typedef struct utectx_s *utectx_t;
-
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !LIKELY */
 
 /* goodness */
 #include "utefile.h"

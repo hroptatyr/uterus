@@ -38,16 +38,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "date.h"
-
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif
-#if !defined UNUSED
-# define UNUSED(_x)	_x __attribute__((unused))
-#endif
+#include "nifty.h"
 
 static inline void
 sprint_year(char *restrict buf, const struct tm *restrict tm)

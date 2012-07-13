@@ -57,6 +57,7 @@
 #include "utefile.h"
 #include "ute-mux.h"
 #include "ute-print.h"
+#include "nifty.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -72,17 +73,6 @@
 #if defined __INTEL_COMPILER
 # pragma warning(disable:981)
 #endif	/* __INTEL_COMPILER */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-
-#define countof(x)	(sizeof(x) / sizeof(*x))
 
 typedef uint8_t symidx_t;
 typedef struct symtbl_s *symtbl_t;

@@ -374,6 +374,11 @@ __offs(zif_t z, int32_t t)
 		max = z->cache.trno;
 		this = max - 1;
 		min = 0;
+	} else {
+		/* we shouldn't end up here at all */
+		this = 0;
+		min = 0;
+		max = 0;
 	}
 	return (z->cache = __find_zrng(z, t, this, min, max)).offs;
 }

@@ -204,13 +204,15 @@ conv_lep(fsck_ctx_t ctx, uteseek_t sk)
 	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 		uint32_t *sndwch = (uint32_t*)ti;
+		uint64_t *sndw64 = (uint64_t*)ti;
 		size_t xsz;
 
 		/* determine the length for the increment */
 		tsz = scom_byte_size(ti);
 		xsz = scom_tick_size(ti);
 
-		ti->u = htole64(ti->u);
+		/* header is always 64b */
+		sndw64[0] = htole64(sndw64[0]);
 		switch (xsz) {
 		case 4:
 			sndwch[8] = htole32(sndwch[8]);
@@ -248,13 +250,15 @@ conv_bep(fsck_ctx_t ctx, uteseek_t sk)
 	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 		uint32_t *sndwch = (uint32_t*)ti;
+		uint64_t *sndw64 = (uint64_t*)ti;
 		size_t xsz;
 
 		/* determine the length for the increment */
 		tsz = scom_byte_size(ti);
 		xsz = scom_tick_size(ti);
 
-		ti->u = htole64(ti->u);
+		/* header is always 64b */
+		sndw64[0] = htobe64(sndw64[0]);
 		switch (xsz) {
 		case 4:
 			sndwch[8] = htobe32(sndwch[8]);

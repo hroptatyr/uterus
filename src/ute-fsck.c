@@ -111,7 +111,7 @@ error(int eno, const char *fmt, ...)
 }
 
 
-/* actual fscking */
+/* page wise operations */
 enum {
 	ISS_NO_ISSUES = 0,
 	ISS_OLD_VER = 1,
@@ -119,6 +119,7 @@ enum {
 	ISS_NO_ENDIAN = 4,
 };
 
+/* the actual fscking */
 static int
 fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 {
@@ -191,6 +192,96 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 	return issues;
 }
 
+static void
+conv_lep(fsck_ctx_t ctx, uteseek_t sk)
+{
+	const size_t ssz = sizeof(*sk->sp);
+	const size_t sk_sz = seek_byte_size(sk);
+
+	if (ctx->dryp) {
+		return;
+	}
+	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
+		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+		uint32_t *sndwch = (uint32_t*)ti;
+		size_t xsz;
+
+		/* determine the length for the increment */
+		tsz = scom_byte_size(ti);
+		xsz = scom_tick_size(ti);
+
+		ti->u = htole64(ti->u);
+		switch (xsz) {
+		case 4:
+			sndwch[8] = htole32(sndwch[8]);
+			sndwch[9] = htole32(sndwch[9]);
+			sndwch[10] = htole32(sndwch[10]);
+			sndwch[11] = htole32(sndwch[11]);
+			sndwch[12] = htole32(sndwch[12]);
+			sndwch[13] = htole32(sndwch[13]);
+			sndwch[14] = htole32(sndwch[14]);
+			sndwch[15] = htole32(sndwch[15]);
+		case 2:
+			sndwch[4] = htole32(sndwch[4]);
+			sndwch[5] = htole32(sndwch[5]);
+			sndwch[6] = htole32(sndwch[6]);
+			sndwch[7] = htole32(sndwch[7]);
+		case 1:
+			sndwch[2] = htole32(sndwch[2]);
+			sndwch[3] = htole32(sndwch[3]);
+		default:
+			break;
+		}
+	}
+	return;
+}
+
+static void
+conv_bep(fsck_ctx_t ctx, uteseek_t sk)
+{
+	const size_t ssz = sizeof(*sk->sp);
+	const size_t sk_sz = seek_byte_size(sk);
+
+	if (ctx->dryp) {
+		return;
+	}
+	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
+		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+		uint32_t *sndwch = (uint32_t*)ti;
+		size_t xsz;
+
+		/* determine the length for the increment */
+		tsz = scom_byte_size(ti);
+		xsz = scom_tick_size(ti);
+
+		ti->u = htole64(ti->u);
+		switch (xsz) {
+		case 4:
+			sndwch[8] = htobe32(sndwch[8]);
+			sndwch[9] = htobe32(sndwch[9]);
+			sndwch[10] = htobe32(sndwch[10]);
+			sndwch[11] = htobe32(sndwch[11]);
+			sndwch[12] = htobe32(sndwch[12]);
+			sndwch[13] = htobe32(sndwch[13]);
+			sndwch[14] = htobe32(sndwch[14]);
+			sndwch[15] = htobe32(sndwch[15]);
+		case 2:
+			sndwch[4] = htobe32(sndwch[4]);
+			sndwch[5] = htobe32(sndwch[5]);
+			sndwch[6] = htobe32(sndwch[6]);
+			sndwch[7] = htobe32(sndwch[7]);
+		case 1:
+			sndwch[2] = htobe32(sndwch[2]);
+			sndwch[3] = htobe32(sndwch[3]);
+		default:
+			break;
+		}
+	}
+	return;
+}
+
+
+/* file wide operations */
 static int
 fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 {
@@ -272,6 +363,44 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	return issues;
 }
 
+static __attribute__((unused)) void
+conv_le(fsck_ctx_t ctx, utectx_t hdl)
+{
+	/* go through them pages manually */
+	for (size_t p = 0, npg = ute_npages(hdl);
+	     p < npg + tpc_has_ticks_p(hdl->tpc);
+	     p++) {
+		struct uteseek_s sk[1];
+
+		/* create a new seek */
+		seek_page(sk, hdl, p);
+		/* convert that one page */
+		conv_lep(ctx, sk);
+		/* flush the old seek */
+		flush_seek(sk);
+	}
+	return;
+}
+
+static __attribute__((unused)) void
+conv_be(fsck_ctx_t ctx, utectx_t hdl)
+{
+	/* go through them pages manually */
+	for (size_t p = 0, npg = ute_npages(hdl);
+	     p < npg + tpc_has_ticks_p(hdl->tpc);
+	     p++) {
+		struct uteseek_s sk[1];
+
+		/* create a new seek */
+		seek_page(sk, hdl, p);
+		/* convert that one page */
+		conv_bep(ctx, sk);
+		/* flush the old seek */
+		flush_seek(sk);
+	}
+	return;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -332,6 +461,15 @@ main(int argc, char *argv[])
 		/* the actual checking */
 		if (fsck1(ctx, hdl, fn)) {
 			res = 1;
+
+			if (argi->little_endian_given) {
+				error(0, "\
+cannot convert file with issues `%s', rerun conversion later", fn);
+			}
+		} else if (argi->little_endian_given) {
+			conv_le(ctx, hdl);
+		} else if (argi->big_endian_given) {
+			conv_be(ctx, hdl);
 		}
 
 		/* safe than sorry */

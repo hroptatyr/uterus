@@ -14,3 +14,11 @@ option "dry-run" n
 option "output" o
 	"Output to FILE, leave original file untouched."
 	optional string typestr="FILE"
+
+option "little-endian" -
+	"Convert ute file to little endian representation."
+	optional
+
+option "big-endian" -
+	"Convert ute file to big endian representation."
+	optional

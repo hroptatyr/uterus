@@ -57,6 +57,7 @@
 /* for public mux and demux (print) apis */
 #include "ute-mux.h"
 #include "ute-print.h"
+#include "nifty.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -69,18 +70,7 @@
 #include "m30.h"
 #include "m62.h"
 
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-
 #define MAX_LINE_LEN	512
-#define countof(x)	(sizeof(x) / sizeof(*x))
 
 /* should coincide with slut_sym_t */
 typedef char cid_t[32];

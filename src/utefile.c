@@ -112,7 +112,7 @@ __local_scom_tick_size(scom_t t)
 	}
 }
 
-static inline size_t
+static inline __attribute__((unused)) size_t
 __local_scom_byte_size(scom_t t)
 {
 	return __local_scom_tick_size(t) * sizeof(struct sndwch_s);

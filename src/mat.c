@@ -51,6 +51,7 @@
 #include "sl1t.h"
 #include "scdl.h"
 #include "ssnp.h"
+#include "nifty.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -62,16 +63,6 @@
 #undef DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
-
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
 
 #define MAT_VERSION	(0x100)
 

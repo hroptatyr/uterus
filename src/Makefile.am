@@ -105,6 +105,7 @@ EXTRA_libuterus_la_SOURCES += darray.c darray.h
 EXTRA_libuterus_la_SOURCES += tail.c tail.h
 EXTRA_libuterus_la_SOURCES += fmcmb.h
 EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
+EXTRA_libuterus_la_SOURCES += nifty.h
 
 bin_PROGRAMS += ute
 ute_SOURCES =

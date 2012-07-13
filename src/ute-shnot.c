@@ -56,6 +56,7 @@
 #include "date.h"
 #include "m30.h"
 #include "m62.h"
+#include "nifty.h"
 /* our own goodness */
 #include "ute-shnot.h"
 
@@ -67,19 +68,6 @@
 #define SUSHI_MODE		1
 #define TRUE_OPEN		1
 #define OPTIM_LEVEL		2
-
-#if !defined countof
-# define countof(x)		(sizeof(x) / sizeof(*x))
-#endif	/* !countof */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
 
 typedef struct bkts_s *bkts_t;
 typedef void(*bkt_f)(bkts_t, const_sl1t_t, void *clo);

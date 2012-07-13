@@ -41,19 +41,10 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <string.h>
+#include "nifty.h"
 #include "uteslut.h"
 /* symbol table stuff */
 #include "uteslut-trie-glue.h"
-
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif	/* !LIKELY */
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !LIKELY */
 
 #include "utefile.h"
 

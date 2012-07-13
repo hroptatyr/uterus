@@ -39,13 +39,7 @@
 #include <stdbool.h>
 #define INCL_TBLS
 #include "date.h"
-
-#if !defined LIKELY
-# define LIKELY(_x)	__builtin_expect((_x), 1)
-#endif
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
+#include "nifty.h"
 
 static const int tenners[10] = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
 

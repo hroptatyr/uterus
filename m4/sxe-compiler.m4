@@ -332,22 +332,34 @@ respectively
 ])dnl SXE_CHECK_CFLAGS
 
 AC_DEFUN([SXE_CHECK_CC], [dnl
+	pushdef([stds], m4_default([$1], [gnu11 c11 gnu99 c99]))
+
 	AC_REQUIRE([AC_CANONICAL_HOST])
 	AC_REQUIRE([AC_CANONICAL_BUILD])
 	AC_REQUIRE([AC_PROG_CPP])
 
 	AC_HEADER_STDC
 
-	for i in "gnu11" "c11" "gnu1x" "c1x" "gnu99" "c99"; do
-		SXE_CHECK_COMPILER_FLAGS([-std="${i}"], [
-			std="-std=${i}"
-			break
-		])
-	done
+	case "${CC}" in dnl (
+	*"-std="*)
+		## user specified a std value already
+		;;
+		dnl (
+	*)
+		for i in []stds[]; do
+			SXE_CHECK_COMPILER_FLAGS([-std="${i}"], [
+				std="-std=${i}"
+				break
+			])
+		done
 
-	AC_MSG_CHECKING([for preferred CC std])
-	AC_MSG_RESULT([${std}])
-	CC="${CC} ${std}"
+		AC_MSG_CHECKING([for preferred CC std])
+		AC_MSG_RESULT([${std}])
+		CC="${CC} ${std}"
+		;;
+	esac
+
+	popdef([stds])
 ])dnl SXE_CHECK_CC
 
 AC_DEFUN([SXE_CHECK_ANON_STRUCTS], [

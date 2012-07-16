@@ -75,6 +75,8 @@ typedef struct fsck_ctx_s *fsck_ctx_t;
 
 struct fsck_ctx_s {
 	bool dryp;
+	ute_end_t tgtend;
+	ute_end_t natend;
 	utectx_t outctx;
 };
 
@@ -111,7 +113,132 @@ error(int eno, const char *fmt, ...)
 }
 
 
-/* actual fscking */
+/* converters */
+#if defined WORDS_BIGENDIAN
+# define letobe32	le32toh
+# define letobe64	le64toh
+# define betole32	htole32
+# define betole64	htole64
+# define swap32		le32toh
+# define swap64		le64toh
+#else  /* !WORDS_BIGENDIAN */
+# define letobe32	htobe32
+# define letobe64	htobe64
+# define betole32	be32toh
+# define betole64	be64toh
+# define swap32		be32toh
+# define swap64		be64toh
+#endif	/* WORDS_BIGENDIAN */
+
+static void
+conv_1_swap(scom_thdr_t ti, size_t tbsz)
+{
+	uint32_t *sndwch = (uint32_t*)ti;
+	uint64_t *sndw64 = (uint64_t*)ti;
+
+	/* header is always 64b */
+	sndw64[0] = swap64(sndw64[0]);
+	switch (tbsz) {
+		uint16_t ttf;
+	case 4:
+		sndwch[8] = swap32(sndwch[8]);
+		sndwch[9] = swap32(sndwch[9]);
+		sndwch[10] = swap32(sndwch[10]);
+		sndwch[11] = swap32(sndwch[11]);
+		sndwch[12] = swap32(sndwch[12]);
+		sndwch[13] = swap32(sndwch[13]);
+		sndwch[14] = swap32(sndwch[14]);
+		sndwch[15] = swap32(sndwch[15]);
+	case 2:
+		sndwch[4] = swap32(sndwch[4]);
+		sndwch[5] = swap32(sndwch[5]);
+		sndwch[6] = swap32(sndwch[6]);
+		sndwch[7] = swap32(sndwch[7]);
+	case 1:
+		sndwch[2] = swap32(sndwch[2]);
+		sndwch[3] = swap32(sndwch[3]);
+
+		/* case 1 is special as we do have 64b vals too */
+		ttf = scom_thdr_ttf(ti);
+		if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
+			     ttf <= SL1T_TTF_OI)) {
+			/* byte order is converted,
+			 * swap sndwch[2] and sndwch[3] */
+			uint32_t foo = sndwch[2];
+			sndwch[2] = sndwch[3];
+			sndwch[3] = foo;
+		}
+	default:
+		break;
+	}
+	return;
+}
+
+static void
+__addconv_tick(utectx_t hdl, scom_t si, size_t tbsz)
+{
+/* do a conversion and then add the tick */
+	uint32_t ALGN(ti[16], sizeof(uint64_t));
+	uint32_t *src_sndwch = (uint32_t*)si;
+	uint64_t *src_sndw64 = (uint64_t*)si;
+	uint32_t *tgt_sndwch = (uint32_t*)ti;
+	uint64_t *tgt_sndw64 = (uint64_t*)ti;
+
+	/* header is always 64b */
+	tgt_sndw64[0] = swap64(src_sndw64[0]);
+	switch (tbsz) {
+		uint16_t ttf;
+	case 4:
+		tgt_sndwch[8] = swap32(src_sndwch[8]);
+		tgt_sndwch[9] = swap32(src_sndwch[9]);
+		tgt_sndwch[10] = swap32(src_sndwch[10]);
+		tgt_sndwch[11] = swap32(src_sndwch[11]);
+		tgt_sndwch[12] = swap32(src_sndwch[12]);
+		tgt_sndwch[13] = swap32(src_sndwch[13]);
+		tgt_sndwch[14] = swap32(src_sndwch[14]);
+		tgt_sndwch[15] = swap32(src_sndwch[15]);
+	case 2:
+		tgt_sndwch[4] = swap32(src_sndwch[4]);
+		tgt_sndwch[5] = swap32(src_sndwch[5]);
+		tgt_sndwch[6] = swap32(src_sndwch[6]);
+		tgt_sndwch[7] = swap32(src_sndwch[7]);
+	case 1:
+		tgt_sndwch[2] = swap32(src_sndwch[2]);
+		tgt_sndwch[3] = swap32(src_sndwch[3]);
+
+		/* case 1 is special as we do have 64b vals too */
+		ttf = scom_thdr_ttf(AS_SCOM(ti));
+		if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
+			     ttf <= SL1T_TTF_OI)) {
+			/* byte order is converted,
+			 * swap sndwch[2] and sndwch[3] */
+			uint32_t foo = src_sndwch[2];
+			tgt_sndwch[2] = src_sndwch[3];
+			tgt_sndwch[3] = foo;
+		}
+	default:
+		break;
+	}
+	ute_add_tick(hdl, AS_SCOM(ti));
+	return;
+}
+
+static bool
+need_swap_p(fsck_ctx_t ctx, utectx_t hdl)
+{
+	switch (ute_endianness(hdl)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return ctx->natend != UTE_ENDIAN_LITTLE;
+	case UTE_ENDIAN_BIG:
+		return ctx->natend != UTE_ENDIAN_BIG;
+	default:
+		return false;
+	}
+}
+
+
+/* page wise operations */
 enum {
 	ISS_NO_ISSUES = 0,
 	ISS_OLD_VER = 1,
@@ -119,11 +246,13 @@ enum {
 	ISS_NO_ENDIAN = 4,
 };
 
+/* the actual fscking */
 static int
 fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
+	bool same_end_p = !need_swap_p(ctx, hdl);
 	int issues = 0;
 
 	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
@@ -153,16 +282,10 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 			}
 		}
 
-		switch (ute_endianness(hdl)) {
-		case UTE_ENDIAN_UNK:
-		case UTE_ENDIAN_LITTLE:
-			x = le64toh(ti->u);
-			break;
-		case UTE_ENDIAN_BIG:
-			x = be64toh(ti->u);
-			break;
-		default:
-			break;
+		if (LIKELY(same_end_p)) {
+			x = ti->u;
+		} else {
+			x = swap64(ti->u);
 		}
 
 		/* check for sortedness */
@@ -174,8 +297,12 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 		last.u = x;
 
 		/* copy the whole shebang when -o|--output is given */
-		if (!ctx->dryp && ctx->outctx) {
+		if (!ctx->dryp && ctx->outctx && same_end_p) {
+			/* just add the guy */
 			ute_add_tick(ctx->outctx, ti);
+		} else if (!ctx->dryp && ctx->outctx) {
+			/* convert to native endianness and add */
+			__addconv_tick(ctx->outctx, ti, tsz / sizeof(*sk->sp));
 		}
 	}
 	/* deal with issues that need page-wise dealing */
@@ -191,6 +318,45 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 	return issues;
 }
 
+static void
+conv_sk_swap(fsck_ctx_t ctx, uteseek_t sk)
+{
+/* only inplace (in situ) conversion is supported */
+	const size_t ssz = sizeof(*sk->sp);
+	const size_t sk_sz = seek_byte_size(sk);
+
+	if (ctx->dryp) {
+		return;
+	}
+	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
+		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+		size_t xsz;
+
+		/* determine the length for the increment */
+		tsz = scom_byte_size(ti);
+		xsz = scom_tick_size(ti);
+
+		conv_1_swap(ti, xsz);
+	}
+	return;
+}
+
+static void
+conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
+{
+	conv_sk_swap(ctx, sk);
+	return;
+}
+
+static void
+conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
+{
+	conv_sk_swap(ctx, sk);
+	return;
+}
+
+
+/* file wide operations */
 static int
 fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 {
@@ -272,6 +438,63 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	return issues;
 }
 
+static void
+conv_le(fsck_ctx_t ctx, utectx_t hdl)
+{
+	switch (ute_endianness(hdl)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		/* bingo, fuckall to do */
+		break;
+	case UTE_ENDIAN_BIG:
+		/* go through them pages manually */
+		for (size_t p = 0, npg = ute_npages(hdl);
+		     p < npg + tpc_has_ticks_p(hdl->tpc);
+		     p++) {
+			struct uteseek_s sk[1];
+
+			/* create a new seek */
+			seek_page(sk, hdl, p);
+			/* convert that one page */
+			conv_sk_betole(ctx, sk);
+			/* flush the old seek */
+			flush_seek(sk);
+		}
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+static void
+conv_be(fsck_ctx_t ctx, utectx_t hdl)
+{
+	switch (ute_endianness(hdl)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		/* go through them pages manually */
+		for (size_t p = 0, npg = ute_npages(hdl);
+		     p < npg + tpc_has_ticks_p(hdl->tpc);
+		     p++) {
+			struct uteseek_s sk[1];
+
+			/* create a new seek */
+			seek_page(sk, hdl, p);
+			/* convert that one page */
+			conv_sk_letobe(ctx, sk);
+			/* flush the old seek */
+			flush_seek(sk);
+		}
+	case UTE_ENDIAN_BIG:
+		/* bingo, fuckall to do */
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -306,6 +529,21 @@ main(int argc, char *argv[])
 		ctx->dryp = true;
 	}
 
+	/* determine native endianness */
+#if defined WORDS_BIGENDIAN
+	ctx->natend = UTE_ENDIAN_BIG;
+#else  /* !WORDS_BIGENDIAN */
+	ctx->natend = UTE_ENDIAN_LITTLE;
+#endif	/* WORDS_BIGENDIAN */
+	if (argi->little_endian_given) {
+		ctx->tgtend = UTE_ENDIAN_LITTLE;
+	} else if (argi->big_endian_given) {
+		ctx->tgtend = UTE_ENDIAN_BIG;
+	} else {
+		/* use native endianness */
+		ctx->tgtend = ctx->natend;
+	}
+
 	if (!argi->dry_run_given && argi->output_given) {
 		const int fl = UO_RDWR | UO_CREAT | UO_TRUNC;
 		const char *fn = argi->output_arg;
@@ -332,18 +570,77 @@ main(int argc, char *argv[])
 		/* the actual checking */
 		if (fsck1(ctx, hdl, fn)) {
 			res = 1;
+
+			if (argi->little_endian_given) {
+				error(0, "\
+cannot convert file with issues `%s', rerun conversion later", fn);
+			}
+		} else if (ctx->outctx != NULL) {
+			/* no endian conversions in this case */
+			;
+		} else if (ctx->dryp) {
+			/* do fuckall in dry mode */
+			;
+		} else if (ctx->tgtend == UTE_ENDIAN_LITTLE) {
+			conv_le(ctx, hdl);
+		} else if (ctx->tgtend == UTE_ENDIAN_BIG) {
+			conv_be(ctx, hdl);
 		}
 
 		/* safe than sorry */
-		if (ctx->outctx) {
+		if (ctx->outctx != NULL) {
 			ute_clone_slut(ctx->outctx, hdl);
+		} else if (ctx->dryp) {
+			/* do fuckall in dry mode */
+			;
+		} else {
+			/* make sure we set the new endianness */
+			ute_set_endianness(hdl, ctx->tgtend);
 		}
 		/* and that's us */
 		ute_close(hdl);
 	}
 
-	if (ctx->outctx) {
+	if (ctx->outctx != NULL) {
+		/* re-open the file */
+		const int fl = UO_RDWR;
+		const int opfl = UO_NO_LOAD_TPC;
+		const char *fn = argi->output_arg;
+		utectx_t hdl;
+
+		/* finalise the whole shebang */
 		ute_close(ctx->outctx);
+
+		/* care about conversions now */
+		if (0) {
+			/* cosmetics */
+		} else if (!argi->little_endian_given &&
+			   !argi->big_endian_given) {
+			/* nothing to do */
+			goto out;
+		} else if (ctx->dryp) {
+			/* dry mode, do fuck all */
+			goto out;
+		} else if (res) {
+			/* can't convert */
+			error(0, "\
+cannot convert file with issues `%s', rerun conversion later", fn);
+			goto out;
+		} else if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
+			error(0, "cannot open file `%s'", fn);
+			res = 1;
+			goto out;
+		} else if (ctx->tgtend == UTE_ENDIAN_LITTLE) {
+			/* inplace little endian conversion */
+			conv_le(ctx, hdl);
+		} else if (ctx->tgtend == UTE_ENDIAN_BIG) {
+			/* inplace big endian conversion */
+			conv_be(ctx, hdl);
+		}
+		/* make sure it's the right endianness */
+		ute_set_endianness(hdl, ctx->tgtend);
+		/* and close the whole shebang again */
+		ute_close(hdl);
 	}
 out:
 	fsck_parser_free(argi);

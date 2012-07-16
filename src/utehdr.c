@@ -98,6 +98,26 @@ utehdr_endianness(utehdr2_t hdr)
 	return UTE_ENDIAN_UNK;
 }
 
+void
+utehdr_set_endianness(struct utehdr2_s *hdr, ute_end_t en)
+{
+	switch (en) {
+	case UTE_ENDIAN_BIG:
+		hdr->endia[0] = '<';
+		hdr->endia[1] = '>';
+		break;
+	case UTE_ENDIAN_LITTLE:
+		hdr->endia[0] = '>';
+		hdr->endia[1] = '<';
+		break;
+	case UTE_ENDIAN_UNK:
+	default:
+		/* do fuckall */
+		break;
+	}
+	return;
+}
+
 int
 utehdr_check_magic(utehdr2_t hdr)
 {

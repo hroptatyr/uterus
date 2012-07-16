@@ -307,6 +307,34 @@ wipe:
 	return 0;
 }
 
+int
+clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src)
+{
+	size_t pgsz = seek_byte_size(src);
+	size_t off = page_offset(ctx, src->pg);
+
+	/* trivial checks */
+	if (LIKELY(off + pgsz >= ctx->fsz)) {
+		/* yep, extend the guy */
+		if (ctx->oflags == UO_RDONLY ||
+		    !__fwr_trunc(ctx->fd, off + pgsz)) {
+			return -1;
+		}
+		/* truncation successful */
+		ctx->fsz = off + pgsz;
+	}
+	/* it's just a normal seek_page() */
+	return seek_page(sk, ctx, src->pg);
+}
+
+int
+make_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
+{
+	sk->pg = pg;
+	sk->szrw = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	return clone_page(sk, ctx, sk);
+}
+
 #if !defined USE_UTE_SORT
 static inline size_t
 page_size(utectx_t ctx, uint32_t page)
@@ -412,8 +440,22 @@ static void
 store_slut(utectx_t ctx)
 {
 	struct utehdr2_s *h = (void*)ctx->hdrp;
-	h->slut_sz = ctx->slut_sz;
-	h->slut_nsyms = (uint16_t)ctx->slut->nsyms;
+
+	switch (utehdr_endianness(h)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		h->slut_sz = htole32(ctx->slut_sz);
+		h->slut_nsyms = htole16((uint16_t)ctx->slut->nsyms);
+		break;
+	case UTE_ENDIAN_BIG:
+		h->slut_sz = htobe32(ctx->slut_sz);
+		h->slut_nsyms = htobe16((uint16_t)ctx->slut->nsyms);
+		break;
+	default:
+		h->slut_sz = 0;
+		h->slut_nsyms = 0;
+		break;
+	}
 	return;
 }
 
@@ -1201,6 +1243,14 @@ ute_check_endianness(utectx_t ctx)
 {
 /* just fall back to utehdr.h solution */
 	return utehdr_check_endianness(ctx->hdrp);
+}
+
+void
+ute_set_endianness(utectx_t ctx, ute_end_t en)
+{
+/* return the number of symbols tracked in the ute file */
+	utehdr_set_endianness(ctx->hdrp, en);
+	return;
 }
 
 /* utefile.c ends here */

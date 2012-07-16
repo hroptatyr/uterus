@@ -1217,4 +1217,12 @@ ute_check_endianness(utectx_t ctx)
 	return utehdr_check_endianness(ctx->hdrp);
 }
 
+void
+ute_set_endianness(utectx_t ctx, ute_end_t en)
+{
+/* return the number of symbols tracked in the ute file */
+	utehdr_set_endianness(ctx->hdrp, en);
+	return;
+}
+
 /* utefile.c ends here */

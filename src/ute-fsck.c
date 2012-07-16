@@ -256,7 +256,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 	int issues = 0;
 
 	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
-		char buf[64];
+		char ALGN(buf[64], 16);
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 		uint64_t x;

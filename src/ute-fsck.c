@@ -261,8 +261,15 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 		uint64_t x;
 
-		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
+		if (LIKELY(same_end_p)) {
+			x = ti->u;
+			/* determine the length for the increment */
+			tsz = scom_byte_size(ti);
+		} else {
+			x = swap64(ti->u);
+			/* and again, determine the length for the increment */
+			tsz = scom_byte_size(AS_SCOM(&x));
+		}
 
 		if (issues & ISS_OLD_VER) {
 			/* promote the old header
@@ -280,12 +287,6 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 				/* pretend we changed it */
 				ti = nu_ti;
 			}
-		}
-
-		if (LIKELY(same_end_p)) {
-			x = ti->u;
-		} else {
-			x = swap64(ti->u);
 		}
 
 		/* check for sortedness */

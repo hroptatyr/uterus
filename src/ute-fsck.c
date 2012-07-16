@@ -116,11 +116,15 @@ error(int eno, const char *fmt, ...)
 # define letobe64	le64toh
 # define betole32	htole32
 # define betole64	htole64
+# define swap32		le32toh
+# define swap64		le64toh
 #else  /* !WORDS_BIGENDIAN */
 # define letobe32	htobe32
 # define letobe64	htobe64
 # define betole32	be32toh
 # define betole64	be64toh
+# define swap32		be32toh
+# define swap64		be64toh
 #endif	/* WORDS_BIGENDIAN */
 
 
@@ -206,8 +210,9 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 }
 
 static void
-conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
+conv_sk_swap(fsck_ctx_t ctx, uteseek_t sk)
 {
+/* only inplace (in situ) conversion is supported */
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
 
@@ -225,26 +230,26 @@ conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
 		xsz = scom_tick_size(ti);
 
 		/* header is always 64b */
-		sndw64[0] = betole64(sndw64[0]);
+		sndw64[0] = swap64(sndw64[0]);
 		switch (xsz) {
 			uint16_t ttf;
 		case 4:
-			sndwch[8] = betole32(sndwch[8]);
-			sndwch[9] = betole32(sndwch[9]);
-			sndwch[10] = betole32(sndwch[10]);
-			sndwch[11] = betole32(sndwch[11]);
-			sndwch[12] = betole32(sndwch[12]);
-			sndwch[13] = betole32(sndwch[13]);
-			sndwch[14] = betole32(sndwch[14]);
-			sndwch[15] = betole32(sndwch[15]);
+			sndwch[8] = swap32(sndwch[8]);
+			sndwch[9] = swap32(sndwch[9]);
+			sndwch[10] = swap32(sndwch[10]);
+			sndwch[11] = swap32(sndwch[11]);
+			sndwch[12] = swap32(sndwch[12]);
+			sndwch[13] = swap32(sndwch[13]);
+			sndwch[14] = swap32(sndwch[14]);
+			sndwch[15] = swap32(sndwch[15]);
 		case 2:
-			sndwch[4] = betole32(sndwch[4]);
-			sndwch[5] = betole32(sndwch[5]);
-			sndwch[6] = betole32(sndwch[6]);
-			sndwch[7] = betole32(sndwch[7]);
+			sndwch[4] = swap32(sndwch[4]);
+			sndwch[5] = swap32(sndwch[5]);
+			sndwch[6] = swap32(sndwch[6]);
+			sndwch[7] = swap32(sndwch[7]);
 		case 1:
-			sndwch[2] = betole32(sndwch[2]);
-			sndwch[3] = betole32(sndwch[3]);
+			sndwch[2] = swap32(sndwch[2]);
+			sndwch[3] = swap32(sndwch[3]);
 
 			/* case 1 is special as we do have 64b vals too */
 			ttf = scom_thdr_ttf(ti);
@@ -264,60 +269,16 @@ conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
 }
 
 static void
+conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
+{
+	conv_sk_swap(ctx, sk);
+	return;
+}
+
+static void
 conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
 {
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
-
-	if (ctx->dryp) {
-		return;
-	}
-	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
-		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
-		uint32_t *sndwch = (uint32_t*)ti;
-		uint64_t *sndw64 = (uint64_t*)ti;
-		size_t xsz;
-
-		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
-		xsz = scom_tick_size(ti);
-
-		/* header is always 64b */
-		sndw64[0] = letobe64(sndw64[0]);
-		switch (xsz) {
-			uint16_t ttf;
-		case 4:
-			sndwch[8] = letobe32(sndwch[8]);
-			sndwch[9] = letobe32(sndwch[9]);
-			sndwch[10] = letobe32(sndwch[10]);
-			sndwch[11] = letobe32(sndwch[11]);
-			sndwch[12] = letobe32(sndwch[12]);
-			sndwch[13] = letobe32(sndwch[13]);
-			sndwch[14] = letobe32(sndwch[14]);
-			sndwch[15] = letobe32(sndwch[15]);
-		case 2:
-			sndwch[4] = letobe32(sndwch[4]);
-			sndwch[5] = letobe32(sndwch[5]);
-			sndwch[6] = letobe32(sndwch[6]);
-			sndwch[7] = letobe32(sndwch[7]);
-		case 1:
-			sndwch[2] = letobe32(sndwch[2]);
-			sndwch[3] = letobe32(sndwch[3]);
-
-			/* case 1 is special as we do have 64b vals too */
-			ttf = scom_thdr_ttf(ti);
-			if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
-				     ttf <= SL1T_TTF_OI)) {
-				/* byte order is converted,
-				 * swap sndwch[2] and sndwch[3] */
-				uint32_t foo = sndwch[2];
-				sndwch[2] = sndwch[3];
-				sndwch[3] = foo;
-			}
-		default:
-			break;
-		}
-	}
+	conv_sk_swap(ctx, sk);
 	return;
 }
 
@@ -404,7 +365,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	return issues;
 }
 
-static __attribute__((unused)) void
+static void
 conv_le(fsck_ctx_t ctx, utectx_t hdl)
 {
 	switch (ute_endianness(hdl)) {
@@ -433,7 +394,7 @@ conv_le(fsck_ctx_t ctx, utectx_t hdl)
 	return;
 }
 
-static __attribute__((unused)) void
+static void
 conv_be(fsck_ctx_t ctx, utectx_t hdl)
 {
 	switch (ute_endianness(hdl)) {

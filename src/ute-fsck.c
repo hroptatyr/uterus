@@ -622,11 +622,6 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		} else if (ctx->dryp) {
 			/* dry mode, do fuck all */
 			goto out;
-		} else if (res) {
-			/* can't convert */
-			error(0, "\
-cannot convert file with issues `%s', rerun conversion later", fn);
-			goto out;
 		} else if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
 			error(0, "cannot open file `%s'", fn);
 			res = 1;

@@ -256,13 +256,20 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 	int issues = 0;
 
 	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
-		char buf[64];
+		char ALGN(buf[64], 16);
 		scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 		uint64_t x;
 
-		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
+		if (LIKELY(same_end_p)) {
+			x = ti->u;
+			/* determine the length for the increment */
+			tsz = scom_byte_size(ti);
+		} else {
+			x = swap64(ti->u);
+			/* and again, determine the length for the increment */
+			tsz = scom_byte_size(AS_SCOM(&x));
+		}
 
 		if (issues & ISS_OLD_VER) {
 			/* promote the old header
@@ -280,12 +287,6 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 				/* pretend we changed it */
 				ti = nu_ti;
 			}
-		}
-
-		if (LIKELY(same_end_p)) {
-			x = ti->u;
-		} else {
-			x = swap64(ti->u);
 		}
 
 		/* check for sortedness */
@@ -620,11 +621,6 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 			goto out;
 		} else if (ctx->dryp) {
 			/* dry mode, do fuck all */
-			goto out;
-		} else if (res) {
-			/* can't convert */
-			error(0, "\
-cannot convert file with issues `%s', rerun conversion later", fn);
 			goto out;
 		} else if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
 			error(0, "cannot open file `%s'", fn);

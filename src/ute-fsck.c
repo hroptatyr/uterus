@@ -110,6 +110,19 @@ error(int eno, const char *fmt, ...)
 	return;
 }
 
+/* converters */
+#if defined WORDS_BIGENDIAN
+# define letobe32	le32toh
+# define letobe64	le64toh
+# define betole32	htole32
+# define betole64	htole64
+#else  /* !WORDS_BIGENDIAN */
+# define letobe32	htobe32
+# define letobe64	htobe64
+# define betole32	be32toh
+# define betole64	be64toh
+#endif	/* WORDS_BIGENDIAN */
+
 
 /* page wise operations */
 enum {
@@ -193,7 +206,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 }
 
 static void
-conv_lep(fsck_ctx_t ctx, uteseek_t sk)
+conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
@@ -212,25 +225,25 @@ conv_lep(fsck_ctx_t ctx, uteseek_t sk)
 		xsz = scom_tick_size(ti);
 
 		/* header is always 64b */
-		sndw64[0] = htole64(sndw64[0]);
+		sndw64[0] = betole64(sndw64[0]);
 		switch (xsz) {
 		case 4:
-			sndwch[8] = htole32(sndwch[8]);
-			sndwch[9] = htole32(sndwch[9]);
-			sndwch[10] = htole32(sndwch[10]);
-			sndwch[11] = htole32(sndwch[11]);
-			sndwch[12] = htole32(sndwch[12]);
-			sndwch[13] = htole32(sndwch[13]);
-			sndwch[14] = htole32(sndwch[14]);
-			sndwch[15] = htole32(sndwch[15]);
+			sndwch[8] = betole32(sndwch[8]);
+			sndwch[9] = betole32(sndwch[9]);
+			sndwch[10] = betole32(sndwch[10]);
+			sndwch[11] = betole32(sndwch[11]);
+			sndwch[12] = betole32(sndwch[12]);
+			sndwch[13] = betole32(sndwch[13]);
+			sndwch[14] = betole32(sndwch[14]);
+			sndwch[15] = betole32(sndwch[15]);
 		case 2:
-			sndwch[4] = htole32(sndwch[4]);
-			sndwch[5] = htole32(sndwch[5]);
-			sndwch[6] = htole32(sndwch[6]);
-			sndwch[7] = htole32(sndwch[7]);
+			sndwch[4] = betole32(sndwch[4]);
+			sndwch[5] = betole32(sndwch[5]);
+			sndwch[6] = betole32(sndwch[6]);
+			sndwch[7] = betole32(sndwch[7]);
 		case 1:
-			sndwch[2] = htole32(sndwch[2]);
-			sndwch[3] = htole32(sndwch[3]);
+			sndwch[2] = betole32(sndwch[2]);
+			sndwch[3] = betole32(sndwch[3]);
 		default:
 			break;
 		}
@@ -239,7 +252,7 @@ conv_lep(fsck_ctx_t ctx, uteseek_t sk)
 }
 
 static void
-conv_bep(fsck_ctx_t ctx, uteseek_t sk)
+conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
@@ -258,25 +271,25 @@ conv_bep(fsck_ctx_t ctx, uteseek_t sk)
 		xsz = scom_tick_size(ti);
 
 		/* header is always 64b */
-		sndw64[0] = htobe64(sndw64[0]);
+		sndw64[0] = letobe64(sndw64[0]);
 		switch (xsz) {
 		case 4:
-			sndwch[8] = htobe32(sndwch[8]);
-			sndwch[9] = htobe32(sndwch[9]);
-			sndwch[10] = htobe32(sndwch[10]);
-			sndwch[11] = htobe32(sndwch[11]);
-			sndwch[12] = htobe32(sndwch[12]);
-			sndwch[13] = htobe32(sndwch[13]);
-			sndwch[14] = htobe32(sndwch[14]);
-			sndwch[15] = htobe32(sndwch[15]);
+			sndwch[8] = letobe32(sndwch[8]);
+			sndwch[9] = letobe32(sndwch[9]);
+			sndwch[10] = letobe32(sndwch[10]);
+			sndwch[11] = letobe32(sndwch[11]);
+			sndwch[12] = letobe32(sndwch[12]);
+			sndwch[13] = letobe32(sndwch[13]);
+			sndwch[14] = letobe32(sndwch[14]);
+			sndwch[15] = letobe32(sndwch[15]);
 		case 2:
-			sndwch[4] = htobe32(sndwch[4]);
-			sndwch[5] = htobe32(sndwch[5]);
-			sndwch[6] = htobe32(sndwch[6]);
-			sndwch[7] = htobe32(sndwch[7]);
+			sndwch[4] = letobe32(sndwch[4]);
+			sndwch[5] = letobe32(sndwch[5]);
+			sndwch[6] = letobe32(sndwch[6]);
+			sndwch[7] = letobe32(sndwch[7]);
 		case 1:
-			sndwch[2] = htobe32(sndwch[2]);
-			sndwch[3] = htobe32(sndwch[3]);
+			sndwch[2] = letobe32(sndwch[2]);
+			sndwch[3] = letobe32(sndwch[3]);
 		default:
 			break;
 		}
@@ -370,18 +383,28 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 static __attribute__((unused)) void
 conv_le(fsck_ctx_t ctx, utectx_t hdl)
 {
-	/* go through them pages manually */
-	for (size_t p = 0, npg = ute_npages(hdl);
-	     p < npg + tpc_has_ticks_p(hdl->tpc);
-	     p++) {
-		struct uteseek_s sk[1];
+	switch (ute_endianness(hdl)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		/* bingo, fuckall to do */
+		break;
+	case UTE_ENDIAN_BIG:
+		/* go through them pages manually */
+		for (size_t p = 0, npg = ute_npages(hdl);
+		     p < npg + tpc_has_ticks_p(hdl->tpc);
+		     p++) {
+			struct uteseek_s sk[1];
 
-		/* create a new seek */
-		seek_page(sk, hdl, p);
-		/* convert that one page */
-		conv_lep(ctx, sk);
-		/* flush the old seek */
-		flush_seek(sk);
+			/* create a new seek */
+			seek_page(sk, hdl, p);
+			/* convert that one page */
+			conv_sk_betole(ctx, sk);
+			/* flush the old seek */
+			flush_seek(sk);
+		}
+		break;
+	default:
+		break;
 	}
 	return;
 }
@@ -389,18 +412,27 @@ conv_le(fsck_ctx_t ctx, utectx_t hdl)
 static __attribute__((unused)) void
 conv_be(fsck_ctx_t ctx, utectx_t hdl)
 {
-	/* go through them pages manually */
-	for (size_t p = 0, npg = ute_npages(hdl);
-	     p < npg + tpc_has_ticks_p(hdl->tpc);
-	     p++) {
-		struct uteseek_s sk[1];
+	switch (ute_endianness(hdl)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		/* go through them pages manually */
+		for (size_t p = 0, npg = ute_npages(hdl);
+		     p < npg + tpc_has_ticks_p(hdl->tpc);
+		     p++) {
+			struct uteseek_s sk[1];
 
-		/* create a new seek */
-		seek_page(sk, hdl, p);
-		/* convert that one page */
-		conv_bep(ctx, sk);
-		/* flush the old seek */
-		flush_seek(sk);
+			/* create a new seek */
+			seek_page(sk, hdl, p);
+			/* convert that one page */
+			conv_sk_letobe(ctx, sk);
+			/* flush the old seek */
+			flush_seek(sk);
+		}
+	case UTE_ENDIAN_BIG:
+		/* bingo, fuckall to do */
+		break;
+	default:
+		break;
 	}
 	return;
 }

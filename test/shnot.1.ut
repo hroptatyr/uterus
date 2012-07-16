@@ -3,7 +3,34 @@
 TOOL=ute
 INFILE="${srcdir}/print.c.ute"
 OUTFILE="testload.ute"
-CMDLINE="shnot -i 60 -o '${OUTFILE}' '${INFILE}'"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+
+endian()
+{
+	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
+	if test "${ind}" = "0"; then
+		echo "big"
+	elif test "${ind}" = "1"; then
+		echo "little"
+	else
+		echo "unknown"
+	fi
+}
+
+cat <<EOF > "${CMDFILE}"
+TMPIN='${INFILE}'
+TMPOUT='${OUTFILE}'
+if test "$(endian)" = "big"; then
+	TMPIN=\$(mktemp "/tmp/tmp.XXXXXXXX")
+	TMPOUT=\$(mktemp "/tmp/tmp.XXXXXXXX")
+	"\${TOOL}" fsck --big-endian '${INFILE}' -o "\${TMPIN}"
+fi
+"\${TOOL}" shnot -i 60 -o "\${TMPOUT}" "\${TMPIN}"
+if test "$(endian)" = "big"; then
+	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${OUTFILE}'
+	rm -f -- "\${TMPIN}" "\${TMPOUT}"
+fi
+EOF
 
 ## STDIN
  

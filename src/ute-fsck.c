@@ -227,6 +227,7 @@ conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
 		/* header is always 64b */
 		sndw64[0] = betole64(sndw64[0]);
 		switch (xsz) {
+			uint16_t ttf;
 		case 4:
 			sndwch[8] = betole32(sndwch[8]);
 			sndwch[9] = betole32(sndwch[9]);
@@ -244,6 +245,17 @@ conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
 		case 1:
 			sndwch[2] = betole32(sndwch[2]);
 			sndwch[3] = betole32(sndwch[3]);
+
+			/* case 1 is special as we do have 64b vals too */
+			ttf = scom_thdr_ttf(ti);
+			if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
+				     ttf <= SL1T_TTF_OI)) {
+				/* byte order is converted,
+				 * swap sndwch[2] and sndwch[3] */
+				uint32_t foo = sndwch[2];
+				sndwch[2] = sndwch[3];
+				sndwch[3] = foo;
+			}
 		default:
 			break;
 		}
@@ -273,6 +285,7 @@ conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
 		/* header is always 64b */
 		sndw64[0] = letobe64(sndw64[0]);
 		switch (xsz) {
+			uint16_t ttf;
 		case 4:
 			sndwch[8] = letobe32(sndwch[8]);
 			sndwch[9] = letobe32(sndwch[9]);
@@ -290,6 +303,17 @@ conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
 		case 1:
 			sndwch[2] = letobe32(sndwch[2]);
 			sndwch[3] = letobe32(sndwch[3]);
+
+			/* case 1 is special as we do have 64b vals too */
+			ttf = scom_thdr_ttf(ti);
+			if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
+				     ttf <= SL1T_TTF_OI)) {
+				/* byte order is converted,
+				 * swap sndwch[2] and sndwch[3] */
+				uint32_t foo = sndwch[2];
+				sndwch[2] = sndwch[3];
+				sndwch[3] = foo;
+			}
 		default:
 			break;
 		}

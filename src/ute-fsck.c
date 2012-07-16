@@ -564,6 +564,9 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		} else if (ctx->outctx != NULL) {
 			/* no endian conversions in this case */
 			;
+		} else if (ctx->dryp) {
+			/* do fuckall in dry mode */
+			;
 		} else if (ctx->tgtend == UTE_ENDIAN_LITTLE) {
 			conv_le(ctx, hdl);
 		} else if (ctx->tgtend == UTE_ENDIAN_BIG) {
@@ -573,6 +576,9 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		/* safe than sorry */
 		if (ctx->outctx != NULL) {
 			ute_clone_slut(ctx->outctx, hdl);
+		} else if (ctx->dryp) {
+			/* do fuckall in dry mode */
+			;
 		} else {
 			/* make sure we set the new endianness */
 			ute_set_endianness(hdl, ctx->tgtend);

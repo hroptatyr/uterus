@@ -487,6 +487,9 @@ main(int argc, char *argv[])
 				error(0, "\
 cannot convert file with issues `%s', rerun conversion later", fn);
 			}
+		} else if (ctx->outctx != NULL) {
+			/* no endian conversions in this case */
+			;
 		} else if (argi->little_endian_given) {
 			conv_le(ctx, hdl);
 		} else if (argi->big_endian_given) {

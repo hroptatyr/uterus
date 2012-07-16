@@ -80,6 +80,10 @@ ut_tests += fsck.9.ut
 ut_tests += fsck.10.ut
 ut_tests += fsck.11.ut
 ut_tests += fsck.12.ut
+ut_tests += fsck.13.ut
+ut_tests += fsck.14.ut
+ut_tests += fsck.15.ut
+ut_tests += fsck.16.ut
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 

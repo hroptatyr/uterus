@@ -307,6 +307,34 @@ wipe:
 	return 0;
 }
 
+int
+clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src)
+{
+	size_t pgsz = seek_byte_size(src);
+	size_t off = page_offset(ctx, src->pg);
+
+	/* trivial checks */
+	if (LIKELY(off + pgsz >= ctx->fsz)) {
+		/* yep, extend the guy */
+		if (ctx->oflags == UO_RDONLY ||
+		    !__fwr_trunc(ctx->fd, off + pgsz)) {
+			return -1;
+		}
+		/* truncation successful */
+		ctx->fsz = off + pgsz;
+	}
+	/* it's just a normal seek_page() */
+	return seek_page(sk, ctx, src->pg);
+}
+
+int
+make_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
+{
+	sk->pg = pg;
+	sk->szrw = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	return clone_page(sk, ctx, sk);
+}
+
 #if !defined USE_UTE_SORT
 static inline size_t
 page_size(utectx_t ctx, uint32_t page)

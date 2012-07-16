@@ -93,6 +93,8 @@ struct utectx_s {
 /* private api */
 extern int seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg);
 extern void flush_seek(uteseek_t sk);
+extern int make_page(uteseek_t sk, utectx_t ctx, uint32_t pg);
+extern int clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src);
 
 extern void bump_header(struct utehdr2_s *hdr);
 

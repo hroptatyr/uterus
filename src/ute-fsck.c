@@ -497,24 +497,59 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		}
 
 		/* safe than sorry */
-		if (ctx->outctx) {
+		if (ctx->outctx != NULL) {
 			ute_clone_slut(ctx->outctx, hdl);
 		} else if (!res && argi->little_endian_given) {
+			/* make sure we set the new endianness */
 			ute_set_endianness(hdl, UTE_ENDIAN_LITTLE);
 		} else if (!res && argi->big_endian_given) {
+			/* make sure we set the new endianness */
 			ute_set_endianness(hdl, UTE_ENDIAN_BIG);
 		}
 		/* and that's us */
 		ute_close(hdl);
 	}
 
-	if (ctx->outctx) {
-		if (!res && argi->little_endian_given) {
-			ute_set_endianness(ctx->outctx, UTE_ENDIAN_LITTLE);
-		} else if (!res && argi->big_endian_given) {
-			ute_set_endianness(ctx->outctx, UTE_ENDIAN_BIG);
-		}
+	if (ctx->outctx != NULL) {
+		/* re-open the file */
+		const int fl = UO_RDWR | UO_CREAT | UO_TRUNC;
+		const int opfl = UO_NO_LOAD_TPC;
+		const char *fn = argi->output_arg;
+		utectx_t hdl;
+
+		/* finalise the whole shebang */
 		ute_close(ctx->outctx);
+
+		/* care about conversions now */
+		if (0) {
+			/* cosmetics */
+		} else if (!argi->little_endian_given &&
+			   !argi->big_endian_given) {
+			/* nothing to do */
+			goto out;
+		} else if (ctx->dryp) {
+			/* dry mode, do fuck all */
+			goto out;
+		} else if (res) {
+			/* can't convert */
+			error(0, "\
+cannot convert file with issues `%s', rerun conversion later", fn);
+			goto out;
+		} else if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
+			error(0, "cannot open file `%s'", fn);
+			res = 1;
+			goto out;
+		} else if (argi->little_endian_given) {
+			/* inplace little endian conversion */
+			conv_le(ctx, hdl);
+			ute_set_endianness(hdl, UTE_ENDIAN_LITTLE);
+		} else if (argi->big_endian_given) {
+			/* inplace big endian conversion */
+			conv_be(ctx, hdl);
+			ute_set_endianness(hdl, UTE_ENDIAN_BIG);
+		}
+		/* and close the whole shebang again */
+		ute_close(hdl);
 	}
 out:
 	fsck_parser_free(argi);

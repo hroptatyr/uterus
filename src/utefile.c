@@ -412,8 +412,22 @@ static void
 store_slut(utectx_t ctx)
 {
 	struct utehdr2_s *h = (void*)ctx->hdrp;
-	h->slut_sz = ctx->slut_sz;
-	h->slut_nsyms = (uint16_t)ctx->slut->nsyms;
+
+	switch (utehdr_endianness(h)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		h->slut_sz = htole32(ctx->slut_sz);
+		h->slut_nsyms = htole16((uint16_t)ctx->slut->nsyms);
+		break;
+	case UTE_ENDIAN_BIG:
+		h->slut_sz = htobe32(ctx->slut_sz);
+		h->slut_nsyms = htobe16((uint16_t)ctx->slut->nsyms);
+		break;
+	default:
+		h->slut_sz = 0;
+		h->slut_nsyms = 0;
+		break;
+	}
 	return;
 }
 
@@ -1201,6 +1215,14 @@ ute_check_endianness(utectx_t ctx)
 {
 /* just fall back to utehdr.h solution */
 	return utehdr_check_endianness(ctx->hdrp);
+}
+
+void
+ute_set_endianness(utectx_t ctx, ute_end_t en)
+{
+/* return the number of symbols tracked in the ute file */
+	utehdr_set_endianness(ctx->hdrp, en);
+	return;
 }
 
 /* utefile.c ends here */

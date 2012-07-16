@@ -205,6 +205,10 @@ extern ute_end_t ute_endianness(utectx_t ctx);
  * Check the endianness of CTX.  Return -1 if it doesn't match. */
 extern int ute_check_endianness(utectx_t ctx);
 
+/**
+ * Set the endianness used in the file associated with CTX. */
+extern void ute_set_endianness(utectx_t ctx, ute_end_t);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

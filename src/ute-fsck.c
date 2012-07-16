@@ -535,12 +535,21 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		/* safe than sorry */
 		if (ctx->outctx) {
 			ute_clone_slut(ctx->outctx, hdl);
+		} else if (!res && argi->little_endian_given) {
+			ute_set_endianness(hdl, UTE_ENDIAN_LITTLE);
+		} else if (!res && argi->big_endian_given) {
+			ute_set_endianness(hdl, UTE_ENDIAN_BIG);
 		}
 		/* and that's us */
 		ute_close(hdl);
 	}
 
 	if (ctx->outctx) {
+		if (!res && argi->little_endian_given) {
+			ute_set_endianness(ctx->outctx, UTE_ENDIAN_LITTLE);
+		} else if (!res && argi->big_endian_given) {
+			ute_set_endianness(ctx->outctx, UTE_ENDIAN_BIG);
+		}
 		ute_close(ctx->outctx);
 	}
 out:

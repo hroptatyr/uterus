@@ -42,6 +42,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include "nifty.h"
+#include "mem.h"
 #include "uteslut.h"
 /* symbol table stuff */
 #include "uteslut-trie-glue.h"
@@ -66,12 +67,6 @@ fini_slut(void)
 }
 
 /* ctor, dtor */
-#if !defined MAP_ANONYMOUS && defined MAP_ANON
-# define MAP_ANONYMOUS	(MAP_ANON)
-#endif	/* MAP_ANON->MAP_ANONYMOUS */
-#define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
-#define PROT_MEM	(PROT_READ | PROT_WRITE)
-
 static void
 init_i2s(uteslut_t s, size_t initial_alloc_sz)
 {

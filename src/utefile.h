@@ -49,6 +49,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,12 +63,36 @@ typedef void *utectx_t;
 #endif	/* INCLUDED_utefile_private_h_ */
 
 
-#define UO_RDONLY	(00)
-#define UO_WRONLY	(01)
-#define UO_RDWR		(02)
-#define UO_CREAT	(0100)
-#define UO_TRUNC	(01000)
-#define UO_APPEND	(02000)
+#if defined O_RDONLY
+# define UO_RDONLY	(O_RDONLY)
+#else
+# define UO_RDONLY	(00)
+#endif	/* O_RDONLY */
+#if defined O_WRONLY
+# define UO_WRONLY	(O_WRONLY)
+#else
+# define UO_WRONLY	(01)
+#endif	/* O_WRONLY */
+#if defined O_RDWR
+# define UO_RDWR	(O_RDWR)
+#else
+# define UO_RDWR	(02)
+#endif	/* O_RDWR */
+#if defined O_CREAT
+# define UO_CREAT	(O_CREAT)
+#else
+# define UO_CREAT	(0100)
+#endif	/* O_CREAT */
+#if defined O_TRUNC
+# define UO_TRUNC	(O_TRUNC)
+#else
+# define UO_TRUNC	(01000)
+#endif	/* O_TRUNC */
+#if defined O_APPEND
+# define UO_APPEND	(O_APPEND)
+#else
+# define UO_APPEND	(02000)
+#endif	/* O_APPEND */
 /* not in fcntl.h mehopes */
 #define UO_ANON		(010)
 #define UO_NO_HDR_CHK	(020)

@@ -247,33 +247,32 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, int old_iss, scidx_t last)
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 		uint64_t x;
 
-		if (LIKELY(same_end_p)) {
-			x = ti->u;
-			/* determine the length for the increment */
-			tsz = scom_byte_size(ti);
-		} else {
-			x = swap64(ti->u);
-			/* and again, determine the length for the increment */
-			tsz = scom_byte_size(AS_SCOM(&x));
-		}
-
 		if (UNLIKELY(old_iss & ISS_OLD_VER)) {
 			/* promote the old header
 			 * copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
 
 			/* now to what we always do */
-			if (!ctx->dryp && ctx->outctx) {
+			if (ctx->dryp) {
+				ti = nu_ti;
+			} else if (ctx->outctx) {
+				tsz = scom_byte_size(nu_ti);
 				memcpy(nu_ti + 1, ti + 1, tsz - sizeof(*ti));
 				ti = nu_ti;
-			} else if (!ctx->dryp) {
+			} else /*if (ctx->outctx == NULL && !ctx->dryp)*/ {
 				/* flush back to our page ... */
-				memcpy(ti, buf, sizeof(*ti));
-			} else {
-				/* pretend we changed it */
-				ti = nu_ti;
+				*ti = *nu_ti;
 			}
 		}
+
+		if (LIKELY(same_end_p)) {
+			x = ti->u;
+		} else {
+			x = swap64(ti->u);
+		}
+
+		/* determine the length for the increment */
+		tsz = scom_byte_size(AS_SCOM(&x));
 
 		/* check for sortedness */
 		if (last.u > x) {

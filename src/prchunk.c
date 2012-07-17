@@ -45,14 +45,11 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include "nifty.h"
+#include "mem.h"
 #include "prchunk.h"
 
 #define MAX_NLINES	(16384)
 #define MAX_LLEN	(1024)
-
-#if !defined MAP_ANONYMOUS && defined MAP_ANON
-# define MAP_ANONYMOUS	(MAP_ANON)
-#endif	/* MAP_ANON->MAP_ANONYMOUS */
 
 #if defined __INTEL_COMPILER
 # pragma warning(disable: 981)
@@ -226,8 +223,6 @@ yield3:
 FDEFU prch_ctx_t
 init_prchunk(int fd)
 {
-#define MAP_MEM		(MAP_ANONYMOUS | MAP_PRIVATE)
-#define PROT_MEM	(PROT_READ | PROT_WRITE)
 #define MAP_LEN		(MAX_NLINES * MAX_LLEN)
 	__ctx->buf = mmap(NULL, MAP_LEN, PROT_MEM, MAP_MEM, -1, 0);
 	if (__ctx->buf == MAP_FAILED) {

@@ -71,4 +71,4 @@ EXTRA_DIST = .version git-version-gen
 BUILT_SOURCES = .version
 .PHONY: .version
 .version: git-version-gen
-	$(<D)/$(<F) $@ >/dev/null
+	$(srcdir)/git-version-gen $@ >/dev/null

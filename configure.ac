@@ -42,7 +42,8 @@ SXE_CHECK_LIBLTDL
 SXE_CHECK_ANON_STRUCTS
 
 ## check for byteorder utils
-AC_CHECK_HEADERS([endian.h sys/endian.h byteorder.h byteswap.h])
+AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])
+AC_CHECK_HEADERS([byteswap.h])
 
 ## check for mkostemp
 SXE_FUNC_MKOSTEMP
@@ -72,6 +73,9 @@ AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])
 ## hdf5 demuxer needs hdf5
 AX_LIB_HDF5([serial])
 AM_CONDITIONAL([HAVE_HDF5], [test "${with_hdf5}" = "yes"])
+
+## lift big endianness to Makefile level
+AM_CONDITIONAL([WORDS_BIGENDIAN], [test "${ac_cv_c_bigendian}" = "yes"])
 
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"

@@ -175,6 +175,13 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			uint32_t v[14];
 		};
 
+#if !defined __bswap_64 && defined __swap64
+# define __bswap_64	__swap64
+#endif	/* !__bswap_64 && __swap64 */
+#if !defined __bswap_32 && defined __swap32
+# define __bswap_32	__swap32
+#endif	/* !__bswap_32 && __swap32 */
+		/* transparent flipping */
 		UTE_ITER_CUST(ti, tsz, hdl) {
 			/* tmp storage for the flip */
 			struct gen_s tmp;

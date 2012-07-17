@@ -193,10 +193,11 @@ print_muxers(void)
 }
 
 
-static void
+static int
 init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 {
 	const char *outf = opts->outfile;
+	int res = 0;
 
 	/* start with a rinse, keep our opts though */
 	memset(ctx, 0, sizeof(*ctx));
@@ -210,19 +211,22 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 		/* bad idea */
 		ctx->wrr = NULL;
 		fputs("This is binary data, cannot dump to stdout\n", stderr);
-		exit(1);
+		res = -1;
 
 	} else if ((opts->flags & OUTFILE_IS_INTO) &&
 		   (ctx->wrr = ute_open(outf, UO_CREAT | UO_RDWR))) {
 		;
-	} else {
+	} else if ((ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC))) {
 		/* plain old mux */
-		ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC);
+		;
+	} else {
+		error(0, "cannot open output file `%s'", outf);
+		res = -1;
 	}
 	/* just make sure we dont accidentally use infd 0 (STDIN) */
 	ctx->infd = -1;
 	ctx->badfd = -1;
-	return;
+	return res;
 }
 
 static void
@@ -334,7 +338,10 @@ main(int argc, char *argv[])
 	}
 
 	/* the actual muxing step */
-	init_ticks(ctx, opts);
+	if (init_ticks(ctx, opts) < 0) {
+		res = 1;
+		goto out;
+	}
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];
 		int fd;

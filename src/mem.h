@@ -102,4 +102,35 @@ snodup(const void *in)
 	return res.p;
 }
 
+#if defined MAP_FAILED
+/* ah, sys/mman.h was inc'd */
+# if !defined MAP_ANONYMOUS && defined MAP_ANON
+#  define MAP_ANONYMOUS		(MAP_ANON)
+# endif	/* MAP_ANON->MAP_ANONYMOUS */
+# if !defined MAP_MEM
+#  define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
+# endif	 /* !MAP_MEM */
+# if !defined PROT_MEM
+#  define PROT_MEM		(PROT_READ | PROT_WRITE)
+# endif	 /* !PROT_MEM */
+
+# if !defined MREMAP_MAYMOVE
+# define MREMAP_MAYMOVE		1
+static inline void*
+mremap(void *old, size_t ol_sz, size_t nu_sz, int flags)
+{
+/* impl'd only for memory maps */
+	void *new;
+
+	if (!(flags & MREMAP_MAYMOVE)) {
+		new = NULL;
+	} else if ((new = mmap(old, nu_sz, PROT_MEM, MAP_MEM, -1, 0)) != old) {
+		memcpy(new, old, ol_sz);
+		munmap(old, ol_sz);
+	}
+	return new;
+}
+# endif	/* !MREMAP_MAYMOVE */
+#endif	/* MAP_FAILED */
+
 #endif	/* INCLUDED_mem_h_ */

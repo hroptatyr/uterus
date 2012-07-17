@@ -57,6 +57,7 @@
 #include "m30.h"
 #include "m62.h"
 #include "nifty.h"
+#include "mem.h"
 /* our own goodness */
 #include "ute-shnot.h"
 
@@ -384,8 +385,6 @@ deinit(shnot_ctx_t ctx)
 static void
 init_buckets(shnot_ctx_t ctx, utectx_t hdl, bkts_t bkt)
 {
-#define PMEM	(PROT_READ | PROT_WRITE)
-#define FMEM	(MAP_ANONYMOUS | MAP_PRIVATE)
 	size_t nsyms_hdl = ute_nsyms(hdl);
 	size_t nsyms_bkt = bkt->nsyms;
 
@@ -394,7 +393,7 @@ init_buckets(shnot_ctx_t ctx, utectx_t hdl, bkts_t bkt)
 		size_t sz = (nsyms_hdl + 1) * sizeof(*snap);
 
 		if (snap == NULL) {
-			bkt->snap = mmap(snap, sz, PMEM, FMEM, -1, 0);
+			bkt->snap = mmap(snap, sz, PROT_MEM, MAP_MEM, -1, 0);
 		} else {
 			size_t old = (nsyms_bkt + 1) * sizeof(*snap);
 			bkt->snap = mremap(snap, old, sz, MREMAP_MAYMOVE);

@@ -234,7 +234,7 @@ enum {
 
 /* the actual fscking */
 static int
-fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
+fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, int old_iss, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
@@ -257,7 +257,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 			tsz = scom_byte_size(AS_SCOM(&x));
 		}
 
-		if (issues & ISS_OLD_VER) {
+		if (UNLIKELY(old_iss & ISS_OLD_VER)) {
 			/* promote the old header
 			 * copy to tmp buffer BUF */
 			scom_promote_v01(nu_ti, ti);
@@ -351,6 +351,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	scidx_t last = {
 		.u = 0ULL,
 	};
+	/* start off with no issues */
 	int issues = 0;
 
 	/* check for ute version */
@@ -373,7 +374,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 		/* create a new seek */
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
-		issues |= fsckp(ctx, sk, hdl, last);
+		issues |= fsckp(ctx, sk, hdl, issues, last);
 		/* flush the old seek */
 		flush_seek(sk);
 	}
@@ -391,7 +392,7 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 		seek_page(sk, hdl, p);
 		/* fsck that one page */
 		ctx->dryp = true;
-		iss = fsckp(ctx, sk, hdl, last);
+		iss = fsckp(ctx, sk, hdl, 0, last);
 		assert(!(iss & ISS_UNSORTED));
 		ctx->dryp = false;
 		/* flush the old seek */

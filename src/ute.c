@@ -221,7 +221,8 @@ build_cmd(const char *cmd)
 	}
 	/* search the path where the binary resides */
 	strncpy(dp + 1, prefix, sizeof(prefix) - 1);
-	strcpy(dp + sizeof(prefix), cmd);
+	dp += sizeof(prefix);
+	strncpy(dp, cmd, sizeof(wd) - (dp - wd));
 	if (__exep(wd)) {
 		/* found one ... */
 		goto succ;

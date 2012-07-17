@@ -223,20 +223,6 @@ __addconv_tick(utectx_t hdl, scom_t si, size_t tbsz)
 	return;
 }
 
-static bool
-need_swap_p(fsck_ctx_t ctx, utectx_t hdl)
-{
-	switch (ute_endianness(hdl)) {
-	case UTE_ENDIAN_UNK:
-	case UTE_ENDIAN_LITTLE:
-		return ctx->natend != UTE_ENDIAN_LITTLE;
-	case UTE_ENDIAN_BIG:
-		return ctx->natend != UTE_ENDIAN_BIG;
-	default:
-		return false;
-	}
-}
-
 
 /* page wise operations */
 enum {
@@ -252,7 +238,7 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
-	bool same_end_p = !need_swap_p(ctx, hdl);
+	bool same_end_p = ute_check_endianness(hdl) == 0;
 	int issues = 0;
 
 	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {

@@ -163,7 +163,7 @@
 # else
 /* technically we could use the __bswap_32 and do it ourselves
  * but I'm not in the mood */
-#  error cannot figure out how to convert big-endian uint64_t to host
+#  error cannot figure out how to convert host uint64_t to big-endian
 # endif
 #endif	/* !htobe64 */
 
@@ -173,7 +173,7 @@
 # elif defined WORDS_BIGENDIAN
 /* technically we could use the __bswap_32 and do it ourselves
  * but I'm not in the mood */
-#  error cannot figure out how to convert big-endian uint64_t to host
+#  error cannot figure out how to convert host uint64_t to little-endian
 # else
 #  define htole64(x)	(x)
 # endif

@@ -68,6 +68,9 @@
 # define UDEBUGvv(args...)
 #endif	/* !UDEBUGvv */
 
+#if !defined MAP_ANONYMOUS && defined MAP_ANON
+# define MAP_ANONYMOUS	(MAP_ANON)
+#endif	/* MAP_ANON->MAP_ANONYMOUS */
 #define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
 #define PROT_MEM	(PROT_READ | PROT_WRITE)
 

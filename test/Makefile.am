@@ -55,12 +55,23 @@ EXTRA_DIST += mux.10.ref.ute
 EXTRA_DIST += mux.11.ref.ute
 EXTRA_DIST += mux.12.ref.ute
 
+if WORDS_BIGENDIAN
+ut_tests += print.3.ut
+ut_tests += print.4.ut
+else
 ut_tests += print.1.ut
 ut_tests += print.2.ut
+ut_tests += print.5.ut
+ut_tests += print.6.ut
+endif
 EXTRA_DIST += print.a.ute
 EXTRA_DIST += print.b.ute
 EXTRA_DIST += print.c.ute
 EXTRA_DIST += print.d.ute
+EXTRA_DIST += print.e.ute
+EXTRA_DIST += print.e.beute
+EXTRA_DIST += print.f.ute
+EXTRA_DIST += print.f.beute
 
 ut_tests += shnot.1.ut
 ut_tests += shnot.2.ut

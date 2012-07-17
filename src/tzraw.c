@@ -56,12 +56,10 @@
 
 /* UNLIKELY/LIKELY/etc. */
 #include "nifty.h"
+/* for mmap goodies */
+#include "mem.h"
 /* me own header, innit */
 #include "tzraw.h"
-
-#if !defined MAP_ANONYMOUS && defined MAP_ANON
-# define MAP_ANONYMOUS	(MAP_ANON)
-#endif	/* MAP_ANON->MAP_ANONYMOUS */
 
 #if defined TZDIR
 static const char tzdir[] = TZDIR;
@@ -192,8 +190,6 @@ zif_close(zif_t z)
 inline zif_t
 zif_inst(zif_t z)
 {
-#define PROT_MEMMAP	PROT_READ | PROT_WRITE
-#define MAP_MEMMAP	MAP_PRIVATE | MAP_ANONYMOUS
 	void *map;
 	size_t sz;
 	zif_t res = NULL;
@@ -204,7 +200,7 @@ zif_inst(zif_t z)
 	}
 	sz = z->mpsz + sizeof(*z);
 
-	map = mmap(NULL, sz, PROT_MEMMAP, MAP_MEMMAP, -1, 0);
+	map = mmap(NULL, sz, PROT_MEM, MAP_MEM, -1, 0);
 	if (UNLIKELY(map == MAP_FAILED)) {
 		return NULL;
 	}

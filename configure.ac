@@ -73,6 +73,9 @@ AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])
 AX_LIB_HDF5([serial])
 AM_CONDITIONAL([HAVE_HDF5], [test "${with_hdf5}" = "yes"])
 
+## lift big endianness to Makefile level
+AM_CONDITIONAL([WORDS_BIGENDIAN], [test "${ac_cv_c_bigendian}" = "yes"])
+
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"
 utedir="${libexecdir}/ute"

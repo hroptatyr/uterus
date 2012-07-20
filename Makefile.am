@@ -53,6 +53,11 @@ pkgconfig_DATA += libuterus.pc
 pkgconfig_DATA += uterus.pc
 
 EXTRA_DIST = .version git-version-gen
+EXTRA_DIST += uterus.magic
+
+if HAVE_FILE
+pkgdata_DATA = uterus.mgc
+endif  HAVE_FILE
 
 # Version string management.  There are two files to be aware of:
 # .tarball-version - present only in a distribution tarball, and not in
@@ -72,3 +77,6 @@ BUILT_SOURCES = .version
 .PHONY: .version
 .version: git-version-gen
 	$(srcdir)/git-version-gen $@ >/dev/null
+
+uterus.mgc: uterus.magic
+	$(FILE) -C -m $(srcdir)/uterus.magic && mv $(builddir)/uterus.magic.mgc $@

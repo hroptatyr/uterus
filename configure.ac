@@ -77,6 +77,10 @@ AM_CONDITIONAL([HAVE_HDF5], [test "${with_hdf5}" = "yes"])
 ## lift big endianness to Makefile level
 AM_CONDITIONAL([WORDS_BIGENDIAN], [test "${ac_cv_c_bigendian}" = "yes"])
 
+## check for file(1)
+AC_CHECK_TOOL([FILE], [file])
+AM_CONDITIONAL([HAVE_FILE], [test -n "${FILE}"])
+
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"
 utedir="${libexecdir}/ute"

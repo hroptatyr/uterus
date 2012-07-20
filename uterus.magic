@@ -1,0 +1,12 @@
+
+# file(1) magic for ute files
+#
+0	string		UTE+	ute file
+>4	string		v	\b, version
+>5	byte		x	%c
+>6	string		.	\b.
+>7	byte		x	\b%c
+>8	string		\<\>	\b, big-endian
+>>16	belong		>0	\b, slut size %u
+>8	string		\>\<	\b, litte-endian
+>>16	lelong		>0	\b, slut size %u

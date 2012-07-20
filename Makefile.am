@@ -53,6 +53,7 @@ pkgconfig_DATA += libuterus.pc
 pkgconfig_DATA += uterus.pc
 
 EXTRA_DIST = .version git-version-gen
+EXTRA_DIST += uterus.magic
 
 # Version string management.  There are two files to be aware of:
 # .tarball-version - present only in a distribution tarball, and not in

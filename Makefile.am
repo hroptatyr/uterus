@@ -59,6 +59,8 @@ if HAVE_FILE
 pkgdata_DATA = uterus.mgc
 endif  HAVE_FILE
 
+CLEANFILES = $(pkgdata_DATA)
+
 # Version string management.  There are two files to be aware of:
 # .tarball-version - present only in a distribution tarball, and not in
 #   a checked-out repository.  Created with contents that were learned at

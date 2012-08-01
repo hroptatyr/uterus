@@ -960,8 +960,8 @@ ute_mktemp(int oflags)
 	/* now open it ... */
 	resfd = mkstemp(tmpfn);
 	chmod(tmpfn, 0644);
-	/* wipe and check for anon */
-	if ((oflags &= UO_ANON)) {
+	/* check for anon */
+	if ((oflags & UO_ANON)) {
 		/* ... and unlink it if ANON is set */
 		unlink(tmpfn);
 	}

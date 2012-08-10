@@ -11,6 +11,7 @@ info_TEXINFOS = uterus.texi
 uterus_TEXINFOS =
 uterus_TEXINFOS += $(built_texis)
 uterus_TEXINFOS += uterus.texi
+uterus_TEXINFOS += uteapi.texi
 
 man1_MANS =
 man1_MANS += $(built_mans)

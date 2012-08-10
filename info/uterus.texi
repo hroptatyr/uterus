@@ -65,6 +65,7 @@ The ute file format
 * ute-fsck::            Check ute file for consistency
 * ute-slut::            Print or edit the symbol look-up table
 * Muxers::              Connect foreign sources/sinks to/from ute files
+* API::                 Working with ute files from other C programs
 @end menu
 
 
@@ -683,6 +684,13 @@ MATLAB Level 5 .mat file printer which currently only works on shnots.
 The output columns are, in that order, timestamp, bid price, ask price,
 bid quantity, ask quantity.
 @end table
+
+
+@node API
+@chapter API
+
+@include uteapi.texi
+
 
 @summarycontents
 @contents

@@ -97,6 +97,8 @@ typedef void *utectx_t;
 #define UO_ANON		(010)
 #define UO_NO_HDR_CHK	(020)
 #define UO_NO_LOAD_TPC	(040)
+/* when used in conjunction with UO_CREAT no initial TPC will be created */
+#define UO_NO_CREAT_TPC	(040)
 
 /**
  * Open the file in PATH and create a ute context.

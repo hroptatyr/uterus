@@ -1,0 +1,75 @@
+@c more complete documentation is of course utefile.h
+
+@defun ute_open path oflags
+Open the file in @samp{path} and return a ute context.
+
+Argument @samp{oflags} is like @samp{flags} in @samp{open()}:
+@end defun
+
+@defun ute_mktemp oflags
+Open a (new) temporary file in @samp{$TMPDIR} and return a ute context.
+The file will be opened with @samp{UO_CREAT} and @samp{OFLAGS} will be
+widely ignored, i.e. except for:
+
+@verbatim
+UO_ANON:
+- open a file without a reference in the file system (anonymous inode)
+@end verbatim
+@end defun
+
+@defun ute_close utectx
+Close the context, do final work and free associated resources.
+
+This is in fact short for:
+@verbatim
+ute_flush(...);
+ute_sort(...);
+<flush_slut(...);>
+ute_free(...);
+@end verbatim
+@end defun
+
+@defun ute_free utectx
+Free all resources associated with @samp{utectx} immediatedly.
+
+If changes are meant to end up on disk call @samp{ute_close()}.
+@end defun
+
+@defun ute_flush utectx
+Flush any pending write operations.
+@end defun
+
+@defun ute_nticks utectx
+Return the (total) number of ticks stored in @samp{utectx}.
+@end defun
+
+@defun ute_nsyms utectx
+Return the number of symbols tracked in @samp{utectx}.
+@end defun
+
+@defun ute_fn utectx
+Return the file name associated with @samp{utectx}.
+
+In case of anonymous inodes @samp{NULL} will be returned.
+@end defun
+
+@defun ute_seek utectx i
+Return a pointer to the @samp{i}-th tick in @samp{utectx}.
+@end defun
+
+@defun ute_tick utectx tgt i
+Obtain the @samp{i}-th tick in @samp{utectx}, put a pointer to it into
+@samp{tgt} and return the tick size.
+@end defun
+
+@defun ute_add_tick utectx scom
+Add the tick pointed to by @samp{scom} to @samp{utectx}.
+@end defun
+
+@defun ute_sym2idx utectx sym
+Given a symbol @samp{sym} return the index in the look-up table.
+@end defun
+
+@defun ute_idx2sym utectx idx
+Given an index @samp{idx} return the symbol in the look-up table.
+@end defun

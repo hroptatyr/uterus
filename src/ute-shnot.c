@@ -98,7 +98,7 @@ bkts_cleanse(bkts_t b)
 static bool
 xsnap_empty_p(xsnap_t sn)
 {
-	return sn->nt.mant == 0 && sn->sn->bp == 0 && sn->sn->ap == 0;
+	return M62_MANT(sn->nt) == 0 && sn->sn->bp == 0 && sn->sn->ap == 0;
 }
 
 static void

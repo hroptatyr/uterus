@@ -332,7 +332,7 @@ check_ariva_tl(ariva_tl_t t)
 	}
 	if (t->p.mant == 0 && t->P.mant == 0 &&
 	    t->a.mant == 0 && t->b.mant == 0 &&
-	    t->A.mant == 0 && t->B.mant == 0 && t->V.mant == 0) {
+	    t->A.mant == 0 && t->B.mant == 0 && M62_MANT(t->V) == 0) {
 		return false;
 	}
 	return true;
@@ -466,10 +466,10 @@ reco_tl(char *buf, ariva_tl_t t)
 	if (t->k.mant) {
 		len += sprintf(buf + len, "\tk%2.4f", ffff_m30_d(t->k));
 	}
-	if (t->v.mant) {
+	if (M62_MANT(t->v)) {
 		len += sprintf(buf + len, "\tv%2.4f", ffff_m62_d(t->v));
 	}
-	if (t->V.mant) {
+	if (M62_MANT(t->V)) {
 		len += sprintf(buf + len, "\tV%2.4f", ffff_m62_d(t->V));
 	}
 	if (t->stmp2) {
@@ -729,14 +729,14 @@ write_tick(mux_ctx_t ctx, ariva_tl_t tl)
 		tp++;
 	}
 
-	if (tl->v.mant) {
+	if (M62_MANT(tl->v)) {
 		sl1t_copy_hdr(tp, (void*)tl);
 		sl1t_set_ttf(tp, SL1T_TTF_VOL);
 		tp->w[0] = tl->v.v;
 		tp++;
 	}
 
-	if (tl->V.mant) {
+	if (M62_MANT(tl->V)) {
 		sl1t_copy_hdr(tp, (void*)tl);
 		sl1t_set_ttf(tp, SL1T_TTF_VPR);
 		tp->w[0] = tl->V.v;

@@ -102,3 +102,36 @@ ute_add_tick(u, &tick);
 /* flush to disk and free resources */
 ute_close(u);
 @end example
+
+@noindent
+Also it is quite straight-forward to reobtain the ticks in such a file:
+
+@example
+#include <uterus/uterus.h>
+
+@dots{}
+
+utectx_t u = ute_open("the_input.ute", UO_RDONLY);
+
+if (u && ute_nticks(u) > 0) @{
+        sl1t_t tick;
+        size_t x = ute_tick(u, AS_SCOM(&tick), 0);
+
+        if (x == sizeof(*tick)) @{
+                /* make sure casting actually works */
+                double prc = ffff_m30_d(tick.pri);
+                double qty = ffff_m30_d(tick.qty);
+
+                printf("price %.4f  quantity %.4f\n", prc, qty);
+                /* NOTE: under gcc the transparent_union framework might
+                   not work, so the call ffff_m30_d(unsigned int) will
+                   trigger a warning or an error.
+                   Use: ffff_m30_d(ffff_m30_ui32(@dots{})) in that case. */
+        @}
+@}
+
+if (u) @{
+        /* make sure we free the file descriptor and whatnot */
+        ute_close(u);
+@}
+@end example

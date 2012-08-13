@@ -177,13 +177,15 @@ fm_write_uint8(fmcmb_t filemem, uint8_t val)
 DEFUN int
 fm_read_chars(fmcmb_t filemem, void *buff, size_t len)
 {
-	return fmread(buff, sizeof(char), len, filemem) == len ? 0 : -1;
+	const ssize_t slen = len;
+	return fmread(buff, sizeof(char), len, filemem) == slen ? 0 : -1;
 }
 
 DEFUN int
 fm_write_chars(fmcmb_t filemem, const char *buff, size_t len)
 {
-	return fmwrite(buff, sizeof(*buff), len, filemem) == len ? 0 : -1;
+	const ssize_t slen = len;
+	return fmwrite(buff, sizeof(*buff), len, filemem) == slen ? 0 : -1;
 }
 
 /* fileutils.c ends here */

@@ -49,13 +49,6 @@ extern "C" {
 
 #include "scommon.h"
 
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-
 typedef struct ssnp_s *ssnp_t;
 typedef const struct ssnp_s *const_ssnp_t;
 

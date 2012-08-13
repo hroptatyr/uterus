@@ -73,3 +73,65 @@ Given a symbol @samp{sym} return the index in the look-up table.
 @defun ute_idx2sym utectx idx
 Given an index @samp{idx} return the symbol in the look-up table.
 @end defun
+
+@noindent
+Using the API as introduced thus far, it's fairly straight-forward to
+write ute writer programs:
+
+@example
+#include <uterus/uterus.h>
+
+@dots{}
+
+utectx_t u = ute_open("the_output.ute", UO_CREAT | UO_TRUNC | UO_RDWR);
+struct sl1t_s tick;
+
+/* timestamp, tick index and tick type */
+sl1t_set_stmp_sec(&tick, 1234567890/*2009-02-13 23:31:30*/);
+sl1t_set_stmp_msec(&tick, 0);
+sl1t_set_tblidx(&tick, 1);
+sl1t_set_ttf(&tick, SL1T_TTF_BID);
+
+/* the actual price and quantity 650 pieces for 12.555 */
+tick.bid = ffff_m30_get_d(12.5550).u;
+tick.bsz = ffff_m30_get_d(650.0).u;
+
+/* add the tick to the file */
+ute_add_tick(u, &tick);
+
+/* flush to disk and free resources */
+ute_close(u);
+@end example
+
+@noindent
+Also it is quite straight-forward to reobtain the ticks in such a file:
+
+@example
+#include <uterus/uterus.h>
+
+@dots{}
+
+utectx_t u = ute_open("the_input.ute", UO_RDONLY);
+
+if (u && ute_nticks(u) > 0) @{
+        sl1t_t tick;
+        size_t x = ute_tick(u, AS_SCOM(&tick), 0);
+
+        if (x == sizeof(*tick)) @{
+                /* make sure casting actually works */
+                double prc = ffff_m30_d(tick.pri);
+                double qty = ffff_m30_d(tick.qty);
+
+                printf("price %.4f  quantity %.4f\n", prc, qty);
+                /* NOTE: under gcc the transparent_union framework might
+                   not work, so the call ffff_m30_d(unsigned int) will
+                   trigger a warning or an error.
+                   Use: ffff_m30_d(ffff_m30_ui32(@dots{})) in that case. */
+        @}
+@}
+
+if (u) @{
+        /* make sure we free the file descriptor and whatnot */
+        ute_close(u);
+@}
+@end example

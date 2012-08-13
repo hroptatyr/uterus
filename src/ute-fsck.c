@@ -139,7 +139,6 @@ conv_1_swap(scom_thdr_t ti, size_t tbsz)
 	/* header is always 64b */
 	sndw64[0] = swap64(sndw64[0]);
 	switch (tbsz) {
-		uint16_t ttf;
 	case 4:
 		sndwch[8] = swap32(sndwch[8]);
 		sndwch[9] = swap32(sndwch[9]);
@@ -157,17 +156,6 @@ conv_1_swap(scom_thdr_t ti, size_t tbsz)
 	case 1:
 		sndwch[2] = swap32(sndwch[2]);
 		sndwch[3] = swap32(sndwch[3]);
-
-		/* case 1 is special as we do have 64b vals too */
-		ttf = scom_thdr_ttf(ti);
-		if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
-			     ttf <= SL1T_TTF_OI)) {
-			/* byte order is converted,
-			 * swap sndwch[2] and sndwch[3] */
-			uint32_t foo = sndwch[2];
-			sndwch[2] = sndwch[3];
-			sndwch[3] = foo;
-		}
 	default:
 		break;
 	}
@@ -187,7 +175,6 @@ __addconv_tick(utectx_t hdl, scom_t si, size_t tbsz)
 	/* header is always 64b */
 	tgt_sndw64[0] = swap64(src_sndw64[0]);
 	switch (tbsz) {
-		uint16_t ttf;
 	case 4:
 		tgt_sndwch[8] = swap32(src_sndwch[8]);
 		tgt_sndwch[9] = swap32(src_sndwch[9]);
@@ -205,17 +192,6 @@ __addconv_tick(utectx_t hdl, scom_t si, size_t tbsz)
 	case 1:
 		tgt_sndwch[2] = swap32(src_sndwch[2]);
 		tgt_sndwch[3] = swap32(src_sndwch[3]);
-
-		/* case 1 is special as we do have 64b vals too */
-		ttf = scom_thdr_ttf(AS_SCOM(ti));
-		if (UNLIKELY(ttf >= SL1T_TTF_VOL &&
-			     ttf <= SL1T_TTF_OI)) {
-			/* byte order is converted,
-			 * swap sndwch[2] and sndwch[3] */
-			uint32_t foo = src_sndwch[2];
-			tgt_sndwch[2] = src_sndwch[3];
-			tgt_sndwch[3] = foo;
-		}
 	default:
 		break;
 	}

@@ -13,7 +13,7 @@ COMMENT="same as mux.b.ariva but needs sorting"
 ## outfile sum
 OUTFILE_SHA1="
 2615c19e165d6a29fe6c10ee17f899b0ca8bb265
-bddad3a66a5a6547364b3cd3b3cfcded0152f73f"
+3e7f273d89c4c13856be59949d624d3ef1f1ccbb"
 
 ## reffile
 # REFFILE="mux.5.ref.ute"

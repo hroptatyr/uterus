@@ -61,29 +61,85 @@ union m62_u {
 	uint64_t u;
 	struct {
 #if defined WORDS_BIGENDIAN
+		uint64_t mant_lower:32;
 		uint8_t expo:2;
-		int64_t mant:62;
+		int64_t mant_upper:30;
 #else  /* !WORDS_BIGENDIAN */
-		int64_t mant:62;
+		int64_t mant_lu:62;
 		uint8_t expo:2;
 #endif	/* WORDS_BIGENDIAN */
 	} __attribute__((packed));
+
+	struct {
+		uint32_t lower;
+		uint32_t upper;
+	};
 } __attribute__((transparent_union));
 #endif	/* !M62T */
+
+static inline __attribute__((pure, always_inline)) int64_t
+__m62_mant(m62_t m)
+{
+#if defined WORDS_BIGENDIAN
+	return ((int64_t)m.mant_upper << 32U) | (uint64_t)m.mant_lower;
+#else  /* !WORDS_BIGENDIAN */
+	return m.mant_lu;
+#endif	/* WORDS_BIGENDIAN */
+}
+#define M62_MANT(x)	__m62_mant(x)
+
+#define M62_EXPO(x)	x.expo
+
+#if defined WORDS_BIGENDIAN
+#define M62_SET_MANT(tgt, m)					\
+	do {							\
+		int64_t __m_mant__ = m;				\
+		tgt.mant_lower = __m_mant__ & 0xffffffffU;	\
+		tgt.mant_upper = __m_mant__ >> 32U;		\
+	} while (0)
+#else  /* !WORDS_BIGENDIAN */
+#define M62_SET_MANT(tgt, m)			\
+	tgt.mant_lu = m
+#endif	/* WORDS_BIGENDIAN */
+#define M62_SET_EXPO(tgt, x)			\
+	tgt.expo = x
+
+#if defined WORDS_BIGENDIAN
+#define M62_MANT_DIVSET_10(tgt)						\
+	({								\
+		int64_t __m_mant__ = M62_MANT(tgt);			\
+		int64_t __res__ = __m_mant__ / 10;			\
+		tgt.mant_lower = __res__ & 0xfffffffffU;		\
+		tgt.mant_upper = __res__ >> 32U;			\
+		__res__;})
+#else  /* !WORDS_BIGENDIAN */
+#define M62_MANT_DIVSET_10(tgt)			\
+	tgt.mant_lu /= 10
+#endif	/* WORDS_BIGENDIAN */
 
 /* muxer */
 static inline m62_t __attribute__((pure, always_inline))
 ffff_m62_get_ui64(uint64_t v)
 {
 	m62_t res;
-	res.v = v;
+	res.u = v;
+	return res;
+}
+
+static inline __attribute__((pure, always_inline)) m62_t
+ffff_m62_get_ui32(uint32_t v1, uint32_t v2)
+{
+	m62_t res;
+
+	res.lower = v2;
+	res.upper = v1;
 	return res;
 }
 
 static inline uint64_t __attribute__((pure, always_inline))
 ffff_m62_ui64(m62_t v)
 {
-	return v.v;
+	return v.u;
 }
 
 /* ctors */
@@ -109,7 +165,7 @@ ffff_m62_get_d(double d);
 
 /**
  * Convert string S to monetary. */
-static inline m62_t __attribute__((always_inline))
+static m62_t __attribute__((always_inline))
 ffff_m62_get_s(const char **s);
 
 /**
@@ -127,8 +183,14 @@ static inline m62_t __attribute__((always_inline))
 ffff_m62_get_m30(m30_t m30)
 {
 	m62_t res;
-	res.expo = m30.expo;
-	res.mant = m30.mant;
+
+	M62_SET_EXPO(res, m30.expo);
+#if defined WORDS_BIGENDIAN
+	res.mant_lower = m30.mant;
+	res.mant_upper = 0;
+#else  /* !WORDS_BIGENDIAN */
+	res.mant_lu = m30.mant;
+#endif	/* WORDS_BIGENDIAN */
 	return res;
 }
 #endif	/* INCLUDED_m30_h_ */
@@ -150,7 +212,9 @@ static const float ffff_m62_f_ubounds[] = {
 static inline float __attribute__((always_inline))
 ffff_m62_f(m62_t m)
 {
-	return (float)m.mant * ffff_m62_f_denoms[m.expo];
+	/* get the mant in one piece */
+	int64_t mant = M62_MANT(m);
+	return (float)mant * ffff_m62_f_denoms[M62_EXPO(m)];
 }
 
 static const float ffff_m62_ui64_denoms[] = {
@@ -171,8 +235,8 @@ ffff_m62_get_f(float f)
 			break;
 		}
 	}
-	res.expo = i;
-	res.mant = (int64_t)(f / ffff_m62_f_denoms[i]);
+	M62_SET_EXPO(res, i);
+	M62_SET_MANT(res, (int64_t)(f / ffff_m62_f_denoms[i]));
 	return res;
 }
 
@@ -189,7 +253,8 @@ static const double ffff_m62_d_ubounds[] = {
 static inline double __attribute__((always_inline))
 ffff_m62_d(m62_t m)
 {
-	return (double)m.mant * ffff_m62_d_denoms[m.expo];
+	int64_t mant = M62_MANT(m);
+	return (double)mant * ffff_m62_d_denoms[M62_EXPO(m)];
 }
 
 static inline m62_t __attribute__((always_inline))
@@ -205,22 +270,27 @@ ffff_m62_get_d(double d)
 			break;
 		}
 	}
-	res.expo = i;
-	res.mant = (int64_t)(d / ffff_m62_d_denoms[i]);
+	M62_SET_EXPO(res, i);
+	M62_SET_MANT(res, (int64_t)(d / ffff_m62_d_denoms[i]));
 	return res;
 }
 
-static inline uint64_t
+static inline int64_t
 __m62_add_helper(m62_t a, m62_t b)
 {
-	switch (a.expo - b.expo) {
+	switch (M62_EXPO(a) - M62_EXPO(b)) {
+		int64_t ma, mb;
 	case 1:
-		return a.mant + b.mant / 10000;
+		ma = M62_MANT(a);
+		mb = M62_MANT(b);
+		return ma + mb / 10000;
 	case 2:
-		return a.mant + b.mant / 10000 / 10000;
+		ma = M62_MANT(a);
+		mb = M62_MANT(b);
+		return ma + mb / 10000 / 10000;
 	case 3:
 		/* no need to do anything, it's out of range */
-		return a.mant;
+		return M62_MANT(a);
 	default:
 		break;
 	}
@@ -233,18 +303,18 @@ ffff_m62_add_m30(m62_t a, m30_t b)
 {
 	m62_t res;
 
-	if (a.expo == b.expo) {
+	if (M62_EXPO(a) == b.expo) {
 		/* common case */
-		res.mant = a.mant + b.mant;
-		res.expo = a.expo;
-	} else if (a.mant == 0) {
+		M62_SET_MANT(res, M62_MANT(a) + b.mant);
+		M62_SET_EXPO(res, M62_EXPO(a));
+	} else if (M62_MANT(a) == 0) {
 		/* easy case too */
-		res.mant = b.mant;
-		res.expo = b.expo;
+		M62_SET_MANT(res, b.mant);
+		M62_SET_EXPO(res, b.expo);
 	} else {
 		/* do me? */
-		res.mant = a.mant;
-		res.expo = a.expo;
+		M62_SET_MANT(res, M62_MANT(a));
+		M62_SET_EXPO(res, M62_EXPO(a));
 	}
 	return res;
 }
@@ -257,15 +327,15 @@ ffff_m62_mul_2m30(m30_t a, m30_t b)
 	if ((a.expo == 1 && b.expo == 2) ||
 	    (a.expo == 2 && b.expo == 2)) {
 		/* common cases */
-		res.mant = (uint64_t)a.mant * (uint64_t)b.mant;
-		res.expo = a.expo;
+		M62_SET_MANT(res, (uint64_t)a.mant * (uint64_t)b.mant);
+		M62_SET_EXPO(res, a.expo);
 	} else if (a.expo == b.expo && a.expo == 1) {
-		res.mant = (uint64_t)a.mant * (uint64_t)b.mant;
-		res.expo = 0;
+		M62_SET_MANT(res, (uint64_t)a.mant * (uint64_t)b.mant);
+		M62_SET_EXPO(res, 0);
 	} else {
 		/* no multiplication rule yet */
-		res.mant = 0;
-		res.expo = a.expo;
+		M62_SET_MANT(res, 0);
+		M62_SET_EXPO(res, a.expo);
 	}
 	return res;
 }
@@ -276,10 +346,12 @@ ffff_m62_add_mul_2m30(m62_t sum, m30_t a, m30_t b)
 /* returns summand + a * b */
 	m62_t res;
 	res.v = 0;
-	if (a.expo == 1 && b.expo == 2 && (sum.expo == 1 || sum.v == 0)) {
+	if (a.expo == 1 && b.expo == 2 && (M62_EXPO(sum) == 1 || sum.v == 0)) {
 		/* only case we support */
-		res.mant = sum.mant + (uint64_t)a.mant * (uint64_t)b.mant;
-		res.expo = 1;
+		M62_SET_MANT(
+			res,
+			M62_MANT(sum) + (uint64_t)a.mant * (uint64_t)b.mant);
+		M62_SET_EXPO(res, 1);
 	}
 	return res;
 }
@@ -289,9 +361,12 @@ ffff_m30_vwap(m62_t volpri, m62_t vol)
 {
 	m30_t res;
 	res.v = 0;
-	if (volpri.expo == 1 && vol.expo == 2 && vol.mant != 0) {
+	if (M62_EXPO(volpri) == 1 && M62_EXPO(vol) == 2 && M62_MANT(vol) != 0) {
 		/* only case we support */
-		res.mant = (volpri.mant / vol.mant);
+		int64_t mvp = M62_MANT(volpri);
+		int64_t mv = M62_MANT(vol);
+
+		res.mant = mvp / mv;
 		res.expo = 1;
 	}
 	return res;
@@ -301,8 +376,8 @@ static inline m30_t
 ffff_m30_from_m62(m62_t v)
 {
 	m30_t res;
-	res.mant = v.mant;
-	res.expo = v.expo;
+	res.mant = M62_MANT(v);
+	res.expo = M62_EXPO(v);
 	return res;
 }
 #endif	/* INCLUDED_m30_h_ */
@@ -312,17 +387,20 @@ ffff_m62_add(m62_t a, m62_t b)
 {
 	m62_t res;
 
-	if (a.expo == b.expo) {
+	if (M62_EXPO(a) == M62_EXPO(b)) {
 		/* common case */
-		res.mant = a.mant + b.mant;
-		res.expo = a.expo;
-	} else if (a.expo > b.expo) {
-		res.mant = __m62_add_helper(a, b);
-		res.expo = a.expo;
+		int64_t ma = M62_MANT(a);
+		int64_t mb = M62_MANT(b);
+
+		M62_SET_MANT(res, ma + mb);
+		M62_SET_EXPO(res, M62_EXPO(a));
+	} else if (M62_EXPO(a) > M62_EXPO(b)) {
+		M62_SET_MANT(res, __m62_add_helper(a, b));
+		M62_SET_EXPO(res, M62_EXPO(a));
 	} else /*if (b.expo > a.expo)*/ {
 		/* addition is commutative */
-		res.mant = __m62_add_helper(b, a);
-		res.expo = b.expo;
+		M62_SET_MANT(res, __m62_add_helper(b, a));
+		M62_SET_EXPO(res, M62_EXPO(b));
 	}
 	return res;
 }
@@ -333,8 +411,8 @@ ffff_m62_add_ui64(m62_t a, uint64_t b)
 	m62_t res;
 
 	/* a.expo must be 1 or a.v must be 0 */
-	res.mant = a.mant + b * ffff_m62_ui64_denoms[1];
-	res.expo = 1;
+	M62_SET_MANT(res, M62_MANT(a) + b * ffff_m62_ui64_denoms[1]);
+	M62_SET_EXPO(res, 1);
 	return res;
 }
 
@@ -344,13 +422,13 @@ ffff_m62_add_mul_m30_ui64(m62_t a, m30_t b, uint64_t c)
 /* -> a + b * c */
 	m62_t h;
 
-	h.mant = b.mant * c;
-	h.expo = b.expo;
+	M62_SET_MANT(h, b.mant * c);
+	M62_SET_EXPO(h, b.expo);
 	return ffff_m62_add(a, h);
 }
 
 #if !defined DEFINE_GORY_STUFF
-static inline m62_t
+static m62_t
 ffff_m62_get_s(const char **s __attribute__((unused)))
 {
 	m62_t res;
@@ -462,7 +540,7 @@ __62_0_get_s(const char *mant, size_t n, const char *f, size_t m)
 	return res;
 }
 
-static inline m62_t
+static m62_t
 ffff_m62_get_s(const char **nptr)
 {
 	/* spray some pointers */
@@ -471,7 +549,7 @@ ffff_m62_get_s(const char **nptr)
 	bool neg = false;
 	m62_t r62;
 
-	r62.expo = 1;
+	M62_SET_EXPO(r62, 1);
 
 	/* space skipping omitted, rather die if there's a space */
 	if (**nptr == '-') {
@@ -501,20 +579,22 @@ ffff_m62_get_s(const char **nptr)
 	 * so frac - mant is the number of integral digits */
 	if ((p - frac) >= 4 &&
 	    (uint64_t)(mend - mant) <= ffff_m62_i_ubounds_l10[0]) {
-		r62.expo = 0;
-		r62.mant = __62_0_get_s(mant, (mend - mant), frac, p - frac);
+		M62_SET_EXPO(r62, 0);
+		M62_SET_MANT(
+			r62, __62_0_get_s(mant, (mend - mant), frac, p - frac));
 	} else if ((p - frac) > 0 ||
 		   (uint64_t)(mend - mant) <= ffff_m62_i_ubounds_l10[1]) {
-		r62.expo = 1;
-		r62.mant = __62_1_get_s(mant, mend - mant, frac, p - frac);
+		M62_SET_EXPO(r62, 1);
+		M62_SET_MANT(
+			r62, __62_1_get_s(mant, mend - mant, frac, p - frac));
 	} else if ((uint64_t)(mend - mant) >= ffff_m62_i_ubounds_l10[2]) {
-		r62.expo = 3;
-		r62.mant = __62_23_get_s(mant, mend - mant - 4);
+		M62_SET_EXPO(r62, 3);
+		M62_SET_MANT(r62, __62_23_get_s(mant, mend - mant - 4));
 	} else {
-		r62.expo = 2;
-		r62.mant = __62_23_get_s(mant, mend - mant);
+		M62_SET_EXPO(r62, 2);
+		M62_SET_MANT(r62, __62_23_get_s(mant, mend - mant));
 	}
-	r62.mant = !neg ? r62.mant : -r62.mant;
+	M62_SET_MANT(r62, !neg ? M62_MANT(r62) : -M62_MANT(r62));
 	return r62;
 }
 
@@ -524,7 +604,7 @@ static inline int8_t
 __m62_nfrac_digits(m62_t m)
 {
 	/* seq is 8, 4, 0, -4 */
-	return (int8_t)(8 - 4 * m.expo);
+	return (int8_t)(8 - 4 * M62_EXPO(m));
 }
 
 #if !defined STRREV
@@ -547,12 +627,13 @@ ffff_m62_s(char *restrict buf, m62_t m)
 	bool sign;
 	int8_t nfrac = __m62_nfrac_digits(m);
 
-	if ((sign = (m.mant < 0))) {
-		m.mant = -m.mant;
+	if ((sign = (M62_MANT(m) < 0))) {
+		M62_SET_MANT(m, -M62_MANT(m));
 	}
 	if (nfrac > 0) {
 		for (register int8_t i = 0; i < nfrac; i++) {
-			*tmp++ = (char)('0' + m.mant % 10), m.mant /= 10;
+			*tmp++ = (char)('0' + M62_MANT(m) % 10);
+			M62_MANT_DIVSET_10(m);
 		}
 		*tmp++ = '.';
 	} else {
@@ -561,8 +642,8 @@ ffff_m62_s(char *restrict buf, m62_t m)
 		}
 	}
 	do {
-		*tmp++ = (char)('0' + m.mant % 10);
-	} while (m.mant /= 10);
+		*tmp++ = (char)('0' + M62_MANT(m) % 10);
+	} while (M62_MANT_DIVSET_10(m));
 	if (sign) {
 		*tmp++ = '-';
 	}

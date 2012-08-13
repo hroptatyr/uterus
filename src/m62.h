@@ -104,6 +104,19 @@ __m62_mant(m62_t m)
 #define M62_SET_EXPO(tgt, x)			\
 	tgt.expo = x
 
+#if defined WORDS_BIGENDIAN
+#define M62_MANT_DIVSET_10(tgt)						\
+	({								\
+		int64_t __m_mant__ = M62_MANT(tgt);			\
+		int64_t __res__ = __m_mant__ / 10;			\
+		tgt.mant_lower = __res__ & 0xfffffffffU;		\
+		tgt.mant_upper = __res__ >> 32U;			\
+		__res__;})
+#else  /* !WORDS_BIGENDIAN */
+#define M62_MANT_DIVSET_10(tgt)			\
+	tgt.mant_lu /= 10
+#endif	/* WORDS_BIGENDIAN */
+
 /* muxer */
 static inline m62_t __attribute__((pure, always_inline))
 ffff_m62_get_ui64(uint64_t v)
@@ -619,8 +632,8 @@ ffff_m62_s(char *restrict buf, m62_t m)
 	}
 	if (nfrac > 0) {
 		for (register int8_t i = 0; i < nfrac; i++) {
-			*tmp++ = (char)('0' + M62_MANT(m) % 10),
-				M62_SET_MANT(m, M62_MANT(m) / 10);
+			*tmp++ = (char)('0' + M62_MANT(m) % 10);
+			M62_MANT_DIVSET_10(m);
 		}
 		*tmp++ = '.';
 	} else {
@@ -630,7 +643,7 @@ ffff_m62_s(char *restrict buf, m62_t m)
 	}
 	do {
 		*tmp++ = (char)('0' + M62_MANT(m) % 10);
-	} while (M62_SET_MANT(m, M62_MANT(m) / 10), M62_MANT(m));
+	} while (M62_MANT_DIVSET_10(m));
 	if (sign) {
 		*tmp++ = '-';
 	}

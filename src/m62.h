@@ -53,7 +53,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #if !defined M62T
-typedef union m62_u m62_t;
 # define M62T
 
 union m62_u {
@@ -75,6 +74,9 @@ union m62_u {
 		uint32_t upper;
 	};
 } __attribute__((transparent_union));
+
+/* bug in gcc needs this BEHIND the actual union definition */
+typedef union m62_u m62_t;
 #endif	/* !M62T */
 
 static inline __attribute__((pure, always_inline)) int64_t

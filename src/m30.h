@@ -58,7 +58,6 @@ extern "C" {
 #endif	/* !UNLIKELY */
 
 #if !defined M30T
-typedef union m30_u m30_t;
 # define M30T
 
 union m30_u {
@@ -74,6 +73,9 @@ union m30_u {
 #endif	/* WORDS_BIGENDIAN */
 	} __attribute__((packed));
 } __attribute__((transparent_union));
+
+/* bug in gcc needs this BEHIND the actual union definition */
+typedef union m30_u m30_t;
 #endif	/* !M30T */
 
 /* muxer */

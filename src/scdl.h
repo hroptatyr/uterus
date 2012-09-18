@@ -55,9 +55,13 @@ extern "C" {
 
 typedef struct scdl_s *scdl_t;
 typedef const struct scdl_s *const_scdl_t;
+#define AS_SCDL(x)		((scdl_t)(x))
+#define AS_CONST_SCDL(x)	((const_scdl_t)(x))
 
 typedef struct sbatcdl_s *sbatcdl_t;
 typedef const struct sbatcdl_s *const_sbatcdl_t;
+#define AS_SBATCDL(x)		((sbatcdl_t)(x))
+#define AS_CONST_SBATCDL(x)	((const_sbatcdl_t)(x))
 
 /* always clear your candles before using them */
 struct scdl_s {

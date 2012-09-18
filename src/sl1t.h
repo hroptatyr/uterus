@@ -50,10 +50,12 @@ extern "C" {
 
 typedef struct sl1t_s *sl1t_t;
 /* more or less a macro to see whether we've been here */
-#define AS_SL1T_T(x)	((sl1t_t)(x))
+#define AS_SL1T_T(x)		((sl1t_t)(x))
+#define AS_SL1T(x)		((sl1t_t)(x))
 
 typedef const struct sl1t_s *const_sl1t_t;
-#define CONST_SL1T_T(x)	((const_sl1t_t)(x))
+#define CONST_SL1T_T(x)		((const_sl1t_t)(x))
+#define AS_CONST_SL1T(x)	((const_sl1t_t)(x))
 
 struct sl1t_s {
 	/* +sizeof(su_sl1t_hdr_s) */

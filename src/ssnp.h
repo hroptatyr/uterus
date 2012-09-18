@@ -51,10 +51,14 @@ extern "C" {
 
 typedef struct ssnp_s *ssnp_t;
 typedef const struct ssnp_s *const_ssnp_t;
+#define AS_SSNP(x)		((ssnp_t)(x))
+#define AS_CONST_SSNP(x)	((const_ssnp_t)(x))
 
 /* bid/ask packs are ssnp's little brother, only tracks the bid and ask price */
 typedef struct sbap_s *sbap_t;
 typedef const struct sbap_s *const_sbap_t;
+#define AS_SBAP(x)		((sbap_t)(x))
+#define AS_CONST_SBAP(x)	((const_sbap_t)(x))
 
 #define SSNP_FLAVOUR	(SL1T_TTF_BIDASK | SCOM_FLAG_LM)
 #define SBAP_FLAVOUR	(SL1T_TTF_BIDASK)

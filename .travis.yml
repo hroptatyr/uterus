@@ -1,0 +1,24 @@
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+before_script:
+  - autoreconf -vfi
+  - sudo apt-get install -qq gengetopt
+  - sudo apt-get install -qq help2man
+  - sudo apt-get install -qq texinfo
+  - sudo apt-get install -qq texlive
+
+script: ./configure && make clean all check distcheck
+
+## whitelist
+branches:
+  only:
+    - master
+    - next
+
+notifications:
+  email:
+    - devel@fresse.org

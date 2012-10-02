@@ -11,7 +11,7 @@ before_script:
   - sudo apt-get install -qq texinfo
   - sudo apt-get install -qq texlive
 
-script: ./configure && make clean all check distcheck
+script: ./configure && make clean all check distcheck || (cat test/test-suite.log && /bin/false)
 
 ## whitelist
 branches:

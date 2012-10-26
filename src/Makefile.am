@@ -179,6 +179,7 @@ uta_la_LIBADD = libuterus.la
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
+dukas_la_LIBADD = libuterus.la
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c

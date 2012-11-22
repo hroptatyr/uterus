@@ -327,7 +327,7 @@ reset:
 	XML_SetElementHandler(hdl, el_sta, el_end);
 	XML_SetUserData(hdl, &clo);
 
-	for (size_t carry = 0, dtsz;
+	for (size_t consum = 0, dtsz;
 	     eb_fetch_lines(eb) && (dtsz = eb_rest_len(eb));
 	     eb_unfetch_lines(eb)) {
 		enum XML_Status res;
@@ -349,14 +349,13 @@ reset:
 		}
 		/* set eb's index */
 		{
-			size_t inc = XML_GetCurrentByteIndex(hdl) - carry;
-			size_t new_carry = eb_rest_len(eb);
+			size_t x = XML_GetCurrentByteIndex(hdl);
 
-			UDEBUG("consumed %zu (carry was %zu)\n", inc, carry);
+			UDEBUG("consumed %zu (this run %zu)\n", x, x - consum);
 			/* advance a bit, just for the inspection below */
-			eb_set_current_line_by_offs(eb, inc);
+			eb_set_current_line_by_offs(eb, x - consum);
 			/* set carry */
-			carry = new_carry;
+			consum = x;
 		}
 
 		/* check if there's more */
@@ -364,7 +363,7 @@ reset:
 			/* advance once more (read over the \f */
 			eb_set_current_line_by_offs(eb, 1);
 			/* reset carry */
-			carry = 0;
+			consum = 0;
 			/* resume the parser */
 			XML_ParserReset(hdl, NULL);
 			/* off we go */

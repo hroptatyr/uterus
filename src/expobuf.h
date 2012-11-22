@@ -191,8 +191,8 @@ eb_fetch_lines_fd(expobuf_t eb)
 
 	/* set new target read rate */
 	if (eb->sz == 0) {
-		if ((eb->fl = nrd) < 4096) {
-			eb->fl = 4096;
+		if ((eb->fl = nrd) < DISK_BUF_LEN) {
+			eb->fl = DISK_BUF_LEN;
 		}
 	}
 	/* account for the stuff that has been there before */

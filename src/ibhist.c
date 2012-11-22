@@ -312,6 +312,21 @@ el_end(void *clo, const char *elem)
 }
 
 
+static int
+need_reset_p(expobuf_t eb)
+{
+	const char *inspect;
+	const char *lptr = eb_current_line(eb);
+
+	if (eb_rest_len(eb) == 0 ||
+	    (inspect = memrchr(lptr - eb->idx, '\f', eb->idx + 1)) == NULL) {
+		return 0;
+	}
+	/* otherwise go behind the \f is */
+	eb_set_current_line_by_offs(eb, (inspect - lptr + 1)/*negative or 0*/);
+	return 1;
+}
+
 static void
 parse(mux_ctx_t ctx)
 {
@@ -359,13 +374,12 @@ reset:
 		}
 
 		/* check if there's more */
-		if (eb_rest_len(eb) > 1 && eb_current_line(eb)[0] == '\f') {
-			/* advance once more (read over the \f */
-			eb_set_current_line_by_offs(eb, 1);
+		if (need_reset_p(eb)) {
 			/* reset carry */
 			consum = 0;
 			/* resume the parser */
 			XML_ParserReset(hdl, NULL);
+			UDEBUG("reset\n");
 			/* off we go */
 			goto reset;
 		}

@@ -315,15 +315,13 @@ el_end(void *clo, const char *elem)
 static int
 need_reset_p(expobuf_t eb)
 {
-	const char *inspect;
 	const char *lptr = eb_current_line(eb);
 
-	if (eb_rest_len(eb) == 0 ||
-	    (inspect = memrchr(lptr - eb->idx, '\f', eb->idx + 1)) == NULL) {
+	if (eb_rest_len(eb) == 0 || *lptr != '\f') {
 		return 0;
 	}
 	/* otherwise go behind the \f is */
-	eb_set_current_line_by_offs(eb, (inspect - lptr + 1)/*negative or 0*/);
+	eb_set_current_line_by_offs(eb, 1);
 	return 1;
 }
 

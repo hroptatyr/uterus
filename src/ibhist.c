@@ -312,6 +312,19 @@ el_end(void *clo, const char *elem)
 }
 
 
+static int
+need_reset_p(expobuf_t eb)
+{
+	const char *lptr = eb_current_line(eb);
+
+	if (eb_rest_len(eb) == 0 || *lptr != '\f') {
+		return 0;
+	}
+	/* otherwise go behind the \f is */
+	eb_set_current_line_by_offs(eb, 1);
+	return 1;
+}
+
 static void
 parse(mux_ctx_t ctx)
 {
@@ -327,7 +340,7 @@ reset:
 	XML_SetElementHandler(hdl, el_sta, el_end);
 	XML_SetUserData(hdl, &clo);
 
-	for (size_t carry = 0, dtsz;
+	for (size_t consum = 0, dtsz;
 	     eb_fetch_lines(eb) && (dtsz = eb_rest_len(eb));
 	     eb_unfetch_lines(eb)) {
 		enum XML_Status res;
@@ -349,29 +362,30 @@ reset:
 		}
 		/* set eb's index */
 		{
-			size_t inc = XML_GetCurrentByteIndex(hdl) - carry;
-			size_t new_carry = eb_rest_len(eb);
+			size_t x = XML_GetCurrentByteIndex(hdl);
 
-			UDEBUG("consumed %zu (carry was %zu)\n", inc, carry);
+			UDEBUG("consumed %zu (this run %zu)\n", x, x - consum);
 			/* advance a bit, just for the inspection below */
-			eb_set_current_line_by_offs(eb, inc);
-			/* set carry */
-			carry = new_carry;
+			eb_set_current_line_by_offs(eb, x - consum);
 		}
 
 		/* check if there's more */
-		if (eb_rest_len(eb) > 1 && eb_current_line(eb)[0] == '\f') {
-			/* advance once more (read over the \f */
-			eb_set_current_line_by_offs(eb, 1);
+		if (need_reset_p(eb)) {
 			/* reset carry */
-			carry = 0;
+			consum = 0;
 			/* resume the parser */
 			XML_ParserReset(hdl, NULL);
+			UDEBUG("reset\n");
 			/* off we go */
 			goto reset;
 		}
 		/* otherwise leave everything as is and advance the expobuf */
 		eb_consume_lines(eb);
+		/* and set real consum now, not what expat thinks, but what
+		 * we've physically handed in
+		 * for the same reason we consume all lines coz expat is
+		 * buffering things too */
+		consum += eb_buf_size(eb);
 	}
 
 	XML_ParserFree(hdl);

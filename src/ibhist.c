@@ -367,8 +367,6 @@ reset:
 			UDEBUG("consumed %zu (this run %zu)\n", x, x - consum);
 			/* advance a bit, just for the inspection below */
 			eb_set_current_line_by_offs(eb, x - consum);
-			/* set carry */
-			consum = x;
 		}
 
 		/* check if there's more */
@@ -383,6 +381,11 @@ reset:
 		}
 		/* otherwise leave everything as is and advance the expobuf */
 		eb_consume_lines(eb);
+		/* and set real consum now, not what expat thinks, but what
+		 * we've physically handed in
+		 * for the same reason we consume all lines coz expat is
+		 * buffering things too */
+		consum += eb_buf_size(eb);
 	}
 
 	XML_ParserFree(hdl);

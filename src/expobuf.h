@@ -284,7 +284,7 @@ eb_set_current_line_by_ptr(expobuf_t eb, const char *p)
 }
 
 static inline void
-eb_set_current_line_by_offs(expobuf_t eb, size_t len)
+eb_set_current_line_by_offs(expobuf_t eb, ssize_t len)
 {
 	eb->idx += len;
 	return;

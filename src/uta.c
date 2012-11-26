@@ -172,6 +172,27 @@ parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 	return 0;
 }
 
+static inline unsigned int
+decfld(const char **cursor)
+{
+/* try date parsing first */
+	union scom_thdr_u h[1];
+
+	if (LIKELY(**cursor == '?')) {
+		/* ffw to | (if any) */
+		while (*(*cursor)++ != '|');
+	}
+	if (parse_rcv_stmp(h, cursor) == 0) {
+		/* cursor should be positioned correctly */
+		return scom_thdr_sec(h);
+	}
+	/* what's next? */
+
+	/* zap to next tab */
+	for (; **cursor != '\t' && **cursor != '\n'; (*cursor)++);
+	return 0;
+}
+
 static int
 read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 {
@@ -199,14 +220,26 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	}
 
 	/* next up is the sym-idx in hex */
-	symidx = hex2int(&cursor);
-	if (UNLIKELY(*cursor++ != '\t')) {
-		return -1;
-	}
-	/* bang the symbol */
-	if (ute_bang_symidx(ctx->wrr, sym, (uint16_t)symidx) != symidx) {
-		/* oh bugger */
-		return -1;
+	if (LIKELY(*cursor != '?')) {
+		symidx = hex2int(&cursor);
+		if (UNLIKELY(*cursor++ != '\t')) {
+			return -1;
+		}
+		/* bang the symbol */
+		if (ute_bang_symidx(ctx->wrr, sym, symidx) != symidx) {
+			/* oh bugger */
+			return -1;
+		}
+	} else {
+		/* obtain the actual symidx value from ute_sym2idx() */
+		cursor++;
+		if (UNLIKELY(*cursor != '\t')) {
+			return -1;
+		}
+		/* add the symbol */
+		if ((symidx = ute_sym2idx(ctx->wrr, sym)) == 0) {
+			return -1;
+		}
 	}
 
 	/* check the tick type + flags, it's hex already */
@@ -244,8 +277,18 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 			}
 		}
 		/* now come 2 generic fields, just read the hex portion */
-		lm->v[4] = hex2int(&cursor);
-		lm->v[5] = hex2int(&cursor);
+		if (LIKELY(*cursor != '?')) {
+			lm->v[4] = hex2int(&cursor);
+		} else {
+			/* could be a date */
+			lm->v[4] = decfld(&cursor);
+		}
+		if (LIKELY(*cursor != '?')) {
+			lm->v[5] = hex2int(&cursor);
+		} else {
+			/* uh oh, don't know what to do */
+			;
+		}
 	}
 	return 0;
 }

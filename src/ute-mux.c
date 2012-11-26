@@ -325,6 +325,7 @@ main(int argc, char *argv[])
 	int res = 0;
 
 	if (mux_parser_ext(argc, argv, argi, &parm)) {
+		/* maybe we've got as far as to parse --format|-f already */
 		if (argi->format_arg == NULL) {
 			res = 1;
 			goto out;
@@ -348,20 +349,21 @@ main(int argc, char *argv[])
 	/* initialise the module system */
 	ute_module_init();
 
-	if (UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
-		/* piss off, we need a mux function */
-		fputs("format unknown\n", stderr);
-		res = 1;
-		goto out;
-	}
-
-	/* now try and process the options through the muxer */
 	if ((cmd_f = build_cmd(argi->format_arg)) != NULL) {
-		/* absolutely brilliant */
-		puts(cmd_f);
+		/* prepare the execve */
+		argv[0] = cmd_f;
+		res = execv(cmd_f, argv);
+		goto out;
+
 	} else if (muxer_specific_options_p) {
 		fputs("\
 muxer specific options given but cannot find muxer\n", stderr);
+		res = 1;
+		goto out;
+
+	} else if (UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
+		/* piss off, we need a mux function */
+		fputs("format unknown\n", stderr);
 		res = 1;
 		goto out;
 	}

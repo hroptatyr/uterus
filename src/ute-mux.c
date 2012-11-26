@@ -50,6 +50,7 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <math.h>
+#include <limits.h>
 #include <string.h>
 #include "module.h"
 
@@ -246,6 +247,53 @@ deinit_ticks(mux_ctx_t ctx)
 }
 
 
+static bool
+__exep(const char *file)
+{
+	struct stat st;
+	return (stat(file, &st) == 0) && (st.st_mode & S_IXUSR);
+}
+
+static char*
+build_cmd(const char *cmd)
+{
+	const char myself[] = "/proc/self/exe";
+	const char prefix[] = "ute-mux-";
+	char wd[PATH_MAX];
+	char *dp;
+	size_t sz;
+
+	sz = readlink(myself, wd, sizeof(wd));
+	wd[sz] = '\0';
+
+	if ((dp = strrchr(wd, '/')) == NULL) {
+		return NULL;
+	}
+	/* search the path where the binary resides */
+	strncpy(dp + 1, prefix, sizeof(prefix) - 1);
+	dp += sizeof(prefix);
+	strncpy(dp, cmd, sizeof(wd) - (dp - wd));
+	if (__exep(wd)) {
+		/* found one ... */
+		goto succ;
+	}
+	/* otherwise try UTEDIR */
+	if ((dp = stpcpy(wd, UTEDIR))[-1] != '/') {
+		*dp++ = '/';
+	}
+	strncpy(dp, prefix, sizeof(prefix) - 1);
+	strcpy(dp + sizeof(prefix) - 1, cmd);
+	if (__exep(wd)) {
+		/* found one ... */
+		goto succ;
+	}
+	return NULL;
+
+succ:
+	return strdup(wd);
+}
+
+
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
 # pragma warning (disable:593)
@@ -262,14 +310,27 @@ int
 main(int argc, char *argv[])
 {
 	struct mux_args_info argi[1];
+	struct mux_parser_params parm = {
+		.override = 1,
+		.initialize = 1,
+		.check_required = 1,
+		.check_ambiguity = 0,
+		.print_errors = 0,
+	};
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
+	const char *cmd_f = NULL;
 	void(*muxf)(mux_ctx_t) = NULL;
+	int muxer_specific_options_p = 0;
 	int res = 0;
 
-	if (mux_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
+	if (mux_parser_ext(argc, argv, argi, &parm)) {
+		if (argi->format_arg == NULL) {
+			res = 1;
+			goto out;
+		}
+		/* otherwise we could try forming ute-mux-<MUXER> as cmd */
+		muxer_specific_options_p = 1;
 	} else if (argi->help_given) {
 		mux_parser_print_help();
 		fputs("\n", stdout);
@@ -290,6 +351,17 @@ main(int argc, char *argv[])
 	if (UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
+		res = 1;
+		goto out;
+	}
+
+	/* now try and process the options through the muxer */
+	if ((cmd_f = build_cmd(argi->format_arg)) != NULL) {
+		/* absolutely brilliant */
+		puts(cmd_f);
+	} else if (muxer_specific_options_p) {
+		fputs("\
+muxer specific options given but cannot find muxer\n", stderr);
 		res = 1;
 		goto out;
 	}

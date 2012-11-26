@@ -220,14 +220,26 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	}
 
 	/* next up is the sym-idx in hex */
-	symidx = hex2int(&cursor);
-	if (UNLIKELY(*cursor++ != '\t')) {
-		return -1;
-	}
-	/* bang the symbol */
-	if (ute_bang_symidx(ctx->wrr, sym, (uint16_t)symidx) != symidx) {
-		/* oh bugger */
-		return -1;
+	if (LIKELY(*cursor != '?')) {
+		symidx = hex2int(&cursor);
+		if (UNLIKELY(*cursor++ != '\t')) {
+			return -1;
+		}
+		/* bang the symbol */
+		if (ute_bang_symidx(ctx->wrr, sym, symidx) != symidx) {
+			/* oh bugger */
+			return -1;
+		}
+	} else {
+		/* obtain the actual symidx value from ute_sym2idx() */
+		cursor++;
+		if (UNLIKELY(*cursor != '\t')) {
+			return -1;
+		}
+		/* add the symbol */
+		if ((symidx = ute_sym2idx(ctx->wrr, sym)) == 0) {
+			return -1;
+		}
 	}
 
 	/* check the tick type + flags, it's hex already */

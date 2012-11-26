@@ -113,6 +113,7 @@ Common options:\n\
 
 	puts("Supported commands:");
 
+	SUBCMD(chndl, "Generate bid and ask candles from ute files");
 	SUBCMD(help, "Print a help screen like this");
 	SUBCMD(fsck, "Check ute file for consistency");
 	SUBCMD(mux, "Generate an ute file from a tick or candle source");

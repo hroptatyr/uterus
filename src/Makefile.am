@@ -126,6 +126,13 @@ ute_shnot_LDFLAGS = $(AM_LDFLAGS) -static
 ute_shnot_LDADD = libuterus.la
 BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
 
+ute_PROGRAMS += ute-chndl
+ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl-clo.ggo
+ute_chndl_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_chndl_LDFLAGS = $(AM_LDFLAGS) -static
+ute_chndl_LDADD = libuterus.la
+BUILT_SOURCES += ute-chndl-clo.c ute-chndl-clo.h
+
 ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
 ute_print_SOURCES += module.c module.h

@@ -233,7 +233,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	} else {
 		/* obtain the actual symidx value from ute_sym2idx() */
 		cursor++;
-		if (UNLIKELY(*cursor != '\t')) {
+		if (UNLIKELY(*cursor++ != '\t')) {
 			return -1;
 		}
 		/* add the symbol */

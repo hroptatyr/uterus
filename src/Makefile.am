@@ -188,6 +188,13 @@ ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 dukas_la_LIBADD = libuterus.la
+## dukas has a binary too
+noinst_PROGRAMS += ute-mux-dukas
+ute_mux_dukas_SOURCES = dukas.c dukas-clo.ggo
+ute_mux_dukas_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_mux_dukas_LDFLAGS = $(AM_LDFLAGS)
+ute_mux_dukas_LDADD = libuterus.la
+BUILT_SOURCES += dukas-clo.c dukas-clo.h
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c

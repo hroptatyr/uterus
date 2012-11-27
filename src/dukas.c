@@ -600,7 +600,6 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 		}
 		/* ... and now mux it */
 		if (argi->human_readable_given) {
-			prepare(ctx);
 			dump_l1bi5(ctx);
 		}
 		/* close the infile */

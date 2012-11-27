@@ -35,6 +35,10 @@ a human-readable format"
 
 section "Content options"
 
+option "guess" -
+	"Do most of the work below by guessing from the file name."
+	optional
+
 option "name" -
 	"For single-security files use NAME as security symbol"
 	string typestr="NAME" optional

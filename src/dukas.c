@@ -303,10 +303,12 @@ dump_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	int32_t off = ctx->opts->tsoff;
 
 	if (tl->bp != last.bp || tl->bq.i != last.bq.i) {
-		printf("%u.%u\tb\t%u\t%f\n", ts + off, ms, tl->bp, tl->bq.d);
+		printf("%s\t%u.%u\tb\t%u\t%f\n",
+		       ctx->opts->sname, ts + off, ms, tl->bp, tl->bq.d);
 	}
 	if (tl->ap != last.ap || tl->aq.i != last.aq.i) {
-		printf("%u.%u\ta\t%u\t%f\n", ts + off, ms, tl->ap, tl->aq.d);
+		printf("%s\t%u.%u\ta\t%u\t%f\n",
+		       ctx->opts->sname, ts + off, ms, tl->ap, tl->aq.d);
 	}
 	last = *tl;
 	return;
@@ -517,6 +519,26 @@ old_fmt:
 	return;
 }
 
+static int
+guess(mux_ctx_t ctx, const char *fn)
+{
+/* guess the specs from the filename FN. */
+	/* currency abbrev stop-set */
+	static char ccy_ss[] = "ABCDEFGHJKNOPRSUXYZ";
+	const char *x = fn;
+
+	while ((x = strpbrk(x, ccy_ss)) != NULL) {
+		if (strspn(x, ccy_ss) == 6UL) {
+			static char sym[8];
+			memcpy(sym, x, 6);
+			ctx->opts->sname = sym;
+			break;
+		}
+		x++;
+	}
+	return 0;
+}
+
 
 /* new all in one dukas slabber */
 void
@@ -589,14 +611,20 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			ctx->infd = fd = STDIN_FILENO;
 			ctx->infn = NULL;
 			ctx->badfd = STDERR_FILENO;
-		} else if ((fd = open(f, 0)) >= 0) {
-			ctx->infd = fd;
-			ctx->infn = f;
-			ctx->badfd = STDERR_FILENO;
-		} else {
+		} else if ((fd = open(f, 0)) < 0) {
+			ctx->infd = -1;
 			error(0, "cannot open file '%s'", f);
 			/* just try the next bloke */
 			continue;
+		} else if (argi->guess_given && guess(ctx, f) < 0) {
+			error(0, "cannot guess info from '%s'", f);
+			/* well try to do the actual muxing anyway */
+			;
+		} else {
+			/* huuuuge success */
+			ctx->infd = fd;
+			ctx->infn = f;
+			ctx->badfd = STDERR_FILENO;
 		}
 		/* ... and now mux it */
 		if (argi->human_readable_given) {

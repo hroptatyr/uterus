@@ -648,6 +648,8 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 		/* ... and now mux it */
 		if (argi->human_readable_given) {
 			dump_l1bi5(ctx);
+		} else {
+			mux(ctx);
 		}
 		/* close the infile */
 		close(fd);

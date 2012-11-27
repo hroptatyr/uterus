@@ -567,6 +567,19 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 		ctx->opts = __opts;
 	}
 
+	if (argi->human_readable_given) {
+		/* wipe off the stuff ute-mux prepared for us */
+		const char *fn;
+
+		if (ctx->wrr != NULL &&
+		    ctx->opts->outfile == NULL &&
+		    (fn = ute_fn(ctx->wrr)) != NULL) {
+			unlink(fn);
+			ute_close(ctx->wrr);
+			ctx->wrr = NULL;
+		}
+	}
+
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *f = argi->inputs[j];
 		int fd;

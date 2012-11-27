@@ -136,24 +136,35 @@ ute_mux(mux_ctx_t ctx)
 
 static ute_dso_t mux_dso;
 
-static void
-(*find_muxer(const char *opt))(mux_ctx_t)
+struct muxer_s {
+	void(*muxf)(mux_ctx_t);
+	int(*mux_main_f)(mux_ctx_t, int, char*[]);
+};
+
+static struct muxer_s
+find_muxer(const char *opt)
 {
+	struct muxer_s res = {NULL, NULL};
 	ute_dso_sym_t mux_sym;
 
 	if (opt == NULL) {
 		/* ah, default muxer is ute himself */
-		return ute_mux;
+		return (struct muxer_s){ute_mux, NULL};
 	} else if ((mux_dso = open_aux(opt)) == NULL) {
-		return NULL;
-	} else if ((mux_sym = find_sym(mux_dso, "mux")) == NULL) {
-		return NULL;
+		return (struct muxer_s){NULL, NULL};
 	}
-	return (void(*)(mux_ctx_t))mux_sym;
+	/* try and resolve at least the mux symbol */
+	if ((mux_sym = find_sym(mux_dso, "mux")) != NULL) {
+		res.muxf = (void(*)())mux_sym;
+	}
+	if ((mux_sym = find_sym(mux_dso, "mux_main")) != NULL) {
+		res.mux_main_f = (int(*)())mux_sym;
+	}
+	return res;
 }
 
 static void
-unfind_muxer(UNUSED(void(*muxf)(mux_ctx_t)))
+unfind_muxer(UNUSED(struct muxer_s mux))
 {
 	if (mux_dso) {
 		close_aux(mux_dso);
@@ -166,18 +177,20 @@ static int
 print_muxer(const char *fname, void *UNUSED(clo))
 {
 	static const char nono[] = "ute";
-	void(*mux_sym)(mux_ctx_t);
+	struct muxer_s tmp;
 
 	/* basename-ify */
 	if ((fname = strrchr(fname, '/'))) {
 		fname++;
 	}
 	/* check for the forbidden words */
-	if (!strstr(fname, nono) && (mux_sym = find_muxer(fname))) {
+	if (!strstr(fname, nono) &&
+	    (tmp = find_muxer(fname),
+	     tmp.muxf != NULL || tmp.mux_main_f != NULL)) {
 		putchar('*');
 		putchar(' ');
 		puts(fname);
-		unfind_muxer(mux_sym);
+		unfind_muxer(tmp);
 	}
 	return 0;
 }
@@ -320,7 +333,7 @@ main(int argc, char *argv[])
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
 	char *cmd_f = NULL;
-	void(*muxf)(mux_ctx_t) = NULL;
+	struct muxer_s mux;
 	int muxer_specific_options_p = 0;
 	int res = 0;
 
@@ -361,7 +374,8 @@ muxer specific options given but cannot find muxer\n", stderr);
 		res = 1;
 		goto out;
 
-	} else if (UNLIKELY((muxf = find_muxer(argi->format_arg)) == NULL)) {
+	} else if (UNLIKELY((mux = find_muxer(argi->format_arg),
+			     mux.muxf == NULL && mux.mux_main_f == NULL))) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
 		res = 1;
@@ -416,33 +430,38 @@ muxer specific options given but cannot find muxer\n", stderr);
 		res = 1;
 		goto out;
 	}
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *f = argi->inputs[j];
-		int fd;
+	/* prefer the fully fledged version */
+	if (mux.mux_main_f != NULL) {
+		res = mux.mux_main_f(ctx, argc, argv);
+	} else {
+		for (unsigned int j = 0; j < argi->inputs_num; j++) {
+			const char *f = argi->inputs[j];
+			int fd;
 
-		/* open the infile ... */
-		if (f[0] == '-' && f[1] == '\0') {
-			ctx->infd = fd = STDIN_FILENO;
-			ctx->infn = NULL;
-			ctx->badfd = STDERR_FILENO;
-		} else if ((fd = open(f, 0)) >= 0) {
-			ctx->infd = fd;
-			ctx->infn = f;
-			ctx->badfd = STDERR_FILENO;
-		} else {
-			error(0, "cannot open file '%s'", f);
-			/* just try the next bloke */
-			continue;
+			/* open the infile ... */
+			if (f[0] == '-' && f[1] == '\0') {
+				ctx->infd = fd = STDIN_FILENO;
+				ctx->infn = NULL;
+				ctx->badfd = STDERR_FILENO;
+			} else if ((fd = open(f, 0)) >= 0) {
+				ctx->infd = fd;
+				ctx->infn = f;
+				ctx->badfd = STDERR_FILENO;
+			} else {
+				error(0, "cannot open file '%s'", f);
+				/* just try the next bloke */
+				continue;
+			}
+			/* ... and now mux it */
+			mux.muxf(ctx);
+			/* close the infile */
+			close(fd);
 		}
-		/* ... and now mux it */
-		muxf(ctx);
-		/* close the infile */
-		close(fd);
 	}
 	deinit_ticks(ctx);
 
 out:
-	unfind_muxer(muxf);
+	unfind_muxer(mux);
 	ute_module_fini();
 	mux_parser_free(argi);
 	return res;

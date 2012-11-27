@@ -319,7 +319,7 @@ main(int argc, char *argv[])
 	};
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
-	const char *cmd_f = NULL;
+	char *cmd_f = NULL;
 	void(*muxf)(mux_ctx_t) = NULL;
 	int muxer_specific_options_p = 0;
 	int res = 0;

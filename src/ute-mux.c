@@ -332,7 +332,7 @@ main(int argc, char *argv[])
 		}
 		/* otherwise we could try forming ute-mux-<MUXER> as cmd */
 		muxer_specific_options_p = 1;
-	} else if (argi->help_given) {
+	} else if (argi->help_given && argi->format_arg == NULL) {
 		mux_parser_print_help();
 		fputs("\n", stdout);
 		print_muxers();

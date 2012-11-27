@@ -343,12 +343,19 @@ proc_l1bi5(mux_ctx_t ctx)
 		struct dc_s bin[1];
 		struct dqbi5_s bi5[2];
 	} buf[1];
-
-	/* rinse, rinse, rinse */
-	memset(buf, 0, sizeof(*buf));
+	ssize_t nrd;
+	int fd = ctx->infd;
 
 	/* read a probe */
-	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
+	if (UNLIKELY((nrd = read(fd, buf->bi5, sizeof(buf->bi5))) <= 0)) {
+		return;
+	} else if (UNLIKELY(nrd == sizeof(*buf->bi5))) {
+		/* only one record then, just go for bi5 format,
+		 * make use of the tick compressor and dupe the record
+		 * then just proceed normally */
+		memcpy(buf->bi5 + 1, buf->bi5 + 0, sizeof(*buf->bi5));
+	} else if (UNLIKELY((size_t)nrd < sizeof(buf->bi5))) {
+		/* oooh incomplete innit? */
 		return;
 	}
 	/* the only thing we can make assumptions about is the timestamp
@@ -380,7 +387,7 @@ proc_l1bi5(mux_ctx_t ctx)
 	/* main loop */
 	do {
 		write_tick_bi5(ctx, buf->bi5 + 1);
-	} while (rd1bi5(ctx->infd, buf->bi5 + 1));
+	} while (rd1bi5(fd, buf->bi5 + 1));
 	return;
 old_fmt:
 	/* polish the probe */
@@ -392,7 +399,7 @@ old_fmt:
 	/* main loop */
 	do {
 		write_tick(ctx, buf->bin);
-	} while (rd1(ctx->infd, buf->bin));
+	} while (rd1(fd, buf->bin));
 	return;
 }
 

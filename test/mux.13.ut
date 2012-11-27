@@ -1,0 +1,15 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.h.dukas.bi5"
+OUTFILE="testload.ute"
+CMDLINE="mux -f dukas --refdate 1328475600 --name 'AUDUSD' '${INFILE}' -o '${OUTFILE}'"
+
+## STDIN
+
+## STDOUT
+
+## outfile reference
+REFFILE="mux.13.ref.ute"
+
+## mux.13.ut ends here

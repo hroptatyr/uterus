@@ -45,8 +45,10 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <time.h>
 #include <string.h>
+#include <errno.h>
 
 #include "boobs.h"
 #include "scommon.h"
@@ -55,6 +57,8 @@
 #include "utefile.h"
 #include "ute-mux.h"
 #include "nifty.h"
+#include "date.h"
+
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 
@@ -101,6 +105,23 @@ struct dcbi5_s {
 	uint32_t h;
 	float32_t v;
 };
+
+static void
+__attribute__((format(printf, 2, 3)))
+error(int eno, const char *fmt, ...)
+{
+	va_list vap;
+	va_start(vap, fmt);
+	vfprintf(stderr, fmt, vap);
+	va_end(vap);
+	if (eno || errno) {
+		fputc(':', stderr);
+		fputc(' ', stderr);
+		fputs(strerror(eno ?: errno), stderr);
+	}
+	fputc('\n', stderr);
+	return;
+}
 
 
 /* little helpers */
@@ -192,21 +213,32 @@ static void
 write_tick(mux_ctx_t ctx, struct dc_s *tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
+	static struct dc_s last;
 	uint32_t ts = tl->ts / 1000;
 	uint16_t ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec(t + 0, ts);
-	sl1t_set_stmp_msec(t + 0, ms);
-	t[0].bid = ffff_m30_get_d(tl->bp.d).v;
-	t[0].bsz = ffff_m30_get_d(tl->bq.d).v;
-
-	sl1t_set_stmp_sec(t + 1, ts);
-	sl1t_set_stmp_msec(t + 1, ms);
-	t[1].ask = ffff_m30_get_d(tl->ap.d).v;
-	t[1].asz = ffff_m30_get_d(tl->aq.d).v;
-
-	ute_add_tick(ctx->wrr, AS_SCOM(t));
-	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp.d != last.bp.d || tl->bq.d != last.bq.d) {
+		sl1t_set_stmp_sec(t + 0, ts);
+		sl1t_set_stmp_msec(t + 0, ms);
+		t[0].bid = ffff_m30_get_d(tl->bp.d).v;
+		t[0].bsz = ffff_m30_get_d(tl->bq.d).v;
+		/* yup, add him */
+		ute_add_tick(ctx->wrr, AS_SCOM(t));
+	}
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap.d != last.ap.d || tl->aq.d != last.aq.d) {
+		sl1t_set_stmp_sec(t + 1, ts);
+		sl1t_set_stmp_msec(t + 1, ms);
+		t[1].ask = ffff_m30_get_d(tl->ap.d).v;
+		t[1].asz = ffff_m30_get_d(tl->aq.d).v;
+		/* off we go */
+		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	}
+	/* for the record */
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -214,21 +246,34 @@ static void
 write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
+	static struct dqbi5_s last;
 	unsigned int ts = tl->ts / 1000;
 	unsigned int ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
-	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
-	t[0].bid = __m30_get_dukas(tl->bp * ctx->opts->mul / ctx->opts->mag).v;
-	t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
-
-	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
-	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
-	t[1].ask = __m30_get_dukas(tl->ap * ctx->opts->mul / ctx->opts->mag).v;
-	t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
-
-	ute_add_tick(ctx->wrr, AS_SCOM(t));
-	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp != last.bp || tl->bq.i != last.bq.i) {
+		sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
+		sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
+		t[0].bid = __m30_get_dukas(
+			tl->bp * ctx->opts->mul / ctx->opts->mag).v;
+		t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
+		/* and off we go to add him */
+		ute_add_tick(ctx->wrr, AS_SCOM(t));
+	}
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap != last.ap || tl->aq.i != last.aq.i) {
+		sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
+		sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
+		t[1].ask = __m30_get_dukas(
+			tl->ap * ctx->opts->mul / ctx->opts->mag).v;
+		t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
+		/* and off again */
+		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	}
+	/* for our compressor */
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -274,6 +319,31 @@ write_cdl_bi5(mux_ctx_t ctx, struct dcbi5_s *tl, uint32_t cdl_len)
 	return;
 }
 
+static void
+dump_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
+{
+/* create one or more sparse ticks, sl1t_t objects */
+	static struct dqbi5_s last;
+	unsigned int ts = tl->ts / 1000;
+	unsigned int ms = tl->ts % 1000;
+	int32_t off = ctx->opts->tsoff;
+
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp != last.bp || tl->bq.i != last.bq.i) {
+		printf("%s\t%u.%u\tb\t%u\t%f\n",
+		       ctx->opts->sname, ts + off, ms, tl->bp, tl->bq.d);
+	}
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap != last.ap || tl->aq.i != last.aq.i) {
+		printf("%s\t%u.%u\ta\t%u\t%f\n",
+		       ctx->opts->sname, ts + off, ms, tl->ap, tl->aq.d);
+	}
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
+	return;
+}
+
 
 static void
 prepare(mux_ctx_t ctx)
@@ -301,12 +371,19 @@ proc_l1bi5(mux_ctx_t ctx)
 		struct dc_s bin[1];
 		struct dqbi5_s bi5[2];
 	} buf[1];
-
-	/* rinse, rinse, rinse */
-	memset(buf, 0, sizeof(*buf));
+	ssize_t nrd;
+	int fd = ctx->infd;
 
 	/* read a probe */
-	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
+	if (UNLIKELY((nrd = read(fd, buf->bi5, sizeof(buf->bi5))) <= 0)) {
+		return;
+	} else if (UNLIKELY(nrd == sizeof(*buf->bi5))) {
+		/* only one record then, just go for bi5 format,
+		 * make use of the tick compressor and dupe the record
+		 * then just proceed normally */
+		memcpy(buf->bi5 + 1, buf->bi5 + 0, sizeof(*buf->bi5));
+	} else if (UNLIKELY((size_t)nrd < sizeof(buf->bi5))) {
+		/* oooh incomplete innit? */
 		return;
 	}
 	/* the only thing we can make assumptions about is the timestamp
@@ -338,7 +415,7 @@ proc_l1bi5(mux_ctx_t ctx)
 	/* main loop */
 	do {
 		write_tick_bi5(ctx, buf->bi5 + 1);
-	} while (rd1bi5(ctx->infd, buf->bi5 + 1));
+	} while (rd1bi5(fd, buf->bi5 + 1));
 	return;
 old_fmt:
 	/* polish the probe */
@@ -350,7 +427,7 @@ old_fmt:
 	/* main loop */
 	do {
 		write_tick(ctx, buf->bin);
-	} while (rd1(ctx->infd, buf->bin));
+	} while (rd1(fd, buf->bin));
 	return;
 }
 
@@ -430,6 +507,93 @@ old_fmt:
 	return;
 }
 
+static void
+dump_l1bi5(mux_ctx_t ctx)
+{
+	union {
+		struct dc_s bin[1];
+		struct dqbi5_s bi5[2];
+	} buf[1];
+
+	/* rinse, rinse, rinse */
+	memset(buf, 0, sizeof(*buf));
+
+	/* read a probe */
+	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
+		return;
+	}
+	/* the only thing we can make assumptions about is the timestamp
+	 * we check the two stamps in bi5 and compare their distance */
+	{
+		uint32_t ts0 = be32toh(buf->bi5[0].ts);
+		uint32_t ts1 = be32toh(buf->bi5[1].ts);
+
+		if (ts1 - ts0 > 60/*min*/ * 60/*sec*/ * 1000/*msec*/) {
+			/* definitely old_fmt */
+			goto old_fmt;
+		}
+
+		/* quickly polish the probe */
+		buf->bi5[0].ts = ts0;
+		buf->bi5[0].ap = be32toh(buf->bi5[0].ap);
+		buf->bi5[0].bp = be32toh(buf->bi5[0].bp);
+		buf->bi5[0].aq.i = be32toh(buf->bi5[0].aq.i);
+		buf->bi5[0].bq.i = be32toh(buf->bi5[0].bq.i);
+
+		buf->bi5[1].ts = ts1;
+		buf->bi5[1].ap = be32toh(buf->bi5[1].ap);
+		buf->bi5[1].bp = be32toh(buf->bi5[1].bp);
+		buf->bi5[1].aq.i = be32toh(buf->bi5[1].aq.i);
+		buf->bi5[1].bq.i = be32toh(buf->bi5[1].bq.i);
+	}
+	/* re-use the probe data */
+	dump_tick_bi5(ctx, buf->bi5 + 0);
+	/* main loop */
+	do {
+		dump_tick_bi5(ctx, buf->bi5 + 1);
+	} while (rd1bi5(ctx->infd, buf->bi5 + 1));
+old_fmt:
+	return;
+}
+
+static int
+guess(mux_ctx_t ctx, const char *fn)
+{
+/* guess the specs from the filename FN. */
+	/* currency abbrev stop-set */
+	static char ccy_ss[] = "ABCDEFGHJKNOPRSUXYZ";
+	static char dt_ss[] = "0123456789/";
+	const char *x;
+
+	/* try to snarf off the ccys first */
+	x = fn;
+	while ((x = strpbrk(x, ccy_ss)) != NULL) {
+		if (strspn(x, ccy_ss) == 6UL) {
+			static char sym[8];
+			memcpy(sym, x, 6);
+			ctx->opts->sname = sym;
+			break;
+		}
+		x++;
+	}
+	/* go back and snarf date and time */
+	x = fn;
+	while ((x = strpbrk(x, dt_ss)) != NULL) {
+		struct tm tm[1];
+
+		if (strspn(x++, dt_ss) == 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 &&
+		    *(x = strptime(x, "%Y/%m/%d/%H", tm)) == 'h') {
+			/* found something like /YYYY/mm/dd/hh */
+			tm->tm_min = 0;
+			tm->tm_sec = 0;
+			ctx->opts->tsoff = ffff_timegm(tm);
+			break;
+		}
+	}
+	return 0;
+}
+
+
 /* new all in one dukas slabber */
 void
 mux(mux_ctx_t ctx)
@@ -447,5 +611,100 @@ mux(mux_ctx_t ctx)
 	}
 	return;
 }
+
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "dukas-clo.h"
+#include "dukas-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
+
+int
+mux_main(mux_ctx_t ctx, int argc, char *argv[])
+{
+	static struct mux_ctx_s __ctx[1];
+	static struct sumux_opt_s __opts[1];
+	struct dukas_args_info argi[1];
+	int res = 0;
+
+	if (dukas_parser(argc, argv, argi)) {
+		res = 1;
+		goto out;
+	} else if (argi->help_given) {
+		dukas_parser_print_help();
+		res = 0;
+		goto out;
+	} else if (UNLIKELY(ctx == NULL)) {
+		ctx = __ctx;
+		ctx->opts = __opts;
+	}
+
+	if (argi->human_readable_given) {
+		/* wipe off the stuff ute-mux prepared for us */
+		const char *fn;
+
+		if (ctx->wrr != NULL &&
+		    ctx->opts->outfile == NULL &&
+		    (fn = ute_fn(ctx->wrr)) != NULL) {
+			unlink(fn);
+			ute_close(ctx->wrr);
+			ctx->wrr = NULL;
+		}
+	}
+	if (argi->all_given) {
+		ctx->opts->flags |= SUMUX_FLAG_ALL_TICKS;
+	}
+
+	for (unsigned int j = 0; j < argi->inputs_num; j++) {
+		const char *f = argi->inputs[j];
+		int fd;
+
+		/* open the infile ... */
+		if (f[0] == '-' && f[1] == '\0') {
+			ctx->infd = fd = STDIN_FILENO;
+			ctx->infn = NULL;
+			ctx->badfd = STDERR_FILENO;
+		} else if ((fd = open(f, 0)) < 0) {
+			ctx->infd = -1;
+			error(0, "cannot open file '%s'", f);
+			/* just try the next bloke */
+			continue;
+		} else if (argi->guess_given && guess(ctx, f) < 0) {
+			error(0, "cannot guess info from '%s'", f);
+			/* well try to do the actual muxing anyway */
+			;
+		} else {
+			/* huuuuge success */
+			ctx->infd = fd;
+			ctx->infn = f;
+			ctx->badfd = STDERR_FILENO;
+		}
+		/* ... and now mux it */
+		if (argi->human_readable_given) {
+			dump_l1bi5(ctx);
+		} else {
+			mux(ctx);
+		}
+		/* close the infile */
+		close(fd);
+	}
+
+out:
+	dukas_parser_free(argi);
+	return res;
+}
+
+
+#if defined STANDALONE
+int
+main(int argc, char *argv[])
+{
+	return mux_main(NULL, argc, argv);
+}
+#endif	/* STANDALONE */
 
 /* dukas.c ends here */

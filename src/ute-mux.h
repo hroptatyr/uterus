@@ -73,6 +73,7 @@ struct sumux_opt_s {
 
 	/* outfile flags */
 #define OUTFILE_IS_INTO		(1)
+#define SUMUX_FLAG_ALL_TICKS	(2)
 	int flags;
 };
 
@@ -80,5 +81,9 @@ struct sumux_opt_s {
  * Public mux function.
  * Implemented through DSOs. */
 extern void mux(mux_ctx_t mctx);
+
+/**
+ * Same as `mux()' but also hand over command line args. */
+extern int mux_main(mux_ctx_t mctx, int argc, char *argv[]);
 
 #endif	/* INCLUDED_ute_mux_h_ */

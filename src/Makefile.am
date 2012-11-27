@@ -147,6 +147,7 @@ ute_PROGRAMS += ute-mux
 ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
 ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_mux_CPPFLAGS += -DUTEDIR=\"$(utedir)\"
 ute_mux_CPPFLAGS += $(INCLTDL)
 ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_mux_LDADD = libuterus.la
@@ -187,6 +188,13 @@ ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
 dukas_la_LIBADD = libuterus.la
+## dukas has a binary too
+noinst_PROGRAMS += ute-mux-dukas
+ute_mux_dukas_SOURCES = dukas.c dukas-clo.ggo
+ute_mux_dukas_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_mux_dukas_LDFLAGS = $(AM_LDFLAGS)
+ute_mux_dukas_LDADD = libuterus.la
+BUILT_SOURCES += dukas-clo.c dukas-clo.h
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c

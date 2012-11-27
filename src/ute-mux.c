@@ -260,53 +260,6 @@ deinit_ticks(mux_ctx_t ctx)
 }
 
 
-static bool
-__exep(const char *file)
-{
-	struct stat st;
-	return (stat(file, &st) == 0) && (st.st_mode & S_IXUSR);
-}
-
-static char*
-build_cmd(const char *cmd)
-{
-	const char myself[] = "/proc/self/exe";
-	const char prefix[] = "ute-mux-";
-	char wd[PATH_MAX];
-	char *dp;
-	size_t sz;
-
-	sz = readlink(myself, wd, sizeof(wd));
-	wd[sz] = '\0';
-
-	if ((dp = strrchr(wd, '/')) == NULL) {
-		return NULL;
-	}
-	/* search the path where the binary resides */
-	strncpy(dp + 1, prefix, sizeof(prefix) - 1);
-	dp += sizeof(prefix);
-	strncpy(dp, cmd, sizeof(wd) - (dp - wd));
-	if (__exep(wd)) {
-		/* found one ... */
-		goto succ;
-	}
-	/* otherwise try UTEDIR */
-	if ((dp = stpcpy(wd, UTEDIR))[-1] != '/') {
-		*dp++ = '/';
-	}
-	strncpy(dp, prefix, sizeof(prefix) - 1);
-	strcpy(dp + sizeof(prefix) - 1, cmd);
-	if (__exep(wd)) {
-		/* found one ... */
-		goto succ;
-	}
-	return NULL;
-
-succ:
-	return strdup(wd);
-}
-
-
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
 # pragma warning (disable:593)
@@ -332,7 +285,6 @@ main(int argc, char *argv[])
 	};
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
-	char *cmd_f = NULL;
 	struct muxer_s mux;
 	int muxer_specific_options_p = 0;
 	int res = 0;
@@ -362,22 +314,15 @@ main(int argc, char *argv[])
 	/* initialise the module system */
 	ute_module_init();
 
-	if ((cmd_f = build_cmd(argi->format_arg)) != NULL) {
-		/* prepare the execve */
-		argv[0] = cmd_f;
-		res = execv(cmd_f, argv);
-		goto out;
-
-	} else if (muxer_specific_options_p) {
-		fputs("\
-muxer specific options given but cannot find muxer\n", stderr);
-		res = 1;
-		goto out;
-
-	} else if (UNLIKELY((mux = find_muxer(argi->format_arg),
-			     mux.muxf == NULL && mux.mux_main_f == NULL))) {
+	if (UNLIKELY((mux = find_muxer(argi->format_arg),
+		      mux.muxf == NULL && mux.mux_main_f == NULL))) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
+		res = 1;
+		goto out;
+	} else if (muxer_specific_options_p && mux.mux_main_f == NULL) {
+		fputs("\
+muxer specific options given but cannot find muxer\n", stderr);
 		res = 1;
 		goto out;
 	}

@@ -36,6 +36,7 @@ EXTRA_DIST += mux.10.ut
 endif  ## HAVE_EXPAT
 ut_tests += mux.11.ut
 ut_tests += mux.12.ut
+ut_tests += mux.13.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
@@ -43,6 +44,7 @@ EXTRA_DIST += mux.d.ariva
 EXTRA_DIST += mux.e.ariva
 EXTRA_DIST += mux.f.ibhist.xml
 EXTRA_DIST += mux.g.ibhist.xml
+EXTRA_DIST += mux.h.dukas.bi5
 
 EXTRA_DIST += mux.4.ref.ute
 EXTRA_DIST += mux.4.ref.beute
@@ -54,6 +56,7 @@ EXTRA_DIST += mux.9.ref.ute
 EXTRA_DIST += mux.10.ref.ute
 EXTRA_DIST += mux.11.ref.ute
 EXTRA_DIST += mux.12.ref.ute
+EXTRA_DIST += mux.13.ref.ute
 
 if WORDS_BIGENDIAN
 else

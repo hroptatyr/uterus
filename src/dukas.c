@@ -57,6 +57,8 @@
 #include "utefile.h"
 #include "ute-mux.h"
 #include "nifty.h"
+#include "date.h"
+
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 
@@ -525,8 +527,11 @@ guess(mux_ctx_t ctx, const char *fn)
 /* guess the specs from the filename FN. */
 	/* currency abbrev stop-set */
 	static char ccy_ss[] = "ABCDEFGHJKNOPRSUXYZ";
-	const char *x = fn;
+	static char dt_ss[] = "0123456789/";
+	const char *x;
 
+	/* try to snarf off the ccys first */
+	x = fn;
 	while ((x = strpbrk(x, ccy_ss)) != NULL) {
 		if (strspn(x, ccy_ss) == 6UL) {
 			static char sym[8];
@@ -535,6 +540,20 @@ guess(mux_ctx_t ctx, const char *fn)
 			break;
 		}
 		x++;
+	}
+	/* go back and snarf date and time */
+	x = fn;
+	while ((x = strpbrk(x, dt_ss)) != NULL) {
+		struct tm tm[1];
+
+		if (strspn(x++, dt_ss) == 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 &&
+		    *(x = strptime(x, "%Y/%m/%d/%H", tm)) == 'h') {
+			/* found something like /YYYY/mm/dd/hh */
+			tm->tm_min = 0;
+			tm->tm_sec = 0;
+			ctx->opts->tsoff = ffff_timegm(tm);
+			break;
+		}
 	}
 	return 0;
 }

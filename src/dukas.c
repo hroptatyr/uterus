@@ -297,12 +297,18 @@ static void
 dump_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
+	static struct dqbi5_s last;
 	unsigned int ts = tl->ts / 1000;
 	unsigned int ms = tl->ts % 1000;
 	int32_t off = ctx->opts->tsoff;
 
-	printf("%u.%u\tb\t%u\t%f\n", ts + off, ms, tl->bp, tl->bq.d);
-	printf("%u.%u\ta\t%u\t%f\n", ts + off, ms, tl->ap, tl->aq.d);
+	if (tl->bp != last.bp || tl->bq.i != last.bq.i) {
+		printf("%u.%u\tb\t%u\t%f\n", ts + off, ms, tl->bp, tl->bq.d);
+	}
+	if (tl->ap != last.ap || tl->aq.i != last.aq.i) {
+		printf("%u.%u\ta\t%u\t%f\n", ts + off, ms, tl->ap, tl->aq.d);
+	}
+	last = *tl;
 	return;
 }
 

@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.c.dukas.bi5"
 OUTFILE="testload.ute"
-CMDLINE="mux --refdate 1328605200 -f dukas --all '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="mux --refdate 1328605200 -f dukas '${INFILE}' -o '${OUTFILE}' --all"
 
 ## STDIN
 

@@ -213,21 +213,32 @@ static void
 write_tick(mux_ctx_t ctx, struct dc_s *tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
+	static struct dc_s last;
 	uint32_t ts = tl->ts / 1000;
 	uint16_t ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec(t + 0, ts);
-	sl1t_set_stmp_msec(t + 0, ms);
-	t[0].bid = ffff_m30_get_d(tl->bp.d).v;
-	t[0].bsz = ffff_m30_get_d(tl->bq.d).v;
-
-	sl1t_set_stmp_sec(t + 1, ts);
-	sl1t_set_stmp_msec(t + 1, ms);
-	t[1].ask = ffff_m30_get_d(tl->ap.d).v;
-	t[1].asz = ffff_m30_get_d(tl->aq.d).v;
-
-	ute_add_tick(ctx->wrr, AS_SCOM(t));
-	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp.d != last.bp.d || tl->bq.d != last.bq.d) {
+		sl1t_set_stmp_sec(t + 0, ts);
+		sl1t_set_stmp_msec(t + 0, ms);
+		t[0].bid = ffff_m30_get_d(tl->bp.d).v;
+		t[0].bsz = ffff_m30_get_d(tl->bq.d).v;
+		/* yup, add him */
+		ute_add_tick(ctx->wrr, AS_SCOM(t));
+	}
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap.d != last.ap.d || tl->aq.d != last.aq.d) {
+		sl1t_set_stmp_sec(t + 1, ts);
+		sl1t_set_stmp_msec(t + 1, ms);
+		t[1].ask = ffff_m30_get_d(tl->ap.d).v;
+		t[1].asz = ffff_m30_get_d(tl->aq.d).v;
+		/* off we go */
+		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	}
+	/* for the record */
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -235,21 +246,34 @@ static void
 write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
+	static struct dqbi5_s last;
 	unsigned int ts = tl->ts / 1000;
 	unsigned int ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
-	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
-	t[0].bid = __m30_get_dukas(tl->bp * ctx->opts->mul / ctx->opts->mag).v;
-	t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
-
-	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
-	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
-	t[1].ask = __m30_get_dukas(tl->ap * ctx->opts->mul / ctx->opts->mag).v;
-	t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
-
-	ute_add_tick(ctx->wrr, AS_SCOM(t));
-	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp != last.bp || tl->bq.i != last.bq.i) {
+		sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
+		sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
+		t[0].bid = __m30_get_dukas(
+			tl->bp * ctx->opts->mul / ctx->opts->mag).v;
+		t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
+		/* and off we go to add him */
+		ute_add_tick(ctx->wrr, AS_SCOM(t));
+	}
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap != last.ap || tl->aq.i != last.aq.i) {
+		sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
+		sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
+		t[1].ask = __m30_get_dukas(
+			tl->ap * ctx->opts->mul / ctx->opts->mag).v;
+		t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
+		/* and off again */
+		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	}
+	/* for our compressor */
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -304,15 +328,19 @@ dump_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	unsigned int ms = tl->ts % 1000;
 	int32_t off = ctx->opts->tsoff;
 
-	if (tl->bp != last.bp || tl->bq.i != last.bq.i) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp != last.bp || tl->bq.i != last.bq.i) {
 		printf("%s\t%u.%u\tb\t%u\t%f\n",
 		       ctx->opts->sname, ts + off, ms, tl->bp, tl->bq.d);
 	}
-	if (tl->ap != last.ap || tl->aq.i != last.aq.i) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap != last.ap || tl->aq.i != last.aq.i) {
 		printf("%s\t%u.%u\ta\t%u\t%f\n",
 		       ctx->opts->sname, ts + off, ms, tl->ap, tl->aq.d);
 	}
-	last = *tl;
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -343,12 +371,19 @@ proc_l1bi5(mux_ctx_t ctx)
 		struct dc_s bin[1];
 		struct dqbi5_s bi5[2];
 	} buf[1];
-
-	/* rinse, rinse, rinse */
-	memset(buf, 0, sizeof(*buf));
+	ssize_t nrd;
+	int fd = ctx->infd;
 
 	/* read a probe */
-	if (UNLIKELY(read(ctx->infd, buf->bi5, sizeof(buf->bi5)) <= 0)) {
+	if (UNLIKELY((nrd = read(fd, buf->bi5, sizeof(buf->bi5))) <= 0)) {
+		return;
+	} else if (UNLIKELY(nrd == sizeof(*buf->bi5))) {
+		/* only one record then, just go for bi5 format,
+		 * make use of the tick compressor and dupe the record
+		 * then just proceed normally */
+		memcpy(buf->bi5 + 1, buf->bi5 + 0, sizeof(*buf->bi5));
+	} else if (UNLIKELY((size_t)nrd < sizeof(buf->bi5))) {
+		/* oooh incomplete innit? */
 		return;
 	}
 	/* the only thing we can make assumptions about is the timestamp
@@ -380,7 +415,7 @@ proc_l1bi5(mux_ctx_t ctx)
 	/* main loop */
 	do {
 		write_tick_bi5(ctx, buf->bi5 + 1);
-	} while (rd1bi5(ctx->infd, buf->bi5 + 1));
+	} while (rd1bi5(fd, buf->bi5 + 1));
 	return;
 old_fmt:
 	/* polish the probe */
@@ -392,7 +427,7 @@ old_fmt:
 	/* main loop */
 	do {
 		write_tick(ctx, buf->bin);
-	} while (rd1(ctx->infd, buf->bin));
+	} while (rd1(fd, buf->bin));
 	return;
 }
 
@@ -619,6 +654,9 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			ute_close(ctx->wrr);
 			ctx->wrr = NULL;
 		}
+	}
+	if (argi->all_given) {
+		ctx->opts->flags |= SUMUX_FLAG_ALL_TICKS;
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {

@@ -1,0 +1,63 @@
+args "--unamed-opts --no-help --long-help -a dukas_args_info -f dukas_parser"
+package "ute-mux -f dukas"
+usage "ute mux -f dukas [OPTIONS...] FILEs..."
+description "Convert dukascopy tick sources FILEs to ute file."
+
+option "help" h
+	"Show this help message."
+	optional
+
+
+section "Input options"
+
+option "format" f
+## handled by ute-mux
+	"Use the specified parser, see below for a list"
+	string typestr="FORMAT" optional
+
+
+section "Output options"
+
+option "output" o
+## handled by ute-mux
+	"Write result to specified output file"
+	string typestr="FILE" optional
+
+option "into" -
+## handled by ute-mux
+	"Write result into ute file FILE"
+	string typestr="FILE" optional
+
+option "human-readable" -
+	"Instead of muxing into ute file format, dump the contents in 
+a human-readable format"
+	optional
+
+section "Content options"
+
+option "name" -
+	"For single-security files use NAME as security symbol"
+	string typestr="NAME" optional
+
+option "refdate" -
+	"Use STAMP as reference point for time values instead of epoch.
+Also see --ordered."
+	int typestr="STAMP" optional
+
+option "ordered" -
+	"Assume files specified are in chronological order, and do not
+reset the refdate stamp between them."
+	optional
+
+option "flavour" -
+	"Data flavour (bid, ask, trade) for flavour-agnostic formats"
+	enum typestr="F" optional values="b","a","t"
+
+option "multiplier" -
+	"Multiply price values by INT, for fractions also use --magnifier"
+	int optional
+
+option "magnifier" -
+	"Price values are regarded as if multiplied by INT, \
+for better divisibility consider --multiplier"
+	int optional

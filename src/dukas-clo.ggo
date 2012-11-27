@@ -48,11 +48,6 @@ option "refdate" -
 Also see --ordered."
 	int typestr="STAMP" optional
 
-option "ordered" -
-	"Assume files specified are in chronological order, and do not
-reset the refdate stamp between them."
-	optional
-
 option "flavour" -
 	"Data flavour (bid, ask, trade) for flavour-agnostic formats"
 	enum typestr="F" optional values="b","a","t"
@@ -65,3 +60,11 @@ option "magnifier" -
 	"Price values are regarded as if multiplied by INT, \
 for better divisibility consider --multiplier"
 	int optional
+
+option "all" -
+	"Explicitly repeat equal consecutive ticks just as they appear \
+in the source file.
+Normally consecutive equal ticks are suppressed to make the result file
+sparser."
+	optional
+

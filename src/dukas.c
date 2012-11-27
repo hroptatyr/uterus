@@ -217,7 +217,8 @@ write_tick(mux_ctx_t ctx, struct dc_s *tl)
 	uint32_t ts = tl->ts / 1000;
 	uint16_t ms = tl->ts % 1000;
 
-	if (tl->bp.d != last.bp.d || tl->bq.d != last.bq.d) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp.d != last.bp.d || tl->bq.d != last.bq.d) {
 		sl1t_set_stmp_sec(t + 0, ts);
 		sl1t_set_stmp_msec(t + 0, ms);
 		t[0].bid = ffff_m30_get_d(tl->bp.d).v;
@@ -225,7 +226,8 @@ write_tick(mux_ctx_t ctx, struct dc_s *tl)
 		/* yup, add him */
 		ute_add_tick(ctx->wrr, AS_SCOM(t));
 	}
-	if (tl->ap.d != last.ap.d || tl->aq.d != last.aq.d) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap.d != last.ap.d || tl->aq.d != last.aq.d) {
 		sl1t_set_stmp_sec(t + 1, ts);
 		sl1t_set_stmp_msec(t + 1, ms);
 		t[1].ask = ffff_m30_get_d(tl->ap.d).v;
@@ -234,7 +236,9 @@ write_tick(mux_ctx_t ctx, struct dc_s *tl)
 		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
 	}
 	/* for the record */
-	last = *tl;
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -246,7 +250,8 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	unsigned int ts = tl->ts / 1000;
 	unsigned int ms = tl->ts % 1000;
 
-	if (tl->bp != last.bp || tl->bq.i != last.bq.i) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp != last.bp || tl->bq.i != last.bq.i) {
 		sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
 		sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
 		t[0].bid = __m30_get_dukas(
@@ -255,7 +260,8 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 		/* and off we go to add him */
 		ute_add_tick(ctx->wrr, AS_SCOM(t));
 	}
-	if (tl->ap != last.ap || tl->aq.i != last.aq.i) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap != last.ap || tl->aq.i != last.aq.i) {
 		sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
 		sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
 		t[1].ask = __m30_get_dukas(
@@ -265,7 +271,9 @@ write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
 	}
 	/* for our compressor */
-	last = *tl;
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -320,15 +328,19 @@ dump_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 	unsigned int ms = tl->ts % 1000;
 	int32_t off = ctx->opts->tsoff;
 
-	if (tl->bp != last.bp || tl->bq.i != last.bq.i) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->bp != last.bp || tl->bq.i != last.bq.i) {
 		printf("%s\t%u.%u\tb\t%u\t%f\n",
 		       ctx->opts->sname, ts + off, ms, tl->bp, tl->bq.d);
 	}
-	if (tl->ap != last.ap || tl->aq.i != last.aq.i) {
+	if (ctx->opts->flags & SUMUX_FLAG_ALL_TICKS ||
+	    tl->ap != last.ap || tl->aq.i != last.aq.i) {
 		printf("%s\t%u.%u\ta\t%u\t%f\n",
 		       ctx->opts->sname, ts + off, ms, tl->ap, tl->aq.d);
 	}
-	last = *tl;
+	if (LIKELY(!(ctx->opts->flags & SUMUX_FLAG_ALL_TICKS))) {
+		last = *tl;
+	}
 	return;
 }
 
@@ -642,6 +654,9 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			ute_close(ctx->wrr);
 			ctx->wrr = NULL;
 		}
+	}
+	if (argi->all_given) {
+		ctx->opts->flags |= SUMUX_FLAG_ALL_TICKS;
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {

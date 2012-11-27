@@ -73,6 +73,7 @@ struct sumux_opt_s {
 
 	/* outfile flags */
 #define OUTFILE_IS_INTO		(1)
+#define SUMUX_FLAG_ALL_TICKS	(2)
 	int flags;
 };
 

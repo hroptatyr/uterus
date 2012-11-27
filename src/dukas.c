@@ -235,21 +235,30 @@ static void
 write_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 {
 /* create one or more sparse ticks, sl1t_t objects */
+	static struct dqbi5_s last;
 	unsigned int ts = tl->ts / 1000;
 	unsigned int ms = tl->ts % 1000;
 
-	sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
-	sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
-	t[0].bid = __m30_get_dukas(tl->bp * ctx->opts->mul / ctx->opts->mag).v;
-	t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
-
-	sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
-	sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
-	t[1].ask = __m30_get_dukas(tl->ap * ctx->opts->mul / ctx->opts->mag).v;
-	t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
-
-	ute_add_tick(ctx->wrr, AS_SCOM(t));
-	ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	if (tl->bp != last.bp || tl->bq.i != last.bq.i) {
+		sl1t_set_stmp_sec(t + 0, ts + ctx->opts->tsoff);
+		sl1t_set_stmp_msec(t + 0, (uint16_t)ms);
+		t[0].bid = __m30_get_dukas(
+			tl->bp * ctx->opts->mul / ctx->opts->mag).v;
+		t[0].bsz = ffff_m30_get_f(tl->bq.d * DUKAS_VMULF).v;
+		/* and off we go to add him */
+		ute_add_tick(ctx->wrr, AS_SCOM(t));
+	}
+	if (tl->ap != last.ap || tl->aq.i != last.aq.i) {
+		sl1t_set_stmp_sec(t + 1, ts + ctx->opts->tsoff);
+		sl1t_set_stmp_msec(t + 1, (uint16_t)ms);
+		t[1].ask = __m30_get_dukas(
+			tl->ap * ctx->opts->mul / ctx->opts->mag).v;
+		t[1].asz = ffff_m30_get_f(tl->aq.d * DUKAS_VMULF).v;
+		/* and off again */
+		ute_add_tick(ctx->wrr, AS_SCOM(t + 1));
+	}
+	/* for our compressor */
+	last = *tl;
 	return;
 }
 

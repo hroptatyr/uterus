@@ -7,6 +7,14 @@ option "help" h
 	"Show this help message."
 	optional
 
+option "compress" -
+	"Compress all ticks (only if lzma support is available)."
+	optional
+
+option "decompress" d
+	"Decompress all ticks."
+	optional
+
 option "dry-run" n
 	"Do not actually change the files."
 	optional

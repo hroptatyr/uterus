@@ -67,8 +67,19 @@ Good day.
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 
 ## ute can do with lzma
-PKG_CHECK_MODULES([liblzma], [liblzma], [have_lzma="yes"], [have_lzma="no"])
+PKG_CHECK_MODULES([lzma], [liblzma], [have_lzma="yes"], [have_lzma="no"])
 AM_CONDITIONAL([HAVE_LZMA], [test "${have_lzma}" = "yes"])
+if test "${have_lzma}" = "yes"; then
+	## check for the header
+	SXE_DUMP_LIBS
+	CPPFLAGS="${CPPFLAGS} ${lzma_CFLAGS}"
+	LDFLAGS="${LDFLAGS} ${lzma_LIBS}"
+	AC_CHECK_HEADERS([lzma.h])
+	if test "${ac_cv_header_lzma_h}" != "yes"; then
+		have_lzma="no"
+	fi
+	SXE_RESTORE_LIBS
+fi
 
 ## ibhist needs expat
 PKG_CHECK_MODULES([expat], [expat], [have_expat="yes"], [have_expat="no"])

@@ -66,6 +66,10 @@ Good day.
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 
+## ute can do with lzma
+PKG_CHECK_MODULES([liblzma], [liblzma], [have_lzma="yes"], [have_lzma="no"])
+AM_CONDITIONAL([HAVE_LZMA], [test "${have_lzma}" = "yes"])
+
 ## ibhist needs expat
 PKG_CHECK_MODULES([expat], [expat], [have_expat="yes"], [have_expat="no"])
 AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])

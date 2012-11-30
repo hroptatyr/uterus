@@ -167,8 +167,8 @@ __addconv_tick(utectx_t hdl, scom_t si, size_t tbsz)
 {
 /* do a conversion and then add the tick */
 	uint32_t ALGN(ti[16], sizeof(uint64_t));
-	uint32_t *src_sndwch = (uint32_t*)si;
-	uint64_t *src_sndw64 = (uint64_t*)si;
+	const uint32_t *src_sndwch = (const uint32_t*)si;
+	const uint64_t *src_sndw64 = (const uint64_t*)si;
 	uint32_t *tgt_sndwch = (uint32_t*)ti;
 	uint64_t *tgt_sndw64 = (uint64_t*)ti;
 

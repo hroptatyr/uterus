@@ -199,6 +199,7 @@ BUILT_SOURCES += dukas-clo.c dukas-clo.h
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
 mat_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS)
+mat_la_LIBADD = libuterus.la
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la

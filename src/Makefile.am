@@ -205,6 +205,7 @@ ute_LTLIBRARIES += hdf5.la
 hdf5_la_SOURCES = hdf5.c
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
+hdf5_la_LIBADD = libuterus.la
 endif  ## HAVE_HDF5
 
 ute_LTLIBRARIES += ariva.la

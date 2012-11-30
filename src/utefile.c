@@ -237,9 +237,11 @@ flush_seek(uteseek_t sk)
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
 	if (sk->szrw > 0) {
-		/* munmap given the computed page size, later to be replaced
-		 * by seek_size(sk) which will account for tick rewindings */
-		munmap(sk->sp, seek_byte_size(sk));
+		/* compute the page size, takes tick rewinds into account */
+		size_t pgsz = seek_byte_size(sk);
+
+		/* munmap it all */
+		munmap(sk->sp, pgsz);
 	}
 	/* bit of cleaning up */
 	sk->si = -1;

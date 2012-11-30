@@ -450,12 +450,12 @@ pr(pr_ctx_t pctx, scom_t st)
 		bang5idx(__gmctx, idx, sec, msec, bp, ap, bq, aq);
 		break;
 	}
-	case SL1T_TTF_BID | SCOM_FLAG_LM:
-	case SL1T_TTF_ASK | SCOM_FLAG_LM:
-	case SL1T_TTF_TRA | SCOM_FLAG_LM:
-	case SL1T_TTF_FIX | SCOM_FLAG_LM:
-	case SL1T_TTF_STL | SCOM_FLAG_LM:
-	case SL1T_TTF_AUC | SCOM_FLAG_LM: {
+	case SL1T_TTF_BID | SCDL_FLAVOUR:
+	case SL1T_TTF_ASK | SCDL_FLAVOUR:
+	case SL1T_TTF_TRA | SCDL_FLAVOUR:
+	case SL1T_TTF_FIX | SCDL_FLAVOUR:
+	case SL1T_TTF_STL | SCDL_FLAVOUR:
+	case SL1T_TTF_AUC | SCDL_FLAVOUR: {
 		const_scdl_t cdl = (const void*)st;
 		double o;
 		double h;

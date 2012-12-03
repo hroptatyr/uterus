@@ -105,6 +105,10 @@ extern void ute_add_ticks(utectx_t ctx, const void *p, size_t nticks);
  * Compress (whatever that means) BSZ bytes in BUF. */
 extern ssize_t ute_encode(void **tgt, const void *buf, const size_t bsz);
 
+/**
+ * Decompress (whatever that means) BSZ bytes in BUF. */
+extern ssize_t ute_decode(void **tgt, const void *buf, const size_t bsz);
+
 
 /* inlines */
 static inline size_t

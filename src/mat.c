@@ -52,6 +52,7 @@
 #include "scdl.h"
 #include "ssnp.h"
 #include "nifty.h"
+#include "mem.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -360,12 +361,6 @@ stmp_to_matdt(uint32_t sec, uint16_t msec)
 	return res;
 }
 
-static inline bool
-mmapable(int fd)
-{
-	return fd > STDERR_FILENO;
-}
-
 /* code dupe! */
 static char*
 mat_tmpnam(void)
@@ -406,7 +401,7 @@ init(pr_ctx_t pctx)
 	/* set up our context */
 	__gmctx->flen = 0;
 	__gmctx->pgsz = sysconf(_SC_PAGESIZE);
-	if (!mmapable(__gmctx->fd = pctx->outfd)) {
+	if (!mmapablep(__gmctx->fd = pctx->outfd)) {
 		/* great we need a new file descriptor now
 		 * generate a new one, mmapable this time */
 		tmpfn = mat_tmpnam();

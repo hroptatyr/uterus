@@ -238,7 +238,7 @@ creat_hdr(utectx_t ctx)
 ssize_t
 ute_encode(void **tgt, const void *buf, const size_t bsz)
 {
-	static lzma_stream strm = (typeof(strm))LZMA_STREAM_INIT;
+	static lzma_stream strm = LZMA_STREAM_INIT;
 	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
 	static uint8_t *iobuf = NULL;
 	lzma_ret rc;
@@ -292,9 +292,85 @@ fa_free:
 	return res;
 }
 
+ssize_t
+ute_decode(void **tgt, const void *buf, const size_t bsz)
+{
+	static lzma_stream strm = LZMA_STREAM_INIT;
+	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+	static uint8_t *iobuf = NULL;
+	lzma_ret rc;
+	ssize_t res = 0;
+
+	if (UNLIKELY(buf == NULL)) {
+		/* oh we're meant to free things */
+		res = 0;
+		if (iobuf != NULL) {
+			goto iob_free;
+		}
+		/* everything should be freed already */
+		goto fa_free;
+	} else if (iobuf == NULL) {
+		rc = lzma_stream_decoder(&strm, UINT64_MAX, 0);
+		if (UNLIKELY(rc != LZMA_OK)) {
+			/* indicate total failure, free fuckall */
+			res = -1;
+			goto fa_free;
+		}
+
+		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
+		if (UNLIKELY(iobuf == MAP_FAILED)) {
+			res = -1;
+			goto enc_free;
+		}
+	}
+	/* reset in/out buffer */
+	strm.next_out = iobuf;
+	strm.avail_out = pgsz;
+	/* point to the stuff we're meant to encode */
+	strm.next_in = buf;
+	strm.avail_in = bsz;
+
+	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
+		/* BUGGER, shall we signal an error? */
+		error(0, "cannot inflate ticks: %d\n", rc);
+	} else if (LIKELY(tgt != NULL)) {
+		/* now then, make *tgt point to the outbuffer */
+		*tgt = iobuf;
+		res = strm.next_out - iobuf;
+	}
+	return res;
+iob_free:
+	munmap(iobuf, pgsz);
+enc_free:
+	iobuf = NULL;
+	lzma_end(&strm);
+	strm = (typeof(strm))LZMA_STREAM_INIT;
+fa_free:
+	return res;
+}
+
 #else  /* !HAVE_LZMA_H */
 ssize_t
 ute_encode(void **tgt, const void *buf, const size_t bsz)
+{
+	ssize_t res = 0;
+
+	if (LIKELY(tgt != NULL)) {
+		/* just have *tgt point to buf really */
+		union {
+			const void *c;
+			void *p;
+		} u = {
+			.c = buf,
+		};
+		*tgt = u.p;
+		res = bsz;
+	}
+	return res;
+}
+
+ssize_t
+ute_decode(void **tgt, const void *buf, const size_t bsz)
 {
 	ssize_t res = 0;
 

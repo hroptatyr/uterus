@@ -350,7 +350,13 @@ decompress_seek(uteseek_t sk, int virtp)
 	void *out;
 	ssize_t ndecd;
 
-	if ((ndecd = ute_decode(&out, src + 1, src[0])) < 0) {
+	if (sk_sz <= src[0]) {
+		/* probably not comp'd at all */
+		return;
+	} else if ((ndecd = ute_decode(&out, src + 1, src[0])) == 0) {
+		/* not comp'd */
+		return;
+	} else if (ndecd < 0) {
 		/* shit */
 		UDEBUG("BIG BUGGER\n");
 		return;
@@ -409,13 +415,17 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 
 		/* create a new seek */
 		seek_page(sk, hdl, p);
+#if defined HAVE_LZMA_H
 		sk[1] = sk[0];
 		/* could be a compressed page, (virtually) decompress */
 		decompress_seek(sk, 1);
+#endif	/* HAVE_LZMA_H */
 		/* fsck that one page */
 		issues |= fsckp(ctx, sk, hdl, issues, last);
+#if defined HAVE_LZMA_H
 		/* and recompress the page in case of changes */
 		recompress_seek(sk + 1, sk);
+#endif	/* HAVE_LZMA_H */
 		/* flush the old seek */
 		flush_seek(sk + 1);
 	}

@@ -365,7 +365,7 @@ init(pr_ctx_t pctx)
 	char *fn;
 
 	/* set up our context */
-	if ((my_fn = !mmapable(pctx->outfd))) {
+	if ((my_fn = !mmapablep(pctx->outfd))) {
 		/* great we need a new file descriptor now
 		 * generate a new one, mmapable this time */
 		int fd;

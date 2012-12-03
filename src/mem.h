@@ -39,6 +39,7 @@
 #define INCLUDED_mem_h_
 
 #include <stdbool.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -137,10 +138,12 @@ mremap(void *old, size_t ol_sz, size_t nu_sz, int flags)
 #endif	/* MAP_FAILED */
 
 static inline bool
-mmapable(int fd)
+mmapablep(int fd)
 {
 	struct stat st;
-	if (fstat(fd, &st) < 0) {
+	if (fd == STDIN_FILENO) {
+		return false;
+	} else if (fstat(fd, &st) < 0) {
 		return false;
 	} else if (st.st_size < 0) {
 		return false;

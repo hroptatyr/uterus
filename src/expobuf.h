@@ -90,7 +90,7 @@ make_expobuf(int fd)
 
 	glob_pgsz = (size_t)sysconf(_SC_PAGESIZE);
 	fstat(fd, &st);
-	if (mmapable(res->fd = fd)) {
+	if (mmapablep(res->fd = fd)) {
 		res->sz = st.st_size;
 		res->data = NULL;
 	} else {
@@ -197,7 +197,7 @@ eb_fetch_lines_fd(expobuf_t eb)
 static inline void
 eb_unfetch_lines(expobuf_t eb)
 {
-	if (mmapable(eb->fd)) {
+	if (mmapablep(eb->fd)) {
 		munmap(eb->data, eb_buf_size(eb));
 		eb->data = NULL;
 	} else if (eb->idx > 0) {
@@ -222,7 +222,7 @@ eb_unfetch_lines(expobuf_t eb)
 static inline bool
 eb_fetch_lines(expobuf_t eb)
 {
-	if (mmapable(eb->fd)) {
+	if (mmapablep(eb->fd)) {
 		return eb_fetch_lines_df(eb);
 	} else {
 		eb_unfetch_lines(eb);
@@ -241,7 +241,7 @@ eb_consume_lines(expobuf_t eb)
 static inline bool
 eb_one_more_line_p(expobuf_t eb)
 {
-	if (mmapable(eb->fd)) {
+	if (mmapablep(eb->fd)) {
 		if (LIKELY(eb->fi < eb->sz)) {
 			if (LIKELY(EB_PGSZ - eb->idx > MAX_LINE_LEN)) {
 				return true;

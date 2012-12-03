@@ -401,7 +401,7 @@ init(pr_ctx_t pctx)
 	/* set up our context */
 	__gmctx->flen = 0;
 	__gmctx->pgsz = sysconf(_SC_PAGESIZE);
-	if (!mmapable(__gmctx->fd = pctx->outfd)) {
+	if (!mmapablep(__gmctx->fd = pctx->outfd)) {
 		/* great we need a new file descriptor now
 		 * generate a new one, mmapable this time */
 		tmpfn = mat_tmpnam();

@@ -154,4 +154,8 @@ extern ssize_t pr(pr_ctx_t pctx, scom_t st);
 extern void init(pr_ctx_t pctx);
 extern void fini(pr_ctx_t pctx);
 
+/**
+ * Same as `init()' but also hand over command line args. */
+extern int init_main(pr_ctx_t pctx, int argc, char *argv[]);
+
 #endif	/* INCLUDED_ute_print_h_ */

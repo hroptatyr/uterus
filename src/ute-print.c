@@ -80,20 +80,39 @@
 
 static ute_dso_t pr_dso;
 
-static ssize_t
-(*find_printer(const char *opt))(pr_ctx_t, scom_t)
+struct printer_s {
+	ssize_t(*prf)(pr_ctx_t, scom_t);
+	int(*init_main_f)(pr_ctx_t, int, char*[]);
+	void(*initf)(pr_ctx_t);
+	void(*finif)(pr_ctx_t);
+};
+
+static struct printer_s
+find_printer(const char opt[static 1])
 {
-	ute_dso_sym_t res;
+	struct printer_s res = {NULL, NULL, NULL, NULL};
+	ute_dso_sym_t pr_sym;
+
 	if ((pr_dso = open_aux(opt)) == NULL) {
-		return NULL;
-	} else if ((res = find_sym(pr_dso, "pr")) == NULL) {
-		return NULL;
+		return res;
 	}
-	return (ssize_t(*)(pr_ctx_t, scom_t))res;
+	if ((pr_sym = find_sym(pr_dso, "pr")) != NULL) {
+		res.prf = (ssize_t(*)())pr_sym;
+	}
+	if ((pr_sym = find_sym(pr_dso, "init")) != NULL) {
+		res.initf = (void(*)())pr_sym;
+	}
+	if ((pr_sym = find_sym(pr_dso, "fini")) != NULL) {
+		res.finif = (void(*)())pr_sym;
+	}
+	if ((pr_sym = find_sym(pr_dso, "init_main")) != NULL) {
+		res.init_main_f = (int(*)())pr_sym;
+	}
+	return res;
 }
 
 static void
-unfind_printer(UNUSED(ssize_t(*prf)(pr_ctx_t, scom_t)))
+unfind_printer(UNUSED(struct printer_s pr))
 {
 	if (pr_dso) {
 		close_aux(pr_dso);
@@ -106,18 +125,19 @@ static int
 print_mudem(const char *fname, void *UNUSED(clo))
 {
 	static const char nono[] = "ute";
-	ssize_t(*prf)(pr_ctx_t, scom_t);
+	struct printer_s tmp;
 
 	/* basename-ify */
 	if ((fname = strrchr(fname, '/'))) {
 		fname++;
 	}
 	/* check for the forbidden words */
-	if (!strstr(fname, nono) && (prf = find_printer(fname))) {
+	if (!strstr(fname, nono) &&
+	    (tmp = find_printer(fname), tmp.prf != NULL)) {
 		putchar('*');
 		putchar(' ');
 		puts(fname);
-		unfind_printer(prf);
+		unfind_printer(tmp);
 	}
 	return 0;
 }
@@ -271,18 +291,31 @@ int
 main(int argc, char *argv[])
 {
 	struct print_args_info argi[1];
+	struct print_parser_params parm = {
+		.override = 1,
+		.initialize = 1,
+		.check_required = 1,
+		.check_ambiguity = 0,
+		.print_errors = 0,
+	};
 	struct pr_ctx_s ctx[1] = {{0}};
 	struct pr_opt_s opt[1] = {{0}};
-	ssize_t(*prf)(pr_ctx_t, scom_t) = NULL;
+	struct printer_s pr;
+	int printer_specific_options_p = 0;
 	const char *fmt;
 	int res = 0;
 
-	if (print_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
+	if (print_parser_ext(argc, argv, argi, &parm)) {
+		/* maybe we've got as far as to parse --format already */
+		if (argi->format_arg == NULL) {
+			res = 1;
+			goto out;
+		}
+		/* otherwise try the printer initialiser */
+		printer_specific_options_p = 1;
+	} else if (argi->help_given && argi->format_arg == NULL) {
 		print_parser_print_help();
-		fputs("\n", stdout);
+		fputc('\n', stdout);
 		print_mudems();
 		res = 0;
 		goto out;
@@ -302,9 +335,14 @@ main(int argc, char *argv[])
 	/* initialise the module system */
 	ute_module_init();
 
-	if (UNLIKELY((prf = find_printer(fmt)) == NULL)) {
+	if (UNLIKELY((pr = find_printer(fmt), pr.prf == NULL))) {
 		/* we need a printer, so piss off here */
 		fputs("printer format unknown\n", stderr);
+		res = 1;
+		goto out;
+	} else if (printer_specific_options_p && pr.init_main_f == NULL) {
+		fputs("\
+printer specific options given but cannot find printer\n", stderr);
 		res = 1;
 		goto out;
 	}
@@ -327,11 +365,13 @@ main(int argc, char *argv[])
 	ctx->opts = opt;
 
 	/* check and call initialiser if any */
-	{
-		void(*initf)(pr_ctx_t);
-		if ((initf = (void(*)(pr_ctx_t))find_sym(pr_dso, "init"))) {
-			initf(ctx);
+	if (pr.init_main_f != NULL) {
+		if (pr.init_main_f(ctx, argc, argv)) {
+			res = 1;
+			goto clo_out;
 		}
+	} else if (pr.initf != NULL) {
+		pr.initf(ctx);
 	}
 
 	if (argi->inputs_num == 0 && !isatty(STDIN_FILENO)) {
@@ -356,28 +396,26 @@ main(int argc, char *argv[])
 				/* last page then? */
 				nrd -= slsz;
 			}
-			prpg(ctx, pg, nrd, prf);
+			prpg(ctx, pg, nrd, pr.prf);
 		}
 
 	} else {
 		for (unsigned int j = 0; j < argi->inputs_num; j++) {
-			pr1(ctx, argi->inputs[j], prf);
+			pr1(ctx, argi->inputs[j], pr.prf);
 		}
 	}
 
 	/* check and call finaliser if any */
 fina:
-	{
-		void(*finif)(pr_ctx_t);
-		if ((finif = (void(*)(pr_ctx_t))find_sym(pr_dso, "fini"))) {
-			finif(ctx);
-		}
+	if (pr.finif != NULL) {
+		pr.finif(ctx);
 	}
+clo_out:
 	/* close the output file */
 	close(ctx->outfd);
 
 out:
-	unfind_printer(prf);
+	unfind_printer(pr);
 	ute_module_fini();
 	print_parser_free(argi);
 	return res;

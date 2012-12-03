@@ -350,7 +350,13 @@ decompress_seek(uteseek_t sk, int virtp)
 	void *out;
 	ssize_t ndecd;
 
-	if ((ndecd = ute_decode(&out, src + 1, src[0])) < 0) {
+	if (sk_sz <= src[0]) {
+		/* probably not comp'd at all */
+		return;
+	} else if ((ndecd = ute_decode(&out, src + 1, src[0])) == 0) {
+		/* not comp'd */
+		return;
+	} else if (ndecd < 0) {
 		/* shit */
 		UDEBUG("BIG BUGGER\n");
 		return;

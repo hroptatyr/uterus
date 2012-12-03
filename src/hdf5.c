@@ -42,8 +42,6 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
 
 /* hdf5 glue */
 #include <hdf5.h>
@@ -51,6 +49,7 @@
 #include "utefile.h"
 #include "ute-print.h"
 #include "nifty.h"
+#include "mem.h"
 
 /* so we know about ticks, candles and snapshots */
 #include "sl1t.h"
@@ -118,21 +117,6 @@ static struct {
 };
 
 
-/* aux helpers */
-static inline bool
-mmapable(int fd)
-{
-	struct stat st;
-	if (fstat(fd, &st) < 0) {
-		return false;
-	} else if (st.st_size < 0) {
-		return false;
-	} else if (!S_ISREG(st.st_mode) || !S_ISLNK(st.st_mode)) {
-		return false;
-	}
-	return true;
-}
-
 /* code dupe! */
 static char*
 __tmpnam(void)
@@ -381,7 +365,7 @@ init(pr_ctx_t pctx)
 	char *fn;
 
 	/* set up our context */
-	if ((my_fn = !mmapable(pctx->outfd))) {
+	if ((my_fn = !mmapablep(pctx->outfd))) {
 		/* great we need a new file descriptor now
 		 * generate a new one, mmapable this time */
 		int fd;

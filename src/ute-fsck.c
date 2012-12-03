@@ -49,10 +49,6 @@
 #include "scommon.h"
 #include "boobs.h"
 
-#if defined HAVE_LZMA_H
-# include <lzma.h>
-#endif	/* HAVE_LZMA_H */
-
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !UNLIKELY */
@@ -82,8 +78,6 @@ struct fsck_ctx_s {
 	ute_end_t tgtend;
 	ute_end_t natend;
 	utectx_t outctx;
-	/* lzma in/out stream */
-	void *strm;
 };
 
 
@@ -325,19 +319,20 @@ conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
 
 #if defined HAVE_LZMA_H
 static void
-compress_seek(lzma_stream *z, uteseek_t sk)
+compress_seek(uteseek_t sk)
 {
 	const size_t sk_sz = seek_byte_size(sk) - sk->si * sizeof(*sk->sp);
-	lzma_ret rc;
+	void *out;
+	ssize_t nencd;
 
-	z->next_in = (void*)(sk->sp + sk->si);
-	z->avail_in = sk_sz;
-	z->next_out = (void*)(sk->sp + sk->si);
-	z->avail_out = sk_sz;
-
-	if ((rc = lzma_code(z, LZMA_FINISH)) != LZMA_STREAM_END) {
+	if ((nencd = ute_encode(&out, sk->sp + sk->si, sk_sz)) < 0) {
+		/* big bugger */
 		UDEBUG("BIG BUGGER\n");
+		return;
 	}
+	/* otherwise memcpy the output and memset the rest */
+	memcpy(sk->sp + sk->si, out, nencd);
+	memset((char*)(sk->sp + sk->si) + nencd, 0, sk_sz - nencd);
 	return;
 }
 #endif	/* HAVE_LZMA_H */
@@ -485,7 +480,7 @@ conv_be(fsck_ctx_t ctx, utectx_t hdl)
 
 #if defined HAVE_LZMA_H
 static void
-ute_compress(lzma_stream z[static 1], utectx_t hdl)
+ute_compress(utectx_t hdl)
 {
 	/* go through them pages manually */
 	for (size_t p = 0, npg = ute_npages(hdl);
@@ -496,7 +491,7 @@ ute_compress(lzma_stream z[static 1], utectx_t hdl)
 		/* create a new seek */
 		seek_page(sk, hdl, p);
 		/* convert that one page */
-		compress_seek(z, sk);
+		compress_seek(sk);
 		/* flush the old seek */
 		flush_seek(sk);
 	}
@@ -506,7 +501,7 @@ ute_compress(lzma_stream z[static 1], utectx_t hdl)
 #else  /* !HAVE_LZMA_H */
 
 static void
-ute_compress(lzma_stream z[static 1], utectx_t hdl)
+ute_compress(utectx_t hdl)
 {
 	const char *fn = ute_fn(hdl);
 
@@ -527,48 +522,6 @@ ute_compress(lzma_stream z[static 1], utectx_t hdl)
 # pragma warning (default:593)
 # pragma warning (default:181)
 #endif	/* __INTEL_COMPILER */
-
-#if defined HAVE_LZMA_H
-static lzma_stream gstrm = LZMA_STREAM_INIT;
-static int lzma_initted_p = 0;
-
-static void*
-init_lzma(void)
-{
-/* singleton */
-	if (lzma_initted_p) {
-		return NULL;
-	} else if (lzma_easy_encoder(&gstrm, 6, LZMA_CHECK_CRC64) != LZMA_OK) {
-		return NULL;
-	}
-	/* otherwise consider ourself initialised */
-	lzma_initted_p = 1;
-	return &gstrm;
-}
-
-static void
-fini_lzma(void)
-{
-	if (LIKELY(lzma_initted_p)) {
-		lzma_end(&gstrm);
-		lzma_initted_p = 0;
-	}
-	return;
-}
-
-#else  /* !HAVE_LZMA_H */
-static void*
-init_lzma(void)
-{
-	return NULL;
-}
-
-static void
-fini_lzma(void)
-{
-	return;
-}
-#endif	/* HAVE_LZMA_H */
 
 int
 main(int argc, char *argv[])
@@ -617,10 +570,6 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (argi->compress_given) {
-		ctx->strm = init_lzma();
-	}
-
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
 		const int fl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
@@ -663,8 +612,8 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 			/* make sure we set the new endianness */
 			ute_set_endianness(hdl, ctx->tgtend);
 
-			if (argi->compress_given && ctx->strm != NULL) {
-				ute_compress(ctx->strm, hdl);
+			if (argi->compress_given) {
+				ute_compress(hdl);
 			}
 		}
 
@@ -707,15 +656,15 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		/* make sure it's the right endianness */
 		ute_set_endianness(hdl, ctx->tgtend);
 
-		if (argi->compress_given && ctx->strm != NULL) {
-			ute_compress(ctx->strm, hdl);
+		if (argi->compress_given) {
+			ute_compress(hdl);
 		}
 		/* and close the whole shebang again */
 		ute_close(hdl);
 	}
 
 	if (argi->compress_given) {
-		fini_lzma();
+		(void)ute_encode(NULL, NULL, 0);
 	}
 out:
 	fsck_parser_free(argi);

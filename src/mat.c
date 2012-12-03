@@ -52,6 +52,7 @@
 #include "scdl.h"
 #include "ssnp.h"
 #include "nifty.h"
+#include "mem.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -358,12 +359,6 @@ stmp_to_matdt(uint32_t sec, uint16_t msec)
 	res = (double)sec / 86400. + 719529.;
 	res += (double)msec / 1000. / 86400.;
 	return res;
-}
-
-static inline bool
-mmapable(int fd)
-{
-	return fd > STDERR_FILENO;
 }
 
 /* code dupe! */

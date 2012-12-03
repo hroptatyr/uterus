@@ -38,6 +38,9 @@
 #if !defined INCLUDED_mem_h_
 #define INCLUDED_mem_h_
 
+#include <stdbool.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #if defined SUSHI_MEM_DEBUG
 extern size_t memusa;
@@ -132,5 +135,19 @@ mremap(void *old, size_t ol_sz, size_t nu_sz, int flags)
 }
 # endif	/* !MREMAP_MAYMOVE */
 #endif	/* MAP_FAILED */
+
+static inline bool
+mmapable(int fd)
+{
+	struct stat st;
+	if (fstat(fd, &st) < 0) {
+		return false;
+	} else if (st.st_size < 0) {
+		return false;
+	} else if (!S_ISREG(st.st_mode) || S_ISLNK(st.st_mode)) {
+		return false;
+	}
+	return true;
+}
 
 #endif	/* INCLUDED_mem_h_ */

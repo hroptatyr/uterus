@@ -77,12 +77,6 @@ struct expobuf_s {
 
 static size_t glob_pgsz;
 
-static inline bool
-mmapable(int fd)
-{
-	return fd > STDIN_FILENO;
-}
-
 
 static inline expobuf_t
 make_expobuf(int fd)

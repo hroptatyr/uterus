@@ -238,7 +238,7 @@ creat_hdr(utectx_t ctx)
 ssize_t
 ute_encode(void **tgt, const void *buf, const size_t bsz)
 {
-	static lzma_stream strm = (typeof(strm))LZMA_STREAM_INIT;
+	static lzma_stream strm = LZMA_STREAM_INIT;
 	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
 	static uint8_t *iobuf = NULL;
 	lzma_ret rc;

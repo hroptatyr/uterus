@@ -506,7 +506,7 @@ ute_compress(lzma_stream z[static 1], utectx_t hdl)
 #else  /* !HAVE_LZMA_H */
 
 static void
-ute_compress(utectx_t hdl)
+ute_compress(lzma_stream z[static 1], utectx_t hdl)
 {
 	const char *fn = ute_fn(hdl);
 

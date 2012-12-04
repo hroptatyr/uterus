@@ -426,6 +426,9 @@ out:
 void
 fini(pr_ctx_t UNUSED(pctx))
 {
+	if (UNLIKELY(__gmctx->cch == NULL)) {
+		return;
+	}
 	cache_fini(__gmctx);
 	hdf5_close(__gmctx);
 	return;

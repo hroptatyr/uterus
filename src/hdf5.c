@@ -213,7 +213,7 @@ get_dat(mctx_t ctx, uint16_t idx)
 }
 
 static void
-hdf5_open(mctx_t ctx, const char *fn)
+hdf5_open_comp(mctx_t ctx, const char *fn)
 {
 	hsize_t dims[] = {1, 1, 0};
 	hsize_t maxdims[] = {1, 1, H5S_UNLIMITED};
@@ -237,7 +237,7 @@ hdf5_open(mctx_t ctx, const char *fn)
 }
 
 static void
-hdf5_close(mctx_t ctx)
+hdf5_close_comp(mctx_t ctx)
 {
 	(void)H5Tclose(ctx->fty);
 	(void)H5Tclose(ctx->mty);
@@ -249,20 +249,7 @@ hdf5_close(mctx_t ctx)
 }
 
 static void
-cache_init(mctx_t ctx)
-{
-	static const char ute_dsnam[] = "/default";
-
-	ctx->cch = malloc(sizeof(*ctx->cch));
-	ctx->cch->nbang = 0UL;
-	/* generate the catch-all data set */
-	ctx->cch->dat = make_dat(ctx, ute_dsnam);
-	ctx->nidxs = 0UL;
-	return;
-}
-
-static void
-cache_flush(mctx_t ctx, size_t idx, const cache_t cch)
+cache_flush_comp(mctx_t ctx, size_t idx, const cache_t cch)
 {
 	const hid_t dat = get_dat(ctx, idx);
 	const hid_t mem = ctx->mem;
@@ -298,13 +285,31 @@ cache_flush(mctx_t ctx, size_t idx, const cache_t cch)
 	return;
 }
 
+
+static void(*h5_open_f)() = hdf5_open_comp;
+static void(*h5_close_f)() = hdf5_close_comp;
+static void(*cch_flush_f)() = cache_flush_comp;
+
+static void
+cache_init(mctx_t ctx)
+{
+	static const char ute_dsnam[] = "/default";
+
+	ctx->cch = malloc(sizeof(*ctx->cch));
+	ctx->cch->nbang = 0UL;
+	/* generate the catch-all data set */
+	ctx->cch->dat = make_dat(ctx, ute_dsnam);
+	ctx->nidxs = 0UL;
+	return;
+}
+
 static void
 cache_fini(mctx_t ctx)
 {
 	for (size_t i = 0; i <= ctx->nidxs; i++) {
 		if (ctx->cch[i].nbang) {
 			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
-			cache_flush(ctx, i, ctx->cch + i);
+			cch_flush_f(ctx, i, ctx->cch + i);
 		}
 		if (ctx->cch[i].dat) {
 			(void)H5Dclose(ctx->cch[i].dat);
@@ -350,7 +355,7 @@ bang5idx(
 		return;
 	}
 	/* oh oh oh */
-	cache_flush(ctx, idx, cch);
+	cch_flush_f(ctx, idx, cch);
 	return;
 }
 
@@ -358,11 +363,33 @@ bang5idx(
 /* public demuxer */
 static struct mctx_s __gmctx[1];
 
-void
-init(pr_ctx_t pctx)
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "hdf5-clo.h"
+#include "hdf5-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
+
+int
+init_main(pr_ctx_t pctx, int argc, char *argv[])
 {
+	struct hdf5_args_info argi[1];
 	bool my_fn;
 	char *fn;
+	int res = 0;
+
+	if (hdf5_parser(argc, argv, argi)) {
+		res = -1;
+		goto out;
+	} else if (argi->help_given) {
+		hdf5_parser_print_help();
+		res = 1;
+		goto out;
+	}
 
 	/* set up our context */
 	if ((my_fn = !mmapablep(pctx->outfd))) {
@@ -388,21 +415,27 @@ init(pr_ctx_t pctx)
 	}
 
 	/* let hdf deal with this */
-	hdf5_open(__gmctx, fn);
+	h5_open_f(__gmctx, fn);
 	/* also get the cache ready */
 	cache_init(__gmctx);
 
 	if (my_fn) {
 		free(fn);
 	}
-	return;
+
+out:
+	hdf5_parser_free(argi);
+	return res;
 }
 
 void
 fini(pr_ctx_t UNUSED(pctx))
 {
+	if (UNLIKELY(__gmctx->cch == NULL)) {
+		return;
+	}
 	cache_fini(__gmctx);
-	hdf5_close(__gmctx);
+	h5_close_f(__gmctx);
 	return;
 }
 

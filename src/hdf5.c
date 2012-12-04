@@ -286,6 +286,10 @@ cache_flush_comp(mctx_t ctx, size_t idx, const cache_t cch)
 }
 
 
+static void(*h5_open_f)() = hdf5_open_comp;
+static void(*h5_close_f)() = hdf5_close_comp;
+static void(*cch_flush_f)() = cache_flush_comp;
+
 static void
 cache_init(mctx_t ctx)
 {
@@ -305,7 +309,7 @@ cache_fini(mctx_t ctx)
 	for (size_t i = 0; i <= ctx->nidxs; i++) {
 		if (ctx->cch[i].nbang) {
 			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
-			cache_flush_comp(ctx, i, ctx->cch + i);
+			cch_flush_f(ctx, i, ctx->cch + i);
 		}
 		if (ctx->cch[i].dat) {
 			(void)H5Dclose(ctx->cch[i].dat);
@@ -351,7 +355,7 @@ bang5idx(
 		return;
 	}
 	/* oh oh oh */
-	cache_flush_comp(ctx, idx, cch);
+	cch_flush_f(ctx, idx, cch);
 	return;
 }
 
@@ -411,7 +415,7 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 	}
 
 	/* let hdf deal with this */
-	hdf5_open_comp(__gmctx, fn);
+	h5_open_f(__gmctx, fn);
 	/* also get the cache ready */
 	cache_init(__gmctx);
 
@@ -431,7 +435,7 @@ fini(pr_ctx_t UNUSED(pctx))
 		return;
 	}
 	cache_fini(__gmctx);
-	hdf5_close_comp(__gmctx);
+	h5_close_f(__gmctx);
 	return;
 }
 

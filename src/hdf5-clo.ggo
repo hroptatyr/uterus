@@ -1,0 +1,25 @@
+args "--unamed-opts --no-help --long-help -a hdf5_args_info -f hdf5_parser"
+package "ute-print -f hdf5"
+usage "ute print -f hdf5 [OPTIONS...] FILEs..."
+description "Dump ute files in HDF5 format."
+
+option "help" h
+	"Show this help message."
+	optional
+
+
+section "Input options"
+
+option "format" f
+## handled by ute-print
+	"Use the specified parser, see below for a list."
+	string typestr="FORMAT" optional
+
+
+section "Output options"
+
+option "output" o
+## handled by ute-print
+	"Write result to specified output file, or stdout if omitted."
+	string typestr="FILE" optional
+

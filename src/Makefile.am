@@ -207,11 +207,12 @@ mat_la_LIBADD = libuterus.la
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
-hdf5_la_SOURCES = hdf5.c
+hdf5_la_SOURCES = hdf5.c hdf5-clo.ggo
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LDFLAGS = -module $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
 hdf5_la_LIBADD = libuterus.la
 endif  ## HAVE_HDF5
+BUILT_SOURCES += hdf5-clo.c hdf5-clo.h
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c

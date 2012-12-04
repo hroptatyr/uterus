@@ -358,11 +358,33 @@ bang5idx(
 /* public demuxer */
 static struct mctx_s __gmctx[1];
 
-void
-init(pr_ctx_t pctx)
+#if defined __INTEL_COMPILER
+# pragma warning (disable:593)
+# pragma warning (disable:181)
+#endif	/* __INTEL_COMPILER */
+#include "hdf5-clo.h"
+#include "hdf5-clo.c"
+#if defined __INTEL_COMPILER
+# pragma warning (default:593)
+# pragma warning (default:181)
+#endif	/* __INTEL_COMPILER */
+
+int
+init_main(pr_ctx_t pctx, int argc, char *argv[])
 {
+	struct hdf5_args_info argi[1];
 	bool my_fn;
 	char *fn;
+	int res = 0;
+
+	if (hdf5_parser(argc, argv, argi)) {
+		res = 1;
+		goto out;
+	} else if (argi->help_given) {
+		hdf5_parser_print_help();
+		res = 0;
+		goto out;
+	}
 
 	/* set up our context */
 	if ((my_fn = !mmapablep(pctx->outfd))) {
@@ -395,7 +417,10 @@ init(pr_ctx_t pctx)
 	if (my_fn) {
 		free(fn);
 	}
-	return;
+
+out:
+	hdf5_parser_free(argi);
+	return res;
 }
 
 void

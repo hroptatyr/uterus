@@ -378,11 +378,11 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 	int res = 0;
 
 	if (hdf5_parser(argc, argv, argi)) {
-		res = 1;
+		res = -1;
 		goto out;
 	} else if (argi->help_given) {
 		hdf5_parser_print_help();
-		res = 0;
+		res = 1;
 		goto out;
 	}
 

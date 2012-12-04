@@ -366,8 +366,13 @@ printer specific options given but cannot find printer\n", stderr);
 
 	/* check and call initialiser if any */
 	if (pr.init_main_f != NULL) {
-		if (pr.init_main_f(ctx, argc, argv)) {
-			res = 1;
+		if ((res = pr.init_main_f(ctx, argc, argv))) {
+			if (res < 0) {
+				res = 1;
+			} else {
+				/* we don't consider it an error */
+				res = 0;
+			}
 			goto clo_out;
 		}
 	} else if (pr.initf != NULL) {

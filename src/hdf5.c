@@ -343,8 +343,8 @@ get_dat_plain(mctx_t ctx, uint16_t idx)
 static void
 hdf5_open_plain(mctx_t ctx, const char *fn)
 {
-	hsize_t dims[] = {2, 0};
-	hsize_t maxdims[] = {2, H5S_UNLIMITED};
+	hsize_t dims[] = {1, 0};
+	hsize_t maxdims[] = {4 * 3, H5S_UNLIMITED};
 
 	/* generate the handle */
         ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -371,16 +371,41 @@ hdf5_close_plain(mctx_t ctx)
 }
 
 static void
+cache_flush_4(
+	const hid_t dat, const hid_t spc, const hid_t mem,
+	size_t bangd, size_t flav, const cache_t cch)
+{
+	const hid_t mty = H5T_NATIVE_DOUBLE;
+	const size_t nbang = cch->nbang;
+	hsize_t mix[] = {0, 0};
+	hsize_t sta[] = {flav, bangd};
+	hsize_t cnt[] = {1, nbang};
+
+	/* select a hyperslab (for open) in the mem space */
+	H5Sselect_hyperslab(mem, H5S_SELECT_SET, mix, NULL, cnt, NULL);
+
+	/* select a hyperslab (for open) in the file space */
+	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+
+	/* final flush */
+	{
+		double tmp[CHUNK_INC];
+
+		for (size_t i = 0; i < nbang; i++) {
+			tmp[i] = cch->vals[i].d[flav];
+		}
+		H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, tmp);
+	}
+	return;
+}
+
+static void
 cache_flush_plain(mctx_t ctx, size_t idx, const cache_t cch)
 {
 	const hid_t dat = get_dat_plain(ctx, idx);
-	const hid_t mem = ctx->mem;
-	const hid_t mty = H5T_NATIVE_DOUBLE;
 	const hsize_t nbang = cch->nbang;
 	hsize_t ol_dims[] = {0, 0};
 	hsize_t nu_dims[] = {0, 0};
-	hsize_t sta[] = {0, 0};
-	hsize_t cnt[] = {1, -1};
 	hid_t spc;
 
 	/* get current dimensions */
@@ -388,27 +413,18 @@ cache_flush_plain(mctx_t ctx, size_t idx, const cache_t cch)
 	H5Sget_simple_extent_dims(spc, ol_dims, NULL);
 
 	/* nbang more rows, make sure we're at least as wide as we say */
-	nu_dims[0] = ol_dims[0];
+	nu_dims[0] = 4;
 	nu_dims[1] = ol_dims[1] + nbang;
 	H5Dset_extent(dat, nu_dims);
 	spc = H5Dget_space(dat);
 
-	/* select a hyperslab in the mem space */
-	cnt[1] = nbang;
-	H5Sselect_hyperslab(mem, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+	/* now flush them one by one */
+	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 0/*open*/, cch);
+	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 1/*high*/, cch);
+	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 2/*low*/, cch);
+	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 3/*close*/, cch);
 
-	/* select a hyperslab in the file space */
-	sta[1] = ol_dims[1];
-	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
-
-	/* final flush */
-	{
-		double vals[cch->nbang];
-		for (size_t i = 0; i < cch->nbang; i++) {
-			vals[i] = cch->vals[i].o;
-		}
-		H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, vals);
-	}
+	/* reset the nbang and off we are */
 	cch->nbang = 0UL;
 	return;
 }

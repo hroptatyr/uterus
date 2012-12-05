@@ -570,9 +570,23 @@ cache_fini(mctx_t ctx)
 			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
 			cache_sift(ctx, i, ctx->cch + i);
 		}
+		/* close them datasets */
+		for (size_t ttf = 0; ttf < 4; ttf++) {
+			if (ctx->cch[i].dat[ttf]) {
+				(void)H5Dclose(ctx->cch[i].dat[ttf]);
+			}
+			if (ctx->cch[i].tss[ttf]) {
+				(void)H5Dclose(ctx->cch[i].tss[ttf]);
+			}
+		}
+		/* close the groups */
 		if (ctx->cch[i].grp) {
 			(void)H5Gclose(ctx->cch[i].grp);
 			ctx->cch[i].grp = 0;
+		}
+		if (ctx->cch[i].tsgrp) {
+			(void)H5Gclose(ctx->cch[i].tsgrp);
+			ctx->cch[i].tsgrp = 0;
 		}
 	}
 	free(ctx->cch);

@@ -7,6 +7,9 @@ option "help" h
 	"Show this help message."
 	optional
 
+option "do-not-throw-errors-upon-unknown-options" ?
+	""
+	optional hidden
 
 section "Input options"
 

@@ -23,3 +23,6 @@ option "output" o
 	"Write result to specified output file, or stdout if omitted."
 	string typestr="FILE" optional
 
+option "compound" -
+	"Use the compound data type to tightly couple timestamps and values."
+	optional

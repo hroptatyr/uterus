@@ -162,8 +162,19 @@ struct cache_s {
 	struct atom_s vals[CHUNK_INC];
 };
 
+static const char ute_dsnam[] = "/default";
+
+struct h5cb_s {
+	void(*open_f)();
+	void(*close_f)();
+	void(*cch_flush_f)();
+	void(*cch_hook_f)();
+};
+
+
+/* compound funs */
 static hid_t
-make_dat(mctx_t ctx, const char *nam)
+make_dat_comp(mctx_t ctx, const char *nam)
 {
 	const hid_t fil = ctx->fil;
 	const hid_t spc = ctx->spc;
@@ -173,6 +184,22 @@ make_dat(mctx_t ctx, const char *nam)
 	const hid_t ds_acc = H5P_DEFAULT;
 
 	return H5Dcreate(fil, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
+}
+
+static hid_t
+get_dat_comp(mctx_t ctx, uint16_t idx)
+{
+	if (ctx->cch[idx].dat == 0) {
+		const char *dnam;
+		if (LIKELY(idx > 0U)) {
+			dnam = ute_idx2sym(ctx->u, idx);
+		} else {
+			dnam = ute_dsnam;
+		}
+		/* singleton */
+		ctx->cch[idx].dat = make_dat_comp(ctx, dnam);
+	}
+	return ctx->cch[idx].dat;
 }
 
 static hid_t
@@ -199,17 +226,6 @@ make_mem_type()
 	H5Tinsert(res, atom_desc[3].nam, atom_desc[3].off, H5T_NATIVE_DOUBLE);
 	H5Tinsert(res, atom_desc[4].nam, atom_desc[4].off, H5T_NATIVE_DOUBLE);
 	return res;
-}
-
-static hid_t
-get_dat(mctx_t ctx, uint16_t idx)
-{
-	if (ctx->cch[idx].dat == 0) {
-		/* singleton */
-		const char *dnam = ute_idx2sym(ctx->u, idx);
-		ctx->cch[idx].dat = make_dat(ctx, dnam);
-	}
-	return ctx->cch[idx].dat;
 }
 
 static void
@@ -251,7 +267,7 @@ hdf5_close_comp(mctx_t ctx)
 static void
 cache_flush_comp(mctx_t ctx, size_t idx, const cache_t cch)
 {
-	const hid_t dat = get_dat(ctx, idx);
+	const hid_t dat = get_dat_comp(ctx, idx);
 	const hid_t mem = ctx->mem;
 	const hsize_t nbang = cch->nbang;
 	hsize_t ol_dims[] = {0, 0, 0};
@@ -285,20 +301,22 @@ cache_flush_comp(mctx_t ctx, size_t idx, const cache_t cch)
 	return;
 }
 
+static const struct h5cb_s h5_comp_cb = {
+	.open_f = hdf5_open_comp,
+	.close_f = hdf5_close_comp,
+	.cch_flush_f = cache_flush_comp,
+	.cch_hook_f = (void(*)())get_dat_comp,
+};
+
 
-static void(*h5_open_f)() = hdf5_open_comp;
-static void(*h5_close_f)() = hdf5_close_comp;
-static void(*cch_flush_f)() = cache_flush_comp;
+/* cache fiddling and interaction with the h5 funs */
+static const struct h5cb_s *h5cb;
 
 static void
 cache_init(mctx_t ctx)
 {
-	static const char ute_dsnam[] = "/default";
-
 	ctx->cch = malloc(sizeof(*ctx->cch));
 	ctx->cch->nbang = 0UL;
-	/* generate the catch-all data set */
-	ctx->cch->dat = make_dat(ctx, ute_dsnam);
 	ctx->nidxs = 0UL;
 	return;
 }
@@ -309,7 +327,7 @@ cache_fini(mctx_t ctx)
 	for (size_t i = 0; i <= ctx->nidxs; i++) {
 		if (ctx->cch[i].nbang) {
 			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
-			cch_flush_f(ctx, i, ctx->cch + i);
+			h5cb->cch_flush_f(ctx, i, ctx->cch + i);
 		}
 		if (ctx->cch[i].dat) {
 			(void)H5Dclose(ctx->cch[i].dat);
@@ -329,9 +347,11 @@ get_cch(mctx_t ctx, uint16_t idx)
 		const size_t nu = idx + 1;
 		ctx->cch = __resize(ctx->cch, ol, nu, sizeof(*ctx->cch));
 		ctx->nidxs = idx;
+
+		if (h5cb->cch_hook_f) {
+			h5cb->cch_hook_f(ctx, idx);
+		}
 	}
-	/* for the side-effect */
-	(void)get_dat(ctx, idx);
 	return ctx->cch + idx;
 }
 
@@ -355,7 +375,7 @@ bang5idx(
 		return;
 	}
 	/* oh oh oh */
-	cch_flush_f(ctx, idx, cch);
+	h5cb->cch_flush_f(ctx, idx, cch);
 	return;
 }
 
@@ -391,6 +411,13 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 		goto out;
 	}
 
+	if (argi->compound_given) {
+		h5cb = &h5_comp_cb;
+	} else {
+		/* we have nothing else really */
+		h5cb = &h5_comp_cb;
+	}
+
 	/* set up our context */
 	if ((my_fn = !mmapablep(pctx->outfd))) {
 		/* great we need a new file descriptor now
@@ -415,7 +442,7 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 	}
 
 	/* let hdf deal with this */
-	h5_open_f(__gmctx, fn);
+	h5cb->open_f(__gmctx, fn);
 	/* also get the cache ready */
 	cache_init(__gmctx);
 
@@ -435,7 +462,7 @@ fini(pr_ctx_t UNUSED(pctx))
 		return;
 	}
 	cache_fini(__gmctx);
-	h5_close_f(__gmctx);
+	h5cb->close_f(__gmctx);
 	return;
 }
 

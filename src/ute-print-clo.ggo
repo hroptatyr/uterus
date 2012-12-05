@@ -7,6 +7,10 @@ option "help" h
 	"Show this help message."
 	optional
 
+option "do-not-throw-errors-upon-unknown-options" ?
+	""
+	optional hidden
+
 option "format" f
 	"Use the specified parser, see below for a list."
 	string optional typestr="FORMAT"

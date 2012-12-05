@@ -160,7 +160,9 @@ __resize(void *p, size_t nol, size_t nnu, size_t blsz)
 struct cache_s {
 	size_t nbang;
 	hid_t grp;
+	hid_t tsgrp;
 	hid_t dat[4];
+	hid_t tss[4];
 	struct atom_s vals[CHUNK_INC];
 };
 
@@ -193,6 +195,18 @@ make_dat(mctx_t ctx, const hid_t grp, const char *nam)
 }
 
 static hid_t
+make_tss(mctx_t ctx, const hid_t grp, const char *nam)
+{
+	const hid_t spc = ctx->spc;
+	const hid_t ds_ty = H5T_UNIX_D64LE;
+	const hid_t ln_crea = H5P_DEFAULT;
+	const hid_t ds_crea = ctx->plist;
+	const hid_t ds_acc = H5P_DEFAULT;
+
+	return H5Dcreate(grp, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
+}
+
+static hid_t
 get_grp(mctx_t ctx, uint16_t idx)
 {
 	if (ctx->cch[idx].grp == 0) {
@@ -209,6 +223,20 @@ get_grp(mctx_t ctx, uint16_t idx)
 }
 
 static hid_t
+get_tsgrp(mctx_t ctx, uint16_t idx)
+{
+	hid_t grp = get_grp(ctx, idx);
+
+	if (ctx->cch[idx].tsgrp == 0) {
+		const char dnam[] = "ts";
+
+		/* singleton */
+		ctx->cch[idx].tsgrp = H5Gcreate1(grp, dnam, 4U);
+	}
+	return ctx->cch[idx].tsgrp;
+}
+
+static hid_t
 get_dat(mctx_t ctx, uint16_t idx, uint16_t ttf)
 {
 	hid_t grp = get_grp(ctx, idx);
@@ -222,6 +250,22 @@ get_dat(mctx_t ctx, uint16_t idx, uint16_t ttf)
 		ctx->cch[idx].dat[i] = make_dat(ctx, grp, nams[i]);
 	}
 	return ctx->cch[idx].dat[i];
+}
+
+static hid_t
+get_tss(mctx_t ctx, uint16_t idx, uint16_t ttf)
+{
+	hid_t grp = get_tsgrp(ctx, idx);
+	size_t i = ttf & 0x3;
+
+	if (ctx->cch[idx].tss[i] == 0) {
+		static const char *nams[] = {
+			"snap", "bid", "ask", "trade"
+		};
+		/* singleton */
+		ctx->cch[idx].tss[i] = make_tss(ctx, grp, nams[i]);
+	}
+	return ctx->cch[idx].tss[i];
 }
 
 
@@ -410,9 +454,53 @@ cache_flush_4(
 }
 
 static void
+cache_flush_ts(
+	const hid_t dat, const hid_t mem,
+	size_t bangd, const cache_t cch, size_t ttf)
+{
+	const hid_t mty = H5T_UNIX_D64LE;
+	int64_t vals[CHUNK_INC];
+	hsize_t nu_dims[] = {0, 0};
+	hsize_t mix[] = {0, 0};
+	hsize_t sta[] = {0, bangd};
+	hsize_t cnt[] = {1, -1};
+	hid_t spc;
+	size_t nbang = 0;
+
+	/* copy them values */
+	for (size_t i = 0; i < cch->nbang; i++) {
+		if ((cch->vals[i].ttf & 0x3) == ttf) {
+			vals[nbang++] = cch->vals[i].ts;
+		}
+	}
+	if (UNLIKELY(nbang == 0U)) {
+		return;
+	}
+
+	/* nbang more rows, make sure we're at least as wide as we say */
+	nu_dims[0] = 1;
+	nu_dims[1] = bangd + nbang;
+	H5Dset_extent(dat, nu_dims);
+	spc = H5Dget_space(dat);
+
+	/* select a hyperslab (for open) in the mem space */
+	cnt[1] = nbang;
+	H5Sselect_hyperslab(mem, H5S_SELECT_SET, mix, NULL, cnt, NULL);
+
+	/* select a hyperslab (for open) in the file space */
+	cnt[1] = nbang;
+	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+
+	/* final flush */
+	H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, vals);
+	return;
+}
+
+static void
 cache_flush_plain(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 {
 	const hid_t dat = get_dat(ctx, idx, ttf);
+	const hid_t tss = get_tss(ctx, idx, ttf);
 	hsize_t ol_dims[] = {0, 0};
 	hid_t spc;
 
@@ -425,6 +513,13 @@ cache_flush_plain(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
+
+	/* same for timestamps */
+	spc = H5Dget_space(tss);
+	H5Sget_simple_extent_dims(spc, ol_dims, NULL);
+
+	/* flush */
+	cache_flush_ts(tss, ctx->mem, ol_dims[1], cch, ttf);
 	return;
 }
 

@@ -309,6 +309,118 @@ static const struct h5cb_s h5_comp_cb = {
 };
 
 
+/* plain funs
+ * plain output is just a vector of [time,value] tuples */
+static hid_t
+make_dat_plain(mctx_t ctx, const char *nam)
+{
+	const hid_t spc = ctx->spc;
+	const hid_t ln_crea = H5P_DEFAULT;
+	const hid_t ds_crea = ctx->plist;
+	const hid_t ds_acc = H5P_DEFAULT;
+	/* type in the actual file */
+	const hid_t ds_ty = H5T_NATIVE_DOUBLE;
+
+	return H5Dcreate(ctx->fil, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
+}
+
+static hid_t
+get_dat_plain(mctx_t ctx, uint16_t idx)
+{
+	if (ctx->cch[idx].dat == 0) {
+		const char *dnam;
+		if (LIKELY(idx > 0U)) {
+			dnam = ute_idx2sym(ctx->u, idx);
+		} else {
+			dnam = ute_dsnam;
+		}
+		/* singleton */
+		ctx->cch[idx].dat = make_dat_plain(ctx, dnam);
+	}
+	return ctx->cch[idx].dat;
+}
+
+static void
+hdf5_open_plain(mctx_t ctx, const char *fn)
+{
+	hsize_t dims[] = {2, 0};
+	hsize_t maxdims[] = {2, H5S_UNLIMITED};
+
+	/* generate the handle */
+        ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	/* generate the data space */
+	ctx->spc = H5Screate_simple(countof(dims), dims, maxdims);
+
+	/* create a plist */
+	dims[countof(dims) - 1] = CHUNK_INC;
+	ctx->plist = H5Pcreate(H5P_DATASET_CREATE);
+	H5Pset_chunk(ctx->plist, countof(dims), dims);
+	/* just one more for slabbing later on */
+	ctx->mem = H5Screate_simple(countof(dims), dims, dims);
+	return;
+}
+
+static void
+hdf5_close_plain(mctx_t ctx)
+{
+	(void)H5Pclose(ctx->plist);
+	(void)H5Sclose(ctx->mem);
+	(void)H5Sclose(ctx->spc);
+	(void)H5Fclose(ctx->fil);
+	return;
+}
+
+static void
+cache_flush_plain(mctx_t ctx, size_t idx, const cache_t cch)
+{
+	const hid_t dat = get_dat_plain(ctx, idx);
+	const hid_t mem = ctx->mem;
+	const hid_t mty = H5T_NATIVE_DOUBLE;
+	const hsize_t nbang = cch->nbang;
+	hsize_t ol_dims[] = {0, 0};
+	hsize_t nu_dims[] = {0, 0};
+	hsize_t sta[] = {0, 0};
+	hsize_t cnt[] = {1, -1};
+	hid_t spc;
+
+	/* get current dimensions */
+	spc = H5Dget_space(dat);
+	H5Sget_simple_extent_dims(spc, ol_dims, NULL);
+
+	/* nbang more rows, make sure we're at least as wide as we say */
+	nu_dims[0] = ol_dims[0];
+	nu_dims[1] = ol_dims[1] + nbang;
+	H5Dset_extent(dat, nu_dims);
+	spc = H5Dget_space(dat);
+
+	/* select a hyperslab in the mem space */
+	cnt[1] = nbang;
+	H5Sselect_hyperslab(mem, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+
+	/* select a hyperslab in the file space */
+	sta[1] = ol_dims[1];
+	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+
+	/* final flush */
+	{
+		double vals[cch->nbang];
+		for (size_t i = 0; i < cch->nbang; i++) {
+			vals[i] = cch->vals[i].o;
+		}
+		H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, vals);
+	}
+	cch->nbang = 0UL;
+	return;
+}
+
+static const struct h5cb_s h5_plain_cb = {
+	.open_f = hdf5_open_plain,
+	.close_f = hdf5_close_plain,
+	.cch_flush_f = cache_flush_plain,
+	.cch_hook_f = (void(*)())get_dat_plain,
+};
+
+
 /* cache fiddling and interaction with the h5 funs */
 static const struct h5cb_s *h5cb;
 
@@ -415,7 +527,7 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 		h5cb = &h5_comp_cb;
 	} else {
 		/* we have nothing else really */
-		h5cb = &h5_comp_cb;
+		h5cb = &h5_plain_cb;
 	}
 
 	/* set up our context */

@@ -171,10 +171,8 @@ struct h5cb_s {
 	void(*cch_hook_f)();
 };
 
-
-/* compound funs */
 static hid_t
-make_dat_comp(mctx_t ctx, const char *nam)
+make_dat(mctx_t ctx, const char *nam)
 {
 	const hid_t fil = ctx->fil;
 	const hid_t spc = ctx->spc;
@@ -186,6 +184,8 @@ make_dat_comp(mctx_t ctx, const char *nam)
 	return H5Dcreate(fil, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
 }
 
+
+/* compound funs */
 static hid_t
 get_dat_comp(mctx_t ctx, uint16_t idx)
 {
@@ -197,7 +197,7 @@ get_dat_comp(mctx_t ctx, uint16_t idx)
 			dnam = ute_dsnam;
 		}
 		/* singleton */
-		ctx->cch[idx].dat = make_dat_comp(ctx, dnam);
+		ctx->cch[idx].dat = make_dat(ctx, dnam);
 	}
 	return ctx->cch[idx].dat;
 }
@@ -312,19 +312,6 @@ static const struct h5cb_s h5_comp_cb = {
 /* plain funs
  * plain output is just a vector of [time,value] tuples */
 static hid_t
-make_dat_plain(mctx_t ctx, const char *nam)
-{
-	const hid_t spc = ctx->spc;
-	const hid_t ln_crea = H5P_DEFAULT;
-	const hid_t ds_crea = ctx->plist;
-	const hid_t ds_acc = H5P_DEFAULT;
-	/* type in the actual file */
-	const hid_t ds_ty = H5T_NATIVE_DOUBLE;
-
-	return H5Dcreate(ctx->fil, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
-}
-
-static hid_t
 get_dat_plain(mctx_t ctx, uint16_t idx)
 {
 	if (ctx->cch[idx].dat == 0) {
@@ -335,7 +322,7 @@ get_dat_plain(mctx_t ctx, uint16_t idx)
 			dnam = ute_dsnam;
 		}
 		/* singleton */
-		ctx->cch[idx].dat = make_dat_plain(ctx, dnam);
+		ctx->cch[idx].dat = make_dat(ctx, dnam);
 	}
 	return ctx->cch[idx].dat;
 }
@@ -357,6 +344,9 @@ hdf5_open_plain(mctx_t ctx, const char *fn)
 	H5Pset_chunk(ctx->plist, countof(dims), dims);
 	/* just one more for slabbing later on */
 	ctx->mem = H5Screate_simple(countof(dims), dims, dims);
+
+	ctx->fty = H5T_IEEE_F64LE;
+	ctx->mty = H5T_NATIVE_DOUBLE;
 	return;
 }
 

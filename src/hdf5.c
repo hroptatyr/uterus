@@ -94,6 +94,7 @@ struct atom_s {
 		time_t ts;
 		int64_t pad;
 	};
+	int64_t ttf;
 	union {
 		double d[4];
 		struct {
@@ -158,7 +159,8 @@ __resize(void *p, size_t nol, size_t nnu, size_t blsz)
 
 struct cache_s {
 	size_t nbang;
-	hid_t dat;
+	hid_t grp;
+	hid_t dat[4];
 	struct atom_s vals[CHUNK_INC];
 };
 
@@ -168,28 +170,32 @@ struct h5cb_s {
 	void(*open_f)();
 	void(*close_f)();
 	void(*cch_flush_f)();
-	void(*cch_hook_f)();
 };
 
 static hid_t
-make_dat(mctx_t ctx, const char *nam)
+make_grp(mctx_t ctx, const char *nam)
 {
 	const hid_t fil = ctx->fil;
+
+	return H5Gcreate1(fil, nam, 4U);
+}
+
+static hid_t
+make_dat(mctx_t ctx, const hid_t grp, const char *nam)
+{
 	const hid_t spc = ctx->spc;
 	const hid_t ds_ty = ctx->fty;
 	const hid_t ln_crea = H5P_DEFAULT;
 	const hid_t ds_crea = ctx->plist;
 	const hid_t ds_acc = H5P_DEFAULT;
 
-	return H5Dcreate(fil, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
+	return H5Dcreate(grp, nam, ds_ty, spc, ln_crea, ds_crea, ds_acc);
 }
 
-
-/* compound funs */
 static hid_t
-get_dat_comp(mctx_t ctx, uint16_t idx)
+get_grp(mctx_t ctx, uint16_t idx)
 {
-	if (ctx->cch[idx].dat == 0) {
+	if (ctx->cch[idx].grp == 0) {
 		const char *dnam;
 		if (LIKELY(idx > 0U)) {
 			dnam = ute_idx2sym(ctx->u, idx);
@@ -197,11 +203,29 @@ get_dat_comp(mctx_t ctx, uint16_t idx)
 			dnam = ute_dsnam;
 		}
 		/* singleton */
-		ctx->cch[idx].dat = make_dat(ctx, dnam);
+		ctx->cch[idx].grp = make_grp(ctx, dnam);
 	}
-	return ctx->cch[idx].dat;
+	return ctx->cch[idx].grp;
 }
 
+static hid_t
+get_dat(mctx_t ctx, uint16_t idx, uint16_t ttf)
+{
+	hid_t grp = get_grp(ctx, idx);
+	size_t i = ttf & 0x3;
+
+	if (ctx->cch[idx].dat[i] == 0) {
+		static const char *nams[] = {
+			"snap", "bid", "ask", "trade"
+		};
+		/* singleton */
+		ctx->cch[idx].dat[i] = make_dat(ctx, grp, nams[i]);
+	}
+	return ctx->cch[idx].dat[i];
+}
+
+
+/* compound funs */
 static hid_t
 make_fil_type()
 {
@@ -265,9 +289,9 @@ hdf5_close_comp(mctx_t ctx)
 }
 
 static void
-cache_flush_comp(mctx_t ctx, size_t idx, const cache_t cch)
+cache_flush_comp(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 {
-	const hid_t dat = get_dat_comp(ctx, idx);
+	const hid_t dat = get_dat(ctx, idx, ttf);
 	const hid_t mem = ctx->mem;
 	const hsize_t nbang = cch->nbang;
 	hsize_t ol_dims[] = {0, 0, 0};
@@ -297,7 +321,6 @@ cache_flush_comp(mctx_t ctx, size_t idx, const cache_t cch)
 
 	/* final flush */
 	H5Dwrite(dat, ctx->mty, mem, spc, H5P_DEFAULT, cch->vals);
-	cch->nbang = 0UL;
 	return;
 }
 
@@ -305,28 +328,11 @@ static const struct h5cb_s h5_comp_cb = {
 	.open_f = hdf5_open_comp,
 	.close_f = hdf5_close_comp,
 	.cch_flush_f = cache_flush_comp,
-	.cch_hook_f = (void(*)())get_dat_comp,
 };
 
 
 /* plain funs
  * plain output is just a vector of [time,value] tuples */
-static hid_t
-get_dat_plain(mctx_t ctx, uint16_t idx)
-{
-	if (ctx->cch[idx].dat == 0) {
-		const char *dnam;
-		if (LIKELY(idx > 0U)) {
-			dnam = ute_idx2sym(ctx->u, idx);
-		} else {
-			dnam = ute_dsnam;
-		}
-		/* singleton */
-		ctx->cch[idx].dat = make_dat(ctx, dnam);
-	}
-	return ctx->cch[idx].dat;
-}
-
 static void
 hdf5_open_plain(mctx_t ctx, const char *fn)
 {
@@ -362,60 +368,63 @@ hdf5_close_plain(mctx_t ctx)
 
 static void
 cache_flush_4(
-	const hid_t dat, const hid_t spc, const hid_t mem,
-	size_t bangd, size_t flav, const cache_t cch)
+	const hid_t dat, const hid_t mem,
+	size_t bangd, size_t flav, const cache_t cch, size_t ttf)
 {
 	const hid_t mty = H5T_NATIVE_DOUBLE;
-	const size_t nbang = cch->nbang;
+	double vals[CHUNK_INC];
+	hsize_t nu_dims[] = {0, 0};
 	hsize_t mix[] = {0, 0};
 	hsize_t sta[] = {flav, bangd};
-	hsize_t cnt[] = {1, nbang};
+	hsize_t cnt[] = {1, -1};
+	hid_t spc;
+	size_t nbang = 0;
+
+	/* copy them values */
+	for (size_t i = 0; i < cch->nbang; i++) {
+		if ((cch->vals[i].ttf & 0x3) == ttf) {
+			vals[nbang++] = cch->vals[i].d[flav];
+		}
+	}
+	if (UNLIKELY(nbang == 0U)) {
+		return;
+	}
+
+	/* nbang more rows, make sure we're at least as wide as we say */
+	nu_dims[0] = 4;
+	nu_dims[1] = bangd + nbang;
+	H5Dset_extent(dat, nu_dims);
+	spc = H5Dget_space(dat);
 
 	/* select a hyperslab (for open) in the mem space */
+	cnt[1] = nbang;
 	H5Sselect_hyperslab(mem, H5S_SELECT_SET, mix, NULL, cnt, NULL);
 
 	/* select a hyperslab (for open) in the file space */
+	cnt[1] = nbang;
 	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
 
 	/* final flush */
-	{
-		double tmp[CHUNK_INC];
-
-		for (size_t i = 0; i < nbang; i++) {
-			tmp[i] = cch->vals[i].d[flav];
-		}
-		H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, tmp);
-	}
+	H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, vals);
 	return;
 }
 
 static void
-cache_flush_plain(mctx_t ctx, size_t idx, const cache_t cch)
+cache_flush_plain(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 {
-	const hid_t dat = get_dat_plain(ctx, idx);
-	const hsize_t nbang = cch->nbang;
+	const hid_t dat = get_dat(ctx, idx, ttf);
 	hsize_t ol_dims[] = {0, 0};
-	hsize_t nu_dims[] = {0, 0};
 	hid_t spc;
 
 	/* get current dimensions */
 	spc = H5Dget_space(dat);
 	H5Sget_simple_extent_dims(spc, ol_dims, NULL);
 
-	/* nbang more rows, make sure we're at least as wide as we say */
-	nu_dims[0] = 4;
-	nu_dims[1] = ol_dims[1] + nbang;
-	H5Dset_extent(dat, nu_dims);
-	spc = H5Dget_space(dat);
-
 	/* now flush them one by one */
-	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 0/*open*/, cch);
-	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 1/*high*/, cch);
-	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 2/*low*/, cch);
-	cache_flush_4(dat, spc, ctx->mem, ol_dims[1], 3/*close*/, cch);
-
-	/* reset the nbang and off we are */
-	cch->nbang = 0UL;
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 0/*open*/, cch, ttf);
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
 	return;
 }
 
@@ -423,7 +432,6 @@ static const struct h5cb_s h5_plain_cb = {
 	.open_f = hdf5_open_plain,
 	.close_f = hdf5_close_plain,
 	.cch_flush_f = cache_flush_plain,
-	.cch_hook_f = (void(*)())get_dat_plain,
 };
 
 
@@ -440,16 +448,36 @@ cache_init(mctx_t ctx)
 }
 
 static void
+cache_sift(mctx_t ctx, size_t idx, const cache_t cch)
+{
+/* sift throught the cache and call the flush function on ttfs in question */
+	unsigned int flags = 0;
+	const size_t nbang = cch->nbang;
+
+	for (size_t i = 0; i < nbang; i++) {
+		flags |= 1U << (cch->vals[i].ttf & 0x3);
+	}
+	for (size_t ttf = 0; ttf < 4; ttf++) {
+		if (flags & (1 << ttf)) {
+			h5cb->cch_flush_f(ctx, idx, ttf, cch);
+		}
+	}
+	/* reset the nbang and off we are */
+	cch->nbang = 0UL;
+	return;
+}
+
+static void
 cache_fini(mctx_t ctx)
 {
 	for (size_t i = 0; i <= ctx->nidxs; i++) {
 		if (ctx->cch[i].nbang) {
 			UDEBUG("draining %zu: %zu\n", i, ctx->cch[i].nbang);
-			h5cb->cch_flush_f(ctx, i, ctx->cch + i);
+			cache_sift(ctx, i, ctx->cch + i);
 		}
-		if (ctx->cch[i].dat) {
-			(void)H5Dclose(ctx->cch[i].dat);
-			ctx->cch[i].dat = 0;
+		if (ctx->cch[i].grp) {
+			(void)H5Gclose(ctx->cch[i].grp);
+			ctx->cch[i].grp = 0;
 		}
 	}
 	free(ctx->cch);
@@ -466,16 +494,16 @@ get_cch(mctx_t ctx, uint16_t idx)
 		ctx->cch = __resize(ctx->cch, ol, nu, sizeof(*ctx->cch));
 		ctx->nidxs = idx;
 
-		if (h5cb->cch_hook_f) {
-			h5cb->cch_hook_f(ctx, idx);
-		}
+		/* for the side effect */
+		(void)get_grp(ctx, idx);
 	}
 	return ctx->cch + idx;
 }
 
 static void
 bang5idx(
-	mctx_t ctx, uint16_t idx, time_t ts, uint16_t UNUSED(msec),
+	mctx_t ctx, uint16_t idx, uint16_t ttf,
+	time_t ts, uint16_t UNUSED(msec),
 	double d1, double d2, double d3, double d4)
 {
 	const cache_t cch = get_cch(ctx, idx);
@@ -483,6 +511,7 @@ bang5idx(
 	atom_t vals = cch->vals;
 
 	vals[nbang].ts = ts;
+	vals[nbang].ttf = ttf;
 	vals[nbang].o = d1;
 	vals[nbang].h = d2;
 	vals[nbang].l = d3;
@@ -492,8 +521,9 @@ bang5idx(
 		/* yay, we're safe */
 		return;
 	}
+
 	/* oh oh oh */
-	h5cb->cch_flush_f(ctx, idx, cch);
+	cache_sift(ctx, idx, ctx->cch + idx);
 	return;
 }
 
@@ -609,7 +639,7 @@ pr(pr_ctx_t pctx, scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5idx(__gmctx, idx, sec, msec, bp, ap, bq, aq);
+		bang5idx(__gmctx, idx, ttf, sec, msec, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCDL_FLAVOUR:
@@ -629,7 +659,7 @@ pr(pr_ctx_t pctx, scom_t st)
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5idx(__gmctx, idx, sec, msec, o, h, l, c);
+		bang5idx(__gmctx, idx, ttf, sec, msec, o, h, l, c);
 		break;
 	}
 	default:

@@ -350,7 +350,7 @@ decompress_seek(uteseek_t sk, int virtp)
 	void *out;
 	ssize_t ndecd;
 
-	if (sk_sz <= src[0]) {
+	if (sk_sz > sizeof(*src) && sk_sz <= src[0]) {
 		/* probably not comp'd at all */
 		return;
 	} else if ((ndecd = ute_decode(&out, src + 1, src[0])) == 0) {

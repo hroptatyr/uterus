@@ -62,8 +62,11 @@ struct utehdr2_s {
 	uint32_t slut_sz;
 	uint16_t slut_nsyms;
 	uint16_t slut_version;
-	/* bollocks, off:24, len:8 */
-	uint32_t dummy[2];
+	/* we can't deduce the number of pages from the size anymore
+	 * due to compression and stuff */
+	uint32_t npages;
+	/* bollocks, off:28, len:4 */
+	uint32_t dummy[1];
 	char pad[4096 - 32];
 };
 

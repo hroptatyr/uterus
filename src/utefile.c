@@ -1310,6 +1310,23 @@ ute_nsyms(utectx_t ctx)
 	return nsyms;
 }
 
+size_t
+ute_npages(utectx_t ctx)
+{
+/* Return the number of tick pages.
+ * The first tick page always contains the header. */
+	size_t res;
+
+	if (UNLIKELY((res = ctx->hdrp->npages) == 0)) {
+		/* GUESS is the file size expressed in ticks */
+		size_t guess;
+
+		guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
+		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
+	}
+	return res;
+}
+
 /* quick note one the actual cow stuff in ute:
  * - we keep ticks in pages, each 1024 sys pages wide.
  * - each tick page is ordered

@@ -1323,6 +1323,8 @@ ute_npages(utectx_t ctx)
 
 		guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
+		/* cache this? */
+		ctx->hdrp->npages = res;
 	}
 	return res;
 }

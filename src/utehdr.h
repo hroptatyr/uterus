@@ -46,6 +46,7 @@ typedef const struct utehdr2_s *utehdr2_t;
 #define UTEHDR_FLAG_SYMTBL	1
 #define UTEHDR_FLAG_ORDERED	2
 #define UTEHDR_FLAG_TRNGTBL	4
+#define UTEHDR_FLAG_COMPRESSED	8
 
 struct utehdr2_s {
 	char magic[4];

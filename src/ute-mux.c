@@ -285,7 +285,7 @@ main(int argc, char *argv[])
 	};
 	struct sumux_opt_s opts[1] = {{0}};
 	struct mux_ctx_s ctx[1] = {{0}};
-	struct muxer_s mux;
+	struct muxer_s mxer;
 	int muxer_specific_options_p = 0;
 	int res = 0;
 
@@ -314,13 +314,13 @@ main(int argc, char *argv[])
 	/* initialise the module system */
 	ute_module_init();
 
-	if (UNLIKELY((mux = find_muxer(argi->format_arg),
-		      mux.muxf == NULL && mux.mux_main_f == NULL))) {
+	if (UNLIKELY((mxer = find_muxer(argi->format_arg),
+		      mxer.muxf == NULL && mxer.mux_main_f == NULL))) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
 		res = 1;
 		goto out;
-	} else if (muxer_specific_options_p && mux.mux_main_f == NULL) {
+	} else if (muxer_specific_options_p && mxer.mux_main_f == NULL) {
 		fputs("\
 muxer specific options given but cannot find muxer\n", stderr);
 		res = 1;
@@ -376,8 +376,8 @@ muxer specific options given but cannot find muxer\n", stderr);
 		goto out;
 	}
 	/* prefer the fully fledged version */
-	if (mux.mux_main_f != NULL) {
-		res = mux.mux_main_f(ctx, argc, argv);
+	if (mxer.mux_main_f != NULL) {
+		res = mxer.mux_main_f(ctx, argc, argv);
 	} else {
 		for (unsigned int j = 0; j < argi->inputs_num; j++) {
 			const char *f = argi->inputs[j];
@@ -398,7 +398,7 @@ muxer specific options given but cannot find muxer\n", stderr);
 				continue;
 			}
 			/* ... and now mux it */
-			mux.muxf(ctx);
+			mxer.muxf(ctx);
 			/* close the infile */
 			close(fd);
 		}
@@ -406,7 +406,7 @@ muxer specific options given but cannot find muxer\n", stderr);
 	deinit_ticks(ctx);
 
 out:
-	unfind_muxer(mux);
+	unfind_muxer(mxer);
 	ute_module_fini();
 	mux_parser_free(argi);
 	return res;

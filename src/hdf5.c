@@ -94,7 +94,8 @@ struct atom_s {
 		time_t ts;
 		int64_t pad;
 	};
-	int64_t ttf;
+	uint32_t ttf;
+	uint32_t sta;
 	union {
 		double d[4];
 		struct {
@@ -380,7 +381,7 @@ static const struct h5cb_s h5_comp_cb = {
 static void
 hdf5_open_plain(mctx_t ctx, const char *fn)
 {
-	hsize_t dims[] = {1, 0};
+	hsize_t dims[] = {0, 0};
 	hsize_t maxdims[] = {4 * 3, H5S_UNLIMITED};
 
 	/* generate the handle */
@@ -389,7 +390,8 @@ hdf5_open_plain(mctx_t ctx, const char *fn)
 	ctx->spc = H5Screate_simple(countof(dims), dims, maxdims);
 
 	/* create a plist */
-	dims[countof(dims) - 1] = CHUNK_INC;
+	dims[0] = maxdims[0];
+	dims[1] = CHUNK_INC;
 	ctx->plist = H5Pcreate(H5P_DATASET_CREATE);
 	H5Pset_chunk(ctx->plist, countof(dims), dims);
 	/* just one more for slabbing later on */
@@ -530,6 +532,94 @@ static const struct h5cb_s h5_plain_cb = {
 };
 
 
+/* matlab funs
+ * just like plain output but store timestamps with the candle */
+static double
+u_to_mlabdt(uint32_t x)
+{
+/* convert a unix time stamp to matlab double
+ * 1970-01-01T00:00:00 is defined to be 719529.0 */
+	return 719529.0 + (double)(x) / 86400.0;
+}
+
+static void
+cache_flush_2ts(
+	const hid_t dat, const hid_t mem,
+	size_t bangd, const cache_t cch, size_t ttf)
+{
+	const hid_t mty = H5T_NATIVE_DOUBLE;
+	double vals[2 * CHUNK_INC];
+	hsize_t nu_dims[] = {0, 0};
+	hsize_t mix[] = {0, 0};
+	hsize_t sta[] = {4, bangd};
+	hsize_t cnt[] = {2, -1};
+	hid_t spc;
+	size_t nbang = 0;
+
+	/* copy them values */
+	for (size_t i = 0; i < cch->nbang; i++) {
+		if ((cch->vals[i].ttf & 0x3) == ttf) {
+			vals[CHUNK_INC + nbang] = u_to_mlabdt(cch->vals[i].ts);
+			vals[nbang++] = u_to_mlabdt(cch->vals[i].sta);
+		}
+	}
+	if (UNLIKELY(nbang == 0U)) {
+		return;
+	}
+	/* make the array contiguous again */
+	for (size_t i = 0; i < nbang; i++) {
+		vals[nbang + i] = vals[CHUNK_INC + i];
+	}
+
+	/* nbang more rows, make sure we're at least as wide as we say */
+	nu_dims[0] = 6;
+	nu_dims[1] = bangd + nbang;
+	H5Dset_extent(dat, nu_dims);
+	spc = H5Dget_space(dat);
+
+	/* select a hyperslab (for open) in the mem space */
+	cnt[1] = nbang;
+	/* just one more for slabbing later on */
+	H5Sselect_hyperslab(mem, H5S_SELECT_SET, mix, NULL, cnt, NULL);
+
+	/* select a hyperslab (for open) in the file space */
+	cnt[1] = nbang;
+	H5Sselect_hyperslab(spc, H5S_SELECT_SET, sta, NULL, cnt, NULL);
+
+	/* final flush */
+	H5Dwrite(dat, mty, mem, spc, H5P_DEFAULT, vals);
+	return;
+}
+
+static void
+cache_flush_mlab(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
+{
+	const hid_t dat = get_dat(ctx, idx, ttf);
+	hsize_t ol_dims[] = {0, 0};
+	hid_t spc;
+
+	/* get current dimensions */
+	spc = H5Dget_space(dat);
+	H5Sget_simple_extent_dims(spc, ol_dims, NULL);
+
+	/* now flush them one by one */
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 0/*open*/, cch, ttf);
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
+	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
+
+	/* flush */
+	cache_flush_2ts(dat, ctx->mem, ol_dims[1], cch, ttf);
+	return;
+}
+
+static const struct h5cb_s h5_mlab_cb = {
+	.open_f = hdf5_open_plain,
+	.close_f = hdf5_close_plain,
+	.cch_flush_f = cache_flush_mlab,
+};
+
+
 /* cache fiddling and interaction with the h5 funs */
 static const struct h5cb_s *h5cb;
 
@@ -612,15 +702,16 @@ get_cch(mctx_t ctx, uint16_t idx)
 static void
 bang5idx(
 	mctx_t ctx, uint16_t idx, uint16_t ttf,
-	time_t ts, uint16_t UNUSED(msec),
+	time_t sta_ts, time_t end_ts,
 	double d1, double d2, double d3, double d4)
 {
 	const cache_t cch = get_cch(ctx, idx);
 	const size_t nbang = cch->nbang;
 	atom_t vals = cch->vals;
 
-	vals[nbang].ts = ts;
+	vals[nbang].ts = end_ts;
 	vals[nbang].ttf = ttf;
+	vals[nbang].sta = (uint32_t)sta_ts;
 	vals[nbang].o = d1;
 	vals[nbang].h = d2;
 	vals[nbang].l = d3;
@@ -668,7 +759,9 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 		goto out;
 	}
 
-	if (argi->compound_given) {
+	if (argi->matlab_given) {
+		h5cb = &h5_mlab_cb;
+	} else if (argi->compound_given) {
 		h5cb = &h5_comp_cb;
 	} else {
 		/* we have nothing else really */
@@ -727,7 +820,6 @@ ssize_t
 pr(pr_ctx_t pctx, scom_t st)
 {
 	uint32_t sec = scom_thdr_sec(st);
-	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
 	uint16_t idx = scom_thdr_tblidx(st);
 
@@ -748,7 +840,7 @@ pr(pr_ctx_t pctx, scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5idx(__gmctx, idx, ttf, sec, msec, bp, ap, bq, aq);
+		bang5idx(__gmctx, idx, ttf, sec, sec, bp, ap, bq, aq);
 		break;
 	}
 	case SL1T_TTF_BID | SCDL_FLAVOUR:
@@ -768,7 +860,7 @@ pr(pr_ctx_t pctx, scom_t st)
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5idx(__gmctx, idx, ttf, sec, msec, o, h, l, c);
+		bang5idx(__gmctx, idx, ttf, cdl->sta_ts, sec, o, h, l, c);
 		break;
 	}
 	default:

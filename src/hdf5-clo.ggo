@@ -26,3 +26,7 @@ option "output" o
 option "compound" -
 	"Use the compound data type to tightly couple timestamps and values."
 	optional
+
+option "matlab" -
+	"Make the generated file easy to read with matlab."
+	optional

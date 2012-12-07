@@ -454,8 +454,6 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	sndwch_t sp;
 	sidx_t nt = 0;
 	void *p;
-	/* length in memory, i.e. after decompressing */
-	size_t mlen;
 
 	UDEBUGvv("I reckon page %u starts at %zu, length %zu\n",
 		 pg, offs.foff, offs.flen);
@@ -484,34 +482,39 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 
 	/* check for compression, even if lzma isn't available */
 	if (page_compressed_p(p) == offs.flen) {
-#if defined HAVE_LZMA_H
+		/* length in memory, i.e. after decompressing */
+		size_t mlen;
+		const uint32_t *restrict pu32 = p;
 		void *x = NULL;
-		const uint32_t *pu32 = p;
 
-		if (LIKELY((mlen = ute_decode(&x, pu32 + 1, offs.flen)))) {
-			UDEBUG("decomp'd %zu bytes\n", mlen);
-			p = x;
-		} else {
-			UDEBUG("big buggery (%p,%zu)\n", x, mlen);
-			munmap_any(p, offs.foff, offs.flen);
-			return -1;
-		}
-#else  /* !HAVE_LZMA_H */
+		mlen = ute_decode(&x, pu32 + 1, offs.flen);
+		munmap_any(p, offs.foff, offs.flen);
+
+#if !defined HAVE_LZMA_H
 		UDEBUG("\
 compressed page detected but no compression support, call the hotline\n");
-		return -1;
 #endif	/* HAVE_LZMA_H */
+		if (UNLIKELY(mlen == 0U)) {
+			return -1;
+		}
+
+		/* after decompression we can't really do with this page */
+		munmap_any(p, offs.foff, offs.flen);
+		/* prepare sk, just the map for now */
+		sk->sp = x;
+		sk->szrw = mlen;
+
 	} else {
-		mlen = offs.flen;
+		/* prepare sk, first bit */
+		sk->sp = p;
+		sk->szrw = offs.flen;
 	}
 	/* prepare sk */
-	sk->sp = p;
 	if (pg == 0) {
 		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
 	} else {
 		sk->si = 0;
 	}
-	sk->szrw = mlen;
 	sk->pg = pg;
 	sk->fl = 0;
 

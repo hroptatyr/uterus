@@ -491,7 +491,7 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 		goto wipe;
 	} else if (UNLIKELY(offs.foff + offs.flen >= ctx->fsz)) {
 		/* could be tpc space */
-		if ((mlen = ctx->fsz - offs.foff) == 0) {
+		if ((offs.flen = ctx->fsz - offs.foff) == 0) {
 			/* tpc space */
 			UDEBUGvv("tpc space (%zub)\n", tpc_byte_size(ctx->tpc));
 			goto wipe;

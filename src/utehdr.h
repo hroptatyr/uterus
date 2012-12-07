@@ -65,8 +65,10 @@ struct utehdr2_s {
 	/* we can't deduce the number of pages from the size anymore
 	 * due to compression and stuff */
 	uint32_t npages;
-	/* bollocks, off:28, len:4 */
-	uint32_t dummy[1];
+	/* size of the footer
+	 * the footer contains page offsets and sizes
+	 * see struct uteftr2_s */
+	uint32_t ftr_sz;
 	char pad[4096 - 32];
 };
 

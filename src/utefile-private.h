@@ -82,6 +82,10 @@ struct utectx_s {
 	/* symbol table, idx->sym and sym->idx */
 	ssize_t slut_sz;
 	struct uteslut_s slut[1];
+
+	/* footer, contains page offsets et al */
+	size_t ftr_sz;
+	void *ftr;
 };
 
 /**

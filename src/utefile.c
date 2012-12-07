@@ -922,6 +922,61 @@ tilman_comp(utectx_t ctx)
 }
 #endif	/* AUTO_TILMAN_COMP */
 
+#if defined HAVE_LZMA_H
+static void
+comp_seek(uteseek_t sk)
+{
+	const size_t sk_sz = seek_byte_size(sk) - sk->si * sizeof(*sk->sp);
+	void *out;
+	ssize_t nencd;
+
+	UDEBUG("compressing page %u\n", sk->pg);
+	if (UNLIKELY((nencd = ute_encode(&out, sk->sp + sk->si, sk_sz)) < 0)) {
+		return;
+	}
+
+	/* now we need to replace sk->sp + sk->si by OUT */
+	{
+		uint32_t *tgt = (uint32_t*)(sk->sp + sk->si);
+
+		memcpy(tgt + 1, out, nencd);
+		memset((char*)(tgt + 1) + nencd, 0, sk_sz - nencd);
+		tgt[0] = (uint32_t)nencd;
+	}
+
+	/* we should leave a note for the footer here */
+	;
+	return;
+}
+
+static void
+lzma_comp(utectx_t ctx)
+{
+	/* go through them pages manually */
+	for (size_t p = 0, npg = ute_npages(ctx); p < npg; p++) {
+		struct uteseek_s sk[1];
+
+		/* create a new seek */
+		seek_page(sk, ctx, p);
+		/* compress */
+		comp_seek(sk);
+		/* flush the seek */
+		flush_seek(sk);
+	}
+	/* now go through the footer and condense the pages */
+	;
+	return;
+}
+
+#else  /* !HAVE_LZMA_H */
+
+static void
+lzma_comp(utectx_t UNUSED(ctx))
+{
+	return;
+}
+#endif	/* HAVE_LZMA_H */
+
 static void MAYBE_NOINLINE
 tpc_from_seek(utectx_t ctx, uteseek_t sk)
 {
@@ -1247,6 +1302,10 @@ ute_close(utectx_t ctx)
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
 #endif	/* AUTO_TILMAN_COMP */
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
+		/* final compression */
+		lzma_comp(ctx);
+	}
 	/* serialse the slut */
 	flush_slut(ctx);
 

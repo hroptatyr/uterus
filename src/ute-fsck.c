@@ -317,31 +317,6 @@ conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
 	return;
 }
 
-#if defined HAVE_LZMA_H
-static void
-compress_seek(uteseek_t sk)
-{
-	const size_t sk_sz = seek_byte_size(sk) - sk->si * sizeof(*sk->sp);
-	void *out;
-	ssize_t nencd;
-
-	if ((nencd = ute_encode(&out, sk->sp + sk->si, sk_sz)) < 0) {
-		/* big bugger */
-		UDEBUG("BIG BUGGER\n");
-		return;
-	}
-	/* otherwise memcpy the output and memset the rest */
-	{
-		uint32_t *tgt = (uint32_t*)(sk->sp + sk->si);
-
-		memcpy(tgt + 1, out, nencd);
-		memset((char*)(tgt + 1) + nencd, 0, sk_sz - nencd);
-		tgt[0] = (uint32_t)nencd;
-	}
-	return;
-}
-#endif	/* HAVE_LZMA_H */
-
 
 /* file wide operations */
 static int
@@ -487,19 +462,7 @@ conv_be(fsck_ctx_t ctx, utectx_t hdl)
 static void
 ute_compress(utectx_t hdl)
 {
-	/* go through them pages manually */
-	for (size_t p = 0, npg = ute_npages(hdl);
-	     p < npg + tpc_has_ticks_p(hdl->tpc);
-	     p++) {
-		struct uteseek_s sk[1];
-
-		/* create a new seek */
-		seek_page(sk, hdl, p);
-		/* convert that one page */
-		compress_seek(sk);
-		/* flush the old seek */
-		flush_seek(sk);
-	}
+	hdl->hdrc->flags |= UTEHDR_FLAG_COMPRESSED;
 	return;
 }
 

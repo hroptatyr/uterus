@@ -1403,14 +1403,14 @@ ute_npages(utectx_t ctx)
  * The first tick page always contains the header. */
 	size_t res;
 
-	if (UNLIKELY((res = ctx->hdrp->npages) == 0)) {
+	if (UNLIKELY((res = ctx->hdrc->npages) == 0)) {
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
 		guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */
-		ctx->hdrp->npages = res;
+		ctx->hdrc->npages = res;
 	}
 	return res;
 }

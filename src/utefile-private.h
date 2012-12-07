@@ -82,6 +82,10 @@ struct utectx_s {
 	/* symbol table, idx->sym and sym->idx */
 	ssize_t slut_sz;
 	struct uteslut_s slut[1];
+
+	/* footer, contains page offsets et al */
+	size_t ftr_sz;
+	void *ftr;
 };
 
 /**
@@ -109,18 +113,12 @@ extern ssize_t ute_encode(void **tgt, const void *buf, const size_t bsz);
  * Decompress (whatever that means) BSZ bytes in BUF. */
 extern ssize_t ute_decode(void **tgt, const void *buf, const size_t bsz);
 
+/**
+ * Return the number of tick pages in CTX. */
+extern size_t ute_npages(utectx_t ctx);
+
 
 /* inlines */
-static inline size_t
-ute_npages(utectx_t ctx)
-{
-/* Return the number of tick pages.
- * The first tick page always contains the header. */
-	/* GUESS is the file size expressed in ticks */
-	size_t guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
-	return guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
-}
-
 static inline uint32_t
 page_of_index(utectx_t ctx, sidx_t i)
 {

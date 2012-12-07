@@ -340,51 +340,6 @@ compress_seek(uteseek_t sk)
 	}
 	return;
 }
-
-static void
-decompress_seek(uteseek_t sk, int virtp)
-{
-	/* first 4 bytes of the seek is the compressed size */
-	const size_t sk_sz = seek_byte_size(sk) - sk->si * sizeof(*sk->sp);
-	uint32_t *src = (uint32_t*)(sk->sp + sk->si);
-	void *out;
-	ssize_t ndecd;
-
-	if (sk_sz < sizeof(*src)) {
-		/* definitely not comp'd */
-		return;
-	} else if (sk_sz <= src[0]) {
-		/* probably not comp'd at all */
-		return;
-	} else if ((ndecd = ute_decode(&out, src + 1, src[0])) == 0) {
-		/* not comp'd */
-		return;
-	} else if (ndecd < 0) {
-		/* shit */
-		UDEBUG("BIG BUGGER\n");
-		return;
-	}
-	/* otherwise memcpy the output and memset the rest */
-	if (!virtp) {
-		uint8_t *tgt = (void*)(sk->sp + sk->si);
-		memcpy(tgt, out, ndecd);
-		memset((char*)tgt + ndecd, -1, sk_sz - ndecd);
-		UDEBUG("decomp'd %zu\n", ndecd);
-	} else {
-		/* fiddle with the seek itself */
-		sk->sp = out;
-		sk->si = 0;
-		sk->szrw = ndecd;
-		UDEBUG("inflatedz %zu\n", ndecd);
-	}
-	return;
-}
-
-static void
-recompress_seek(uteseek_t UNUSED(tgt), uteseek_t UNUSED(src))
-{
-	return;
-}
 #endif	/* HAVE_LZMA_H */
 
 
@@ -414,23 +369,14 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	/* go through the pages manually */
 	npg = ute_npages(hdl);
 	for (size_t p = 0; p < npg + tpc_has_ticks_p(hdl->tpc); p++) {
-		struct uteseek_s sk[2];
+		struct uteseek_s sk[1];
 
 		/* create a new seek */
 		seek_page(sk, hdl, p);
-#if defined HAVE_LZMA_H
-		sk[1] = sk[0];
-		/* could be a compressed page, (virtually) decompress */
-		decompress_seek(sk, 1);
-#endif	/* HAVE_LZMA_H */
 		/* fsck that one page */
 		issues |= fsckp(ctx, sk, hdl, issues, last);
-#if defined HAVE_LZMA_H
-		/* and recompress the page in case of changes */
-		recompress_seek(sk + 1, sk);
-#endif	/* HAVE_LZMA_H */
 		/* flush the old seek */
-		flush_seek(sk + 1);
+		flush_seek(sk);
 	}
 
 #if defined DEBUG_FLAG

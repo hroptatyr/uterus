@@ -236,7 +236,7 @@ creat_hdr(utectx_t ctx)
 
 #if defined HAVE_LZMA_H
 ssize_t
-ute_encode(void **tgt, const void *buf, const size_t bsz)
+ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	static lzma_stream strm = LZMA_STREAM_INIT;
 	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
@@ -293,7 +293,7 @@ fa_free:
 }
 
 ssize_t
-ute_decode(void **tgt, const void *buf, const size_t bsz)
+ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	static lzma_stream strm = LZMA_STREAM_INIT;
 	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
@@ -351,7 +351,7 @@ fa_free:
 
 #else  /* !HAVE_LZMA_H */
 ssize_t
-ute_encode(void **tgt, const void *buf, const size_t bsz)
+ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	ssize_t res = 0;
 
@@ -370,7 +370,7 @@ ute_encode(void **tgt, const void *buf, const size_t bsz)
 }
 
 ssize_t
-ute_decode(void **tgt, const void *buf, const size_t bsz)
+ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	ssize_t res = 0;
 

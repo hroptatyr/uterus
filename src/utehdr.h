@@ -46,6 +46,7 @@ typedef const struct utehdr2_s *utehdr2_t;
 #define UTEHDR_FLAG_SYMTBL	1
 #define UTEHDR_FLAG_ORDERED	2
 #define UTEHDR_FLAG_TRNGTBL	4
+#define UTEHDR_FLAG_COMPRESSED	8
 
 struct utehdr2_s {
 	char magic[4];
@@ -61,8 +62,13 @@ struct utehdr2_s {
 	uint32_t slut_sz;
 	uint16_t slut_nsyms;
 	uint16_t slut_version;
-	/* bollocks, off:24, len:8 */
-	uint32_t dummy[2];
+	/* we can't deduce the number of pages from the size anymore
+	 * due to compression and stuff */
+	uint32_t npages;
+	/* size of the footer
+	 * the footer contains page offsets and sizes
+	 * see struct uteftr2_s */
+	uint32_t ftr_sz;
 	char pad[4096 - 32];
 };
 

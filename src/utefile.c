@@ -351,41 +351,17 @@ fa_free:
 
 #else  /* !HAVE_LZMA_H */
 ssize_t
-ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
+ute_encode(void *tgt[static 1], const void *UNUSED(x), const size_t UNUSED(y))
 {
-	ssize_t res = 0;
-
-	if (LIKELY(tgt != NULL)) {
-		/* just have *tgt point to buf really */
-		union {
-			const void *c;
-			void *p;
-		} u = {
-			.c = buf,
-		};
-		*tgt = u.p;
-		res = bsz;
-	}
-	return res;
+	*tgt = NULL;
+	return 0;
 }
 
 ssize_t
-ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
+ute_decode(void *tgt[static 1], const void *UNUSED(x), const size_t UNUSED(y))
 {
-	ssize_t res = 0;
-
-	if (LIKELY(tgt != NULL)) {
-		/* just have *tgt point to buf really */
-		union {
-			const void *c;
-			void *p;
-		} u = {
-			.c = buf,
-		};
-		*tgt = u.p;
-		res = bsz;
-	}
-	return res;
+	*tgt = NULL;
+	return 0;
 }
 #endif	/* HAVE_LZMA_H */
 

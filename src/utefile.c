@@ -421,6 +421,7 @@ page_compressed_p(const void *restrict p)
 static struct sk_offs_s
 seek_get_offs(utectx_t ctx, uint32_t pg)
 {
+	const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 	size_t off;
 	size_t len;
 
@@ -446,12 +447,16 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 			} else if ((len = page_compressed_p(p))) {
 				off = otry;
 				try += len;
+			} else {
+				/* page was not compressed? */
+				off = otry;
+				try += (len = pgsz);
 			}
 			munmap_any(p, otry, probe_z);
 		}
 	} else {
 		off = page_offset(ctx, pg);
-		len = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+		len = pgsz;
 	}
 	return (struct sk_offs_s){off, len};
 }

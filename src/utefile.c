@@ -1146,6 +1146,8 @@ load_last_tpc(utectx_t ctx)
 		tpc_from_seek(ctx, sk);
 		/* now munmap the seek */
 		flush_seek(sk);
+		/* update page counter, this isn't an official page anymore */
+		ctx->hdrc->npages--;
 	} else {
 		const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
 		make_tpc(ctx->tpc, UTE_BLKSZ - hdr);

@@ -532,6 +532,7 @@ compressed page detected but no compression support, call the hotline\n");
 		/* prepare sk, just the map for now */
 		sk->sp = x;
 		sk->szrw = mlen;
+		sk->si = 0;
 		sk->fl = TPC_FL_STATIC_SP;
 
 	} else {
@@ -539,13 +540,13 @@ compressed page detected but no compression support, call the hotline\n");
 		sk->sp = p;
 		sk->szrw = offs.flen;
 		sk->fl = 0;
+		if (pg == 0) {
+			sk->si = sizeof(*ctx->hdrc) / sizeof(*ctx->seek->sp);
+		} else {
+			sk->si = 0;
+		}
 	}
 	/* prepare sk */
-	if (pg == 0) {
-		sk->si = sizeof(*ctx->hdrc) / sizeof(*ctx->seek->sp);
-	} else {
-		sk->si = 0;
-	}
 	sk->pg = pg;
 
 	/* check if there's lone naughts at the end of the page */

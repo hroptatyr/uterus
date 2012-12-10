@@ -113,6 +113,8 @@ struct utetpc_s {
 
 #define TPC_FL_UNSORTED		0x01
 #define TPC_FL_NEEDMRG		0x02
+/* indicate that flush_seek() et al mustn't munmap() sp */
+#define TPC_FL_STATIC_SP	0x04
 
 static inline __attribute__((pure)) size_t
 seek_rewound(uteseek_t sk)

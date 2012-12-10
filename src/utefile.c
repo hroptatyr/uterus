@@ -390,7 +390,7 @@ flush_seek(uteseek_t sk)
 {
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
-	if (sk->szrw > 0) {
+	if (sk->szrw > 0 && !(sk->fl & TPC_FL_STATIC_SP)) {
 		/* compute the page size, takes tick rewinds into account */
 		size_t pgsz = seek_byte_size(sk);
 
@@ -532,11 +532,13 @@ compressed page detected but no compression support, call the hotline\n");
 		/* prepare sk, just the map for now */
 		sk->sp = x;
 		sk->szrw = mlen;
+		sk->fl = TPC_FL_STATIC_SP;
 
 	} else {
 		/* prepare sk, first bit */
 		sk->sp = p;
 		sk->szrw = offs.flen;
+		sk->fl = 0;
 	}
 	/* prepare sk */
 	if (pg == 0) {
@@ -545,7 +547,6 @@ compressed page detected but no compression support, call the hotline\n");
 		sk->si = 0;
 	}
 	sk->pg = pg;
-	sk->fl = 0;
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);

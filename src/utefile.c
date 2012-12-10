@@ -414,11 +414,12 @@ page_compressed_p(const void *restrict p)
 {
 /* If P points to a compressed page return its file-level size, 0 otherwise */
 	const uint32_t *pu32 = p;
+	size_t res = 0UL;
 
 	if (memcmp(pu32 + 1, "\xfd" "7zXZ\0", 6) == 0) {
-		return (size_t)(pu32[0]);
+		res = ROUND(pu32[0] + sizeof(*pu32), sizeof(struct sndwch_s));
 	}
-	return 0UL;
+	return res;
 }
 
 static struct sk_offs_s
@@ -1565,8 +1566,7 @@ ute_npages(utectx_t ctx)
 		UDEBUGvv("using footer info\n");
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* compression and no footer, i feel terrible */
-		const size_t tsz = sizeof(*ctx->seek->sp);
-		const size_t pgsz = UTE_BLKSZ * tsz;
+		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 		const size_t probe_z = 32U;
 		off_t try = sizeof(*ctx->hdrc);
 
@@ -1580,8 +1580,7 @@ ute_npages(utectx_t ctx)
 			if (UNLIKELY(p == NULL)) {
 				try = -1;
 			} else if ((len = page_compressed_p(p))) {
-				len += sizeof(uint32_t);
-				try += ROUND(len, tsz);
+				try += len;
 			} else {
 				/* page was not compressed? */
 				try += pgsz;

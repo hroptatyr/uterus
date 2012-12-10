@@ -174,7 +174,6 @@ cache_hdr(utectx_t ctx)
 	/* we just use max size here */
 	const size_t sz = sizeof(struct utehdr2_s);
 	struct utehdr2_s *res;
-	int pflags = __pflags(ctx);
 
 	/* check if the file's big enough */
 	if (ctx->fsz < sz) {
@@ -182,18 +181,21 @@ cache_hdr(utectx_t ctx)
 		goto err_out;
 	}
 	/* just map the first sizeof(struct bla) bytes */
-	res = mmap(NULL, sz, pflags, MAP_SHARED, ctx->fd, 0);
+	res = mmap(NULL, sz, PROT_READ, MAP_SHARED, ctx->fd, 0);
 	if (UNLIKELY(res == MAP_FAILED)) {
 		/* it failed, it failed, who cares why */
 		goto err_out;
 	}
 	/* assign the header ... */
-	ctx->slut_sz = get_slut_size((ctx->hdrp = res));
+	ctx->hdrp = res;
+	*ctx->hdrc = *res;
+	/* do the rest of the probing */
+	ctx->slut_sz = get_slut_size(ctx->hdrc);
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
 		return 0;
-	} else if (!utehdr_check_magic(res)) {
+	} else if (!utehdr_check_magic(ctx->hdrc)) {
 		/* perfect, magic string fits, endianness matches, I'm happy */
 		return 0;
 	} else if (ctx->oflags & UO_NO_HDR_CHK) {
@@ -213,7 +215,15 @@ close_hdr(utectx_t ctx)
 {
 	/* munmap the header */
 	if (ctx->hdrp != NULL) {
-		munmap((void*)ctx->hdrp, sizeof(*ctx->hdrp));
+		/* we don't care if we can keep the const promise of HDRP
+		 * in CTX hereafter */
+		union {
+			const void *c;
+			void *p;
+		} tmp = {
+			.c = ctx->hdrp,
+		};
+		munmap(tmp.p, sizeof(*ctx->hdrp));
 	}
 	ctx->hdrp = NULL;
 	return;
@@ -229,10 +239,8 @@ creat_hdr(utectx_t ctx)
 	/* cache the header */
 	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
-	if (LIKELY(ctx->hdrp != NULL)) {
-		memset((void*)ctx->hdrp, 0, sz);
-		bump_header(ctx->hdrp);
-	}
+	memset((void*)ctx->hdrc, 0, sz);
+	bump_header(ctx->hdrc);
 	/* file creation means new slut */
 	ctx->slut_sz = 0;
 	return;
@@ -416,13 +424,13 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 	size_t off;
 	size_t len;
 
-	if (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
 		/* use the footer info */
 		UDEBUGvv("using footer info\n");
-	} else if (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED) {
+	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* fuck, compression and no footer, i feel terrible */
 		const size_t probe_z = 32U;
-		off_t try = sizeof(*ctx->hdrp);
+		off_t try = sizeof(*ctx->hdrc);
 
 		UDEBUGvv("try %zd\n", try);
 		for (uint32_t i = 0; (try % 16U == 0) && i <= pg; i++) {
@@ -515,7 +523,7 @@ compressed page detected but no compression support, call the hotline\n");
 	}
 	/* prepare sk */
 	if (pg == 0) {
-		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+		sk->si = sizeof(*ctx->hdrc) / sizeof(*ctx->seek->sp);
 	} else {
 		sk->si = 0;
 	}
@@ -630,7 +638,7 @@ index_to_tpc_index(utectx_t ctx, sidx_t i)
 /* Return the index of I within the tpc hold
  * we just assume that tpc will never have more than UTE_BLKSZ ticks */
 	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
+	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrc);
 	if (tot_off >= ctx->fsz) {
 		return (tot_off - ctx->fsz) / sizeof(*ctx->seek->sp);
 	}
@@ -669,7 +677,7 @@ store_lvtd(utectx_t ctx)
 static void
 store_slut(utectx_t ctx)
 {
-	struct utehdr2_s *h = (void*)ctx->hdrp;
+	struct utehdr2_s *h = ctx->hdrc;
 
 	switch (utehdr_endianness(h)) {
 	case UTE_ENDIAN_UNK:
@@ -988,7 +996,7 @@ seek_page_cow(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	}
 	/* prepare sk */
 	if (pg == 0) {
-		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+		sk->si = sizeof(*ctx->hdrc) / sizeof(*ctx->seek->sp);
 	} else {
 		sk->si = 0;
 	}
@@ -1091,7 +1099,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 
 	if (!tpc_active_p(ctx->tpc)) {
 		if (sk->pg == 0) {
-			const size_t hdr = sizeof(*ctx->hdrp) / sizeof(*sk->sp);
+			const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
 			make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
 		} else {
 			make_tpc(ctx->tpc, UTE_BLKSZ);
@@ -1414,6 +1422,8 @@ ute_close(utectx_t ctx)
 	}
 	/* serialse the slut */
 	flush_slut(ctx);
+	/* serialise the cached header */
+	flush_hdr(ctx);
 
 	/* just destroy the rest */
 	ute_free(ctx);
@@ -1532,7 +1542,7 @@ size_t
 ute_nsyms(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	size_t nsyms = ctx->hdrp->slut_nsyms;
+	size_t nsyms = ctx->hdrc->slut_nsyms;
 	if (UNLIKELY(nsyms == 0)) {
 		/* try the slut itself */
 		nsyms = ctx->slut->nsyms;
@@ -1638,28 +1648,28 @@ ute_ver_t
 ute_version(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	return utehdr_version(ctx->hdrp);
+	return utehdr_version(ctx->hdrc);
 }
 
 ute_end_t
 ute_endianness(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	return utehdr_endianness(ctx->hdrp);
+	return utehdr_endianness(ctx->hdrc);
 }
 
 int
 ute_check_endianness(utectx_t ctx)
 {
 /* just fall back to utehdr.h solution */
-	return utehdr_check_endianness(ctx->hdrp);
+	return utehdr_check_endianness(ctx->hdrc);
 }
 
 void
 ute_set_endianness(utectx_t ctx, ute_end_t en)
 {
 /* return the number of symbols tracked in the ute file */
-	utehdr_set_endianness(ctx->hdrp, en);
+	utehdr_set_endianness(ctx->hdrc, en);
 	return;
 }
 

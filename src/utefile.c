@@ -839,6 +839,9 @@ flush_hdr(utectx_t ctx)
 	UDEBUG("ftrz was %u\n", ctx->hdrc->ftr_sz);
 	ctx->hdrc->ftr_sz = 0U;
 
+	/* never let a dirty escape to the file flags */
+	ctx->hdrc->flags &= ~UTEHDR_FLAG_DIRTY;
+
 	/* otherwise copy the cache */
 	memcpy(p, ctx->hdrc, sizeof(*ctx->hdrc));
 

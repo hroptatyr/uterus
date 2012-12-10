@@ -1557,7 +1557,41 @@ ute_npages(utectx_t ctx)
  * The first tick page always contains the header. */
 	size_t res;
 
-	if (UNLIKELY((res = ctx->hdrc->npages) == 0)) {
+	if (LIKELY((res = ctx->hdrc->npages) > 0)) {
+		;
+	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
+		   ctx->ftr != NULL) {
+		/* just use the footer info */
+		UDEBUGvv("using footer info\n");
+	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
+		/* compression and no footer, i feel terrible */
+		const size_t tsz = sizeof(*ctx->seek->sp);
+		const size_t pgsz = UTE_BLKSZ * tsz;
+		const size_t probe_z = 32U;
+		off_t try = sizeof(*ctx->hdrc);
+
+		UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+		for (res = 0; (size_t)try < ctx->fsz; res++) {
+			void *p = mmap_any(
+				ctx->fd, PROT_READ, MAP_SHARED, try, probe_z);
+			off_t otry = try;
+			size_t len;
+
+			if (UNLIKELY(p == NULL)) {
+				try = -1;
+			} else if ((len = page_compressed_p(p))) {
+				len += sizeof(uint32_t);
+				try += ROUND(len, tsz);
+			} else {
+				/* page was not compressed? */
+				try += pgsz;
+			}
+			munmap_any(p, otry, probe_z);
+			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+		}
+		/* cache this? */
+		ctx->hdrc->npages = res;
+	} else {
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 

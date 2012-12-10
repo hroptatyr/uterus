@@ -458,7 +458,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 			munmap_any(p, otry, probe_z);
 		}
 		/* check if we're on the last page */
-		if (UNLIKELY(try > ctx->fsz)) {
+		if (UNLIKELY((size_t)try > ctx->fsz)) {
 			len = ctx->fsz - off;
 		}
 	} else {

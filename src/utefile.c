@@ -811,6 +811,31 @@ out:
 	return;
 }
 
+static void
+flush_hdr(utectx_t ctx)
+{
+	void *p;
+
+	/* dont try at all in read-only mode */
+	UDEBUG("flushing %p %s header ...\n", ctx, ute_fn(ctx));
+	if (UNLIKELY(ctx->oflags == UO_RDONLY)) {
+		return;
+	}
+
+	/* mmap the header bit */
+	p = mmap(NULL, sizeof(*ctx->hdrp), PROT_FLUSH, MAP_FLUSH, ctx->fd, 0);
+	if (UNLIKELY(p == MAP_FAILED)) {
+		return;
+	}
+
+	/* otherwise copy the cache */
+	memcpy(p, ctx->hdrc, sizeof(*ctx->hdrc));
+
+	/* that's it */
+	munmap(p, sizeof(*ctx->hdrc));
+	return;
+}
+
 
 /* tpc glue */
 #if !defined USE_UTE_SORT

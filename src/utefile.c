@@ -1032,23 +1032,22 @@ lzma_comp(utectx_t ctx)
 		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n",
 		       i, pi, ftr[i].foff, pz);
 		if (LIKELY((cz = ute_encode(&cp, pi, pz)) > 0)) {
-			void *p;
+			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
-			p = mmap_any(ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
+			p = (void*)mmap_any(
+				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
 			if (p != MAP_FAILED) {
-				uint32_t *pu32 = p;
-
-				pu32[0] = (uint32_t)cz;
+				p[0] = (uint32_t)cz;
 				/* copy payload */
-				memcpy(pu32 + 1, cp, cz);
+				memcpy(p + 1, cp, cz);
 				/* memset the rest */
-				memset((char*)(pu32 + 1) + cz, 0, fz - cz);
+				memset((char*)(p + 1) + cz, 0, fz - cz);
 				/* diskify */
-				munmap_any(p, fo, fo + fz);
+				munmap_any((void*)p, fo, fo + fz);
 			}
 			fo += fz;
 		}

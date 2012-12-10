@@ -402,7 +402,7 @@ flush_seek(uteseek_t sk)
 		size_t o = sk->pg ? 0UL : sizeof(struct utehdr2_s);
 
 		/* munmap it all */
-		munmap_any((void*)sk->sp, o, pgsz + o);
+		munmap_any((void*)sk->sp, o, pgsz);
 	}
 	/* bit of cleaning up */
 	sk->si = -1;

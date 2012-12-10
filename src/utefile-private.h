@@ -133,8 +133,15 @@ static inline uint32_t
 offset_of_index(utectx_t ctx, sidx_t i)
 {
 /* Return the offset of the I-th tick in its page. */
-	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
-	return (uint32_t)(i % UTE_BLKSZ);
+	const size_t blk = UTE_BLKSZ;
+	const size_t hdrt = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+
+	i += hdrt;
+	if (LIKELY(i / blk)) {
+		return (uint32_t)(i % blk);
+	} else {
+		return i - hdrt;
+	}
 }
 
 static inline size_t

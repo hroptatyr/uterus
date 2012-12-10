@@ -393,9 +393,10 @@ flush_seek(uteseek_t sk)
 	if (sk->szrw > 0 && !(sk->fl & TPC_FL_STATIC_SP)) {
 		/* compute the page size, takes tick rewinds into account */
 		size_t pgsz = seek_byte_size(sk);
+		size_t o = sk->pg ? 0UL : sizeof(struct utehdr2_s);
 
 		/* munmap it all */
-		munmap(sk->sp, pgsz);
+		munmap_any((void*)sk->sp, o, pgsz + o);
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
@@ -466,9 +467,12 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 		if (UNLIKELY((size_t)try > ctx->fsz)) {
 			len = ctx->fsz - off;
 		}
-	} else {
+	} else if (pg > 0) {
 		off = page_offset(ctx, pg);
 		len = pgsz;
+	} else {
+		off = sizeof(*ctx->hdrc);
+		len = pgsz - off;
 	}
 	return (struct sk_offs_s){off, len};
 }
@@ -532,7 +536,6 @@ compressed page detected but no compression support, call the hotline\n");
 		/* prepare sk, just the map for now */
 		sk->sp = x;
 		sk->szrw = mlen;
-		sk->si = 0;
 		sk->fl = TPC_FL_STATIC_SP;
 
 	} else {
@@ -540,13 +543,9 @@ compressed page detected but no compression support, call the hotline\n");
 		sk->sp = p;
 		sk->szrw = offs.flen;
 		sk->fl = 0;
-		if (pg == 0) {
-			sk->si = sizeof(*ctx->hdrc) / sizeof(*ctx->seek->sp);
-		} else {
-			sk->si = 0;
-		}
 	}
 	/* prepare sk */
+	sk->si = 0UL;
 	sk->pg = pg;
 
 	/* check if there's lone naughts at the end of the page */
@@ -652,7 +651,6 @@ ute_seek(utectx_t ctx, sidx_t i)
 		return NULL;
 	} else if (UNLIKELY(p == np)) {
 		/* could be tpc space or beyond eof */
-		o += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
 		return tpc_get_scom(ctx->tpc, o);
 	} else if (UNLIKELY(p != ctx->seek->pg)) {
 		/* flush the old seek */

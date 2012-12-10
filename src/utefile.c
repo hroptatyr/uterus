@@ -74,6 +74,10 @@
 
 #define SMALLEST_LVTD	(0)
 
+#if !defined ROUND
+# define ROUND(s, a)		(a * ((s + a - 1) / a))
+#endif	/* !ROUND */
+
 size_t __pgsz;
 
 /* not the best of ideas to have output printing in a lib */
@@ -142,9 +146,15 @@ munmap_any(char *map, off_t off, size_t len)
 }
 
 static inline int
+__rdwrp(utectx_t ctx)
+{
+	return ctx->oflags & 0x03;
+}
+
+static inline int
 __pflags(utectx_t ctx)
 {
-	return PROT_READ | ((ctx->oflags & UO_RDWR) ? PROT_WRITE : 0);
+	return PROT_READ | (__rdwrp(ctx) ? PROT_WRITE : 0);
 }
 
 static size_t
@@ -170,7 +180,6 @@ cache_hdr(utectx_t ctx)
 	/* we just use max size here */
 	const size_t sz = sizeof(struct utehdr2_s);
 	struct utehdr2_s *res;
-	int pflags = __pflags(ctx);
 
 	/* check if the file's big enough */
 	if (ctx->fsz < sz) {
@@ -178,18 +187,21 @@ cache_hdr(utectx_t ctx)
 		goto err_out;
 	}
 	/* just map the first sizeof(struct bla) bytes */
-	res = mmap(NULL, sz, pflags, MAP_SHARED, ctx->fd, 0);
+	res = mmap(NULL, sz, PROT_READ, MAP_SHARED, ctx->fd, 0);
 	if (UNLIKELY(res == MAP_FAILED)) {
 		/* it failed, it failed, who cares why */
 		goto err_out;
 	}
 	/* assign the header ... */
-	ctx->slut_sz = get_slut_size((ctx->hdrp = res));
+	ctx->hdrp = res;
+	*ctx->hdrc = *res;
+	/* do the rest of the probing */
+	ctx->slut_sz = get_slut_size(ctx->hdrc);
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
 		return 0;
-	} else if (!utehdr_check_magic(res)) {
+	} else if (!utehdr_check_magic(ctx->hdrc)) {
 		/* perfect, magic string fits, endianness matches, I'm happy */
 		return 0;
 	} else if (ctx->oflags & UO_NO_HDR_CHK) {
@@ -209,7 +221,15 @@ close_hdr(utectx_t ctx)
 {
 	/* munmap the header */
 	if (ctx->hdrp != NULL) {
-		munmap((void*)ctx->hdrp, sizeof(*ctx->hdrp));
+		/* we don't care if we can keep the const promise of HDRP
+		 * in CTX hereafter */
+		union {
+			const void *c;
+			void *p;
+		} tmp = {
+			.c = ctx->hdrp,
+		};
+		munmap(tmp.p, sizeof(*ctx->hdrp));
 	}
 	ctx->hdrp = NULL;
 	return;
@@ -225,10 +245,8 @@ creat_hdr(utectx_t ctx)
 	/* cache the header */
 	(void)cache_hdr(ctx);
 	/* set standard header payload offset, just to be sure it's sane */
-	if (LIKELY(ctx->hdrp != NULL)) {
-		memset((void*)ctx->hdrp, 0, sz);
-		bump_header(ctx->hdrp);
-	}
+	memset((void*)ctx->hdrc, 0, sz);
+	bump_header(ctx->hdrc);
 	/* file creation means new slut */
 	ctx->slut_sz = 0;
 	return;
@@ -239,7 +257,7 @@ ssize_t
 ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	static lzma_stream strm = LZMA_STREAM_INIT;
-	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+	static size_t pgsz = 0UL;
 	static uint8_t *iobuf = NULL;
 	lzma_ret rc;
 	ssize_t res = 0;
@@ -253,19 +271,22 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 		/* everything should be freed already */
 		goto fa_free;
 	} else if (iobuf == NULL) {
-		rc = lzma_easy_encoder(&strm, 6, LZMA_CHECK_CRC64);
-		if (UNLIKELY(rc != LZMA_OK)) {
-			/* indicate total failure, free fuckall */
-			res = -1;
-			goto fa_free;
-		}
-
+		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
 		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
 		if (UNLIKELY(iobuf == MAP_FAILED)) {
 			res = -1;
 			goto enc_free;
 		}
 	}
+
+	/* set up new encoder */
+	rc = lzma_easy_encoder(&strm, 6, LZMA_CHECK_CRC64);
+	if (UNLIKELY(rc != LZMA_OK)) {
+		/* indicate total failure, free fuckall */
+		res = -1;
+		goto fa_free;
+	}
+
 	/* reset in/out buffer */
 	strm.next_out = iobuf;
 	strm.avail_out = pgsz;
@@ -281,12 +302,13 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 		*tgt = iobuf;
 		res = strm.next_out - iobuf;
 	}
+	lzma_end(&strm);
+	strm = (typeof(strm))LZMA_STREAM_INIT;
 	return res;
 iob_free:
 	munmap(iobuf, pgsz);
 enc_free:
 	iobuf = NULL;
-	lzma_end(&strm);
 	strm = (typeof(strm))LZMA_STREAM_INIT;
 fa_free:
 	return res;
@@ -296,7 +318,7 @@ ssize_t
 ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	static lzma_stream strm = LZMA_STREAM_INIT;
-	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+	static size_t pgsz = 0UL;
 	static uint8_t *iobuf = NULL;
 	lzma_ret rc;
 	ssize_t res = 0;
@@ -310,18 +332,20 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 		/* everything should be freed already */
 		goto fa_free;
 	} else if (iobuf == NULL) {
-		rc = lzma_stream_decoder(&strm, UINT64_MAX, 0);
-		if (UNLIKELY(rc != LZMA_OK)) {
-			/* indicate total failure, free fuckall */
-			res = -1;
-			goto fa_free;
-		}
-
+		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
 		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
 		if (UNLIKELY(iobuf == MAP_FAILED)) {
 			res = -1;
 			goto enc_free;
 		}
+	}
+
+	/* set up new decoder */
+	rc = lzma_stream_decoder(&strm, UINT64_MAX, 0);
+	if (UNLIKELY(rc != LZMA_OK)) {
+		/* indicate total failure, free fuckall */
+		res = -1;
+		goto fa_free;
 	}
 	/* reset in/out buffer */
 	strm.next_out = iobuf;
@@ -338,12 +362,13 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 		*tgt = iobuf;
 		res = strm.next_out - iobuf;
 	}
+	lzma_end(&strm);
+	strm = (typeof(strm))LZMA_STREAM_INIT;
 	return res;
 iob_free:
 	munmap(iobuf, pgsz);
 enc_free:
 	iobuf = NULL;
-	lzma_end(&strm);
 	strm = (typeof(strm))LZMA_STREAM_INIT;
 fa_free:
 	return res;
@@ -371,12 +396,13 @@ flush_seek(uteseek_t sk)
 {
 /* the psz code will go eventually and be replaced with the rewound stuff
  * we're currently preparing in the tpc/seek api */
-	if (sk->szrw > 0) {
+	if (sk->szrw > 0 && !(sk->fl & TPC_FL_STATIC_SP)) {
 		/* compute the page size, takes tick rewinds into account */
 		size_t pgsz = seek_byte_size(sk);
+		size_t o = sk->pg ? 0UL : sizeof(struct utehdr2_s);
 
 		/* munmap it all */
-		munmap(sk->sp, pgsz);
+		munmap_any((void*)sk->sp, o, pgsz);
 	}
 	/* bit of cleaning up */
 	sk->si = -1;
@@ -399,26 +425,28 @@ page_compressed_p(const void *restrict p)
 {
 /* If P points to a compressed page return its file-level size, 0 otherwise */
 	const uint32_t *pu32 = p;
+	size_t res = 0UL;
 
 	if (memcmp(pu32 + 1, "\xfd" "7zXZ\0", 6) == 0) {
-		return (size_t)(pu32[0]);
+		res = ROUND(pu32[0] + sizeof(*pu32), sizeof(struct sndwch_s));
 	}
-	return 0UL;
+	return res;
 }
 
 static struct sk_offs_s
 seek_get_offs(utectx_t ctx, uint32_t pg)
 {
+	const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 	size_t off;
 	size_t len;
 
-	if (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
 		/* use the footer info */
 		UDEBUGvv("using footer info\n");
-	} else if (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED) {
+	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* fuck, compression and no footer, i feel terrible */
 		const size_t probe_z = 32U;
-		off_t try = sizeof(*ctx->hdrp);
+		off_t try = sizeof(*ctx->hdrc);
 
 		UDEBUGvv("try %zd\n", try);
 		for (uint32_t i = 0; (try % 16U == 0) && i <= pg; i++) {
@@ -434,12 +462,27 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 			} else if ((len = page_compressed_p(p))) {
 				off = otry;
 				try += len;
+			} else if (i) {
+				/* page was not compressed? */
+				off = otry;
+				try += (len = pgsz);
+			} else {
+				/* page not compressed AND it's the first one */
+				off = otry;
+				try += (len = pgsz - off);
 			}
 			munmap_any(p, otry, probe_z);
 		}
-	} else {
+		/* check if we're on the last page */
+		if (UNLIKELY((size_t)try > ctx->fsz)) {
+			len = ctx->fsz - off;
+		}
+	} else if (pg > 0) {
 		off = page_offset(ctx, pg);
-		len = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+		len = pgsz;
+	} else {
+		off = sizeof(*ctx->hdrc);
+		len = pgsz - off;
 	}
 	return (struct sk_offs_s){off, len};
 }
@@ -484,10 +527,11 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	if (page_compressed_p(p) == offs.flen) {
 		/* length in memory, i.e. after decompressing */
 		size_t mlen;
-		const uint32_t *restrict pu32 = p;
+		const uint32_t *pu32 = p;
 		void *x = NULL;
 
-		mlen = ute_decode(&x, pu32 + 1, offs.flen);
+		mlen = ute_decode(&x, pu32 + 1, pu32[0]);
+		/* after decompression we can't really do with this page */
 		munmap_any(p, offs.foff, offs.flen);
 
 #if !defined HAVE_LZMA_H
@@ -495,28 +539,24 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 compressed page detected but no compression support, call the hotline\n");
 #endif	/* HAVE_LZMA_H */
 		if (UNLIKELY(mlen == 0U)) {
+			UDEBUG("decomp'ing page %u gave 0 length\n", pg);
 			return -1;
 		}
 
-		/* after decompression we can't really do with this page */
-		munmap_any(p, offs.foff, offs.flen);
 		/* prepare sk, just the map for now */
 		sk->sp = x;
 		sk->szrw = mlen;
+		sk->fl = TPC_FL_STATIC_SP;
 
 	} else {
 		/* prepare sk, first bit */
 		sk->sp = p;
 		sk->szrw = offs.flen;
+		sk->fl = 0;
 	}
 	/* prepare sk */
-	if (pg == 0) {
-		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
-	} else {
-		sk->si = 0;
-	}
+	sk->si = 0UL;
 	sk->pg = pg;
-	sk->fl = 0;
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
@@ -542,8 +582,7 @@ clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src)
 	/* trivial checks */
 	if (LIKELY(off + pgsz >= ctx->fsz)) {
 		/* yep, extend the guy */
-		if (ctx->oflags == UO_RDONLY ||
-		    !__fwr_trunc(ctx->fd, off + pgsz)) {
+		if (!__rdwrp(ctx) || !__fwr_trunc(ctx->fd, off + pgsz)) {
 			return -1;
 		}
 		/* truncation successful */
@@ -606,48 +645,31 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 }
 #endif	/* USE_UTE_SORT */
 
-static void
-reseek(utectx_t ctx, sidx_t i)
-{
-	uint32_t p = page_of_index(ctx, i);
-	uint32_t o = offset_of_index(ctx, i);
-
-	/* flush the old seek */
-	flush_seek(ctx->seek);
-	/* create a new seek */
-	seek_page(ctx->seek, ctx, p);
-	ctx->seek->si = o;
-	return;
-}
-
-static inline sidx_t
-index_to_tpc_index(utectx_t ctx, sidx_t i)
-{
-/* Return the index of I within the tpc hold
- * we just assume that tpc will never have more than UTE_BLKSZ ticks */
-	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
-	if (tot_off >= ctx->fsz) {
-		return (tot_off - ctx->fsz) / sizeof(*ctx->seek->sp);
-	}
-	return 0;
-}
-
 /* seek to */
 scom_t
 ute_seek(utectx_t ctx, sidx_t i)
 {
-	/* wishful thinking */
-	if (UNLIKELY(index_past_eof_p(ctx, i))) {
+	/* calculate the page the tick should be in
+	 * and the offset within that page */
+	uint32_t p = page_of_index(ctx, i);
+	uint32_t o = offset_of_index(ctx, i);
+	size_t np = ute_npages(ctx);
+
+	if (UNLIKELY(p > np)) {
+		/* beyond hope */
 		return NULL;
-	} else if (UNLIKELY(index_in_tpc_space_p(ctx, i))) {
-		sidx_t new_i = index_to_tpc_index(ctx, i);
-		return tpc_get_scom(ctx->tpc, new_i);
-	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
-		reseek(ctx, i);
+	} else if (UNLIKELY(p == np)) {
+		/* could be tpc space or beyond eof */
+		return tpc_get_scom(ctx->tpc, o);
+	} else if (UNLIKELY(p != ctx->seek->pg)) {
+		/* flush the old seek */
+		flush_seek(ctx->seek);
+		/* create a new seek */
+		seek_page(ctx->seek, ctx, p);
+		ctx->seek->si = o;
 	} else {
-		/* just reseek manually */
-		ctx->seek->si = offset_of_index(ctx, i);
+		/* everything's fine, just reseek within the page */
+		ctx->seek->si = o;
 	}
 	return seek_get_scom(ctx->seek);
 }
@@ -665,7 +687,7 @@ store_lvtd(utectx_t ctx)
 static void
 store_slut(utectx_t ctx)
 {
-	struct utehdr2_s *h = (void*)ctx->hdrp;
+	struct utehdr2_s *h = ctx->hdrc;
 
 	switch (utehdr_endianness(h)) {
 	case UTE_ENDIAN_UNK:
@@ -726,7 +748,7 @@ flush_tpc(utectx_t ctx)
 #endif	/* DEBUG_FLAG */
 	assert(sisz <= sz);
 	/* extend to take SZ additional bytes */
-	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
+	if (!__rdwrp(ctx) || !ute_extend(ctx, sz)) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
@@ -746,6 +768,8 @@ flush_tpc(utectx_t ctx)
 			memset(p + ix + sisz, -1, sz - sisz);
 		}
 		munmap(p, mpsz);
+		/* up the npages counter */
+		ctx->hdrc->npages++;
 	}
 
 	/* store the largest-value-to-date */
@@ -767,7 +791,7 @@ flush_slut(utectx_t ctx)
 	sidx_t off = ctx->fsz;
 
 	/* dont try at all in read-only mode */
-	if (UNLIKELY(ctx->oflags == UO_RDONLY)) {
+	if (UNLIKELY(!__rdwrp(ctx))) {
 		return;
 	}
 
@@ -796,6 +820,41 @@ flush_slut(utectx_t ctx)
 
 out:
 	free(stbl);
+	return;
+}
+
+static void
+flush_hdr(utectx_t ctx)
+{
+	void *p;
+
+	/* dont try at all in read-only mode */
+	if (UNLIKELY(!__rdwrp(ctx))) {
+		return;
+	}
+
+	UDEBUG("flushing %p %s header ...\n", ctx, ute_fn(ctx));
+	/* mmap the header bit */
+	p = mmap(NULL, sizeof(*ctx->hdrp), PROT_FLUSH, MAP_FLUSH, ctx->fd, 0);
+	if (UNLIKELY(p == MAP_FAILED)) {
+		return;
+	}
+
+	/* for the moment we don't want to dump the footer size and
+	 * the number of pages */
+	UDEBUG("npages was %u\n", ctx->hdrc->npages);
+	ctx->hdrc->npages = 0U;
+	UDEBUG("ftrz was %u\n", ctx->hdrc->ftr_sz);
+	ctx->hdrc->ftr_sz = 0U;
+
+	/* never let a dirty escape to the file flags */
+	ctx->hdrc->flags &= ~UTEHDR_FLAG_DIRTY;
+
+	/* otherwise copy the cache */
+	memcpy(p, ctx->hdrc, sizeof(*ctx->hdrc));
+
+	/* that's it */
+	munmap(p, sizeof(*ctx->hdrc));
 	return;
 }
 
@@ -924,47 +983,96 @@ tilman_comp(utectx_t ctx)
 
 #if defined HAVE_LZMA_H
 static void
-comp_seek(uteseek_t sk)
+lzma_comp(utectx_t ctx)
 {
-	const size_t sk_sz = seek_byte_size(sk) - sk->si * sizeof(*sk->sp);
-	void *out;
-	ssize_t nencd;
+/* compress all pages in CTX and, by side-effect, set CTX's fsz slot
+ * (file size) to the total file size after compressing */
+	struct ftr_s {
+		uint64_t foff;
+		uint32_t flen;
+	};
+	const size_t npg = ute_npages(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	int pflags = __pflags(ctx);
+	struct ftr_s *ftr;
+	off_t fo;
 
-	UDEBUG("compressing page %u\n", sk->pg);
-	if (UNLIKELY((nencd = ute_encode(&out, sk->sp + sk->si, sk_sz)) < 0)) {
+	if (UNLIKELY(npg == 0)) {
+		return;
+	} else if (UNLIKELY(pflags == PROT_READ)) {
 		return;
 	}
 
-	/* now we need to replace sk->sp + sk->si by OUT */
-	{
-		uint32_t *tgt = (uint32_t*)(sk->sp + sk->si);
-
-		memcpy(tgt + 1, out, nencd);
-		memset((char*)(tgt + 1) + nencd, 0, sk_sz - nencd);
-		tgt[0] = (uint32_t)nencd;
+	/* build the ftr object */
+	ftr = calloc(npg, sizeof(*ftr));
+	/* get all them seeks */
+	for (size_t i = 0; i < npg; i++) {
+		struct sk_offs_s so = seek_get_offs(ctx, i);
+		ftr[i].foff = so.foff;
+		ftr[i].flen = so.flen;
 	}
 
-	/* we should leave a note for the footer here */
-	;
-	return;
-}
+	/* seek to the first page */
+	fo = ftr[0].foff;
 
-static void
-lzma_comp(utectx_t ctx)
-{
-	/* go through them pages manually */
-	for (size_t p = 0, npg = ute_npages(ctx); p < npg; p++) {
-		struct uteseek_s sk[1];
+	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
+	for (size_t i = 0; i < npg; i++) {
+		/* i-th page */
+		static void *pi = NULL;
+		static size_t pz = 0UL;
+		/* next page, just so we have the copy-on-write in place */
+		void *pn = NULL;
+		/* result of compression */
+		void *cp;
+		/* size after compression */
+		ssize_t cz;
 
-		/* create a new seek */
-		seek_page(sk, ctx, p);
-		/* compress */
-		comp_seek(sk);
-		/* flush the seek */
-		flush_seek(sk);
+		if (pi == NULL) {
+			pi = mmap_any(
+				ctx->fd, pflags, MAP_PRIVATE,
+				ftr[i].foff, pz = ftr[i].flen);
+		}
+		if (LIKELY(i + 1 < npg) &&
+		    UNLIKELY(ftr[i].foff + ftr[i].flen > ftr[i + 1].foff)) {
+			/* we need a private map of the guy afterwards */
+			pn = mmap_any(
+				ctx->fd, pflags, MAP_PRIVATE,
+				ftr[i + 1].foff, ftr[i + 1].flen);
+		}
+
+		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n",
+		       i, pi, ftr[i].foff, pz);
+		if (LIKELY((cz = ute_encode(&cp, pi, pz)) > 0)) {
+			uint32_t *p;
+			size_t fz = ROUND(cz + sizeof(*p), tsz);
+
+			/* pi is private (i.e. COW) so copy to the real file
+			 * mmap from FO to FO + FZ */
+			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
+			p = (void*)mmap_any(
+				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
+			if (p != MAP_FAILED) {
+				p[0] = (uint32_t)cz;
+				/* copy payload */
+				memcpy(p + 1, cp, cz);
+				/* memset the rest */
+				memset((char*)(p + 1) + cz, 0, fz - cz);
+				/* diskify */
+				munmap_any((void*)p, fo, fo + fz);
+			}
+			fo += fz;
+		}
+		/* definitely munmap pi */
+		munmap_any(pi, ftr[i].foff, ftr[i].flen);
+		/* cross-assign pn to pi/pz */
+		pi = pn;
+		pz = ftr[i + 1].flen;
 	}
-	/* now go through the footer and condense the pages */
-	;
+	/* free resources */
+	free(ftr);
+
+	/* set ctx file size */
+	ctx->fsz = fo;
 	return;
 }
 
@@ -985,7 +1093,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 
 	if (!tpc_active_p(ctx->tpc)) {
 		if (sk->pg == 0) {
-			const size_t hdr = sizeof(*ctx->hdrp) / sizeof(*sk->sp);
+			const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
 			make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
 		} else {
 			make_tpc(ctx->tpc, UTE_BLKSZ);
@@ -1022,9 +1130,7 @@ load_last_tpc(utectx_t ctx)
 	size_t lpg = ute_npages(ctx);
 	struct uteseek_s sk[1];
 
-	if (UNLIKELY(lpg == 0)) {
-		goto wipeout;
-	} else if (!(ctx->oflags & UO_RDWR)) {
+	if (!__rdwrp(ctx)) {
 		/* we mustn't change things, so fuck off right here */
 		goto wipeout;
 	} else if ((ctx->oflags & UO_NO_LOAD_TPC)) {
@@ -1033,11 +1139,21 @@ load_last_tpc(utectx_t ctx)
 	}
 
 	/* seek to the last page */
-	seek_page(sk, ctx, lpg - 1);
-	/* create the tpc space */
-	tpc_from_seek(ctx, sk);
-	/* now munmap the seek */
-	flush_seek(sk);
+	if (lpg > 0) {
+		seek_page(sk, ctx, lpg - 1);
+		/* create the tpc space */
+		tpc_from_seek(ctx, sk);
+		/* now munmap the seek */
+		flush_seek(sk);
+		/* update page counter, this isn't an official page anymore */
+		ctx->hdrc->npages--;
+	} else {
+		const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
+		make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
+		/* bit of rinsing */
+		ctx->lvtd = ctx->tpc->least = 0;
+		ctx->tpc->last = 0;
+	}
 	/* also set the last and lvtd values */
 	/* store the largest-value-to-date */
 	store_lvtd(ctx);
@@ -1302,12 +1418,15 @@ ute_close(utectx_t ctx)
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
 #endif	/* AUTO_TILMAN_COMP */
-	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
+	    ctx->hdrc->flags & UTEHDR_FLAG_DIRTY) {
 		/* final compression */
 		lzma_comp(ctx);
 	}
 	/* serialse the slut */
 	flush_slut(ctx);
+	/* serialise the cached header */
+	flush_hdr(ctx);
 
 	/* just destroy the rest */
 	ute_free(ctx);
@@ -1413,20 +1532,23 @@ ute_nticks(utectx_t ctx)
 {
 /* for the moment just use the file size and number of pages
  * plus whats in the tpc */
-	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	size_t nticks = (ctx->fsz - aux_sz) / sizeof(*ctx->tpc->sk.sp);
+	size_t np = ute_npages(ctx);
+	size_t res;
+
+	/* each page has UTE_BLKSZ ticks */
+	res = np * UTE_BLKSZ;
 	/* if there are non-flushed ticks, consider them */
 	if (tpc_active_p(ctx->tpc)) {
-		nticks += ctx->tpc->sk.si;
+		res += ctx->tpc->sk.si;
 	}
-	return nticks;
+	return res;
 }
 
 size_t
 ute_nsyms(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	size_t nsyms = ctx->hdrp->slut_nsyms;
+	size_t nsyms = ctx->hdrc->slut_nsyms;
 	if (UNLIKELY(nsyms == 0)) {
 		/* try the slut itself */
 		nsyms = ctx->slut->nsyms;
@@ -1441,11 +1563,44 @@ ute_npages(utectx_t ctx)
  * The first tick page always contains the header. */
 	size_t res;
 
-	if (UNLIKELY((res = ctx->hdrc->npages) == 0)) {
+	if (LIKELY((res = ctx->hdrc->npages) > 0)) {
+		;
+	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
+		   ctx->ftr != NULL) {
+		/* just use the footer info */
+		UDEBUGvv("using footer info\n");
+	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
+		/* compression and no footer, i feel terrible */
+		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+		const size_t probe_z = 32U;
+		off_t try = sizeof(*ctx->hdrc);
+
+		UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+		for (res = 0; (size_t)try < ctx->fsz; res++) {
+			void *p = mmap_any(
+				ctx->fd, PROT_READ, MAP_SHARED, try, probe_z);
+			off_t otry = try;
+			size_t len;
+
+			if (UNLIKELY(p == NULL)) {
+				try = -1;
+			} else if ((len = page_compressed_p(p))) {
+				try += len;
+			} else {
+				/* page was not compressed? */
+				try += pgsz;
+			}
+			munmap_any(p, otry, probe_z);
+			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+		}
+		/* cache this? */
+		ctx->hdrc->npages = res;
+	} else {
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
+		guess = ctx->fsz - ctx->slut_sz - sizeof(*ctx->hdrp);
+		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */
 		ctx->hdrc->npages = res;
@@ -1532,28 +1687,28 @@ ute_ver_t
 ute_version(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	return utehdr_version(ctx->hdrp);
+	return utehdr_version(ctx->hdrc);
 }
 
 ute_end_t
 ute_endianness(utectx_t ctx)
 {
 /* return the number of symbols tracked in the ute file */
-	return utehdr_endianness(ctx->hdrp);
+	return utehdr_endianness(ctx->hdrc);
 }
 
 int
 ute_check_endianness(utectx_t ctx)
 {
 /* just fall back to utehdr.h solution */
-	return utehdr_check_endianness(ctx->hdrp);
+	return utehdr_check_endianness(ctx->hdrc);
 }
 
 void
 ute_set_endianness(utectx_t ctx, ute_end_t en)
 {
 /* return the number of symbols tracked in the ute file */
-	utehdr_set_endianness(ctx->hdrp, en);
+	utehdr_set_endianness(ctx->hdrc, en);
 	return;
 }
 

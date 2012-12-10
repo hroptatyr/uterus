@@ -981,148 +981,96 @@ tilman_comp(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 
 #if defined HAVE_LZMA_H
-static struct sk_offs_s
-seek_page_cow(uteseek_t sk, utectx_t ctx, uint32_t pg)
-{
-/* Load page PG of CTX into SK
- * transparently decompress the page */
-	struct sk_offs_s offs = seek_get_offs(ctx, pg);
-	int pflags = __pflags(ctx);
-	void *p;
-
-	UDEBUGvv("I reckon page %u starts at %zu, length %zu\n",
-		 pg, offs.foff, offs.flen);
-
-	/* trivial checks */
-	if (UNLIKELY(offs.foff > ctx->fsz)) {
-		UDEBUGvv("offset %zu out of bounds (file size %zu)\n",
-			 offs.foff, ctx->fsz);
-		goto wipe;
-	} else if (UNLIKELY(offs.foff + offs.flen >= ctx->fsz)) {
-		/* could be tpc space */
-		if ((offs.flen = ctx->fsz - offs.foff) == 0) {
-			/* tpc space */
-			UDEBUGvv("tpc space (%zub)\n", tpc_byte_size(ctx->tpc));
-			goto wipe;
-		}
-	} else if (UNLIKELY(offs.flen == 0)) {
-		/* something's fucked */
-		return offs;
-	}
-	/* just mmap what we've got so far */
-	p = mmap_any(ctx->fd, pflags, MAP_PRIVATE, offs.foff, offs.flen);
-	if (UNLIKELY(p == NULL)) {
-		goto wipe;
-	}
-
-	/* check for compression, even if lzma isn't available */
-	if (page_compressed_p(p) == offs.flen) {
-		/* length in memory, i.e. after decompressing */
-		size_t mlen;
-		const uint32_t *restrict pu32 = p;
-		void *x = NULL;
-
-		mlen = ute_decode(&x, pu32 + 1, offs.flen);
-		munmap_any(p, offs.foff, offs.flen);
-
-		if (UNLIKELY(mlen == 0U)) {
-			goto wipe;
-		}
-
-		/* after decompression we can't really do with this page */
-		munmap_any(p, offs.foff, offs.flen);
-		/* prepare sk, just the map for now */
-		sk->sp = x;
-		sk->szrw = mlen;
-
-	} else {
-		/* prepare sk, first bit */
-		sk->sp = p;
-		sk->szrw = offs.flen;
-	}
-	/* prepare sk */
-	if (pg == 0) {
-		sk->si = sizeof(*ctx->hdrc) / sizeof(*ctx->seek->sp);
-	} else {
-		sk->si = 0;
-	}
-	sk->pg = pg;
-	sk->fl = 0;
-	return offs;
-wipe:
-	memset(sk, 0, sizeof(*sk));
-	return (struct sk_offs_s){0, 0};
-}
-
-static ssize_t
-comp_seek(uteseek_t sk)
-{
-	const size_t sk_sz = seek_byte_size(sk) - sk->si * sizeof(*sk->sp);
-	void *out;
-	ssize_t nencd;
-
-	UDEBUG("compressing page %u\n", sk->pg);
-	if (UNLIKELY((nencd = ute_encode(&out, sk->sp + sk->si, sk_sz)) <= 0)) {
-		;
-	} else {
-		/* copy OUT to replace sk->sp + sk->si by OUT */
-		uint32_t *tgt = (uint32_t*)(sk->sp + sk->si);
-
-		memcpy(tgt + 1, out, nencd);
-		memset((char*)(tgt + 1) + nencd, 0, sk_sz - nencd);
-		tgt[0] = (uint32_t)nencd;
-		nencd += sizeof(*tgt);
-	}
-	return nencd;
-}
-
 static void
 lzma_comp(utectx_t ctx)
 {
 /* compress all pages in CTX and, by side-effect, set CTX's fsz slot
  * (file size) to the total file size after compressing */
+	struct ftr_s {
+		uint64_t foff;
+		uint32_t flen;
+	};
 	const size_t npg = ute_npages(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
 	int pflags = __pflags(ctx);
-	struct uteseek_s sk[2];
-	struct sk_offs_s so[2];
+	struct ftr_s *ftr;
 	off_t fo;
-	ssize_t cz;
 
 	if (UNLIKELY(npg == 0)) {
 		return;
+	} else if (UNLIKELY(pflags == UO_RDONLY)) {
+		return;
 	}
+
+	/* build the ftr object */
+	ftr = calloc(npg, sizeof(*ftr));
+	/* get all them seeks */
+	for (size_t i = 0; i < npg; i++) {
+		struct sk_offs_s so = seek_get_offs(ctx, i);
+		ftr[i].foff = so.foff;
+		ftr[i].flen = so.flen;
+	}
+
 	/* seek to the first page */
-	so[0] = seek_page_cow(sk, ctx, 0);
-	fo = sk->si * sizeof(*sk->sp);
-	UDEBUG("npages %zu\n", npg);
-	for (size_t i = 1; i <= npg; i++) {
-		/* seek to the next page */
-		if (LIKELY(i < npg)) {
-			so[1] = seek_page_cow(sk + 1, ctx, i);
+	fo = ftr[0].foff;
+
+	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
+	for (size_t i = 0; i < npg; i++) {
+		/* i-th page */
+		static void *pi = NULL;
+		static size_t pz = 0UL;
+		/* next page, just so we have the copy-on-write in place */
+		void *pn = NULL;
+		/* result of compression */
+		void *cp;
+		/* size after compression */
+		ssize_t cz;
+
+		if (pi == NULL) {
+			pi = mmap_any(
+				ctx->fd, pflags, MAP_PRIVATE,
+				ftr[i].foff, pz = ftr[i].flen);
+		}
+		if (LIKELY(i + 1 < npg) &&
+		    UNLIKELY(ftr[i].foff + ftr[i].flen > ftr[i + 1].foff)) {
+			/* we need a private map of the guy afterwards */
+			pn = mmap_any(
+				ctx->fd, pflags, MAP_PRIVATE,
+				ftr[i + 1].foff, ftr[i + 1].flen);
 		}
 
-		if ((cz = comp_seek(sk)) > 0) {
-			size_t fz = ROUND(cz, sizeof(*sk->sp));
+		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n",
+		       i, pi, ftr[i].foff, pz);
+		if (LIKELY((cz = ute_encode(&cp, pi, pz)) > 0)) {
 			void *p;
+			size_t fz = ROUND(cz + sizeof(*p), tsz);
 
-			/* sk[0] is private (i.e. COW) so copy to the real file
+			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = mmap_any(ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
-			/* copy payload */
-			memcpy(p, sk[0].sp + sk[0].si, cz);
-			/* memset the rest */
-			memset((char*)p + cz, 0, fz - cz);
-			/* diskify */
-			munmap_any(p, fo, fo + fz);
+			if (p != MAP_FAILED) {
+				uint32_t *pu32 = p;
+
+				pu32[0] = (uint32_t)cz;
+				/* copy payload */
+				memcpy(pu32 + 1, cp, cz);
+				/* memset the rest */
+				memset((char*)(pu32 + 1) + cz, 0, fz - cz);
+				/* diskify */
+				munmap_any(p, fo, fo + fz);
+			}
 			fo += fz;
 		}
-		/* flush this guy */
-		flush_seek(sk);
-		/* copy them seeks and offsets over */
-		sk[0] = sk[1];
-		so[0] = so[1];
+		/* definitely munmap pi */
+		munmap_any(pi, ftr[i].foff, ftr[i].flen);
+		/* cross-assign pn to pi/pz */
+		pi = pn;
+		pz = ftr[i + 1].flen;
 	}
+	/* free resources */
+	free(ftr);
+
 	/* set ctx file size */
 	ctx->fsz = fo;
 	return;

@@ -251,7 +251,7 @@ ssize_t
 ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	static lzma_stream strm = LZMA_STREAM_INIT;
-	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+	static size_t pgsz = 0UL;
 	static uint8_t *iobuf = NULL;
 	lzma_ret rc;
 	ssize_t res = 0;
@@ -265,6 +265,7 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 		/* everything should be freed already */
 		goto fa_free;
 	} else if (iobuf == NULL) {
+		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
 		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
 		if (UNLIKELY(iobuf == MAP_FAILED)) {
 			res = -1;
@@ -311,7 +312,7 @@ ssize_t
 ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
 	static lzma_stream strm = LZMA_STREAM_INIT;
-	const size_t pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+	static size_t pgsz = 0UL;
 	static uint8_t *iobuf = NULL;
 	lzma_ret rc;
 	ssize_t res = 0;
@@ -325,6 +326,7 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 		/* everything should be freed already */
 		goto fa_free;
 	} else if (iobuf == NULL) {
+		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
 		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
 		if (UNLIKELY(iobuf == MAP_FAILED)) {
 			res = -1;

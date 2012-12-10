@@ -74,7 +74,8 @@
 typedef struct fsck_ctx_s *fsck_ctx_t;
 
 struct fsck_ctx_s {
-	bool dryp;
+	bool dryp:1;
+	bool verbp:1;
 	ute_end_t tgtend;
 	ute_end_t natend;
 	utectx_t outctx;
@@ -343,11 +344,17 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	}
 	/* go through the pages manually */
 	npg = ute_npages(hdl);
+	if (ctx->verbp) {
+		fprintf(stderr, "inspecting %zu pages\n", npg);
+	}
 	for (size_t p = 0; p < npg + tpc_has_ticks_p(hdl->tpc); p++) {
 		struct uteseek_s sk[1];
 
 		/* create a new seek */
 		seek_page(sk, hdl, p);
+		if (ctx->verbp) {
+			fprintf(stderr, "page %zu ...\n", p);
+		}
 		/* fsck that one page */
 		issues |= fsckp(ctx, sk, hdl, issues, last);
 		/* flush the old seek */
@@ -510,6 +517,9 @@ main(int argc, char *argv[])
 	/* copy interesting stuff into our own context */
 	if (argi->dry_run_given) {
 		ctx->dryp = true;
+	}
+	if (argi->verbose_given) {
+		ctx->verbp = true;
 	}
 
 	/* determine native endianness */

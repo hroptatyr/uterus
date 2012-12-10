@@ -513,10 +513,11 @@ seek_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	if (page_compressed_p(p) == offs.flen) {
 		/* length in memory, i.e. after decompressing */
 		size_t mlen;
-		const uint32_t *restrict pu32 = p;
+		const uint32_t *pu32 = p;
 		void *x = NULL;
 
-		mlen = ute_decode(&x, pu32 + 1, offs.flen);
+		mlen = ute_decode(&x, pu32 + 1, pu32[0]);
+		/* after decompression we can't really do with this page */
 		munmap_any(p, offs.foff, offs.flen);
 
 #if !defined HAVE_LZMA_H
@@ -528,8 +529,6 @@ compressed page detected but no compression support, call the hotline\n");
 			return -1;
 		}
 
-		/* after decompression we can't really do with this page */
-		munmap_any(p, offs.foff, offs.flen);
 		/* prepare sk, just the map for now */
 		sk->sp = x;
 		sk->szrw = mlen;

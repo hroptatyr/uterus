@@ -1417,7 +1417,8 @@ ute_close(utectx_t ctx)
 	/* tilman compress the file, needs to happen after sorting */
 	tilman_comp(ctx);
 #endif	/* AUTO_TILMAN_COMP */
-	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
+	    ctx->hdrc->flags & UTEHDR_FLAG_DIRTY) {
 		/* final compression */
 		lzma_comp(ctx);
 	}

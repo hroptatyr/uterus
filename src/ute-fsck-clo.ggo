@@ -19,6 +19,10 @@ option "dry-run" n
 	"Do not actually change the files."
 	optional
 
+option "verbose" v
+	"Print some additional info."
+	optional
+
 option "output" o
 	"Output to FILE, leave original file untouched."
 	optional string typestr="FILE"

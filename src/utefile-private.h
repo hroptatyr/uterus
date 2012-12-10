@@ -64,8 +64,8 @@ struct utectx_s {
 	struct uteseek_s seek[1];
 	/* header cache */
 	struct utehdr2_s hdrc[1];
-	/* we can't keep the const promise, so ... */
-	struct utehdr2_s *hdrp;
+	/* the header on the disk */
+	const struct utehdr2_s *hdrp;
 	/* tick pages cache */
 	struct utetpc_s tpc[1];
 	/* page size */

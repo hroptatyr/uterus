@@ -1170,9 +1170,7 @@ load_last_tpc(utectx_t ctx)
 	size_t lpg = ute_npages(ctx);
 	struct uteseek_s sk[1];
 
-	if (UNLIKELY(lpg == 0)) {
-		goto wipeout;
-	} else if (!(ctx->oflags & UO_RDWR)) {
+	if (!(ctx->oflags & UO_RDWR)) {
 		/* we mustn't change things, so fuck off right here */
 		goto wipeout;
 	} else if ((ctx->oflags & UO_NO_LOAD_TPC)) {
@@ -1181,11 +1179,19 @@ load_last_tpc(utectx_t ctx)
 	}
 
 	/* seek to the last page */
-	seek_page(sk, ctx, lpg - 1);
-	/* create the tpc space */
-	tpc_from_seek(ctx, sk);
-	/* now munmap the seek */
-	flush_seek(sk);
+	if (lpg > 0) {
+		seek_page(sk, ctx, lpg - 1);
+		/* create the tpc space */
+		tpc_from_seek(ctx, sk);
+		/* now munmap the seek */
+		flush_seek(sk);
+	} else {
+		const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
+		make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
+		/* bit of rinsing */
+		ctx->lvtd = ctx->tpc->least = 0;
+		ctx->tpc->last = 0;
+	}
 	/* also set the last and lvtd values */
 	/* store the largest-value-to-date */
 	store_lvtd(ctx);
@@ -1595,7 +1601,8 @@ ute_npages(utectx_t ctx)
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = (ctx->fsz - ctx->slut_sz) / sizeof(*ctx->seek->sp);
+		guess = ctx->fsz - ctx->slut_sz - sizeof(*ctx->hdrp);
+		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */
 		ctx->hdrc->npages = res;

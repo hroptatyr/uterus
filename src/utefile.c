@@ -265,19 +265,21 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 		/* everything should be freed already */
 		goto fa_free;
 	} else if (iobuf == NULL) {
-		rc = lzma_easy_encoder(&strm, 6, LZMA_CHECK_CRC64);
-		if (UNLIKELY(rc != LZMA_OK)) {
-			/* indicate total failure, free fuckall */
-			res = -1;
-			goto fa_free;
-		}
-
 		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
 		if (UNLIKELY(iobuf == MAP_FAILED)) {
 			res = -1;
 			goto enc_free;
 		}
 	}
+
+	/* set up new encoder */
+	rc = lzma_easy_encoder(&strm, 6, LZMA_CHECK_CRC64);
+	if (UNLIKELY(rc != LZMA_OK)) {
+		/* indicate total failure, free fuckall */
+		res = -1;
+		goto fa_free;
+	}
+
 	/* reset in/out buffer */
 	strm.next_out = iobuf;
 	strm.avail_out = pgsz;
@@ -293,12 +295,13 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 		*tgt = iobuf;
 		res = strm.next_out - iobuf;
 	}
+	lzma_end(&strm);
+	strm = (typeof(strm))LZMA_STREAM_INIT;
 	return res;
 iob_free:
 	munmap(iobuf, pgsz);
 enc_free:
 	iobuf = NULL;
-	lzma_end(&strm);
 	strm = (typeof(strm))LZMA_STREAM_INIT;
 fa_free:
 	return res;

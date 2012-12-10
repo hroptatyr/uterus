@@ -470,6 +470,7 @@ static void
 ute_compress(utectx_t hdl)
 {
 	hdl->hdrc->flags |= UTEHDR_FLAG_COMPRESSED;
+	hdl->hdrc->flags |= UTEHDR_FLAG_DIRTY;
 	return;
 }
 

@@ -133,8 +133,15 @@ static inline uint32_t
 offset_of_index(utectx_t ctx, sidx_t i)
 {
 /* Return the offset of the I-th tick in its page. */
-	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
-	return (uint32_t)(i % UTE_BLKSZ);
+	const size_t blk = UTE_BLKSZ;
+	const size_t hdrt = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+
+	i += hdrt;
+	if (LIKELY(i / blk)) {
+		return (uint32_t)(i % blk);
+	} else {
+		return i - hdrt;
+	}
 }
 
 static inline size_t
@@ -142,34 +149,6 @@ page_offset(utectx_t ctx, uint32_t page)
 {
 /* Return the absolute file offset of the PAGE-th page in CTX. */
 	return page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
-}
-
-static inline bool
-index_past_eof_p(utectx_t ctx, sidx_t i)
-{
-/* Return true if I has no allocated space in CTX */
-	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
-	size_t tot_tpc = tpc_byte_size(ctx->tpc);
-	/* assume file is trunc'd to last settled page */
-	return tot_off >= ctx->fsz + tot_tpc;
-}
-
-static inline bool
-index_in_tpc_space_p(utectx_t ctx, sidx_t i)
-{
-/* Return true if I is not on the disk but in the tpc hold. */
-	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
-	size_t tot_tpc = tpc_byte_size(ctx->tpc);
-	/* assume file is trunc'd to last settled page */
-	return tot_off >= ctx->fsz && tot_off < ctx->fsz + tot_tpc;
-}
-
-static inline bool
-index_in_seek_page_p(utectx_t ctx, sidx_t i)
-{
-	return ctx->seek->pg == page_of_index(ctx, i);
 }
 
 static inline bool

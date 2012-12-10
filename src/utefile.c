@@ -631,48 +631,32 @@ seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
 }
 #endif	/* USE_UTE_SORT */
 
-static void
-reseek(utectx_t ctx, sidx_t i)
-{
-	uint32_t p = page_of_index(ctx, i);
-	uint32_t o = offset_of_index(ctx, i);
-
-	/* flush the old seek */
-	flush_seek(ctx->seek);
-	/* create a new seek */
-	seek_page(ctx->seek, ctx, p);
-	ctx->seek->si = o;
-	return;
-}
-
-static inline sidx_t
-index_to_tpc_index(utectx_t ctx, sidx_t i)
-{
-/* Return the index of I within the tpc hold
- * we just assume that tpc will never have more than UTE_BLKSZ ticks */
-	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrc);
-	if (tot_off >= ctx->fsz) {
-		return (tot_off - ctx->fsz) / sizeof(*ctx->seek->sp);
-	}
-	return 0;
-}
-
 /* seek to */
 scom_t
 ute_seek(utectx_t ctx, sidx_t i)
 {
-	/* wishful thinking */
-	if (UNLIKELY(index_past_eof_p(ctx, i))) {
+	/* calculate the page the tick should be in
+	 * and the offset within that page */
+	uint32_t p = page_of_index(ctx, i);
+	uint32_t o = offset_of_index(ctx, i);
+	size_t np = ute_npages(ctx);
+
+	if (UNLIKELY(p > np)) {
+		/* beyond hope */
 		return NULL;
-	} else if (UNLIKELY(index_in_tpc_space_p(ctx, i))) {
-		sidx_t new_i = index_to_tpc_index(ctx, i);
-		return tpc_get_scom(ctx->tpc, new_i);
-	} else if (UNLIKELY(!index_in_seek_page_p(ctx, i))) {
-		reseek(ctx, i);
+	} else if (UNLIKELY(p == np)) {
+		/* could be tpc space or beyond eof */
+		o += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+		return tpc_get_scom(ctx->tpc, o);
+	} else if (UNLIKELY(p != ctx->seek->pg)) {
+		/* flush the old seek */
+		flush_seek(ctx->seek);
+		/* create a new seek */
+		seek_page(ctx->seek, ctx, p);
+		ctx->seek->si = o;
 	} else {
-		/* just reseek manually */
-		ctx->seek->si = offset_of_index(ctx, i);
+		/* everything's fine, just reseek within the page */
+		ctx->seek->si = o;
 	}
 	return seek_get_scom(ctx->seek);
 }

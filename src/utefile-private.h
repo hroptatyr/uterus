@@ -145,34 +145,6 @@ page_offset(utectx_t ctx, uint32_t page)
 }
 
 static inline bool
-index_past_eof_p(utectx_t ctx, sidx_t i)
-{
-/* Return true if I has no allocated space in CTX */
-	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
-	size_t tot_tpc = tpc_byte_size(ctx->tpc);
-	/* assume file is trunc'd to last settled page */
-	return tot_off >= ctx->fsz + tot_tpc;
-}
-
-static inline bool
-index_in_tpc_space_p(utectx_t ctx, sidx_t i)
-{
-/* Return true if I is not on the disk but in the tpc hold. */
-	/* calculations in bytes */
-	size_t tot_off = i * sizeof(*ctx->seek->sp) + sizeof(*ctx->hdrp);
-	size_t tot_tpc = tpc_byte_size(ctx->tpc);
-	/* assume file is trunc'd to last settled page */
-	return tot_off >= ctx->fsz && tot_off < ctx->fsz + tot_tpc;
-}
-
-static inline bool
-index_in_seek_page_p(utectx_t ctx, sidx_t i)
-{
-	return ctx->seek->pg == page_of_index(ctx, i);
-}
-
-static inline bool
 ute_sorted_p(utectx_t ctx)
 {
 	return (ctx->flags & UTE_FL_UNSORTED) == 0;

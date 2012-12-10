@@ -462,10 +462,14 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 			} else if ((len = page_compressed_p(p))) {
 				off = otry;
 				try += len;
-			} else {
+			} else if (i) {
 				/* page was not compressed? */
 				off = otry;
 				try += (len = pgsz);
+			} else {
+				/* page not compressed AND it's the first one */
+				off = otry;
+				try += (len = pgsz - off);
 			}
 			munmap_any(p, otry, probe_z);
 		}

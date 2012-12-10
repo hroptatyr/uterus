@@ -1517,13 +1517,16 @@ ute_nticks(utectx_t ctx)
 {
 /* for the moment just use the file size and number of pages
  * plus whats in the tpc */
-	size_t aux_sz = sizeof(struct utehdr2_s) + ctx->slut_sz;
-	size_t nticks = (ctx->fsz - aux_sz) / sizeof(*ctx->tpc->sk.sp);
+	size_t np = ute_npages(ctx);
+	size_t res;
+
+	/* each page has UTE_BLKSZ ticks */
+	res = np * UTE_BLKSZ;
 	/* if there are non-flushed ticks, consider them */
 	if (tpc_active_p(ctx->tpc)) {
-		nticks += ctx->tpc->sk.si;
+		res += ctx->tpc->sk.si;
 	}
-	return nticks;
+	return res;
 }
 
 size_t

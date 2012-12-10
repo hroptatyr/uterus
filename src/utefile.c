@@ -758,6 +758,8 @@ flush_tpc(utectx_t ctx)
 			memset(p + ix + sisz, -1, sz - sisz);
 		}
 		munmap(p, mpsz);
+		/* up the npages counter */
+		ctx->hdrc->npages++;
 	}
 
 	/* store the largest-value-to-date */

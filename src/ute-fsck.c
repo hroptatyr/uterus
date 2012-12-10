@@ -389,12 +389,12 @@ fsck1(fsck_ctx_t ctx, utectx_t hdl, const char *fn)
 	/* print diagnostics */
 	if ((issues & ISS_OLD_VER) && !ctx->dryp) {
 		/* update the header version */
-		const char *ver = hdl->hdrp->version;
-		bump_header(hdl->hdrp);
+		const char *ver = hdl->hdrc->version;
+		bump_header(hdl->hdrc);
 		printf(" ... `%s' upgraded: %s\n", fn, ver);
 	} else if ((issues & ISS_NO_ENDIAN) && !ctx->dryp) {
 		/* just bump the header again */
-		bump_header(hdl->hdrp);
+		bump_header(hdl->hdrc);
 		printf(" ... `%s' endian indicator added\n", fn);
 	}
 	if ((issues & ISS_UNSORTED) && !ctx->dryp) {

@@ -146,9 +146,15 @@ munmap_any(char *map, off_t off, size_t len)
 }
 
 static inline int
+__rdwrp(utectx_t ctx)
+{
+	return ctx->oflags & 0x03;
+}
+
+static inline int
 __pflags(utectx_t ctx)
 {
-	return PROT_READ | ((ctx->oflags & UO_RDWR) ? PROT_WRITE : 0);
+	return PROT_READ | (__rdwrp(ctx) ? PROT_WRITE : 0);
 }
 
 static size_t
@@ -572,8 +578,7 @@ clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src)
 	/* trivial checks */
 	if (LIKELY(off + pgsz >= ctx->fsz)) {
 		/* yep, extend the guy */
-		if (ctx->oflags == UO_RDONLY ||
-		    !__fwr_trunc(ctx->fd, off + pgsz)) {
+		if (!__rdwrp(ctx) || !__fwr_trunc(ctx->fd, off + pgsz)) {
 			return -1;
 		}
 		/* truncation successful */
@@ -739,7 +744,7 @@ flush_tpc(utectx_t ctx)
 #endif	/* DEBUG_FLAG */
 	assert(sisz <= sz);
 	/* extend to take SZ additional bytes */
-	if (ctx->oflags == UO_RDONLY || !ute_extend(ctx, sz)) {
+	if (!__rdwrp(ctx) || !ute_extend(ctx, sz)) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
@@ -782,7 +787,7 @@ flush_slut(utectx_t ctx)
 	sidx_t off = ctx->fsz;
 
 	/* dont try at all in read-only mode */
-	if (UNLIKELY(ctx->oflags == UO_RDONLY)) {
+	if (UNLIKELY(!__rdwrp(ctx))) {
 		return;
 	}
 
@@ -820,11 +825,11 @@ flush_hdr(utectx_t ctx)
 	void *p;
 
 	/* dont try at all in read-only mode */
-	UDEBUG("flushing %p %s header ...\n", ctx, ute_fn(ctx));
-	if (UNLIKELY(ctx->oflags == UO_RDONLY)) {
+	if (UNLIKELY(!__rdwrp(ctx))) {
 		return;
 	}
 
+	UDEBUG("flushing %p %s header ...\n", ctx, ute_fn(ctx));
 	/* mmap the header bit */
 	p = mmap(NULL, sizeof(*ctx->hdrp), PROT_FLUSH, MAP_FLUSH, ctx->fd, 0);
 	if (UNLIKELY(p == MAP_FAILED)) {
@@ -990,7 +995,7 @@ lzma_comp(utectx_t ctx)
 
 	if (UNLIKELY(npg == 0)) {
 		return;
-	} else if (UNLIKELY(pflags == UO_RDONLY)) {
+	} else if (UNLIKELY(pflags == PROT_READ)) {
 		return;
 	}
 
@@ -1121,7 +1126,7 @@ load_last_tpc(utectx_t ctx)
 	size_t lpg = ute_npages(ctx);
 	struct uteseek_s sk[1];
 
-	if (!(ctx->oflags & UO_RDWR)) {
+	if (!__rdwrp(ctx)) {
 		/* we mustn't change things, so fuck off right here */
 		goto wipeout;
 	} else if ((ctx->oflags & UO_NO_LOAD_TPC)) {

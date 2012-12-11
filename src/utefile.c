@@ -727,18 +727,6 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
-static inline __attribute__((unused)) size_t
-next_multiple_of(size_t foo, size_t mul)
-{
-	return foo % mul ? foo + mul - foo % mul : foo;
-}
-
-static inline size_t
-prev_multiple_of(size_t foo, size_t mul)
-{
-	return foo - foo % mul;
-}
-
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {

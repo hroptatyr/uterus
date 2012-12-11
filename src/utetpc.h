@@ -57,6 +57,7 @@ extern size_t __pgsz;
 
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
+typedef const struct uteseek_s *const_uteseek_t;
 
 #if defined _Generic
 /* C11 only, fucking gcc hurry up! */
@@ -95,7 +96,11 @@ struct uteseek_s {
 		/** in the context of tpcs this is the tick capacity */
 		uint32_t cap;
 	};
-	/** general page flags */
+	/**
+	 * general page flags
+	 * See TPC_FL_* below.
+	 * We will also encode the page offset in here, so fl & ~63 will
+	 * give the page offset */
 	uint32_t fl;
 };
 
@@ -117,7 +122,20 @@ struct utetpc_s {
 #define TPC_FL_STATIC_SP	0x04
 
 static inline __attribute__((pure)) size_t
-seek_rewound(uteseek_t sk)
+seek_offset(const_uteseek_t sk)
+{
+	return (size_t)(sk->fl & ~63U);
+}
+
+static inline void
+seek_set_offset(uteseek_t sk, size_t off)
+{
+	sk->fl |= (uint32_t)off;
+	return;
+}
+
+static inline __attribute__((pure)) size_t
+seek_rewound(const_uteseek_t sk)
 {
 	return sk->szrw & ((1 << STRUCT_ILOG2B(struct sndwch_s)) - 1);
 }

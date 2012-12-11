@@ -152,14 +152,14 @@ is still fulfilled.
 
 The overall file layout of a tick file:
 @verbatim
-+---------+-----------+----------+--------------+
-| hdr (1) | ticks (n) | slut (m) | metadata (k) |
-+---------+-----------+----------+--------------+
++---------+-----------+----------+--------------+---------+
+| hdr (1) | ticks (n) | slut (m) | metadata (k) | ftr (p) |
++---------+-----------+----------+--------------+---------+
 @end verbatim
 
-The header is exactly 1 tick page (256 ticks == 4096 bytes) long.
-The ticks section is aligned to 1 tick, i.e. 16 bytes, its length is not
-bounded except for OS-limitations.
+The header is at least 4 ticks (= 64 bytes) and at most 256 ticks
+(= 4096 bytes) long.  The ticks section is aligned to 1 tick, i.e.
+16 bytes, its length is not bounded except for OS-limitations.
 
 The slut is the symbol look-up table and variable in size as well.  It's
 basically an index 
@@ -169,10 +169,15 @@ basically an index
 with a twist, the actual symbol strings are stored in a double-array
 (prefix/postfix) trie for performance reasons, see below for details.
 
-The final metadata part is of arbitrary size, layout and content, that
-is users of the uterus file format must take care of the metadata themselves.
-Typically this part is used to associate custom data to anything, ticks,
-symbols, etc.  See discussion below for further information.
+The metadata part is of arbitrary size, layout and content, that is
+users of the uterus file format must take care of the metadata
+themselves.  Typically this part is used to associate custom data to
+anything, ticks, symbols, etc.  See discussion below for further
+information.
+
+Finally, the footer contains information about the varying parts of an
+ute file.  At the moment, it tracks the offsets (and lengths) of the
+tick pages, the slut, and the metadata parts.
 
 @heading Tick payloads
 
@@ -603,14 +608,21 @@ tick pages.
 Header:
 -------
 The header consists of following data (and widths)
-offset   size  slot    description
-0x0000   4b    magic   magic string, @code{UTE+}
-0x0004   4b    ver     version identifier, @code{v0.2} at the moment
-0x0008   2b    endian  endianness indicator, the integer @code{0x3c3e}
-                       which on big-E systems translates to @code{<>}
-                       and on little-endian systems to @code{><}
-0x000a
-0x0010   4b    slut_sz size of the symbol look up table in bytes
+offset   size  slot     description
+0x0000   4b    magic    magic string, @code{UTE+}
+0x0004   4b    version  version identifier, @code{v0.2} at the moment
+0x0008   2b    endian   endianness indicator, the integer @code{0x3c3e}
+                        which on big-E systems translates to @code{<>}
+                        and on little-endian systems to @code{><}
+0x000a   2b    flags    various flags
+0x000c   4b    ploff    payload offset, i.e. size of the header, 0=4096
+0x0010   4b    slut_sz  size of the symbol look up table in bytes
+0x0014   2b    nsyms    number of symbols in the symbol look-up table
+0x0016   2b    slut_ver version of the slut implementation
+0x0018   4b    npages   number of pages
+0x001c   4b    ftr_sz   size of the file footer which contains dynamic
+                        information, such as file offsets and lengths
+                        into the pages
 @end verbatim
 
 

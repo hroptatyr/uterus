@@ -71,12 +71,12 @@
 # define DEFAULT_EDITOR	"vi"
 #endif	/* DEFAULT_EDITOR */
 
-static const char*
+static char*
 ute_editor(void)
 {
 /* stolen from git's editor.c */
-	const char *editor = getenv("UTE_EDITOR");
-	const char *terminal = getenv("TERM");
+	char *editor = getenv("UTE_EDITOR");
+	char *terminal = getenv("TERM");
 	int terminal_dumb_p = !terminal || strcmp(terminal, "dumb") == 0;
 
 	if (!editor && !terminal_dumb_p) {
@@ -94,11 +94,11 @@ ute_editor(void)
 	return editor;
 }
 
-static const char**
-prep_sh_cmd(const char **argv)
+static char**
+prep_sh_cmd(char **argv)
 {
 	int argc, nargc = 0;
-	const char **res;
+	char **res;
 	size_t a0len;
 
 	/* count nargs */
@@ -135,7 +135,7 @@ prep_sh_cmd(const char **argv)
 }
 
 static int
-run_cmd(const char **argv, const char *const UNUSED(env)[])
+run_cmd(char **argv, char *const UNUSED(env)[])
 {
 	pid_t pid, wp;
 	int status;
@@ -148,12 +148,12 @@ run_cmd(const char **argv, const char *const UNUSED(env)[])
 		return -1;
 	} else if (pid == 0) {
 		/* in child */
-		const char **nu_argv = prep_sh_cmd(argv);
+		char **nu_argv = prep_sh_cmd(argv);
 
-		execvp(nu_argv[0], (char**)nu_argv);
+		execvp(nu_argv[0], nu_argv);
 		if (argv[1]) {
 			/* nu_argv[2] is alloc'd obviously */
-			free(((char**)nu_argv)[2]);
+			free((nu_argv)[2]);
 		}
 		free(nu_argv);
 	}
@@ -273,8 +273,8 @@ slut1(utectx_t hdl, int editp)
 
 	/* otherwise launch the editor */
 	{
-		const char *editor = ute_editor();
-		const char *args[] = {
+		char *editor = ute_editor();
+		char *args[] = {
 			editor,
 			tmpf,
 			NULL

@@ -58,6 +58,7 @@ struct utehdr2_s {
 		char endia[sizeof(uint16_t) / sizeof(char)];
 	};
 	uint16_t flags;
+	/* payload offset, if 0=4096 */
 	uint32_t ploff;
 	/* slut info, off:16 len:8  */
 	uint32_t slut_sz;
@@ -70,8 +71,11 @@ struct utehdr2_s {
 	 * the footer contains page offsets and sizes
 	 * see struct uteftr2_s */
 	uint32_t ftr_sz;
-	char pad[4096 - 32];
+	char pad[64 - 32];
 };
+
+#define UTEHDR_MIN_SIZE		(sizeof(struct utehdr2_s))
+#define UTEHDR_MAX_SIZE		(4096U)
 
 typedef enum {
 	UTE_VERSION_UNK,

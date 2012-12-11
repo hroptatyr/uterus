@@ -178,7 +178,7 @@ static int
 cache_hdr(utectx_t ctx)
 {
 	/* we just use max size here */
-	const size_t sz = sizeof(struct utehdr2_s);
+	const size_t sz = sizeof(*ctx->hdrc);
 	struct utehdr2_s *res;
 
 	/* check if the file's big enough */
@@ -238,7 +238,7 @@ close_hdr(utectx_t ctx)
 static void
 creat_hdr(utectx_t ctx)
 {
-	size_t sz = sizeof(struct utehdr2_s);
+	const size_t sz = sizeof(*ctx->hdrc);
 
 	/* trunc to sz */
 	ute_trunc(ctx, sz);
@@ -399,7 +399,7 @@ flush_seek(uteseek_t sk)
 	if (sk->szrw > 0 && !(sk->fl & TPC_FL_STATIC_SP)) {
 		/* compute the page size, takes tick rewinds into account */
 		size_t pgsz = seek_byte_size(sk);
-		size_t o = sk->pg ? 0UL : sizeof(struct utehdr2_s);
+		size_t o = seek_offset(sk);
 
 		/* munmap it all */
 		munmap_any((void*)sk->sp, o, pgsz);
@@ -446,7 +446,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* fuck, compression and no footer, i feel terrible */
 		const size_t probe_z = 32U;
-		off_t try = sizeof(*ctx->hdrc);
+		off_t try = ute_hdrz(ctx);
 
 		UDEBUGvv("try %zd\n", try);
 		for (uint32_t i = 0; (try % 16U == 0) && i <= pg; i++) {
@@ -481,7 +481,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 		off = page_offset(ctx, pg);
 		len = pgsz;
 	} else {
-		off = sizeof(*ctx->hdrc);
+		off = ute_hdrz(ctx);
 		len = pgsz - off;
 	}
 	return (struct sk_offs_s){off, len};
@@ -557,6 +557,7 @@ compressed page detected but no compression support, call the hotline\n");
 	/* prepare sk */
 	sk->si = 0UL;
 	sk->pg = pg;
+	seek_set_offset(sk, offs.foff);
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);
@@ -710,7 +711,7 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
-static inline size_t
+static inline __attribute__((unused)) size_t
 next_multiple_of(size_t foo, size_t mul)
 {
 	return foo % mul ? foo + mul - foo % mul : foo;
@@ -728,6 +729,7 @@ flush_tpc(utectx_t ctx)
 	size_t sz = tpc_byte_size(ctx->tpc);
 	sidx_t si = ctx->tpc->sk.si;
 	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
+	const size_t hdrz = ute_hdrz(ctx);
 	size_t fsz = ctx->fsz;
 
 #if defined DEBUG_FLAG
@@ -747,27 +749,32 @@ flush_tpc(utectx_t ctx)
 	}
 #endif	/* DEBUG_FLAG */
 	assert(sisz <= sz);
+
+	/* make sure we start behind the header */
+	if (UNLIKELY(fsz < hdrz)) {
+		ute_trunc(ctx, hdrz);
+		fsz = hdrz;
+	}
+
 	/* extend to take SZ additional bytes */
 	if (!__rdwrp(ctx) || !ute_extend(ctx, sz)) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
 	{
-		sidx_t ix = fsz % __pgsz;
 		size_t foff = prev_multiple_of(fsz, __pgsz);
-		size_t mpsz = next_multiple_of(ix + sz, __pgsz);
 		char *p;
 
-		p = mmap(NULL, mpsz, PROT_FLUSH, MAP_FLUSH, ctx->fd, foff);
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, foff, sz);
 		if (p == MAP_FAILED) {
 			return;
 		}
-		memcpy(p + ix, ctx->tpc->sk.sp, sisz);
+		memcpy(p, ctx->tpc->sk.sp, sisz);
 		/* memset the rest with the marker tick */
 		if (sisz < sz) {
-			memset(p + ix + sisz, -1, sz - sisz);
+			memset(p + sisz, -1, sz - sisz);
 		}
-		munmap(p, mpsz);
+		munmap_any(p, foff, sz);
 		/* up the npages counter */
 		ctx->hdrc->npages++;
 	}
@@ -854,7 +861,7 @@ flush_hdr(utectx_t ctx)
 	memcpy(p, ctx->hdrc, sizeof(*ctx->hdrc));
 
 	/* that's it */
-	munmap(p, sizeof(*ctx->hdrc));
+	munmap(p, sizeof(*ctx->hdrp));
 	return;
 }
 
@@ -1092,12 +1099,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 	const size_t cp_sz = sk_sz - sk->si * sizeof(*sk->sp);
 
 	if (!tpc_active_p(ctx->tpc)) {
-		if (sk->pg == 0) {
-			const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
-			make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
-		} else {
-			make_tpc(ctx->tpc, UTE_BLKSZ);
-		}
+		make_tpc(ctx->tpc, page_sizet(ctx, sk->pg));
 	}
 	if (cp_sz) {
 		/* copy the last page, from index sk->si onwards */
@@ -1148,8 +1150,7 @@ load_last_tpc(utectx_t ctx)
 		/* update page counter, this isn't an official page anymore */
 		ctx->hdrc->npages--;
 	} else {
-		const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
-		make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
+		make_tpc(ctx->tpc, page_sizet(ctx, 0));
 		/* bit of rinsing */
 		ctx->lvtd = ctx->tpc->least = 0;
 		ctx->tpc->last = 0;
@@ -1573,7 +1574,7 @@ ute_npages(utectx_t ctx)
 		/* compression and no footer, i feel terrible */
 		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 		const size_t probe_z = 32U;
-		off_t try = sizeof(*ctx->hdrc);
+		off_t try = ute_hdrz(ctx);
 
 		UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
 		for (res = 0; (size_t)try < ctx->fsz; res++) {
@@ -1586,9 +1587,12 @@ ute_npages(utectx_t ctx)
 				try = -1;
 			} else if ((len = page_compressed_p(p))) {
 				try += len;
+			} else if (res) {
+				/* page (>0) was not compressed? */
+				try += pgsz;
 			} else {
 				/* page was not compressed? */
-				try += pgsz;
+				try += pgsz - otry;
 			}
 			munmap_any(p, otry, probe_z);
 			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
@@ -1599,7 +1603,7 @@ ute_npages(utectx_t ctx)
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = ctx->fsz - ctx->slut_sz - sizeof(*ctx->hdrp);
+		guess = ctx->fsz - ctx->slut_sz - ute_hdrz(ctx);
 		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */

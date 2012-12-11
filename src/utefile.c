@@ -463,7 +463,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 		off_t try = ute_hdrz(ctx);
 
 		UDEBUGvv("try %zd\n", try);
-		for (uint32_t i = 0; (try % 16U == 0) && i <= pg; i++) {
+		for (uint32_t i = 0; i <= pg; i++) {
 			void *p = mmap_any(
 				ctx->fd, PROT_READ, MAP_SHARED, try, probe_z);
 			off_t otry = try;

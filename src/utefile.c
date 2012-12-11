@@ -778,10 +778,9 @@ flush_tpc(utectx_t ctx)
 	}
 	/* span a map covering the SZ new bytes */
 	{
-		size_t foff = prev_multiple_of(fsz, __pgsz);
 		char *p;
 
-		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, foff, sz);
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, sz);
 		if (p == MAP_FAILED) {
 			return;
 		}

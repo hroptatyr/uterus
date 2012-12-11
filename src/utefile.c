@@ -877,7 +877,7 @@ flush_hdr(utectx_t ctx)
 
 /* footer handling */
 static void
-add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len)
+add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len, size_t nt)
 {
 /* auto-resizing */
 	struct uteftr_cell_s *cells;
@@ -893,7 +893,7 @@ add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len)
 	cells = ctx->ftr;
 	cells[pg].foff = off;
 	cells[pg].flen = len;
-	cells[pg].tlen = page_sizet(ctx, pg);
+	cells[pg].tlen = nt;
 	return;
 }
 
@@ -1165,6 +1165,9 @@ lzma_comp(utectx_t ctx)
 				/* diskify */
 				munmap_any((void*)p, fo, fo + fz);
 			}
+			/* also make sure to update the ftr */
+			add_ftr(ctx, i, fo, fz, pz / sizeof(*ctx->seek->sp));
+			/* and our global counter */
 			fo += fz;
 		}
 		/* definitely munmap pi */
@@ -1684,7 +1687,8 @@ ute_npages(utectx_t ctx)
 
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* compression and no footer, i feel terrible */
-		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+		const size_t tz = sizeof(*ctx->seek->sp);
+		const size_t pgsz = UTE_BLKSZ * tz;
 		const size_t probe_z = 32U;
 		off_t try = ute_hdrz(ctx);
 
@@ -1709,7 +1713,7 @@ ute_npages(utectx_t ctx)
 			munmap_any(p, otry, probe_z);
 			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
 			/* cache this in FTR slot */
-			add_ftr(ctx, res, otry, try - otry);
+			add_ftr(ctx, res, otry, try - otry, (try - otry) / tz);
 		}
 		/* cache this? */
 		ctx->hdrc->npages = res;

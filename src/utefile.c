@@ -710,7 +710,7 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
-static inline size_t
+static inline __attribute__((unused)) size_t
 next_multiple_of(size_t foo, size_t mul)
 {
 	return foo % mul ? foo + mul - foo % mul : foo;
@@ -728,6 +728,7 @@ flush_tpc(utectx_t ctx)
 	size_t sz = tpc_byte_size(ctx->tpc);
 	sidx_t si = ctx->tpc->sk.si;
 	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
+	const size_t hdrz = ute_hdrz(ctx);
 	size_t fsz = ctx->fsz;
 
 #if defined DEBUG_FLAG
@@ -747,27 +748,32 @@ flush_tpc(utectx_t ctx)
 	}
 #endif	/* DEBUG_FLAG */
 	assert(sisz <= sz);
+
+	/* make sure we start behind the header */
+	if (UNLIKELY(fsz < hdrz)) {
+		ute_trunc(ctx, hdrz);
+		fsz = hdrz;
+	}
+
 	/* extend to take SZ additional bytes */
 	if (!__rdwrp(ctx) || !ute_extend(ctx, sz)) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
 	{
-		sidx_t ix = fsz % __pgsz;
 		size_t foff = prev_multiple_of(fsz, __pgsz);
-		size_t mpsz = next_multiple_of(ix + sz, __pgsz);
 		char *p;
 
-		p = mmap(NULL, mpsz, PROT_FLUSH, MAP_FLUSH, ctx->fd, foff);
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, foff, sz);
 		if (p == MAP_FAILED) {
 			return;
 		}
-		memcpy(p + ix, ctx->tpc->sk.sp, sisz);
+		memcpy(p, ctx->tpc->sk.sp, sisz);
 		/* memset the rest with the marker tick */
 		if (sisz < sz) {
-			memset(p + ix + sisz, -1, sz - sisz);
+			memset(p + sisz, -1, sz - sisz);
 		}
-		munmap(p, mpsz);
+		munmap_any(p, foff, sz);
 		/* up the npages counter */
 		ctx->hdrc->npages++;
 	}

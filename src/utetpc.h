@@ -96,7 +96,11 @@ struct uteseek_s {
 		/** in the context of tpcs this is the tick capacity */
 		uint32_t cap;
 	};
-	/** general page flags */
+	/**
+	 * general page flags
+	 * See TPC_FL_* below.
+	 * We will also encode the page offset in here, so fl & ~63 will
+	 * give the page offset */
 	uint32_t fl;
 };
 
@@ -116,6 +120,19 @@ struct utetpc_s {
 #define TPC_FL_NEEDMRG		0x02
 /* indicate that flush_seek() et al mustn't munmap() sp */
 #define TPC_FL_STATIC_SP	0x04
+
+static inline __attribute__((pure)) size_t
+seek_offset(const_uteseek_t sk)
+{
+	return (size_t)(sk->fl & ~63U);
+}
+
+static inline void
+seek_set_offset(uteseek_t sk, size_t off)
+{
+	sk->fl |= (uint32_t)off;
+	return;
+}
 
 static inline __attribute__((pure)) size_t
 seek_rewound(const_uteseek_t sk)

@@ -399,7 +399,7 @@ flush_seek(uteseek_t sk)
 	if (sk->szrw > 0 && !(sk->fl & TPC_FL_STATIC_SP)) {
 		/* compute the page size, takes tick rewinds into account */
 		size_t pgsz = seek_byte_size(sk);
-		size_t o = sk->pg ? 0UL : sizeof(struct utehdr2_s);
+		size_t o = seek_offset(sk);
 
 		/* munmap it all */
 		munmap_any((void*)sk->sp, o, pgsz);
@@ -557,6 +557,7 @@ compressed page detected but no compression support, call the hotline\n");
 	/* prepare sk */
 	sk->si = 0UL;
 	sk->pg = pg;
+	seek_set_offset(sk, offs.foff);
 
 	/* check if there's lone naughts at the end of the page */
 	assert(sk->szrw / sizeof(*sk->sp) > 0);

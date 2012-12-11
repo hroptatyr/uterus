@@ -48,6 +48,7 @@
 #endif	/* DEBUG_FLAG */
 
 typedef struct utectx_s *utectx_t;
+typedef const struct utectx_s *const_utectx_t;
 
 /* goodness */
 #include "utefile.h"
@@ -121,16 +122,16 @@ extern size_t ute_npages(utectx_t ctx);
 
 
 /* inlines */
-static inline uint32_t
-page_of_index(utectx_t ctx, sidx_t i)
+static inline __attribute__((pure)) uint32_t
+page_of_index(const_utectx_t ctx, sidx_t i)
 {
 /* Return the page where the tick with index I is to be found. */
 	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
 	return (uint32_t)(i / UTE_BLKSZ);
 }
 
-static inline uint32_t
-offset_of_index(utectx_t ctx, sidx_t i)
+static inline __attribute__((pure)) uint32_t
+offset_of_index(const_utectx_t ctx, sidx_t i)
 {
 /* Return the offset of the I-th tick in its page. */
 	const size_t blk = UTE_BLKSZ;
@@ -144,15 +145,15 @@ offset_of_index(utectx_t ctx, sidx_t i)
 	}
 }
 
-static inline size_t
-page_offset(utectx_t ctx, uint32_t page)
+static inline __attribute__((pure)) size_t
+page_offset(const_utectx_t ctx, uint32_t page)
 {
 /* Return the absolute file offset of the PAGE-th page in CTX. */
 	return page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
 }
 
 static inline bool
-ute_sorted_p(utectx_t ctx)
+ute_sorted_p(const_utectx_t ctx)
 {
 	return (ctx->flags & UTE_FL_UNSORTED) == 0;
 }

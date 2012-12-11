@@ -1098,12 +1098,7 @@ tpc_from_seek(utectx_t ctx, uteseek_t sk)
 	const size_t cp_sz = sk_sz - sk->si * sizeof(*sk->sp);
 
 	if (!tpc_active_p(ctx->tpc)) {
-		if (sk->pg == 0) {
-			const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
-			make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
-		} else {
-			make_tpc(ctx->tpc, UTE_BLKSZ);
-		}
+		make_tpc(ctx->tpc, page_sizet(ctx, sk->pg));
 	}
 	if (cp_sz) {
 		/* copy the last page, from index sk->si onwards */
@@ -1154,8 +1149,7 @@ load_last_tpc(utectx_t ctx)
 		/* update page counter, this isn't an official page anymore */
 		ctx->hdrc->npages--;
 	} else {
-		const size_t hdr = sizeof(*ctx->hdrc) / sizeof(*sk->sp);
-		make_tpc(ctx->tpc, UTE_BLKSZ - hdr);
+		make_tpc(ctx->tpc, page_sizet(ctx, 0));
 		/* bit of rinsing */
 		ctx->lvtd = ctx->tpc->least = 0;
 		ctx->tpc->last = 0;

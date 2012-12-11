@@ -170,6 +170,21 @@ page_offset(const_utectx_t ctx, uint32_t page)
 	return page ? cand : ute_hdrz(ctx);
 }
 
+static inline __attribute__((pure)) size_t
+page_size(const_utectx_t ctx, uint32_t page)
+{
+/* Return the absolute (memory) size of the PAGE-th page in CTX in bytes. */
+	const size_t cand = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	return page ? cand : cand - ute_hdrz(ctx);
+}
+
+static inline __attribute__((pure)) size_t
+page_sizet(const_utectx_t ctx, uint32_t page)
+{
+/* Return the absolute (memory) size of the PAGE-th page in CTX in ticks. */
+	return page_size(ctx, page) / sizeof(*ctx->seek->sp);
+}
+
 static inline bool
 ute_sorted_p(const_utectx_t ctx)
 {

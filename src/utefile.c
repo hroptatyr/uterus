@@ -727,18 +727,6 @@ store_slut(utectx_t ctx)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
-static inline __attribute__((unused)) size_t
-next_multiple_of(size_t foo, size_t mul)
-{
-	return foo % mul ? foo + mul - foo % mul : foo;
-}
-
-static inline size_t
-prev_multiple_of(size_t foo, size_t mul)
-{
-	return foo - foo % mul;
-}
-
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
@@ -778,10 +766,9 @@ flush_tpc(utectx_t ctx)
 	}
 	/* span a map covering the SZ new bytes */
 	{
-		size_t foff = prev_multiple_of(fsz, __pgsz);
 		char *p;
 
-		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, foff, sz);
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, sz);
 		if (p == MAP_FAILED) {
 			return;
 		}
@@ -790,7 +777,7 @@ flush_tpc(utectx_t ctx)
 		if (sisz < sz) {
 			memset(p + sisz, -1, sz - sisz);
 		}
-		munmap_any(p, foff, sz);
+		munmap_any(p, fsz, sz);
 		/* up the npages counter */
 		ctx->hdrc->npages++;
 	}

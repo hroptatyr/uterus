@@ -71,8 +71,11 @@ struct utehdr2_s {
 	 * the footer contains page offsets and sizes
 	 * see struct uteftr2_s */
 	uint32_t ftr_sz;
-	char pad[4096 - 32];
+	char pad[64 - 32];
 };
+
+#define UTEHDR_MIN_SIZE		(sizeof(struct utehdr2_s))
+#define UTEHDR_MAX_SIZE		(4096U)
 
 typedef enum {
 	UTE_VERSION_UNK,

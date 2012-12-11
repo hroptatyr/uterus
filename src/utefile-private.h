@@ -116,6 +116,9 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz);
 extern ssize_t
 ute_decode(void *tgt[static 1], const void *buf, const size_t bsz);
 
+/* compression level to use for ute_encode() */
+extern uint32_t ute_encode_clevel;
+
 /**
  * Return the number of tick pages in CTX. */
 extern size_t ute_npages(utectx_t ctx);

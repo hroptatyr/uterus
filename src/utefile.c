@@ -253,6 +253,8 @@ creat_hdr(utectx_t ctx)
 }
 
 #if defined HAVE_LZMA_H
+uint32_t ute_encode_clevel = 6;
+
 ssize_t
 ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
@@ -280,7 +282,7 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 	}
 
 	/* set up new encoder */
-	rc = lzma_easy_encoder(&strm, 6, LZMA_CHECK_CRC64);
+	rc = lzma_easy_encoder(&strm, ute_encode_clevel, LZMA_CHECK_CRC64);
 	if (UNLIKELY(rc != LZMA_OK)) {
 		/* indicate total failure, free fuckall */
 		res = -1;
@@ -375,6 +377,8 @@ fa_free:
 }
 
 #else  /* !HAVE_LZMA_H */
+uint32_t ute_encode_clevel = 0;
+
 ssize_t
 ute_encode(void *tgt[static 1], const void *UNUSED(x), const size_t UNUSED(y))
 {

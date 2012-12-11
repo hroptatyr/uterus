@@ -1612,6 +1612,7 @@ ute_npages(utectx_t ctx)
 /* Return the number of tick pages.
  * The first tick page always contains the header. */
 	size_t res;
+	size_t hdrz;
 
 	if (LIKELY((res = ctx->hdrc->npages) > 0)) {
 		;
@@ -1660,11 +1661,14 @@ ute_npages(utectx_t ctx)
 		/* cache this? */
 		ctx->hdrc->npages = res;
 
+	} else if (ctx->fsz <= (hdrz = ute_hdrz(ctx))) {
+		ctx->hdrc->npages = res = 0U;
+
 	} else {
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = ctx->fsz - ctx->slut_sz - ute_hdrz(ctx);
+		guess = ctx->fsz - ctx->slut_sz - hdrz;
 		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */

@@ -89,6 +89,15 @@ typedef enum {
 	UTE_ENDIAN_BIG,
 } ute_end_t;
 
+struct uteftr_cell_s {
+	/** file offset of page in question */
+	uint64_t foff;
+	/** length (in bytes) of page on disk */
+	uint32_t flen;
+	/** length (in ticks) of uncpacked page */
+	uint32_t tlen;
+};
+
 
 /* public api */
 extern ute_ver_t utehdr_version(utehdr2_t);

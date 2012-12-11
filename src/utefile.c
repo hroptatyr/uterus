@@ -1586,9 +1586,12 @@ ute_npages(utectx_t ctx)
 				try = -1;
 			} else if ((len = page_compressed_p(p))) {
 				try += len;
+			} else if (res) {
+				/* page (>0) was not compressed? */
+				try += pgsz;
 			} else {
 				/* page was not compressed? */
-				try += pgsz;
+				try += pgsz - otry;
 			}
 			munmap_any(p, otry, probe_z);
 			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);

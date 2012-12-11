@@ -12,7 +12,7 @@ before_script:
   - sudo apt-get install -qq texlive
   - sudo apt-get install -qq liblzma-dev
 
-script: ./configure && make clean all check distcheck || (cat test/test-suite.log && /bin/false)
+script: ./configure CPPFLAGS="-DDEBUG_FLAG" && make clean all check distcheck || (cat test/test-suite.log && /bin/false)
 
 ## whitelist
 branches:

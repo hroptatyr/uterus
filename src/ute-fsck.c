@@ -471,6 +471,8 @@ ute_compress(utectx_t hdl)
 {
 	hdl->hdrc->flags |= UTEHDR_FLAG_COMPRESSED;
 	hdl->hdrc->flags |= UTEHDR_FLAG_DIRTY;
+	/* we also go for the minimum header size */
+	hdl->hdrc->ploff = UTEHDR_MIN_SIZE;
 	return;
 }
 
@@ -537,6 +539,9 @@ main(int argc, char *argv[])
 		/* use native endianness */
 		ctx->tgtend = ctx->natend;
 	}
+
+	/* set the compression level in either case */
+	ute_encode_clevel = argi->compression_level_arg;
 
 	if (!argi->dry_run_given && argi->output_given) {
 		const int fl = UO_RDWR | UO_CREAT | UO_TRUNC;

@@ -48,6 +48,7 @@
 #endif	/* DEBUG_FLAG */
 
 typedef struct utectx_s *utectx_t;
+typedef const struct utectx_s *const_utectx_t;
 
 /* goodness */
 #include "utefile.h"
@@ -115,26 +116,46 @@ ute_encode(void *tgt[static 1], const void *buf, const size_t bsz);
 extern ssize_t
 ute_decode(void *tgt[static 1], const void *buf, const size_t bsz);
 
+/* compression level to use for ute_encode() */
+extern uint32_t ute_encode_clevel;
+
 /**
  * Return the number of tick pages in CTX. */
 extern size_t ute_npages(utectx_t ctx);
 
 
 /* inlines */
-static inline uint32_t
-page_of_index(utectx_t ctx, sidx_t i)
+static inline __attribute__((pure)) size_t
+ute_hdrz(const_utectx_t ctx)
+{
+/* return the size of CTX's header on disk in bytes */
+	if (LIKELY(ctx->hdrp->ploff)) {
+		return (size_t)ctx->hdrp->ploff;
+	}
+	return UTEHDR_MAX_SIZE;
+}
+
+static inline __attribute__((pure)) size_t
+ute_hdrzt(const_utectx_t ctx)
+{
+/* like ute_hdrz() but return the header size in ticks instead of bytes */
+	return ute_hdrz(ctx) / sizeof(*ctx->seek->sp);
+}
+
+static inline __attribute__((pure)) uint32_t
+page_of_index(const_utectx_t ctx, sidx_t i)
 {
 /* Return the page where the tick with index I is to be found. */
-	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	i += ute_hdrzt(ctx);
 	return (uint32_t)(i / UTE_BLKSZ);
 }
 
-static inline uint32_t
-offset_of_index(utectx_t ctx, sidx_t i)
+static inline __attribute__((pure)) uint32_t
+offset_of_index(const_utectx_t ctx, sidx_t i)
 {
 /* Return the offset of the I-th tick in its page. */
 	const size_t blk = UTE_BLKSZ;
-	const size_t hdrt = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	const size_t hdrt = ute_hdrzt(ctx);
 
 	i += hdrt;
 	if (LIKELY(i / blk)) {
@@ -144,15 +165,31 @@ offset_of_index(utectx_t ctx, sidx_t i)
 	}
 }
 
-static inline size_t
-page_offset(utectx_t ctx, uint32_t page)
+static inline __attribute__((pure)) size_t
+page_offset(const_utectx_t ctx, uint32_t page)
 {
 /* Return the absolute file offset of the PAGE-th page in CTX. */
-	return page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	const size_t cand = page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	return page ? cand : ute_hdrz(ctx);
+}
+
+static inline __attribute__((pure)) size_t
+page_size(const_utectx_t ctx, uint32_t page)
+{
+/* Return the absolute (memory) size of the PAGE-th page in CTX in bytes. */
+	const size_t cand = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	return page ? cand : cand - ute_hdrz(ctx);
+}
+
+static inline __attribute__((pure)) size_t
+page_sizet(const_utectx_t ctx, uint32_t page)
+{
+/* Return the absolute (memory) size of the PAGE-th page in CTX in ticks. */
+	return page_size(ctx, page) / sizeof(*ctx->seek->sp);
 }
 
 static inline bool
-ute_sorted_p(utectx_t ctx)
+ute_sorted_p(const_utectx_t ctx)
 {
 	return (ctx->flags & UTE_FL_UNSORTED) == 0;
 }

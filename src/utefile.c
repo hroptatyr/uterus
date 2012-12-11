@@ -178,7 +178,7 @@ static int
 cache_hdr(utectx_t ctx)
 {
 	/* we just use max size here */
-	const size_t sz = sizeof(struct utehdr2_s);
+	const size_t sz = sizeof(*ctx->hdrc);
 	struct utehdr2_s *res;
 
 	/* check if the file's big enough */
@@ -238,7 +238,7 @@ close_hdr(utectx_t ctx)
 static void
 creat_hdr(utectx_t ctx)
 {
-	size_t sz = sizeof(struct utehdr2_s);
+	const size_t sz = sizeof(*ctx->hdrc);
 
 	/* trunc to sz */
 	ute_trunc(ctx, sz);
@@ -854,7 +854,7 @@ flush_hdr(utectx_t ctx)
 	memcpy(p, ctx->hdrc, sizeof(*ctx->hdrc));
 
 	/* that's it */
-	munmap(p, sizeof(*ctx->hdrc));
+	munmap(p, sizeof(*ctx->hdrp));
 	return;
 }
 

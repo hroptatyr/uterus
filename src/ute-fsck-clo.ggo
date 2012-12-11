@@ -7,7 +7,7 @@ option "help" h
 	"Show this help message."
 	optional
 
-option "compress" -
+option "compress" z
 	"Compress all ticks (only if lzma support is available)."
 	optional
 

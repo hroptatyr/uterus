@@ -817,7 +817,7 @@ flush_slut(utectx_t ctx)
 	/* round up to the next multiple of a tick (16b) */
 	{
 		const size_t mul = sizeof(*ctx->seek->sp);
-		bndz = ((stsz - 1) / mul) * mul;
+		bndz = ((stsz - 1) / mul + 1) * mul;
 	}
 	/* extend to take BNDZ additional bytes */
 	if (!ute_extend(ctx, bndz)) {
@@ -937,7 +937,7 @@ flush_ftr(utectx_t ctx)
 		char *p;
 
 		/* round up to the next multiple of a tick (16b) */
-		ftrz = ((ftrz - 1) / mul) * mul;
+		ftrz = ((ftrz - 1) / mul + 1) * mul;
 
 		/* extend to take BNDZ additional bytes */
 		if (!ute_extend(ctx, ftrz)) {

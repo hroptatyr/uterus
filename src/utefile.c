@@ -828,7 +828,6 @@ flush_slut(utectx_t ctx)
 		goto out;
 	}
 	memcpy(p, stbl, stsz);
-	memset(p + stsz, 0, bndz - stsz);
 	munmap_any(p, off, bndz);
 
 	/* store the size of the serialised slut */

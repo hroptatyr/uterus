@@ -908,6 +908,51 @@ free_ftr(utectx_t ctx)
 	return;
 }
 
+static void
+flush_ftr(utectx_t ctx)
+{
+/* pack the ftr and write a copy at the end of the file
+ * should be called last */
+	const struct uteftr_cell_s *ftr;
+	size_t npg;
+
+	/* dont try at all in read-only mode */
+	if (UNLIKELY(!__rdwrp(ctx))) {
+		return;
+	} else if (UNLIKELY((ftr = ctx->ftr) == NULL)) {
+		/* piss off right away */
+		return;
+	} else if (UNLIKELY((npg = ute_npages(ctx)) == 0U)) {
+		return;
+	} else if (UNLIKELY(ctx->ftr_sz < npg * sizeof(*ftr))) {
+		/* footer is fucked */
+		UDEBUG("footer too small, not dumping %zu\n", ctx->ftr_sz);
+		return;
+	}
+	/* otherwise write exactly NPG cells to the disk */
+	{
+		const size_t mul = sizeof(*ctx->seek->sp);
+		size_t ftrz = npg * sizeof(*ftr);
+		size_t fsz = ctx->fsz;
+		char *p;
+
+		/* round up to the next multiple of a tick (16b) */
+		ftrz = ((ftrz - 1) / mul) * mul;
+
+		/* extend to take BNDZ additional bytes */
+		if (!ute_extend(ctx, ftrz)) {
+			goto out;
+		}
+
+		UDEBUG("writing %zu footer bytes\n", ftrz);
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, ftrz);
+		memcpy(p, ftr, ftrz);
+		munmap_any(p, fsz, ftrz);
+	}
+out:
+	return;
+}
+
 
 /* tpc glue */
 #if !defined USE_UTE_SORT
@@ -1482,6 +1527,8 @@ ute_close(utectx_t ctx)
 	}
 	/* serialise the slut */
 	flush_slut(ctx);
+	/* serialise the footer */
+	flush_ftr(ctx);
 	/* serialise the cached header */
 	flush_hdr(ctx);
 

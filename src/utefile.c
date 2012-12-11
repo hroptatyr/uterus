@@ -777,7 +777,7 @@ flush_tpc(utectx_t ctx)
 		if (sisz < sz) {
 			memset(p + sisz, -1, sz - sisz);
 		}
-		munmap_any(p, foff, sz);
+		munmap_any(p, fsz, sz);
 		/* up the npages counter */
 		ctx->hdrc->npages++;
 	}

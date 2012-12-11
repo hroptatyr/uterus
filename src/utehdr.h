@@ -58,6 +58,7 @@ struct utehdr2_s {
 		char endia[sizeof(uint16_t) / sizeof(char)];
 	};
 	uint16_t flags;
+	/* payload offset, if 0=4096 */
 	uint32_t ploff;
 	/* slut info, off:16 len:8  */
 	uint32_t slut_sz;

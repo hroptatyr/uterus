@@ -446,7 +446,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* fuck, compression and no footer, i feel terrible */
 		const size_t probe_z = 32U;
-		off_t try = sizeof(*ctx->hdrc);
+		off_t try = ute_hdrz(ctx);
 
 		UDEBUGvv("try %zd\n", try);
 		for (uint32_t i = 0; (try % 16U == 0) && i <= pg; i++) {
@@ -481,7 +481,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 		off = page_offset(ctx, pg);
 		len = pgsz;
 	} else {
-		off = sizeof(*ctx->hdrc);
+		off = ute_hdrz(ctx);
 		len = pgsz - off;
 	}
 	return (struct sk_offs_s){off, len};
@@ -1573,7 +1573,7 @@ ute_npages(utectx_t ctx)
 		/* compression and no footer, i feel terrible */
 		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
 		const size_t probe_z = 32U;
-		off_t try = sizeof(*ctx->hdrc);
+		off_t try = ute_hdrz(ctx);
 
 		UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
 		for (res = 0; (size_t)try < ctx->fsz; res++) {
@@ -1599,7 +1599,7 @@ ute_npages(utectx_t ctx)
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = ctx->fsz - ctx->slut_sz - sizeof(*ctx->hdrp);
+		guess = ctx->fsz - ctx->slut_sz - ute_hdrz(ctx);
 		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */

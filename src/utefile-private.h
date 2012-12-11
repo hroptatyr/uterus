@@ -122,11 +122,28 @@ extern size_t ute_npages(utectx_t ctx);
 
 
 /* inlines */
+static inline __attribute__((pure)) size_t
+ute_hdrz(const_utectx_t ctx)
+{
+/* return the size of CTX's header on disk in bytes */
+	if (LIKELY(ctx->hdrp->ploff)) {
+		return (size_t)ctx->hdrp->ploff;
+	}
+	return UTEHDR_MAX_SIZE;
+}
+
+static inline __attribute__((pure)) size_t
+ute_hdrzt(const_utectx_t ctx)
+{
+/* like ute_hdrz() but return the header size in ticks instead of bytes */
+	return ute_hdrz(ctx) / sizeof(*ctx->seek->sp);
+}
+
 static inline __attribute__((pure)) uint32_t
 page_of_index(const_utectx_t ctx, sidx_t i)
 {
 /* Return the page where the tick with index I is to be found. */
-	i += sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	i += ute_hdrzt(ctx);
 	return (uint32_t)(i / UTE_BLKSZ);
 }
 
@@ -135,7 +152,7 @@ offset_of_index(const_utectx_t ctx, sidx_t i)
 {
 /* Return the offset of the I-th tick in its page. */
 	const size_t blk = UTE_BLKSZ;
-	const size_t hdrt = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
+	const size_t hdrt = ute_hdrzt(ctx);
 
 	i += hdrt;
 	if (LIKELY(i / blk)) {
@@ -149,7 +166,8 @@ static inline __attribute__((pure)) size_t
 page_offset(const_utectx_t ctx, uint32_t page)
 {
 /* Return the absolute file offset of the PAGE-th page in CTX. */
-	return page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	const size_t cand = page * UTE_BLKSZ * sizeof(*ctx->seek->sp);
+	return page ? cand : ute_hdrz(ctx);
 }
 
 static inline bool

@@ -540,6 +540,9 @@ main(int argc, char *argv[])
 		ctx->tgtend = ctx->natend;
 	}
 
+	/* set the compression level in either case */
+	ute_encode_clevel = argi->compression_level_arg;
+
 	if (!argi->dry_run_given && argi->output_given) {
 		const int fl = UO_RDWR | UO_CREAT | UO_TRUNC;
 		const char *fn = argi->output_arg;

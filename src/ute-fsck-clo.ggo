@@ -11,6 +11,10 @@ option "compress" z
 	"Compress all ticks (only if lzma support is available)."
 	optional
 
+option "compression-level" -
+	"Use different compression presets, 1 is fast, 9 is best."
+	optional int default="6"
+
 option "decompress" d
 	"Decompress all ticks."
 	optional

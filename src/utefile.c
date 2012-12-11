@@ -413,6 +413,7 @@ flush_seek(uteseek_t sk)
 	return;
 }
 
+
 struct sk_offs_s {
 	/* file offset */
 	size_t foff;
@@ -442,7 +443,16 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 
 	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
 		/* use the footer info */
+		const struct uteftr_cell_s *cells = ctx->ftr;
+
 		UDEBUGvv("using footer info\n");
+		if ((ctx->ftr_sz / sizeof(*cells)) < pg) {
+			off = len = 0U;
+		} else {
+			off = cells[pg].foff;
+			len = cells[pg].flen;
+		}
+
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* fuck, compression and no footer, i feel terrible */
 		const size_t probe_z = 32U;
@@ -477,9 +487,11 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 		if (UNLIKELY((size_t)try > ctx->fsz)) {
 			len = ctx->fsz - off;
 		}
+
 	} else if (pg > 0) {
 		off = page_offset(ctx, pg);
 		len = pgsz;
+
 	} else {
 		off = ute_hdrz(ctx);
 		len = pgsz - off;
@@ -862,6 +874,39 @@ flush_hdr(utectx_t ctx)
 
 	/* that's it */
 	munmap(p, sizeof(*ctx->hdrp));
+	return;
+}
+
+
+/* footer handling */
+static void
+add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len)
+{
+/* auto-resizing */
+	struct uteftr_cell_s *cells;
+	size_t ncells = ctx->ftr_sz / sizeof(*cells);
+
+	/* resize? */
+	if (UNLIKELY(pg >= ncells)) {
+		size_t nxpg = ((pg / 16U) + 1U) * 16U;
+		ctx->ftr_sz = nxpg * sizeof(*cells);
+		ctx->ftr = realloc(ctx->ftr, ctx->ftr_sz);
+	}
+	/* now we're clear to go */
+	cells = ctx->ftr;
+	cells[pg].foff = off;
+	cells[pg].flen = len;
+	cells[pg].tlen = page_sizet(ctx, pg);
+	return;
+}
+
+static void
+free_ftr(utectx_t ctx)
+{
+	if (ctx->ftr != NULL) {
+		free(ctx->ftr);
+		ctx->ftr = NULL;
+	}
 	return;
 }
 
@@ -1404,6 +1449,8 @@ ute_free(utectx_t ctx)
 	free_tpc(ctx->tpc);
 	/* finish our tpc session */
 	fini_tpc();
+	/* finalise ftr */
+	free_ftr(ctx);
 
 	/* now proceed to closing and finalising */
 	close_hdr(ctx);
@@ -1580,7 +1627,16 @@ ute_npages(utectx_t ctx)
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
 		   ctx->ftr != NULL) {
 		/* just use the footer info */
+		const struct uteftr_cell_s *cells = ctx->ftr;
+
 		UDEBUGvv("using footer info\n");
+		for (size_t i = 0; i < ctx->ftr_sz / sizeof(*cells); i++) {
+			if (cells[i].foff == 0) {
+				ctx->hdrc->npages = res = i;
+				break;
+			}
+		}
+
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* compression and no footer, i feel terrible */
 		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
@@ -1607,9 +1663,12 @@ ute_npages(utectx_t ctx)
 			}
 			munmap_any(p, otry, probe_z);
 			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+			/* cache this in FTR slot */
+			add_ftr(ctx, res, otry, try - otry);
 		}
 		/* cache this? */
 		ctx->hdrc->npages = res;
+
 	} else {
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;

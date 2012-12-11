@@ -798,6 +798,7 @@ flush_slut(utectx_t ctx)
 	char *p;
 	void *stbl = NULL;
 	size_t stsz = 0;
+	size_t bndz;
 	sidx_t off = ctx->fsz;
 
 	/* dont try at all in read-only mode */
@@ -813,16 +814,22 @@ flush_slut(utectx_t ctx)
 	} else if (UNLIKELY(stsz == 0)) {
 		goto out;
 	}
-	/* extend to take STSZ additional bytes */
-	if (!ute_extend(ctx, stsz)) {
+	/* round up to the next multiple of a tick (16b) */
+	{
+		const size_t mul = sizeof(*ctx->seek->sp);
+		bndz = ((stsz - 1) / mul) * mul;
+	}
+	/* extend to take BNDZ additional bytes */
+	if (!ute_extend(ctx, bndz)) {
 		goto out;
 	}
 	/* align to multiples of page size */
-	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, stsz)) == NULL) {
+	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, bndz)) == NULL) {
 		goto out;
 	}
 	memcpy(p, stbl, stsz);
-	munmap_any(p, off, stsz);
+	memset(p + stsz, 0, bndz - stsz);
+	munmap_any(p, off, bndz);
 
 	/* store the size of the serialised slut */
 	ctx->slut_sz = stsz;
@@ -1473,7 +1480,7 @@ ute_close(utectx_t ctx)
 		/* final compression */
 		lzma_comp(ctx);
 	}
-	/* serialse the slut */
+	/* serialise the slut */
 	flush_slut(ctx);
 	/* serialise the cached header */
 	flush_hdr(ctx);

@@ -57,6 +57,7 @@ extern size_t __pgsz;
 
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;
+typedef const struct uteseek_s *const_uteseek_t;
 
 #if defined _Generic
 /* C11 only, fucking gcc hurry up! */
@@ -117,7 +118,7 @@ struct utetpc_s {
 #define TPC_FL_STATIC_SP	0x04
 
 static inline __attribute__((pure)) size_t
-seek_rewound(uteseek_t sk)
+seek_rewound(const_uteseek_t sk)
 {
 	return sk->szrw & ((1 << STRUCT_ILOG2B(struct sndwch_s)) - 1);
 }

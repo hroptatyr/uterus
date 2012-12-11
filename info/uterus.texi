@@ -152,14 +152,14 @@ is still fulfilled.
 
 The overall file layout of a tick file:
 @verbatim
-+---------+-----------+----------+--------------+
-| hdr (1) | ticks (n) | slut (m) | metadata (k) |
-+---------+-----------+----------+--------------+
++---------+-----------+----------+--------------+---------+
+| hdr (1) | ticks (n) | slut (m) | metadata (k) | ftr (p) |
++---------+-----------+----------+--------------+---------+
 @end verbatim
 
-The header is exactly 1 tick page (256 ticks == 4096 bytes) long.
-The ticks section is aligned to 1 tick, i.e. 16 bytes, its length is not
-bounded except for OS-limitations.
+The header is at least 4 ticks (= 64 bytes) and at most 256 ticks
+(= 4096 bytes) long.  The ticks section is aligned to 1 tick, i.e.
+16 bytes, its length is not bounded except for OS-limitations.
 
 The slut is the symbol look-up table and variable in size as well.  It's
 basically an index 
@@ -169,10 +169,15 @@ basically an index
 with a twist, the actual symbol strings are stored in a double-array
 (prefix/postfix) trie for performance reasons, see below for details.
 
-The final metadata part is of arbitrary size, layout and content, that
-is users of the uterus file format must take care of the metadata themselves.
-Typically this part is used to associate custom data to anything, ticks,
-symbols, etc.  See discussion below for further information.
+The metadata part is of arbitrary size, layout and content, that is
+users of the uterus file format must take care of the metadata
+themselves.  Typically this part is used to associate custom data to
+anything, ticks, symbols, etc.  See discussion below for further
+information.
+
+Finally, the footer contains information about the varying parts of an
+ute file.  At the moment, it tracks the offsets (and lengths) of the
+tick pages, the slut, and the metadata parts.
 
 @heading Tick payloads
 

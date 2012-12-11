@@ -471,6 +471,8 @@ ute_compress(utectx_t hdl)
 {
 	hdl->hdrc->flags |= UTEHDR_FLAG_COMPRESSED;
 	hdl->hdrc->flags |= UTEHDR_FLAG_DIRTY;
+	/* we also go for the minimum header size */
+	hdl->hdrc->ploff = UTEHDR_MIN_SIZE;
 	return;
 }
 

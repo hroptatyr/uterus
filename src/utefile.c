@@ -1245,16 +1245,6 @@ tilman_comp(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 
 #if defined HAVE_LZMA_H
-static inline __attribute__((pure)) size_t
-ute_hdrcz(const_utectx_t ctx)
-{
-/* return the size of CTX's header on disk in bytes */
-	if (LIKELY(ctx->hdrc->ploff)) {
-		return (size_t)ctx->hdrc->ploff;
-	}
-	return ute_hdrz(ctx);
-}
-
 static void
 lzma_comp(utectx_t ctx)
 {
@@ -1287,7 +1277,7 @@ lzma_comp(utectx_t ctx)
 
 	/* seek to the first page (target file offset!)
 	 * this can be very well different from the source file offset */
-	fo = ute_hdrcz(ctx);
+	fo = ute_hdrz(ctx);
 
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {

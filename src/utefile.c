@@ -1276,8 +1276,10 @@ lzma_comp(utectx_t ctx)
 	}
 
 	/* seek to the first page (target file offset!)
-	 * this can be very well different from the source file offset */
-	fo = ute_hdrz(ctx);
+	 * this can be very well different from the source file offset
+	 * we somehow still need an API thing to let us know that the
+	 * target file offset is to be changed */
+	fo = UTEHDR_MIN_SIZE;
 
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {

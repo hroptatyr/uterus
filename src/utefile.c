@@ -856,13 +856,6 @@ flush_hdr(utectx_t ctx)
 		return;
 	}
 
-	/* for the moment we don't want to dump the footer size and
-	 * the number of pages */
-	UDEBUG("npages was %u\n", ctx->hdrc->npages);
-	ctx->hdrc->npages = 0U;
-	UDEBUG("ftrz was %u\n", ctx->hdrc->ftr_sz);
-	ctx->hdrc->ftr_sz = 0U;
-
 	/* never let a dirty escape to the file flags */
 	ctx->hdrc->flags &= ~UTEHDR_FLAG_DIRTY;
 

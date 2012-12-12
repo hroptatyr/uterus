@@ -798,7 +798,6 @@ flush_slut(utectx_t ctx)
 	char *p;
 	void *stbl = NULL;
 	size_t stsz = 0;
-	size_t bndz;
 	sidx_t off = ctx->fsz;
 
 	/* dont try at all in read-only mode */
@@ -817,18 +816,19 @@ flush_slut(utectx_t ctx)
 	/* round up to the next multiple of a tick (16b) */
 	{
 		const size_t mul = sizeof(*ctx->seek->sp);
-		bndz = ((stsz - 1) / mul + 1) * mul;
-	}
-	/* extend to take BNDZ additional bytes */
-	if (!ute_extend(ctx, bndz)) {
-		goto out;
+		size_t bndz = ((stsz - 1) / mul + 1) * mul;
+
+		/* extend to take BNDZ additional bytes */
+		if (!ute_extend(ctx, bndz)) {
+			goto out;
+		}
 	}
 	/* align to multiples of page size */
-	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, bndz)) == NULL) {
+	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, stsz)) == NULL) {
 		goto out;
 	}
 	memcpy(p, stbl, stsz);
-	munmap_any(p, off, bndz);
+	munmap_any(p, off, stsz);
 
 	/* store the size of the serialised slut */
 	ctx->slut_sz = stsz;

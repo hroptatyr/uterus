@@ -146,13 +146,13 @@ munmap_any(char *map, off_t off, size_t len)
 }
 
 static inline int
-__rdwrp(utectx_t ctx)
+__rdwrp(const_utectx_t ctx)
 {
 	return ctx->oflags & 0x03;
 }
 
 static inline int
-__pflags(utectx_t ctx)
+__pflags(const_utectx_t ctx)
 {
 	return PROT_READ | (__rdwrp(ctx) ? PROT_WRITE : 0);
 }
@@ -1296,7 +1296,7 @@ wipeout:
 
 
 static char*
-mmap_slut(utectx_t ctx)
+mmap_slut(const_utectx_t ctx)
 {
 	const size_t off = ctx->fsz - ctx->slut_sz;
 	int pflags = __pflags(ctx);
@@ -1304,7 +1304,7 @@ mmap_slut(utectx_t ctx)
 }
 
 static void
-munmap_slut(utectx_t ctx, char *map)
+munmap_slut(const_utectx_t ctx, char *map)
 {
 	const size_t off = ctx->fsz - ctx->slut_sz;
 	munmap_any(map, off, ctx->slut_sz);

@@ -1434,10 +1434,6 @@ static void
 load_ftr(utectx_t ctx)
 {
 /* take the stuff past the last page in CTX and make a slut from it */
-	if (UNLIKELY(ctx->fsz <= UTEHDR_MIN_SIZE)) {
-		return;
-	}
-
 	/* otherwise leap to behind the last tick and
 	 * deserialise the look-up table */
 	const size_t ftrz = get_ftr_size(ctx);
@@ -1445,9 +1441,45 @@ load_ftr(utectx_t ctx)
 	const int pflags = __pflags(ctx);
 	char *ftr;
 
-	if ((ftr = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ftrz)) != NULL) {
+	if (UNLIKELY(ctx->fsz <= UTEHDR_MIN_SIZE)) {
+		return;
+	} else if (UNLIKELY(ftrz == 0UL)) {
+		return;
+	}
+
+	ftr = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ftrz);
+	if (LIKELY(ftr != NULL)) {
 		/* deserialise the footer */
-		;
+		const size_t npg1 = ctx->npages;
+		const size_t npg2 = ftrz / sizeof(*ctx->ftr->c);
+		const struct uteftr_cell_s *fc = (void*)ftr;
+
+		if (UNLIKELY(npg1 != npg2)) {
+			UDEBUG("information on the number of pages differ\n");
+		}
+		for (size_t i = 0; i < npg2; i++) {
+			struct uteftr_cell_s tmp;
+
+			switch (utehdr_endianness(ctx->hdrc)) {
+			case UTE_ENDIAN_UNK:
+			case UTE_ENDIAN_LITTLE:
+				tmp.foff = le64toh(fc[i].foff);
+				tmp.flen = le32toh(fc[i].flen);
+				tmp.tlen = le32toh(fc[i].tlen);
+				break;
+			case UTE_ENDIAN_BIG:
+				tmp.foff = be64toh(fc[i].foff);
+				tmp.flen = be32toh(fc[i].flen);
+				tmp.tlen = be32toh(fc[i].tlen);
+				break;
+			default:
+				tmp.foff = 0U;
+				tmp.flen = tmp.tlen = 0U;
+				break;
+			}
+
+			add_ftr(ctx, i, tmp);
+		}
 		munmap_any(ftr, off, ftrz);
 	}
 

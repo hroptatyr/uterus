@@ -1471,14 +1471,14 @@ load_ftr(utectx_t ctx)
 	ftr = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ftrz);
 	if (LIKELY(ftr != NULL)) {
 		/* deserialise the footer */
-		const size_t npg1 = ctx->npages;
-		const size_t npg2 = ftrz / sizeof(*ctx->ftr->c);
+		const size_t npg = ftrz / sizeof(*ctx->ftr->c);
+		const size_t npgnpg = ctx->npages;
 		const struct uteftr_cell_s *fc = (void*)ftr;
 
-		if (UNLIKELY(npg1 != npg2)) {
+		if (UNLIKELY(npg != npgnpg)) {
 			UDEBUG("information on the number of pages differ\n");
 		}
-		for (size_t i = 0; i < npg2; i++) {
+		for (size_t i = 0; i < npg; i++) {
 			struct uteftr_cell_s tmp;
 
 			switch (utehdr_endianness(ctx->hdrc)) {

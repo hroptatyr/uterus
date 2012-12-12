@@ -81,12 +81,18 @@ struct utectx_s {
 	uint64_t lvtd;
 
 	/* symbol table, idx->sym and sym->idx */
-	ssize_t slut_sz;
 	struct uteslut_s slut[1];
 
+	/* number of pages, native endianness */
+	size_t npages;
+	/* payload offset, native endianness */
+	size_t ploff;
+
 	/* footer, contains page offsets et al */
-	size_t ftr_sz;
-	void *ftr;
+	struct {
+		size_t z;
+		struct uteftr_cell_s *c;
+	} ftr[1];
 };
 
 /**
@@ -123,14 +129,18 @@ extern uint32_t ute_encode_clevel;
  * Return the number of tick pages in CTX. */
 extern size_t ute_npages(utectx_t ctx);
 
+/**
+ * Extend (or shrink) the ute file in CTX by SZ bytes. */
+extern bool ute_extend(utectx_t ctx, ssize_t sz);
+
 
 /* inlines */
 static inline __attribute__((pure)) size_t
 ute_hdrz(const_utectx_t ctx)
 {
 /* return the size of CTX's header on disk in bytes */
-	if (LIKELY(ctx->hdrp->ploff)) {
-		return (size_t)ctx->hdrp->ploff;
+	if (LIKELY(ctx->ploff)) {
+		return (size_t)ctx->ploff;
 	}
 	return UTEHDR_MAX_SIZE;
 }
@@ -206,39 +216,6 @@ ute_unset_unsorted(utectx_t ctx)
 {
 	ctx->flags &= ~UTE_FL_UNSORTED;
 	return;
-}
-
-
-/* shaping the file */
-static inline bool
-__fwr_trunc(int fd, size_t sz)
-{
-	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
-		return false;
-	}
-	return true;
-}
-
-static inline bool
-ute_trunc(utectx_t ctx, size_t sz)
-{
-	if (!__fwr_trunc(ctx->fd, sz)) {
-		return false;
-	}
-	ctx->fsz = sz;
-	return true;
-}
-
-static inline bool
-ute_extend(utectx_t ctx, ssize_t sz)
-{
-/* extend the ute file by SZ bytes */
-	size_t tot = sz + ctx->fsz;
-	if (!__fwr_trunc(ctx->fd, tot)) {
-		return false;
-	}
-	ctx->fsz = tot;
-	return true;
 }
 
 #endif	/* INCLUDED_utefile_private_h_ */

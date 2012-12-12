@@ -146,20 +146,53 @@ munmap_any(char *map, off_t off, size_t len)
 }
 
 static inline int
-__rdwrp(utectx_t ctx)
+__rdwrp(const_utectx_t ctx)
 {
 	return ctx->oflags & 0x03;
 }
 
 static inline int
-__pflags(utectx_t ctx)
+__pflags(const_utectx_t ctx)
 {
 	return PROT_READ | (__rdwrp(ctx) ? PROT_WRITE : 0);
 }
 
-static size_t
-get_slut_size(utehdr2_t hdr)
+static __attribute__((pure)) size_t
+get_ftr_size(const_utectx_t ctx)
 {
+/* retrieve the size of the footer in the header HDR in native endianness */
+	utehdr2_t hdr = ctx->hdrc;
+
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->ftr_sz);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->ftr_sz);
+	default:
+		break;
+	}
+	return 0U;
+}
+
+static __attribute__((pure)) off_t
+get_ftr_off(const_utectx_t ctx)
+{
+/* get the offset off the slut within the ute file CTX
+ * we go backwards through footer and metadata */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	size_t cand = ctx->fsz - get_ftr_size(ctx);
+
+	/* round down to previous TZ multiple */
+	return cand & ~(tz - 1);
+}
+
+static __attribute__((pure)) size_t
+get_slut_size(const_utectx_t ctx)
+{
+/* retrieve the size of the slut in the header HDR in native endianness */
+	utehdr2_t hdr = ctx->hdrc;
+
 	switch (utehdr_endianness(hdr)) {
 	case UTE_ENDIAN_UNK:
 	case UTE_ENDIAN_LITTLE:
@@ -169,10 +202,112 @@ get_slut_size(utehdr2_t hdr)
 	default:
 		break;
 	}
-	return 0;
+	return 0U;
 }
 
+static __attribute__((pure)) off_t
+get_slut_off(const_utectx_t ctx)
+{
+/* get the offset off the slut within the ute file CTX
+ * we go backwards through footer and metadata */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	size_t cand = ctx->fsz - get_ftr_size(ctx) - get_slut_size(ctx);
 
+	/* round down to previous TZ multiple */
+	return cand & ~(tz - 1);
+}
+
+static size_t
+get_npages(utehdr2_t hdr)
+{
+/* retrieve the number of pages in the header HDR in native endianness */
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->npages);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->npages);
+	default:
+		break;
+	}
+	return 0U;
+}
+
+static size_t
+get_ploff(utehdr2_t hdr)
+{
+/* retrieve the number of pages in the header HDR in native endianness */
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->ploff);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->ploff);
+	default:
+		break;
+	}
+	return 0U;
+}
+
+static inline bool
+__fwr_trunc(int fd, size_t sz)
+{
+	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
+		return false;
+	}
+	return true;
+}
+
+static inline bool
+ute_trunc(utectx_t ctx, size_t sz)
+{
+	if (!__fwr_trunc(ctx->fd, sz)) {
+		return false;
+	}
+	ctx->fsz = sz;
+	return true;
+}
+
+bool
+ute_extend(utectx_t ctx, ssize_t z)
+{
+/* extend ute file by at least Z bytes */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	ssize_t tot;
+
+	if (UNLIKELY((tot = z + ctx->fsz) <= 0)) {
+		return false;
+	}
+	/* round up */
+	tot = ((tot - 1U) | (tz - 1U)) + 1U;
+	if (!__fwr_trunc(ctx->fd, tot)) {
+		return false;
+	}
+	ctx->fsz = (size_t)tot;
+	return true;
+}
+
+static void
+ute_shrink(utectx_t ctx, ssize_t z)
+{
+/* like ute_extend() with -Z, but round the file size down */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	ssize_t tot;
+
+	if (UNLIKELY(z == 0)) {
+		/* don't bother */
+		return;
+	} else if (UNLIKELY((tot = ctx->fsz - z) <= 0)) {
+		return;
+	}
+	/* round down */
+	tot &= ~(tz - 1U);
+	/* don't actually shrink the whole shebang, set the fsz instead */
+	ctx->fsz = (size_t)tot;
+	return;
+}
+
+
 /* header caching, also probing */
 static int
 cache_hdr(utectx_t ctx)
@@ -196,7 +331,8 @@ cache_hdr(utectx_t ctx)
 	ctx->hdrp = res;
 	*ctx->hdrc = *res;
 	/* do the rest of the probing */
-	ctx->slut_sz = get_slut_size(ctx->hdrc);
+	ctx->npages = get_npages(ctx->hdrc);
+	ctx->ploff = get_ploff(ctx->hdrc);
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
@@ -212,7 +348,6 @@ cache_hdr(utectx_t ctx)
 	munmap(res, sz);
 err_out:
 	ctx->hdrp = NULL;
-	ctx->slut_sz = 0;
 	return -1;
 }
 
@@ -247,8 +382,6 @@ creat_hdr(utectx_t ctx)
 	/* set standard header payload offset, just to be sure it's sane */
 	memset((void*)ctx->hdrc, 0, sz);
 	bump_header(ctx->hdrc);
-	/* file creation means new slut */
-	ctx->slut_sz = 0;
 	return;
 }
 
@@ -447,10 +580,10 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 
 	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
 		/* use the footer info */
-		const struct uteftr_cell_s *cells = ctx->ftr;
+		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
 		UDEBUGvv("using footer info\n");
-		if ((ctx->ftr_sz / sizeof(*cells)) < pg) {
+		if ((ctx->ftr->z / sizeof(*cells)) < pg) {
 			off = len = 0U;
 		} else {
 			off = cells[pg].foff;
@@ -702,23 +835,51 @@ store_lvtd(utectx_t ctx)
 }
 
 static void
-store_slut(utectx_t ctx)
+store_slut(utectx_t ctx, size_t sluz)
 {
 	struct utehdr2_s *h = ctx->hdrc;
 
 	switch (utehdr_endianness(h)) {
 	case UTE_ENDIAN_UNK:
 	case UTE_ENDIAN_LITTLE:
-		h->slut_sz = htole32(ctx->slut_sz);
+		h->slut_sz = htole32(sluz);
 		h->slut_nsyms = htole16((uint16_t)ctx->slut->nsyms);
 		break;
 	case UTE_ENDIAN_BIG:
-		h->slut_sz = htobe32(ctx->slut_sz);
+		h->slut_sz = htobe32(sluz);
 		h->slut_nsyms = htobe16((uint16_t)ctx->slut->nsyms);
 		break;
 	default:
-		h->slut_sz = 0;
-		h->slut_nsyms = 0;
+		h->slut_sz = 0U;
+		h->slut_nsyms = 0U;
+		break;
+	}
+	return;
+}
+
+static void
+store_ftrz(utectx_t ctx, size_t z)
+{
+	struct utehdr2_s *h = ctx->hdrc;
+
+	switch (utehdr_endianness(h)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		h->ftr_sz = htole32(z);
+		/* while we're at it? */
+		h->npages = htole32(ctx->npages);
+		h->ploff = htole32(ctx->ploff);
+		break;
+	case UTE_ENDIAN_BIG:
+		h->ftr_sz = htobe32(z);
+		/* while we're at it? */
+		h->npages = htobe32(ctx->npages);
+		h->ploff = htobe32(ctx->ploff);
+		break;
+	default:
+		h->ftr_sz = 0U;
+		h->npages = 0U;
+		h->ploff = 0U;
 		break;
 	}
 	return;
@@ -769,7 +930,7 @@ flush_tpc(utectx_t ctx)
 		char *p;
 
 		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, sz);
-		if (p == MAP_FAILED) {
+		if (UNLIKELY(p == NULL)) {
 			return;
 		}
 		memcpy(p, ctx->tpc->sk.sp, sisz);
@@ -779,7 +940,7 @@ flush_tpc(utectx_t ctx)
 		}
 		munmap_any(p, fsz, sz);
 		/* up the npages counter */
-		ctx->hdrc->npages++;
+		ctx->npages++;
 	}
 
 	/* store the largest-value-to-date */
@@ -813,7 +974,7 @@ flush_slut(utectx_t ctx)
 	} else if (UNLIKELY(stsz == 0)) {
 		goto out;
 	}
-	/* extend to take STSZ additional bytes */
+	/* extend to take STSZ (plus alignment) additional bytes */
 	if (!ute_extend(ctx, stsz)) {
 		goto out;
 	}
@@ -825,8 +986,7 @@ flush_slut(utectx_t ctx)
 	munmap_any(p, off, stsz);
 
 	/* store the size of the serialised slut */
-	ctx->slut_sz = stsz;
-	store_slut(ctx);
+	store_slut(ctx, stsz);
 
 out:
 	free(stbl);
@@ -850,13 +1010,6 @@ flush_hdr(utectx_t ctx)
 		return;
 	}
 
-	/* for the moment we don't want to dump the footer size and
-	 * the number of pages */
-	UDEBUG("npages was %u\n", ctx->hdrc->npages);
-	ctx->hdrc->npages = 0U;
-	UDEBUG("ftrz was %u\n", ctx->hdrc->ftr_sz);
-	ctx->hdrc->ftr_sz = 0U;
-
 	/* never let a dirty escape to the file flags */
 	ctx->hdrc->flags &= ~UTEHDR_FLAG_DIRTY;
 
@@ -871,33 +1024,100 @@ flush_hdr(utectx_t ctx)
 
 /* footer handling */
 static void
-add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len)
+add_ftr(utectx_t ctx, uint32_t pg, struct uteftr_cell_s c)
 {
 /* auto-resizing */
 	struct uteftr_cell_s *cells;
-	size_t ncells = ctx->ftr_sz / sizeof(*cells);
+	size_t ncells = ctx->ftr->z / sizeof(*cells);
 
 	/* resize? */
 	if (UNLIKELY(pg >= ncells)) {
 		size_t nxpg = ((pg / 16U) + 1U) * 16U;
-		ctx->ftr_sz = nxpg * sizeof(*cells);
-		ctx->ftr = realloc(ctx->ftr, ctx->ftr_sz);
+		ctx->ftr->z = nxpg * sizeof(*cells);
+		ctx->ftr->c = realloc(ctx->ftr->c, ctx->ftr->z);
 	}
 	/* now we're clear to go */
-	cells = ctx->ftr;
-	cells[pg].foff = off;
-	cells[pg].flen = len;
-	cells[pg].tlen = page_sizet(ctx, pg);
+	ctx->ftr->c[pg] = c;
 	return;
 }
 
 static void
 free_ftr(utectx_t ctx)
 {
-	if (ctx->ftr != NULL) {
-		free(ctx->ftr);
-		ctx->ftr = NULL;
+	if (ctx->ftr->c != NULL) {
+		free(ctx->ftr->c);
+		ctx->ftr->c = NULL;
+		ctx->ftr->z = 0UL;
 	}
+	return;
+}
+
+static void
+flush_ftr(utectx_t ctx)
+{
+/* pack the ftr and write a copy at the end of the file
+ * should be called last */
+	const struct uteftr_cell_s *ftr;
+	size_t npg;
+
+	/* dont try at all in read-only mode */
+	if (UNLIKELY(!__rdwrp(ctx))) {
+		return;
+	} else if (UNLIKELY((ftr = ctx->ftr->c) == NULL)) {
+		/* piss off right away */
+		return;
+	} else if (UNLIKELY((npg = ute_npages(ctx)) == 0U)) {
+		return;
+	} else if (UNLIKELY(ctx->ftr->z < npg * sizeof(*ftr))) {
+		/* footer is fucked */
+		UDEBUG("footer too small, not dumping %zu\n", ctx->ftr->z);
+		return;
+	}
+	/* otherwise write exactly NPG cells to the disk */
+	{
+		size_t ftrz = npg * sizeof(*ftr);
+		size_t fsz = ctx->fsz;
+		char *p;
+
+		/* extend to take BNDZ additional bytes */
+		if (!ute_extend(ctx, ftrz)) {
+			goto out;
+		}
+
+		UDEBUG("writing %zu footer bytes\n", ftrz);
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, ftrz);
+		if (UNLIKELY(p == NULL)) {
+			goto out;
+		}
+		if (LIKELY(utehdr_check_endianness(ctx->hdrc) == 0)) {
+			/* endiannesses coincide,
+			 * just a plain copy then aye */
+			memcpy(p, ftr, ftrz);
+		} else {
+			struct uteftr_cell_s *fc = (void*)p;
+
+#if defined __bswap_64
+# define htooe64(x)	__bswap_64(x)
+# define htooe32(x)	__bswap_32(x)
+#elif defined __swap64
+# define htooe64(x)	__swap64(x)
+# define htooe32(x)	__swap32(x)
+#else
+# error cannot figure out how to store the footer
+#endif	/* various swaps */
+			for (size_t i = 0; i < npg; i++) {
+				fc[i].foff = htooe64(ftr[i].foff);
+				fc[i].flen = htooe32(ftr[i].flen);
+				fc[i].tlen = htooe32(ftr[i].tlen);
+			}
+		}
+		munmap_any(p, fsz, ftrz);
+
+		/* make sure we put the info in the file header */
+		store_ftrz(ctx, ftrz);
+	}
+
+out:
 	return;
 }
 
@@ -1025,16 +1245,6 @@ tilman_comp(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 
 #if defined HAVE_LZMA_H
-static inline __attribute__((pure)) size_t
-ute_hdrcz(const_utectx_t ctx)
-{
-/* return the size of CTX's header on disk in bytes */
-	if (LIKELY(ctx->hdrc->ploff)) {
-		return (size_t)ctx->hdrc->ploff;
-	}
-	return ute_hdrz(ctx);
-}
-
 static void
 lzma_comp(utectx_t ctx)
 {
@@ -1067,7 +1277,7 @@ lzma_comp(utectx_t ctx)
 
 	/* seek to the first page (target file offset!)
 	 * this can be very well different from the source file offset */
-	fo = ute_hdrcz(ctx);
+	fo = ute_hdrz(ctx);
 
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
@@ -1105,7 +1315,7 @@ lzma_comp(utectx_t ctx)
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
-			if (p != MAP_FAILED) {
+			if (LIKELY(p != NULL)) {
 				p[0] = (uint32_t)cz;
 				/* copy payload */
 				memcpy(p + 1, cp, cz);
@@ -1114,6 +1324,11 @@ lzma_comp(utectx_t ctx)
 				/* diskify */
 				munmap_any((void*)p, fo, fo + fz);
 			}
+			/* also make sure to update the ftr */
+			add_ftr(ctx, i, (struct uteftr_cell_s){
+					fo, fz, pz / sizeof(*ctx->seek->sp)
+						});
+			/* and our global counter */
 			fo += fz;
 		}
 		/* definitely munmap pi */
@@ -1195,7 +1410,7 @@ load_last_tpc(utectx_t ctx)
 		/* now munmap the seek */
 		flush_seek(sk);
 		/* update page counter, this isn't an official page anymore */
-		ctx->hdrc->npages--;
+		ctx->npages--;
 	} else {
 		make_tpc(ctx->tpc, page_sizet(ctx, 0));
 		/* bit of rinsing */
@@ -1208,10 +1423,8 @@ load_last_tpc(utectx_t ctx)
 
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
-	if (ctx->fsz > tpc_byte_size(ctx->tpc) + ctx->slut_sz) {
-		ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
-	} else {
-		ctx->fsz -= ctx->slut_sz;
+	if (ctx->fsz > tpc_byte_size(ctx->tpc)) {
+		ute_shrink(ctx, tpc_byte_size(ctx->tpc));
 	}
 	return;
 wipeout:
@@ -1220,44 +1433,95 @@ wipeout:
 }
 
 
-static char*
-mmap_slut(utectx_t ctx)
-{
-	const size_t off = ctx->fsz - ctx->slut_sz;
-	int pflags = __pflags(ctx);
-	return mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ctx->slut_sz);
-}
-
-static void
-munmap_slut(utectx_t ctx, char *map)
-{
-	const size_t off = ctx->fsz - ctx->slut_sz;
-	munmap_any(map, off, ctx->slut_sz);
-	return;
-}
-
+/* auxiliary data deserialisers */
 static void
 load_slut(utectx_t ctx)
 {
 /* take the stuff past the last page in CTX and make a slut from it */
-	char *slut;
-
-	if (UNLIKELY(ctx->fsz == 0)) {
+	if (UNLIKELY(ctx->fsz <= UTEHDR_MIN_SIZE)) {
 		return;
 	}
 
 	/* otherwise leap to behind the last tick and
 	 * deserialise the look-up table */
-	if ((slut = mmap_slut(ctx)) != NULL) {
-		slut_deser(ctx->slut, slut, ctx->slut_sz);
-		munmap_slut(ctx, slut);
+	const size_t sluz = get_slut_size(ctx);
+	const off_t off = get_slut_off(ctx);
+	const int pflags = __pflags(ctx);
+	char *slut;
+
+	if ((slut = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, sluz)) != NULL) {
+		slut_deser(ctx->slut, slut, sluz);
+		munmap_any(slut, off, sluz);
 	}
 
 	/* real shrink is too dangerous, just adapt fsz instead */
-	ctx->fsz -= ctx->slut_sz, ctx->slut_sz = 0;
+	ute_shrink(ctx, sluz);
+	/* act as though we don't have a slut */
+	ctx->hdrc->slut_sz = 0U;
 	return;
 }
 
+static void
+load_ftr(utectx_t ctx)
+{
+/* take the stuff past the last page in CTX and make a slut from it */
+	/* otherwise leap to behind the last tick and
+	 * deserialise the look-up table */
+	const size_t ftrz = get_ftr_size(ctx);
+	const off_t off = get_ftr_off(ctx);
+	const int pflags = __pflags(ctx);
+	char *ftr;
+
+	if (UNLIKELY(ctx->fsz <= UTEHDR_MIN_SIZE)) {
+		return;
+	} else if (UNLIKELY(ftrz == 0UL)) {
+		return;
+	}
+
+	ftr = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ftrz);
+	if (LIKELY(ftr != NULL)) {
+		/* deserialise the footer */
+		const size_t npg = ftrz / sizeof(*ctx->ftr->c);
+		const size_t npgnpg = ctx->npages;
+		const struct uteftr_cell_s *fc = (void*)ftr;
+
+		if (UNLIKELY(npg != npgnpg)) {
+			UDEBUG("information on the number of pages differ\n");
+		}
+		for (size_t i = 0; i < npg; i++) {
+			struct uteftr_cell_s tmp;
+
+			switch (utehdr_endianness(ctx->hdrc)) {
+			case UTE_ENDIAN_UNK:
+			case UTE_ENDIAN_LITTLE:
+				tmp.foff = le64toh(fc[i].foff);
+				tmp.flen = le32toh(fc[i].flen);
+				tmp.tlen = le32toh(fc[i].tlen);
+				break;
+			case UTE_ENDIAN_BIG:
+				tmp.foff = be64toh(fc[i].foff);
+				tmp.flen = be32toh(fc[i].flen);
+				tmp.tlen = be32toh(fc[i].tlen);
+				break;
+			default:
+				tmp.foff = 0U;
+				tmp.flen = tmp.tlen = 0U;
+				break;
+			}
+
+			add_ftr(ctx, i, tmp);
+		}
+		munmap_any(ftr, off, ftrz);
+	}
+
+	/* real shrink is too dangerous, just adapt fsz instead */
+	ute_shrink(ctx, ftrz);
+	/* act as though we don't have a footer */
+	ctx->hdrc->ftr_sz = 0U;
+	return;
+}
+
+
 static void
 ute_init(utectx_t ctx)
 {
@@ -1356,8 +1620,9 @@ make_utectx(const char *fn, int fd, int oflags)
 		res->lvtd = SMALLEST_LVTD;
 		make_slut(res->slut);
 	} else {
-		/* load the slut, must be first, as we need to shrink
-		 * the file accordingly */
+		/* load the footer, then the slut
+		 * must be in this order because they shrink the file */
+		load_ftr(res);
 		load_slut(res);
 	}
 	/* load the last page as tpc */
@@ -1473,8 +1738,10 @@ ute_close(utectx_t ctx)
 		/* final compression */
 		lzma_comp(ctx);
 	}
-	/* serialse the slut */
+	/* serialise the slut */
 	flush_slut(ctx);
+	/* serialise the footer */
+	flush_ftr(ctx);
 	/* serialise the cached header */
 	flush_hdr(ctx);
 
@@ -1512,7 +1779,6 @@ ute_clone_slut(utectx_t tgt, utectx_t src)
 	/* free any existing sluts */
 	free_slut(tgt->slut);
 	/* now clone */
-	tgt->slut_sz = src->slut_sz;
 	clone_slut(tgt->slut, src->slut);
 	return;
 }
@@ -1522,8 +1788,6 @@ ute_empty_slut(utectx_t ctx)
 {
 	/* free existing sluts */
 	free_slut(ctx->slut);
-	/* reset slut size */
-	ctx->slut_sz = 0;
 	/* make a new slut */
 	make_slut(ctx->slut);
 	return;
@@ -1614,24 +1878,25 @@ ute_npages(utectx_t ctx)
 	size_t res;
 	size_t hdrz;
 
-	if (LIKELY((res = ctx->hdrc->npages) > 0)) {
+	if (LIKELY((res = ctx->npages) > 0)) {
 		;
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
 		   ctx->ftr != NULL) {
 		/* just use the footer info */
-		const struct uteftr_cell_s *cells = ctx->ftr;
+		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
 		UDEBUGvv("using footer info\n");
-		for (size_t i = 0; i < ctx->ftr_sz / sizeof(*cells); i++) {
+		for (size_t i = 0; i < ctx->ftr->z / sizeof(*cells); i++) {
 			if (cells[i].foff == 0) {
-				ctx->hdrc->npages = res = i;
+				ctx->npages = res = i;
 				break;
 			}
 		}
 
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) {
 		/* compression and no footer, i feel terrible */
-		const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
+		const size_t tz = sizeof(*ctx->seek->sp);
+		const size_t pgsz = UTE_BLKSZ * tz;
 		const size_t probe_z = 32U;
 		off_t try = ute_hdrz(ctx);
 
@@ -1656,23 +1921,25 @@ ute_npages(utectx_t ctx)
 			munmap_any(p, otry, probe_z);
 			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
 			/* cache this in FTR slot */
-			add_ftr(ctx, res, otry, try - otry);
+			add_ftr(ctx, res, (struct uteftr_cell_s){
+					otry, try - otry, (try - otry) / tz
+						});
 		}
 		/* cache this? */
-		ctx->hdrc->npages = res;
+		ctx->npages = res;
 
 	} else if (ctx->fsz <= (hdrz = ute_hdrz(ctx))) {
-		ctx->hdrc->npages = res = 0U;
+		ctx->npages = res = 0U;
 
 	} else {
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = ctx->fsz - ctx->slut_sz - hdrz;
+		guess = ctx->fsz - hdrz;
 		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */
-		ctx->hdrc->npages = res;
+		ctx->npages = res;
 	}
 	return res;
 }

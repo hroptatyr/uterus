@@ -1358,13 +1358,14 @@ wipeout:
 }
 
 
+/* auxiliary data deserialisers */
 static off_t
 get_slut_off(const_utectx_t ctx)
 {
 /* get the offset off the slut within the ute file CTX
  * we go backwards through footer and metadata */
 	const size_t tz = sizeof(*ctx->seek->sp);
-	size_t cand = ctx->fsz - ctx->hdrp->ftr_sz - ctx->hdrp->slut_sz;
+	size_t cand = ctx->fsz - ctx->ftr_sz - ctx->slut_sz;
 
 	/* round down to previous TZ multiple */
 	return cand & ~(tz - 1);

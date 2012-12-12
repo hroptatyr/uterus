@@ -172,7 +172,45 @@ get_slut_size(utehdr2_t hdr)
 	return 0;
 }
 
+static inline bool
+__fwr_trunc(int fd, size_t sz)
+{
+	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
+		return false;
+	}
+	return true;
+}
 
+static inline bool
+ute_trunc(utectx_t ctx, size_t sz)
+{
+	if (!__fwr_trunc(ctx->fd, sz)) {
+		return false;
+	}
+	ctx->fsz = sz;
+	return true;
+}
+
+bool
+ute_extend(utectx_t ctx, ssize_t z)
+{
+/* extend ute file by at least Z bytes */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	ssize_t tot;
+
+	if (UNLIKELY((tot = z + ctx->fsz) <= 0)) {
+		return false;
+	}
+	/* round up */
+	tot = ((tot + (tz - 1U)) / tz) * tz;
+	if (!__fwr_trunc(ctx->fd, tot)) {
+		return false;
+	}
+	ctx->fsz = (size_t)tot;
+	return true;
+}
+
+
 /* header caching, also probing */
 static int
 cache_hdr(utectx_t ctx)

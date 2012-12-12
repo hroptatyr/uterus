@@ -851,15 +851,9 @@ flush_slut(utectx_t ctx)
 	} else if (UNLIKELY(stsz == 0)) {
 		goto out;
 	}
-	/* round up to the next multiple of a tick (16b) */
-	{
-		const size_t mul = sizeof(*ctx->seek->sp);
-		size_t bndz = ((stsz - 1) / mul + 1) * mul;
-
-		/* extend to take BNDZ additional bytes */
-		if (!ute_extend(ctx, bndz)) {
-			goto out;
-		}
+	/* extend to take STSZ (plus alignment) additional bytes */
+	if (!ute_extend(ctx, stsz)) {
+		goto out;
 	}
 	/* align to multiples of page size */
 	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, stsz)) == NULL) {
@@ -961,13 +955,9 @@ flush_ftr(utectx_t ctx)
 	}
 	/* otherwise write exactly NPG cells to the disk */
 	{
-		const size_t mul = sizeof(*ctx->seek->sp);
 		size_t ftrz = npg * sizeof(*ftr);
 		size_t fsz = ctx->fsz;
 		char *p;
-
-		/* round up to the next multiple of a tick (16b) */
-		ftrz = ((ftrz - 1) / mul + 1) * mul;
 
 		/* extend to take BNDZ additional bytes */
 		if (!ute_extend(ctx, ftrz)) {

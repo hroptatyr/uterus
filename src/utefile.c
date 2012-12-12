@@ -1295,10 +1295,22 @@ wipeout:
 }
 
 
+static off_t
+get_slut_off(const_utectx_t ctx)
+{
+/* get the offset off the slut within the ute file CTX
+ * we go backwards through footer and metadata */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	size_t cand = ctx->fsz - ctx->hdrp->ftr_sz - ctx->hdrp->slut_sz;
+
+	/* round down to previous TZ multiple */
+	return cand & ~(tz - 1);
+}
+
 static char*
 mmap_slut(const_utectx_t ctx)
 {
-	const size_t off = ctx->fsz - ctx->slut_sz;
+	const off_t off = get_slut_off(ctx);
 	int pflags = __pflags(ctx);
 	return mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ctx->slut_sz);
 }
@@ -1306,7 +1318,7 @@ mmap_slut(const_utectx_t ctx)
 static void
 munmap_slut(const_utectx_t ctx, char *map)
 {
-	const size_t off = ctx->fsz - ctx->slut_sz;
+	const off_t off = get_slut_off(ctx);
 	munmap_any(map, off, ctx->slut_sz);
 	return;
 }

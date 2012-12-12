@@ -866,7 +866,7 @@ flush_tpc(utectx_t ctx)
 		char *p;
 
 		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, sz);
-		if (p == MAP_FAILED) {
+		if (UNLIKELY(p == NULL)) {
 			return;
 		}
 		memcpy(p, ctx->tpc->sk.sp, sisz);
@@ -1025,6 +1025,9 @@ flush_ftr(utectx_t ctx)
 
 		UDEBUG("writing %zu footer bytes\n", ftrz);
 		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, ftrz);
+		if (UNLIKELY(p == NULL)) {
+			goto out;
+		}
 		memcpy(p, ftr, ftrz);
 		munmap_any(p, fsz, ftrz);
 
@@ -1240,7 +1243,7 @@ lzma_comp(utectx_t ctx)
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
-			if (p != MAP_FAILED) {
+			if (LIKELY(p != NULL)) {
 				p[0] = (uint32_t)cz;
 				/* copy payload */
 				memcpy(p + 1, cp, cz);

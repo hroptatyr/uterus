@@ -1004,7 +1004,7 @@ flush_hdr(utectx_t ctx)
 
 /* footer handling */
 static void
-add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len, size_t nt)
+add_ftr(utectx_t ctx, uint32_t pg, struct uteftr_cell_s c)
 {
 /* auto-resizing */
 	struct uteftr_cell_s *cells;
@@ -1017,10 +1017,7 @@ add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len, size_t nt)
 		ctx->ftr->c = realloc(ctx->ftr->c, ctx->ftr->z);
 	}
 	/* now we're clear to go */
-	cells = ctx->ftr->c;
-	cells[pg].foff = off;
-	cells[pg].flen = len;
-	cells[pg].tlen = nt;
+	ctx->ftr->c[pg] = c;
 	return;
 }
 
@@ -1297,7 +1294,9 @@ lzma_comp(utectx_t ctx)
 				munmap_any((void*)p, fo, fo + fz);
 			}
 			/* also make sure to update the ftr */
-			add_ftr(ctx, i, fo, fz, pz / sizeof(*ctx->seek->sp));
+			add_ftr(ctx, i, (struct uteftr_cell_s){
+					fo, fz, pz / sizeof(*ctx->seek->sp)
+						});
 			/* and our global counter */
 			fo += fz;
 		}
@@ -1859,7 +1858,9 @@ ute_npages(utectx_t ctx)
 			munmap_any(p, otry, probe_z);
 			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
 			/* cache this in FTR slot */
-			add_ftr(ctx, res, otry, try - otry, (try - otry) / tz);
+			add_ftr(ctx, res, (struct uteftr_cell_s){
+					otry, try - otry, (try - otry) / tz
+						});
 		}
 		/* cache this? */
 		ctx->npages = res;

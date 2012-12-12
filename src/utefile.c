@@ -233,6 +233,22 @@ get_npages(utehdr2_t hdr)
 	return 0U;
 }
 
+static size_t
+get_ploff(utehdr2_t hdr)
+{
+/* retrieve the number of pages in the header HDR in native endianness */
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->ploff);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->ploff);
+	default:
+		break;
+	}
+	return 0U;
+}
+
 static inline bool
 __fwr_trunc(int fd, size_t sz)
 {
@@ -316,6 +332,7 @@ cache_hdr(utectx_t ctx)
 	*ctx->hdrc = *res;
 	/* do the rest of the probing */
 	ctx->npages = get_npages(ctx->hdrc);
+	ctx->ploff = get_ploff(ctx->hdrc);
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
@@ -851,15 +868,18 @@ store_ftrz(utectx_t ctx, size_t z)
 		h->ftr_sz = htole32(z);
 		/* while we're at it? */
 		h->npages = htole32(ctx->npages);
+		h->ploff = htole32(ctx->ploff);
 		break;
 	case UTE_ENDIAN_BIG:
 		h->ftr_sz = htobe32(z);
 		/* while we're at it? */
 		h->npages = htobe32(ctx->npages);
+		h->ploff = htobe32(ctx->ploff);
 		break;
 	default:
 		h->ftr_sz = 0U;
 		h->npages = 0U;
+		h->ploff = 0U;
 		break;
 	}
 	return;
@@ -1225,16 +1245,6 @@ tilman_comp(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 
 #if defined HAVE_LZMA_H
-static inline __attribute__((pure)) size_t
-ute_hdrcz(const_utectx_t ctx)
-{
-/* return the size of CTX's header on disk in bytes */
-	if (LIKELY(ctx->hdrc->ploff)) {
-		return (size_t)ctx->hdrc->ploff;
-	}
-	return ute_hdrz(ctx);
-}
-
 static void
 lzma_comp(utectx_t ctx)
 {
@@ -1267,7 +1277,7 @@ lzma_comp(utectx_t ctx)
 
 	/* seek to the first page (target file offset!)
 	 * this can be very well different from the source file offset */
-	fo = ute_hdrcz(ctx);
+	fo = ute_hdrz(ctx);
 
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {

@@ -235,7 +235,26 @@ ute_extend(utectx_t ctx, ssize_t z)
 		return false;
 	}
 	/* round up */
-	tot = ((tot + (tz - 1U)) / tz) * tz;
+	tot = ((tot - 1U) | (tz - 1U)) + 1U;
+	if (!__fwr_trunc(ctx->fd, tot)) {
+		return false;
+	}
+	ctx->fsz = (size_t)tot;
+	return true;
+}
+
+static bool
+ute_shrink(utectx_t ctx, ssize_t z)
+{
+/* like ute_extend() with -Z, but round the file size down */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	ssize_t tot;
+
+	if (UNLIKELY((tot = ctx->fsz - z) <= 0)) {
+		return false;
+	}
+	/* round down */
+	tot &= ~(tz - 1U);
 	if (!__fwr_trunc(ctx->fd, tot)) {
 		return false;
 	}

@@ -18,17 +18,11 @@ endian()
 }
 
 cat <<EOF > "${CMDFILE}"
-TMPIN='${INFILE}'
 TMPOUT='${OUTFILE}'
-if test "$(endian)" = "big"; then
-	TMPIN=\$(mktemp "/tmp/tmp.XXXXXXXX")
-	TMPOUT=\$(mktemp "/tmp/tmp.XXXXXXXX")
-	"\${TOOL}" fsck --big-endian '${INFILE}' -o "\${TMPIN}"
-fi
-"\${TOOL}" mux -f dukas --refdate 1328475600 --name 'AUDUSD' "\${TMPIN}" -o "\${TMPOUT}"
+"\${TOOL}" mux -f dukas --refdate 1328475600 --name 'AUDUSD' '${INFILE}' -o "\${TMPOUT}"
 if test "$(endian)" = "big"; then
 	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${OUTFILE}'
-	rm -f -- "\${TMPIN}" "\${TMPOUT}"
+	rm -f -- "\${TMPOUT}"
 fi
 EOF
 

@@ -7,7 +7,7 @@ COMMENT="testing in situ compression"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 
 cat <<EOF > "${CMDFILE}"
-cp -a '${INFILE}' '${OUTFILE}'
+cp -d '${INFILE}' '${OUTFILE}'
 "\${TOOL}" fsck --compress '${OUTFILE}'
 EOF
 

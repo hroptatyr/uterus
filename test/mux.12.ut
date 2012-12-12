@@ -15,8 +15,9 @@ EOF
 
 ## outfile sums
 OUTFILE_SHA1="
-2615c19e165d6a29fe6c10ee17f899b0ca8bb265
-3e7f273d89c4c13856be59949d624d3ef1f1ccbb"
+ac1ce20dca1b9e4c5a2aeb0f7840c6926ea4f06d
+5496df332f669293a0456d773d4ad025acf64c30
+"
 
 ## outfile reference
 # REFFILE="mux.12.ref.ute"

@@ -8,7 +8,6 @@
 >7	byte		x	\b%c
 >8	string		\<\>	\b, big-endian
 >>16	belong		>0	\b, slut size %u
->>10	beshort		&8	\b, compressed
 >8	string		\>\<	\b, litte-endian
 >>16	lelong		>0	\b, slut size %u
->>10	leshort		&8	\b, compressed
+>10	byte		&8	\b, compressed

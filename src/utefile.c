@@ -314,7 +314,6 @@ cache_hdr(utectx_t ctx)
 	ctx->hdrp = res;
 	*ctx->hdrc = *res;
 	/* do the rest of the probing */
-	ctx->slut_sz = get_slut_size(ctx->hdrc);
 	ctx->npages = get_npages(ctx->hdrc);
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
@@ -331,7 +330,6 @@ cache_hdr(utectx_t ctx)
 	munmap(res, sz);
 err_out:
 	ctx->hdrp = NULL;
-	ctx->slut_sz = 0;
 	return -1;
 }
 
@@ -366,8 +364,6 @@ creat_hdr(utectx_t ctx)
 	/* set standard header payload offset, just to be sure it's sane */
 	memset((void*)ctx->hdrc, 0, sz);
 	bump_header(ctx->hdrc);
-	/* file creation means new slut */
-	ctx->slut_sz = 0;
 	return;
 }
 
@@ -821,18 +817,18 @@ store_lvtd(utectx_t ctx)
 }
 
 static void
-store_slut(utectx_t ctx)
+store_slut(utectx_t ctx, size_t sluz)
 {
 	struct utehdr2_s *h = ctx->hdrc;
 
 	switch (utehdr_endianness(h)) {
 	case UTE_ENDIAN_UNK:
 	case UTE_ENDIAN_LITTLE:
-		h->slut_sz = htole32(ctx->slut_sz);
+		h->slut_sz = htole32(sluz);
 		h->slut_nsyms = htole16((uint16_t)ctx->slut->nsyms);
 		break;
 	case UTE_ENDIAN_BIG:
-		h->slut_sz = htobe32(ctx->slut_sz);
+		h->slut_sz = htobe32(sluz);
 		h->slut_nsyms = htobe16((uint16_t)ctx->slut->nsyms);
 		break;
 	default:
@@ -969,8 +965,7 @@ flush_slut(utectx_t ctx)
 	munmap_any(p, off, stsz);
 
 	/* store the size of the serialised slut */
-	ctx->slut_sz = stsz;
-	store_slut(ctx);
+	store_slut(ctx, stsz);
 
 out:
 	free(stbl);
@@ -1397,10 +1392,8 @@ load_last_tpc(utectx_t ctx)
 
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
-	if (ctx->fsz > tpc_byte_size(ctx->tpc) + ctx->slut_sz) {
-		ctx->fsz -= tpc_byte_size(ctx->tpc) + ctx->slut_sz;
-	} else {
-		ctx->fsz -= ctx->slut_sz;
+	if (ctx->fsz > tpc_byte_size(ctx->tpc)) {
+		ctx->fsz -= tpc_byte_size(ctx->tpc);
 	}
 	return;
 wipeout:
@@ -1723,7 +1716,6 @@ ute_clone_slut(utectx_t tgt, utectx_t src)
 	/* free any existing sluts */
 	free_slut(tgt->slut);
 	/* now clone */
-	tgt->slut_sz = src->slut_sz;
 	clone_slut(tgt->slut, src->slut);
 	return;
 }
@@ -1733,8 +1725,6 @@ ute_empty_slut(utectx_t ctx)
 {
 	/* free existing sluts */
 	free_slut(ctx->slut);
-	/* reset slut size */
-	ctx->slut_sz = 0;
 	/* make a new slut */
 	make_slut(ctx->slut);
 	return;
@@ -1880,7 +1870,7 @@ ute_npages(utectx_t ctx)
 		/* GUESS is the file size expressed in ticks */
 		size_t guess;
 
-		guess = ctx->fsz - ctx->slut_sz - hdrz;
+		guess = ctx->fsz - hdrz;
 		guess /= sizeof(*ctx->seek->sp);
 		res = guess / UTE_BLKSZ + (guess % UTE_BLKSZ ? 1 : 0);
 		/* cache this? */

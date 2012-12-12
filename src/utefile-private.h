@@ -81,7 +81,6 @@ struct utectx_s {
 	uint64_t lvtd;
 
 	/* symbol table, idx->sym and sym->idx */
-	ssize_t slut_sz;
 	struct uteslut_s slut[1];
 
 	/* number of pages, native endianness */

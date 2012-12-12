@@ -85,6 +85,8 @@ struct utectx_s {
 
 	/* number of pages, native endianness */
 	size_t npages;
+	/* payload offset, native endianness */
+	size_t ploff;
 
 	/* footer, contains page offsets et al */
 	struct {
@@ -137,8 +139,8 @@ static inline __attribute__((pure)) size_t
 ute_hdrz(const_utectx_t ctx)
 {
 /* return the size of CTX's header on disk in bytes */
-	if (LIKELY(ctx->hdrp->ploff)) {
-		return (size_t)ctx->hdrp->ploff;
+	if (LIKELY(ctx->ploff)) {
+		return (size_t)ctx->ploff;
 	}
 	return UTEHDR_MAX_SIZE;
 }

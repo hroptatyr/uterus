@@ -831,7 +831,7 @@ flush_slut(utectx_t ctx)
 	munmap_any(p, off, bndz);
 
 	/* store the size of the serialised slut */
-	ctx->slut_sz = bndz;
+	ctx->slut_sz = stsz;
 	store_slut(ctx);
 
 out:

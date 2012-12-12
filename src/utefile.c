@@ -566,10 +566,10 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 
 	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
 		/* use the footer info */
-		const struct uteftr_cell_s *cells = ctx->ftr;
+		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
 		UDEBUGvv("using footer info\n");
-		if ((ctx->ftr_sz / sizeof(*cells)) < pg) {
+		if ((ctx->ftr->z / sizeof(*cells)) < pg) {
 			off = len = 0U;
 		} else {
 			off = cells[pg].foff;
@@ -1012,16 +1012,16 @@ add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len, size_t nt)
 {
 /* auto-resizing */
 	struct uteftr_cell_s *cells;
-	size_t ncells = ctx->ftr_sz / sizeof(*cells);
+	size_t ncells = ctx->ftr->z / sizeof(*cells);
 
 	/* resize? */
 	if (UNLIKELY(pg >= ncells)) {
 		size_t nxpg = ((pg / 16U) + 1U) * 16U;
-		ctx->ftr_sz = nxpg * sizeof(*cells);
-		ctx->ftr = realloc(ctx->ftr, ctx->ftr_sz);
+		ctx->ftr->z = nxpg * sizeof(*cells);
+		ctx->ftr->c = realloc(ctx->ftr->c, ctx->ftr->z);
 	}
 	/* now we're clear to go */
-	cells = ctx->ftr;
+	cells = ctx->ftr->c;
 	cells[pg].foff = off;
 	cells[pg].flen = len;
 	cells[pg].tlen = nt;
@@ -1031,9 +1031,10 @@ add_ftr(utectx_t ctx, uint32_t pg, off_t off, size_t len, size_t nt)
 static void
 free_ftr(utectx_t ctx)
 {
-	if (ctx->ftr != NULL) {
-		free(ctx->ftr);
-		ctx->ftr = NULL;
+	if (ctx->ftr->c != NULL) {
+		free(ctx->ftr->c);
+		ctx->ftr->c = NULL;
+		ctx->ftr->z = 0UL;
 	}
 	return;
 }
@@ -1049,14 +1050,14 @@ flush_ftr(utectx_t ctx)
 	/* dont try at all in read-only mode */
 	if (UNLIKELY(!__rdwrp(ctx))) {
 		return;
-	} else if (UNLIKELY((ftr = ctx->ftr) == NULL)) {
+	} else if (UNLIKELY((ftr = ctx->ftr->c) == NULL)) {
 		/* piss off right away */
 		return;
 	} else if (UNLIKELY((npg = ute_npages(ctx)) == 0U)) {
 		return;
-	} else if (UNLIKELY(ctx->ftr_sz < npg * sizeof(*ftr))) {
+	} else if (UNLIKELY(ctx->ftr->z < npg * sizeof(*ftr))) {
 		/* footer is fucked */
-		UDEBUG("footer too small, not dumping %zu\n", ctx->ftr_sz);
+		UDEBUG("footer too small, not dumping %zu\n", ctx->ftr->z);
 		return;
 	}
 	/* otherwise write exactly NPG cells to the disk */
@@ -1829,10 +1830,10 @@ ute_npages(utectx_t ctx)
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
 		   ctx->ftr != NULL) {
 		/* just use the footer info */
-		const struct uteftr_cell_s *cells = ctx->ftr;
+		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
 		UDEBUGvv("using footer info\n");
-		for (size_t i = 0; i < ctx->ftr_sz / sizeof(*cells); i++) {
+		for (size_t i = 0; i < ctx->ftr->z / sizeof(*cells); i++) {
 			if (cells[i].foff == 0) {
 				ctx->npages = res = i;
 				break;

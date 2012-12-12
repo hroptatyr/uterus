@@ -1394,7 +1394,7 @@ load_last_tpc(utectx_t ctx)
 	/* real shrinking was to dangerous without C-c handler,
 	 * make fsz a multiple of page size */
 	if (ctx->fsz > tpc_byte_size(ctx->tpc)) {
-		ctx->fsz -= tpc_byte_size(ctx->tpc);
+		ute_shrink(ctx, tpc_byte_size(ctx->tpc));
 	}
 	return;
 wipeout:

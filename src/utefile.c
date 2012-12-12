@@ -157,10 +157,42 @@ __pflags(const_utectx_t ctx)
 	return PROT_READ | (__rdwrp(ctx) ? PROT_WRITE : 0);
 }
 
-static size_t
-get_slut_size(utehdr2_t hdr)
+static __attribute__((pure)) size_t
+get_ftr_size(const_utectx_t ctx)
+{
+/* retrieve the size of the footer in the header HDR in native endianness */
+	utehdr2_t hdr = ctx->hdrc;
+
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->ftr_sz);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->ftr_sz);
+	default:
+		break;
+	}
+	return 0U;
+}
+
+static __attribute__((pure)) off_t
+get_ftr_off(const_utectx_t ctx)
+{
+/* get the offset off the slut within the ute file CTX
+ * we go backwards through footer and metadata */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	size_t cand = ctx->fsz - get_ftr_size(ctx);
+
+	/* round down to previous TZ multiple */
+	return cand & ~(tz - 1);
+}
+
+static __attribute__((pure)) size_t
+get_slut_size(const_utectx_t ctx)
 {
 /* retrieve the size of the slut in the header HDR in native endianness */
+	utehdr2_t hdr = ctx->hdrc;
+
 	switch (utehdr_endianness(hdr)) {
 	case UTE_ENDIAN_UNK:
 	case UTE_ENDIAN_LITTLE:
@@ -173,20 +205,16 @@ get_slut_size(utehdr2_t hdr)
 	return 0U;
 }
 
-static size_t
-get_ftr_size(utehdr2_t hdr)
+static __attribute__((pure)) off_t
+get_slut_off(const_utectx_t ctx)
 {
-/* retrieve the size of the footer in the header HDR in native endianness */
-	switch (utehdr_endianness(hdr)) {
-	case UTE_ENDIAN_UNK:
-	case UTE_ENDIAN_LITTLE:
-		return le32toh(hdr->ftr_sz);
-	case UTE_ENDIAN_BIG:
-		return be32toh(hdr->ftr_sz);
-	default:
-		break;
-	}
-	return 0U;
+/* get the offset off the slut within the ute file CTX
+ * we go backwards through footer and metadata */
+	const size_t tz = sizeof(*ctx->seek->sp);
+	size_t cand = ctx->fsz - get_ftr_size(ctx) - get_slut_size(ctx);
+
+	/* round down to previous TZ multiple */
+	return cand & ~(tz - 1);
 }
 
 static size_t
@@ -1381,56 +1409,62 @@ wipeout:
 
 
 /* auxiliary data deserialisers */
-static off_t
-get_slut_off(const_utectx_t ctx)
-{
-/* get the offset off the slut within the ute file CTX
- * we go backwards through footer and metadata */
-	const size_t tz = sizeof(*ctx->seek->sp);
-	size_t cand = ctx->fsz - ctx->ftr_sz - ctx->slut_sz;
-
-	/* round down to previous TZ multiple */
-	return cand & ~(tz - 1);
-}
-
-static char*
-mmap_slut(const_utectx_t ctx)
-{
-	const off_t off = get_slut_off(ctx);
-	int pflags = __pflags(ctx);
-	return mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ctx->slut_sz);
-}
-
-static void
-munmap_slut(const_utectx_t ctx, char *map)
-{
-	const off_t off = get_slut_off(ctx);
-	munmap_any(map, off, ctx->slut_sz);
-	return;
-}
-
 static void
 load_slut(utectx_t ctx)
 {
 /* take the stuff past the last page in CTX and make a slut from it */
-	char *slut;
-
-	if (UNLIKELY(ctx->fsz == 0)) {
+	if (UNLIKELY(ctx->fsz <= UTEHDR_MIN_SIZE)) {
 		return;
 	}
 
 	/* otherwise leap to behind the last tick and
 	 * deserialise the look-up table */
-	if ((slut = mmap_slut(ctx)) != NULL) {
-		slut_deser(ctx->slut, slut, ctx->slut_sz);
-		munmap_slut(ctx, slut);
+	const size_t sluz = get_slut_size(ctx);
+	const off_t off = get_slut_off(ctx);
+	const int pflags = __pflags(ctx);
+	char *slut;
+
+	if ((slut = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, sluz)) != NULL) {
+		slut_deser(ctx->slut, slut, sluz);
+		munmap_any(slut, off, sluz);
 	}
 
 	/* real shrink is too dangerous, just adapt fsz instead */
-	ctx->fsz -= ctx->slut_sz, ctx->slut_sz = 0;
+	ute_shrink(ctx, sluz);
+	/* act as though we don't have a slut */
+	ctx->hdrc->slut_sz = 0U;
 	return;
 }
 
+static void
+load_ftr(utectx_t ctx)
+{
+/* take the stuff past the last page in CTX and make a slut from it */
+	if (UNLIKELY(ctx->fsz <= UTEHDR_MIN_SIZE)) {
+		return;
+	}
+
+	/* otherwise leap to behind the last tick and
+	 * deserialise the look-up table */
+	const size_t ftrz = get_ftr_size(ctx);
+	const off_t off = get_ftr_off(ctx);
+	const int pflags = __pflags(ctx);
+	char *ftr;
+
+	if ((ftr = mmap_any(ctx->fd, pflags, MAP_FLUSH, off, ftrz)) != NULL) {
+		/* deserialise the footer */
+		;
+		munmap_any(ftr, off, ftrz);
+	}
+
+	/* real shrink is too dangerous, just adapt fsz instead */
+	ute_shrink(ctx, ftrz);
+	/* act as though we don't have a footer */
+	ctx->hdrc->ftr_sz = 0U;
+	return;
+}
+
+
 static void
 ute_init(utectx_t ctx)
 {

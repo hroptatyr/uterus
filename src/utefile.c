@@ -762,6 +762,31 @@ store_slut(utectx_t ctx)
 	return;
 }
 
+static void
+store_ftrz(utectx_t ctx, size_t z)
+{
+	struct utehdr2_s *h = ctx->hdrc;
+
+	switch (utehdr_endianness(h)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		h->ftr_sz = htole32(z);
+		/* while we're at it? */
+		h->npages = htole32(h->npages);
+		break;
+	case UTE_ENDIAN_BIG:
+		h->ftr_sz = htobe32(z);
+		/* while we're at it? */
+		h->npages = htobe32(h->npages);
+		break;
+	default:
+		h->ftr_sz = 0;
+		h->npages = 0;
+		break;
+	}
+	return;
+}
+
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
@@ -968,7 +993,11 @@ flush_ftr(utectx_t ctx)
 		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, ftrz);
 		memcpy(p, ftr, ftrz);
 		munmap_any(p, fsz, ftrz);
+
+		/* make sure we put the info in the file header */
+		store_ftrz(ctx, ftrz);
 	}
+
 out:
 	return;
 }

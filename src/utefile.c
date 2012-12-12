@@ -271,23 +271,24 @@ ute_extend(utectx_t ctx, ssize_t z)
 	return true;
 }
 
-static bool
+static void
 ute_shrink(utectx_t ctx, ssize_t z)
 {
 /* like ute_extend() with -Z, but round the file size down */
 	const size_t tz = sizeof(*ctx->seek->sp);
 	ssize_t tot;
 
-	if (UNLIKELY((tot = ctx->fsz - z) <= 0)) {
-		return false;
+	if (UNLIKELY(z == 0)) {
+		/* don't bother */
+		return;
+	} else if (UNLIKELY((tot = ctx->fsz - z) <= 0)) {
+		return;
 	}
 	/* round down */
 	tot &= ~(tz - 1U);
-	if (!__fwr_trunc(ctx->fd, tot)) {
-		return false;
-	}
+	/* don't actually shrink the whole shebang, set the fsz instead */
 	ctx->fsz = (size_t)tot;
-	return true;
+	return;
 }
 
 

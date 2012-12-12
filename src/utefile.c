@@ -1563,8 +1563,9 @@ make_utectx(const char *fn, int fd, int oflags)
 		res->lvtd = SMALLEST_LVTD;
 		make_slut(res->slut);
 	} else {
-		/* load the slut, must be first, as we need to shrink
-		 * the file accordingly */
+		/* load the footer, then the slut
+		 * must be in this order because they shrink the file */
+		load_ftr(res);
 		load_slut(res);
 	}
 	/* load the last page as tpc */

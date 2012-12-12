@@ -578,7 +578,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 	size_t off;
 	size_t len;
 
-	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr->c != NULL) {
 		/* use the footer info */
 		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
@@ -1276,8 +1276,10 @@ lzma_comp(utectx_t ctx)
 	}
 
 	/* seek to the first page (target file offset!)
-	 * this can be very well different from the source file offset */
-	fo = ute_hdrz(ctx);
+	 * this can be very well different from the source file offset
+	 * we somehow still need an API thing to let us know that the
+	 * target file offset is to be changed */
+	fo = UTEHDR_MIN_SIZE;
 
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
@@ -1881,7 +1883,7 @@ ute_npages(utectx_t ctx)
 	if (LIKELY((res = ctx->npages) > 0)) {
 		;
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
-		   ctx->ftr != NULL) {
+		   ctx->ftr->c != NULL) {
 		/* just use the footer info */
 		const struct uteftr_cell_s *cells = ctx->ftr->c;
 

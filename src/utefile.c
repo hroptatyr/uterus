@@ -578,7 +578,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 	size_t off;
 	size_t len;
 
-	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr != NULL) {
+	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr->c != NULL) {
 		/* use the footer info */
 		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
@@ -1881,7 +1881,7 @@ ute_npages(utectx_t ctx)
 	if (LIKELY((res = ctx->npages) > 0)) {
 		;
 	} else if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED &&
-		   ctx->ftr != NULL) {
+		   ctx->ftr->c != NULL) {
 		/* just use the footer info */
 		const struct uteftr_cell_s *cells = ctx->ftr->c;
 

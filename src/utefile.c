@@ -160,6 +160,7 @@ __pflags(const_utectx_t ctx)
 static size_t
 get_slut_size(utehdr2_t hdr)
 {
+/* retrieve the size of the slut in the header HDR in native endianness */
 	switch (utehdr_endianness(hdr)) {
 	case UTE_ENDIAN_UNK:
 	case UTE_ENDIAN_LITTLE:
@@ -169,7 +170,39 @@ get_slut_size(utehdr2_t hdr)
 	default:
 		break;
 	}
-	return 0;
+	return 0U;
+}
+
+static size_t
+get_ftr_size(utehdr2_t hdr)
+{
+/* retrieve the size of the footer in the header HDR in native endianness */
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->ftr_sz);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->ftr_sz);
+	default:
+		break;
+	}
+	return 0U;
+}
+
+static size_t
+get_npages(utehdr2_t hdr)
+{
+/* retrieve the number of pages in the header HDR in native endianness */
+	switch (utehdr_endianness(hdr)) {
+	case UTE_ENDIAN_UNK:
+	case UTE_ENDIAN_LITTLE:
+		return le32toh(hdr->npages);
+	case UTE_ENDIAN_BIG:
+		return be32toh(hdr->npages);
+	default:
+		break;
+	}
+	return 0U;
 }
 
 static inline bool
@@ -235,6 +268,7 @@ cache_hdr(utectx_t ctx)
 	*ctx->hdrc = *res;
 	/* do the rest of the probing */
 	ctx->slut_sz = get_slut_size(ctx->hdrc);
+	ctx->npages = get_npages(ctx->hdrc);
 	/* ... and take a probe, if it's not for creation */
 	if (ctx->oflags & UO_TRUNC) {
 		/* don't bother checking the header */
@@ -755,8 +789,8 @@ store_slut(utectx_t ctx)
 		h->slut_nsyms = htobe16((uint16_t)ctx->slut->nsyms);
 		break;
 	default:
-		h->slut_sz = 0;
-		h->slut_nsyms = 0;
+		h->slut_sz = 0U;
+		h->slut_nsyms = 0U;
 		break;
 	}
 	return;
@@ -772,16 +806,16 @@ store_ftrz(utectx_t ctx, size_t z)
 	case UTE_ENDIAN_LITTLE:
 		h->ftr_sz = htole32(z);
 		/* while we're at it? */
-		h->npages = htole32(h->npages);
+		h->npages = htole32(ctx->npages);
 		break;
 	case UTE_ENDIAN_BIG:
 		h->ftr_sz = htobe32(z);
 		/* while we're at it? */
-		h->npages = htobe32(h->npages);
+		h->npages = htobe32(ctx->npages);
 		break;
 	default:
-		h->ftr_sz = 0;
-		h->npages = 0;
+		h->ftr_sz = 0U;
+		h->npages = 0U;
 		break;
 	}
 	return;

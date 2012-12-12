@@ -84,6 +84,8 @@ struct utectx_s {
 	ssize_t slut_sz;
 	struct uteslut_s slut[1];
 
+	/* number of pages, native endianness */
+	size_t npages;
 	/* footer, contains page offsets et al */
 	size_t ftr_sz;
 	void *ftr;

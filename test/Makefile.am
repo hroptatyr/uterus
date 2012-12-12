@@ -80,7 +80,6 @@ EXTRA_DIST += print.f.beute
 
 ut_tests += shnot.1.ut
 ut_tests += shnot.2.ut
-
 EXTRA_DIST += shnot.1.ref.ute
 EXTRA_DIST += shnot.2.ref.ute
 
@@ -100,8 +99,13 @@ ut_tests += fsck.13.ut
 ut_tests += fsck.14.ut
 ut_tests += fsck.15.ut
 ut_tests += fsck.16.ut
+if HAVE_LZMA
+ut_tests += fsck.17.ut
+ut_tests += fsck.18.ut
+endif  HAVE_LZMA
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
+EXTRA_DIST += fsck.17.ref.ute
 
 ut_tests += slut.1.ut
 ut_tests += slut.2.ut

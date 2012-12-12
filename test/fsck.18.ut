@@ -1,0 +1,17 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.7.ref.ute"
+OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+COMMENT="testing in situ compression"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+
+cat <<EOF > "${CMDFILE}"
+cp -a '${INFILE}' '${OUTFILE}'
+"\${TOOL}" fsck --compress '${OUTFILE}'
+EOF
+
+## outfile reference, hopefully this is portable
+REFFILE="fsck.17.ref.ute"
+
+## fsck.18.ut ends here

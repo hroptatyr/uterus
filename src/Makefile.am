@@ -159,9 +159,7 @@ BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 ute_PROGRAMS += ute-fsck
 ute_fsck_SOURCES = ute-fsck.c ute-fsck-clo.ggo
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_fsck_CPPFLAGS += $(lzma_CFLAGS)
 ute_fsck_LDFLAGS = $(AM_LDFLAGS) -static
-ute_fsck_LDFLAGS += $(lzma_LIBS)
 ute_fsck_LDADD = libuterus.la
 BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
 

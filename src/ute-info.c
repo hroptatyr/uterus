@@ -182,10 +182,32 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
 		scom_t ti = AS_SCOM(sk->sp + i / ssz);
 
-		if (scom_thdr_tblidx(ti) == sym) {
-			ttfs |= (1U << scom_thdr_ttf(ti));
+		/* determine the length for the increment */
+		tz = scom_byte_size(ti);
+
+		if (scom_thdr_tblidx(ti) != sym) {
+			/* none of our business at the moment */
+			continue;
 		}
-		if (scom_thdr_ttf(ti) > SCDL_FLAVOUR) {
+		/* try and keep track of ttfs */
+		ttfs |= (1U << scom_thdr_ttf(ti));
+		if (scom_thdr_ttf(ti) == SSNP_FLAVOUR) {
+			uint32_t stmp = scom_thdr_sec(ti);
+
+#define INTV(x)		(intv[x])
+			if (!INTV(0)) {
+				;
+			} else if (!INTV(1)) {
+				INTV(1) = stmp - INTV(0);
+			} else if (stmp - INTV(0) == INTV(1)) {
+				;
+			} else {
+				INTV(1) = -1;
+			}
+			/* always keep track of current time */
+			INTV(0) = stmp;
+#undef INTV
+		} else if (scom_thdr_ttf(ti) > SCDL_FLAVOUR) {
 			/* try and get interval */
 			const_scdl_t x = AS_CONST_SCDL(ti);
 			int this = x->hdr->sec - x->sta_ts;
@@ -200,9 +222,6 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 			}
 #undef INTV
 		}
-
-		/* determine the length for the increment */
-		tz = scom_byte_size(ti);
 	}
 
 	if (ttfs & (1U << SCOM_TTF_UNK)) {
@@ -218,7 +237,8 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 		printf("\ttick_t");
 	}
 	if (ttfs & (1U << SSNP_FLAVOUR)) {
-		printf("\ts???");
+		printf("\ts");
+		pr_intv(intv[1]);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
 		printf("\tc");

@@ -61,8 +61,11 @@ The ute file format
 * File format::         File format internals
 * ute-mux::             Generate an ute file from a tick source
 * ute-print::           Print the contents of an ute file
-* ute-shnot::           Generate all-level snapshots from ute files
 * ute-fsck::            Check ute file for consistency
+* ute-info::            Print a terse summary of file contents
+* ute-chndl::           Generate bid and ask candles from tick files
+* ute-shnot::           Generate all-level snapshots from ute files
+* ute-slab::            Cut slabs of tick types, symbols or stamp ranges
 * ute-slut::            Print or edit the symbol look-up table
 * Muxers::              Connect foreign sources/sinks to/from ute files
 * API::                 Working with ute files from other C programs
@@ -656,8 +659,11 @@ slut to a new location upon insertion or deletion of ticks.
 
 @include ute-mux.texi
 @include ute-print.texi
-@include ute-shnot.texi
 @include ute-fsck.texi
+@include ute-info.texi
+@include ute-chndl.texi
+@include ute-shnot.texi
+@include ute-slab.texi
 @include ute-slut.texi
 
 

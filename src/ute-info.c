@@ -155,7 +155,7 @@ bset_set(bset_t bs, unsigned int bno)
 static void
 pr_intv(int i)
 {
-	if (i <= 0 && i > 86400) {
+	if (i <= 0 || i > 86400) {
 		printf("???");
 	} else if (i == 86400) {
 		printf("eod");

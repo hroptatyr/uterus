@@ -159,11 +159,8 @@ BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 ute_PROGRAMS += ute-fsck
 ute_fsck_SOURCES = ute-fsck.c ute-fsck-clo.ggo
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_fsck_CPPFLAGS += $(lzma_CFLAGS)
 ute_fsck_LDFLAGS = $(AM_LDFLAGS) -static
-ute_fsck_LDFLAGS += $(lzma_LIBS)
 ute_fsck_LDADD = libuterus.la
-ute_fsck_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
 
 ute_PROGRAMS += ute-slut
@@ -171,7 +168,6 @@ ute_slut_SOURCES = ute-slut.c ute-slut-clo.ggo
 ute_slut_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slut_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slut_LDADD = libuterus.la
-ute_slut_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-slut-clo.c ute-slut-clo.h
 
 ute_PROGRAMS += ute-slab
@@ -179,7 +175,6 @@ ute_slab_SOURCES = ute-slab.c ute-slab-clo.ggo
 ute_slab_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slab_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slab_LDADD = libuterus.la
-ute_slab_LDADD += $(LIBLTDL)
 BUILT_SOURCES += ute-slab-clo.c ute-slab-clo.h
 
 ## muxer/demuxer DSOs

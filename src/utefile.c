@@ -1096,15 +1096,6 @@ flush_ftr(utectx_t ctx)
 		} else {
 			struct uteftr_cell_s *fc = (void*)p;
 
-#if defined __bswap_64
-# define htooe64(x)	__bswap_64(x)
-# define htooe32(x)	__bswap_32(x)
-#elif defined __swap64
-# define htooe64(x)	__swap64(x)
-# define htooe32(x)	__swap32(x)
-#else
-# error cannot figure out how to store the footer
-#endif	/* various swaps */
 			for (size_t i = 0; i < npg; i++) {
 				fc[i].foff = htooe64(ftr[i].foff);
 				fc[i].flen = htooe32(ftr[i].flen);

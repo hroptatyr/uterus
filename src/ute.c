@@ -116,10 +116,11 @@ Common options:\n\
 	SUBCMD(chndl, "Generate bid and ask candles from ute files");
 	SUBCMD(help, "Print a help screen like this");
 	SUBCMD(fsck, "Check ute file for consistency");
+	SUBCMD(info, "Print a terse summary of file contents");
 	SUBCMD(mux, "Generate an ute file from a tick or candle source");
 	SUBCMD(print, "Print the contents of an ute file");
 	SUBCMD(shnot, "Generate all-level snapshots from ute files");
-	SUBCMD(slab, "Print or edit the symbol look-up table");
+	SUBCMD(slab, "Cut slabs of tick types, symbols or stamp ranges");
 	SUBCMD(slut, "Print or edit the symbol look-up table");
 	puts("");
 	return 0;

@@ -116,6 +116,7 @@ Common options:\n\
 	SUBCMD(chndl, "Generate bid and ask candles from ute files");
 	SUBCMD(help, "Print a help screen like this");
 	SUBCMD(fsck, "Check ute file for consistency");
+	SUBCMD(info, "Print a terse summary of file contents");
 	SUBCMD(mux, "Generate an ute file from a tick or candle source");
 	SUBCMD(print, "Print the contents of an ute file");
 	SUBCMD(shnot, "Generate all-level snapshots from ute files");

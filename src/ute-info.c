@@ -47,6 +47,9 @@
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
+#include "sl1t.h"
+#include "scdl.h"
+#include "ssnp.h"
 #include "mem.h"
 
 #if !defined UNLIKELY
@@ -149,11 +152,84 @@ bset_set(bset_t bs, unsigned int bno)
 			     _j_ < sizeof(_b_) * CHAR_BIT; _j_++, i++)	\
 				if ((_b_) & (1UL << (_j_)))
 
+static void
+pr_intv(int i)
+{
+	if (i <= 0 && i > 86400) {
+		printf("???");
+	} else if (i == 86400) {
+		printf("eod");
+	} else if (i >= 3600 && !(i % 3600)) {
+		printf("%02dh", i / 3600);
+	} else if (i >= 60 && !(i % 60)) {
+		printf("%02dm", i / 60);
+	} else {
+		printf("%02ds", i);
+	}
+}
+
 
 /* page wise operations */
+static int
+snarf_ttf(info_ctx_t ctx, uteseek_t sk, uint16_t sym)
+{
+	static int intv[16];
+	const size_t ssz = sizeof(*sk->sp);
+	const size_t sk_sz = seek_byte_size(sk);
+	uint32_t ttfs = 0U;
+
+	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
+		scom_t ti = AS_SCOM(sk->sp + i / ssz);
+
+		if (scom_thdr_tblidx(ti) == sym) {
+			ttfs |= (1U << scom_thdr_ttf(ti));
+		}
+		if (scom_thdr_ttf(ti) > SCDL_FLAVOUR) {
+			/* try and get interval */
+			const_scdl_t x = AS_CONST_SCDL(ti);
+			intv[scom_thdr_ttf(ti) & 0xf] = x->hdr->sec - x->sta_ts;
+		}
+
+		/* determine the length for the increment */
+		tz = scom_byte_size(ti);
+	}
+
+	if (ttfs & (1U << SCOM_TTF_UNK)) {
+		printf("\tunk");
+	}
+	if (ttfs & (1U << SL1T_TTF_BID)) {
+		printf("\ttick_b");
+	}
+	if (ttfs & (1U << SL1T_TTF_ASK)) {
+		printf("\ttick_a");
+	}
+	if (ttfs & (1U << SL1T_TTF_TRA)) {
+		printf("\ttick_t");
+	}
+	if (ttfs & (1U << SSNP_FLAVOUR)) {
+		printf("\ts???");
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
+		printf("\tc");
+		pr_intv(intv[SL1T_TTF_BID]);
+		printf("_b");
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_ASK))) {
+		printf("\tc");
+		pr_intv(intv[SL1T_TTF_ASK]);
+		printf("_a");
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_TRA))) {
+		printf("\tc");
+		pr_intv(intv[SL1T_TTF_TRA]);
+		printf("_t");
+	}
+	return 0;
+}
+
 /* the actual infoing */
 static int
-infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
+infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 {
 	const size_t ssz = sizeof(*sk->sp);
 	const size_t sk_sz = seek_byte_size(sk);
@@ -162,17 +238,19 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl, scidx_t last)
 	if (UNLIKELY((bs = make_bset()) == NULL)) {
 		return -1;
 	}
-	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
+	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
 		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
 
 		bset_set(bs, scom_thdr_tblidx(ti));
 
 		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
+		tz = scom_byte_size(ti);
 	}
 
 	BSET_ITER(i, bs) {
-		printf("sym\t%s\n", ute_idx2sym(hdl, i));
+		printf("%s", ute_idx2sym(hdl, i));
+		snarf_ttf(ctx, sk, i);
+		putchar('\n');
 	}
 
 	free_bset(bs);
@@ -185,25 +263,19 @@ static int
 info1(info_ctx_t ctx, utectx_t hdl, const char *UNUSED(fn))
 {
 	size_t npg;
-	scidx_t last = {
-		.u = 0ULL,
-	};
 
 	/* go through the pages manually */
 	npg = ute_npages(hdl);
 	if (ctx->verbp) {
 		printf("pages\t%zu\n", npg);
 	}
-	for (size_t p = 0; p < npg; p++) {
+	for (size_t p = 0; p < 1U/*assume 1st page info only*/; p++) {
 		struct uteseek_s sk[1];
 
 		/* create a new seek */
 		seek_page(sk, hdl, p);
-		if (ctx->verbp) {
-			printf("page\t%zu\n", p);
-		}
 		/* info that one page */
-		infop(ctx, sk, hdl, last);
+		infop(ctx, sk, hdl);
 		/* flush the old seek */
 		flush_seek(sk);
 	}

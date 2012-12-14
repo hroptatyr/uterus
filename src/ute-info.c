@@ -188,7 +188,17 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 		if (scom_thdr_ttf(ti) > SCDL_FLAVOUR) {
 			/* try and get interval */
 			const_scdl_t x = AS_CONST_SCDL(ti);
-			intv[scom_thdr_ttf(ti) & 0xf] = x->hdr->sec - x->sta_ts;
+			int this = x->hdr->sec - x->sta_ts;
+
+#define INTV(x)		(intv[scom_thdr_ttf(x) & 0xf])
+			if (!INTV(ti)) {
+				/* always store */
+				INTV(ti) = this;
+			} else if (INTV(ti) != this) {
+				/* sort of reset */
+				INTV(ti) = -1;
+			}
+#undef INTV
 		}
 
 		/* determine the length for the increment */

@@ -83,7 +83,7 @@ struct info_ctx_s {
 
 /* helper functions */
 static void
-__attribute__((format(printf, 1, 2)))
+__attribute__((format(printf, 1, 2), unused))
 verbprf(const char *UNUSED_nodbg(fmt), ...)
 {
 #if defined DEBUG_FLAG
@@ -171,7 +171,7 @@ pr_intv(int i)
 
 /* page wise operations */
 static int
-snarf_ttf(info_ctx_t ctx, uteseek_t sk, uint16_t sym)
+snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 {
 	static int intv[16];
 	const size_t ssz = sizeof(*sk->sp);

@@ -178,6 +178,7 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 	const size_t sk_sz = seek_byte_size(sk);
 	uint32_t ttfs = 0U;
 
+	memset(intv, 0, sizeof(intv));
 	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
 		scom_t ti = AS_SCOM(sk->sp + i / ssz);
 

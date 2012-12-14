@@ -177,6 +177,13 @@ ute_slab_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slab_LDADD = libuterus.la
 BUILT_SOURCES += ute-slab-clo.c ute-slab-clo.h
 
+ute_PROGRAMS += ute-info
+ute_info_SOURCES = ute-info.c ute-info-clo.ggo
+ute_info_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_info_LDFLAGS = $(AM_LDFLAGS) -static
+ute_info_LDADD = libuterus.la
+BUILT_SOURCES += ute-info-clo.c ute-info-clo.h
+
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c

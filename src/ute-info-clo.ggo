@@ -1,0 +1,12 @@
+args "--unamed-opts --no-help --long-help --no-handle-error -a info_args_info -f info_parser"
+package "ute info"
+usage "ute info FILEs..."
+description "Output terse info about the contents of FILEs."
+
+option "help" h
+	"Show this help message."
+	optional
+
+option "verbose" v
+	"Print some additional info."
+	optional

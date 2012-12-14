@@ -37,6 +37,8 @@ endif  ## HAVE_EXPAT
 ut_tests += mux.11.ut
 ut_tests += mux.12.ut
 ut_tests += mux.13.ut
+ut_tests += mux.14.ut
+ut_tests += mux.15.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5

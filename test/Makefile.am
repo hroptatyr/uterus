@@ -109,6 +109,8 @@ ut_tests += fsck.16.ut
 if HAVE_LZMA
 ut_tests += fsck.17.ut
 ut_tests += fsck.18.ut
+ut_tests += fsck.19.ut
+ut_tests += fsck.20.ut
 endif  HAVE_LZMA
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute

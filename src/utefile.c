@@ -1284,14 +1284,22 @@ mmap_page(int fd, int pflags, int mflags, off_t off, size_t len)
 		/* length in memory, i.e. after decompressing */
 		size_t mlen;
 		const uint32_t *pu32 = p;
-		void *x = NULL;
+		void *x;
+		size_t z;
+
+		z = UTE_BLKSZ * sizeof(struct sndwch_s);
+		x = mmap(NULL, z, PROT_MEM, MAP_MEM, -1, 0);
 
 		UDEBUG("decomp'ing %p[%zu] == %u/%zu\n",
 		       pu32 + 1, len, pu32[0], clen);
-		mlen = ute_decode(&x, pu32 + 1, pu32[0]);
-		UDEBUG("got %zu<-%u\n", mlen, pu32[0]);
+		mlen = ute_decode_raw(x, z, pu32 + 1, pu32[0]);
+		UDEBUG("got %zu<-%u %p\n", mlen, pu32[0], x);
 		/* after decompression we can't really do with the orig page */
 		munmap_any(p, off, len);
+
+		/* remap so that we don't have to keep track of z != mlen */
+		x = mremap(x, z, mlen, 0);
+
 		/* prepare return value */
 		p = x;
 		off = 0UL;
@@ -1356,7 +1364,6 @@ lzma_comp(utectx_t ctx)
 		void *cp;
 		/* size after compression */
 		ssize_t cz;
-
 
 		if (!mmap_page_p(pi)) {
 			pi = mmap_page(

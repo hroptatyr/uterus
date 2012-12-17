@@ -580,7 +580,10 @@ main(int argc, char *argv[])
 		const int opfl = UO_NO_LOAD_TPC;
 		utectx_t hdl;
 
-		if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
+		if (UNLIKELY(fl < 0)) {
+			/* error got probably printed already */
+			continue;
+		} else if (UNLIKELY((hdl = ute_open(fn, fl | opfl)) == NULL)) {
 			error(0, "cannot open file `%s'", fn);
 			res = 1;
 			continue;

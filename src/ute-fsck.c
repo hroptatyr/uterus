@@ -476,6 +476,14 @@ ute_compress(utectx_t hdl)
 	return;
 }
 
+static void
+ute_decompress(utectx_t hdl)
+{
+	hdl->hdrc->flags &= ~UTEHDR_FLAG_COMPRESSED;
+	hdl->hdrc->flags |= UTEHDR_FLAG_DIRTY;
+	return;
+}
+
 #else  /* !HAVE_LZMA_H */
 
 static void
@@ -484,6 +492,15 @@ ute_compress(utectx_t hdl)
 	const char *fn = ute_fn(hdl);
 
 	error(0, "compression requested for '%s' but no lzma support", fn);
+	return;
+}
+
+static void
+ute_decompress(utectx_t hdl)
+{
+	const char *fn = ute_fn(hdl);
+
+	error(0, "decompression requested for '%s' but no lzma support", fn);
 	return;
 }
 #endif	/* HAVE_LZMA_H */
@@ -628,6 +645,8 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 
 			if (argi->compress_given) {
 				ute_compress(hdl);
+			} else if (argi->decompress_given) {
+				ute_decompress(hdl);
 			}
 		}
 
@@ -672,6 +691,8 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 
 		if (argi->compress_given) {
 			ute_compress(hdl);
+		} else if (argi->decompress_given) {
+			ute_decompress(hdl);
 		}
 		/* and close the whole shebang again */
 		ute_close(hdl);

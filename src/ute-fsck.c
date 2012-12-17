@@ -76,6 +76,8 @@ typedef struct fsck_ctx_s *fsck_ctx_t;
 struct fsck_ctx_s {
 	bool dryp:1;
 	bool verbp:1;
+	/* dryp from command line */
+	bool a_dryp:1;
 	ute_end_t tgtend;
 	ute_end_t natend;
 	utectx_t outctx;
@@ -486,6 +488,24 @@ ute_compress(utectx_t hdl)
 }
 #endif	/* HAVE_LZMA_H */
 
+static int
+file_flags(fsck_ctx_t ctx, const char *fn)
+{
+	struct stat st;
+
+	if (UNLIKELY(stat(fn, &st) < 0)) {
+		/* we don't want to know what's wrong here */
+		error(0, "cannot process file '%s'", fn);
+		return -1;
+	} else if (UNLIKELY(!ctx->a_dryp && !(st.st_mode & S_IWUSR))) {
+		/* user didn't request creation, so fuck off here */
+		ctx->dryp = true;
+	} else if (ctx->a_dryp) {
+		ctx->dryp = true;
+	}
+	return (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -517,7 +537,7 @@ main(int argc, char *argv[])
 
 	/* copy interesting stuff into our own context */
 	if (argi->dry_run_given) {
-		ctx->dryp = true;
+		ctx->a_dryp = true;
 	}
 	if (argi->verbose_given) {
 		ctx->verbp = true;
@@ -554,7 +574,7 @@ main(int argc, char *argv[])
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
-		const int fl = (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
+		const int fl = file_flags(ctx, fn);
 		const int opfl = UO_NO_LOAD_TPC;
 		utectx_t hdl;
 

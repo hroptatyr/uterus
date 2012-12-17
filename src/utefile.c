@@ -1396,7 +1396,7 @@ lzma_comp(utectx_t ctx)
 			 * mmap from FO to FO + FZ */
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
-				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
+				ctx->fd, pflags, MAP_SHARED, fo, fz);
 			if (UNLIKELY(p == NULL)) {
 				UDEBUG("big bugger, skipping page %zu\n", i);
 				goto next;
@@ -1409,7 +1409,7 @@ lzma_comp(utectx_t ctx)
 			/* memset the rest */
 			memset((char*)(p + 1) + cz, 0, fz - cz);
 			/* diskify */
-			munmap_any((void*)p, fo, fo + fz);
+			munmap_any((void*)p, fo, fz);
 
 			/* also make sure to update the ftr */
 			add_ftr(ctx, i, (struct uteftr_cell_s){

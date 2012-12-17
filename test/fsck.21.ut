@@ -1,0 +1,16 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/fsck.17.ref.ute"
+OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+COMMENT="testing ex situ decompression of compressed file"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+
+cat <<EOF > "${CMDFILE}"
+"\${TOOL}" fsck --decompress -o '${OUTFILE}' '${INFILE}'
+EOF
+
+## outfile reference, hopefully this is portable
+REFFILE="mux.7.ref.ute"
+
+## fsck.21.ut ends here

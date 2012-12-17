@@ -1314,6 +1314,7 @@ munmap_page(struct mmap_pg_s p)
 	if (UNLIKELY(!mmap_page_p(p))) {
 		return;
 	}
+	UDEBUG("munmapping (%p[%zu],%zu)\n", p.p, p.o, p.z);
 	munmap_any(p.p, p.o, p.z);
 	return;
 }
@@ -1386,6 +1387,8 @@ lzma_comp(utectx_t ctx)
 		if (LIKELY((cz = ute_encode(&cp, pi.p, pi.z)) > 0)) {
 			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
+
+			UDEBUG("got %zu->%zu\n", pi.z, cz);
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */

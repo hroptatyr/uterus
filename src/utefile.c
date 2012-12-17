@@ -1236,6 +1236,42 @@ tilman_comp(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 
 #if defined HAVE_LZMA_H
+struct mmap_pg_s {
+	void *p;
+	off_t o;
+	size_t z;
+};
+
+#define mmap_page_initialiser()		((struct mmap_pg_s){NULL, 0UL, 0UL})
+
+static int
+mmap_page_p(struct mmap_pg_s p)
+{
+	return p.p != NULL;
+}
+
+static struct mmap_pg_s
+mmap_page(int fd, int pflags, int mflags, off_t off, size_t len)
+{
+	void *p;
+
+	if (UNLIKELY((p = mmap_any(fd, pflags, mflags, off, len)) == NULL)) {
+		return mmap_page_initialiser();
+	}
+
+	return (struct mmap_pg_s){p, off, len};
+}
+
+static void
+munmap_page(struct mmap_pg_s p)
+{
+	if (UNLIKELY(!mmap_page_p(p))) {
+		return;
+	}
+	munmap_any(p.p, p.o, p.z);
+	return;
+}
+
 static void
 lzma_comp(utectx_t ctx)
 {
@@ -1275,31 +1311,30 @@ lzma_comp(utectx_t ctx)
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
 		/* i-th page */
-		static void *pi = NULL;
-		static size_t pz = 0UL;
+		static struct mmap_pg_s pi = mmap_page_initialiser();
 		/* next page, just so we have the copy-on-write in place */
-		void *pn = NULL;
+		struct mmap_pg_s pn = mmap_page_initialiser();
 		/* result of compression */
 		void *cp;
 		/* size after compression */
 		ssize_t cz;
 
-		if (pi == NULL) {
-			pi = mmap_any(
+
+		if (!mmap_page_p(pi)) {
+			pi = mmap_page(
 				ctx->fd, pflags, MAP_PRIVATE,
-				ftr[i].foff, pz = ftr[i].flen);
+				ftr[i].foff, ftr[i].flen);
 		}
 		if (LIKELY(i + 1 < npg) &&
 		    UNLIKELY(ftr[i].foff + ftr[i].flen > ftr[i + 1].foff)) {
 			/* we need a private map of the guy afterwards */
-			pn = mmap_any(
+			pn = mmap_page(
 				ctx->fd, pflags, MAP_PRIVATE,
 				ftr[i + 1].foff, ftr[i + 1].flen);
 		}
 
-		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n",
-		       i, pi, ftr[i].foff, pz);
-		if (LIKELY((cz = ute_encode(&cp, pi, pz)) > 0)) {
+		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n", i, pi.p, pi.o, pi.z);
+		if (LIKELY((cz = ute_encode(&cp, pi.p, pi.z)) > 0)) {
 			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
 
@@ -1319,16 +1354,15 @@ lzma_comp(utectx_t ctx)
 			}
 			/* also make sure to update the ftr */
 			add_ftr(ctx, i, (struct uteftr_cell_s){
-					fo, fz, pz / sizeof(*ctx->seek->sp)
+					fo, fz, pi.z / sizeof(*ctx->seek->sp)
 						});
 			/* and our global counter */
 			fo += fz;
 		}
 		/* definitely munmap pi */
-		munmap_any(pi, ftr[i].foff, ftr[i].flen);
+		munmap_page(pi);
 		/* cross-assign pn to pi/pz */
 		pi = pn;
-		pz = ftr[i + 1].flen;
 	}
 	/* free resources */
 	free(ftr);

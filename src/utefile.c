@@ -1390,7 +1390,7 @@ lzma_comp(utectx_t ctx)
 			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
 
-			UDEBUG("got %zu->%zu\n", pi.z, cz);
+			UDEBUG("got %zu->%zd\n", pi.z, cz);
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
@@ -1413,7 +1413,7 @@ lzma_comp(utectx_t ctx)
 
 			/* also make sure to update the ftr */
 			add_ftr(ctx, i, (struct uteftr_cell_s){
-					fo, fz, pi.z / sizeof(*ctx->seek->sp)
+					fo, fz, pi.z / tsz
 						});
 			/* and our global counter */
 			fo += fz;

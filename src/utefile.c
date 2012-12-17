@@ -1481,7 +1481,10 @@ lzma_decomp(utectx_t ctx)
 		 * if FSZ < FO + FZ, extend the file */
 		tz = page_size(tgt, i);
 		UDEBUG("mmapping [%zu,%zu]\n", fo, fo + tz);
-		ute_trunc(tgt, fo + tz);
+		if (UNLIKELY(!ute_trunc(tgt, fo + tz))) {
+			UDEBUG("can't truncate, skipping page %zu\n", i);
+			goto next;
+		}
 		ti = (void*)mmap_any(tgt->fd, PROT_FLUSH, MAP_SHARED, fo, tz);
 		if (UNLIKELY(ti == NULL)) {
 			UDEBUG("big bugger, skipping page %zu\n", i);

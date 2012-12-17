@@ -493,17 +493,19 @@ file_flags(fsck_ctx_t ctx, const char *fn)
 {
 	struct stat st;
 
-	if (UNLIKELY(stat(fn, &st) < 0)) {
+	if (ctx->outctx != NULL) {
+		return UO_RDONLY;
+	} else if (UNLIKELY(stat(fn, &st) < 0)) {
 		/* we don't want to know what's wrong here */
 		error(0, "cannot process file '%s'", fn);
 		return -1;
-	} else if (UNLIKELY(!ctx->a_dryp && !(st.st_mode & S_IWUSR))) {
+	} else if (UNLIKELY(!ctx->a_dryp && !(st.st_mode & S_IWUSR)) ||
+		   LIKELY(ctx->a_dryp)) {
 		/* user didn't request creation, so fuck off here */
 		ctx->dryp = true;
-	} else if (ctx->a_dryp) {
-		ctx->dryp = true;
+		return UO_RDONLY;
 	}
-	return (ctx->dryp || ctx->outctx ? UO_RDONLY : UO_RDWR);
+	return UO_RDWR;
 }
 
 

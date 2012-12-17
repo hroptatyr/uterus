@@ -908,6 +908,8 @@ store_ftrz(utectx_t ctx, size_t z)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
+#define MARKER_TICK	(-1)
+
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
@@ -956,7 +958,7 @@ flush_tpc(utectx_t ctx)
 		memcpy(p, ctx->tpc->sk.sp, sisz);
 		/* memset the rest with the marker tick */
 		if (sisz < sz) {
-			memset(p + sisz, -1, sz - sisz);
+			memset(p + sisz, MARKER_TICK, sz - sisz);
 		}
 		munmap_any(p, fsz, sz);
 		/* up the npages counter */

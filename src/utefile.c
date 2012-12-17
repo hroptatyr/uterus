@@ -1314,7 +1314,7 @@ munmap_page(struct mmap_pg_s p)
 	if (UNLIKELY(!mmap_page_p(p))) {
 		return;
 	}
-	UDEBUG("munmapping (%p[%zu],%zu)\n", p.p, p.o, p.z);
+	UDEBUG("munmapping (%p[%zd],%zu)\n", p.p, p.o, p.z);
 	munmap_any(p.p, p.o, p.z);
 	return;
 }
@@ -1355,7 +1355,7 @@ lzma_comp(utectx_t ctx)
 	 * target file offset is to be changed */
 	fo = UTEHDR_MIN_SIZE;
 
-	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
+	UDEBUG("compressing %zu pages, starting at %jd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
 		/* i-th page */
 		static struct mmap_pg_s pi = mmap_page_initialiser();
@@ -1985,7 +1985,7 @@ ute_npages(utectx_t ctx)
 		const size_t probe_z = 32U;
 		off_t try = ute_hdrz(ctx);
 
-		UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+		UDEBUGvv("try %jd  fsz %zu\n", try, ctx->fsz);
 		for (res = 0; (size_t)try < ctx->fsz; res++) {
 			void *p = mmap_any(
 				ctx->fd, PROT_READ, MAP_SHARED, try, probe_z);
@@ -2004,7 +2004,7 @@ ute_npages(utectx_t ctx)
 				try += pgsz - otry;
 			}
 			munmap_any(p, otry, probe_z);
-			UDEBUGvv("try %zd  fsz %zu\n", try, ctx->fsz);
+			UDEBUGvv("try %jd  fsz %zu\n", try, ctx->fsz);
 			/* cache this in FTR slot */
 			add_ftr(ctx, res, (struct uteftr_cell_s){
 					otry, try - otry, (try - otry) / tz

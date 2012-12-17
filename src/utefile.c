@@ -1502,7 +1502,7 @@ lzma_decomp(utectx_t ctx)
 
 			/* also make sure to update the ftr */
 			add_ftr(tgt, i, (struct uteftr_cell_s){
-					fo, tz, dz / tsz
+					fo, dz, dz / tsz
 						});
 		}
 

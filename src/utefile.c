@@ -388,74 +388,43 @@ creat_hdr(utectx_t ctx)
 #if defined HAVE_LZMA_H
 uint32_t ute_encode_clevel = 6;
 
-ssize_t
-ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
+static ssize_t
+ute_encode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 {
-	static lzma_stream strm = LZMA_STREAM_INIT;
-	static size_t pgsz = 0UL;
-	static uint8_t *iobuf = NULL;
+	lzma_stream strm = LZMA_STREAM_INIT;
 	lzma_ret rc;
-	ssize_t res = 0;
-
-	if (UNLIKELY(buf == NULL)) {
-		/* oh we're meant to free things */
-		res = 0;
-		if (iobuf != NULL) {
-			goto iob_free;
-		}
-		/* everything should be freed already */
-		goto fa_free;
-	} else if (iobuf == NULL) {
-		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
-		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
-		if (UNLIKELY(iobuf == MAP_FAILED)) {
-			res = -1;
-			goto enc_free;
-		}
-	}
+	ssize_t res;
 
 	/* set up new encoder */
 	rc = lzma_easy_encoder(&strm, ute_encode_clevel, LZMA_CHECK_CRC64);
 	if (UNLIKELY(rc != LZMA_OK)) {
 		/* indicate total failure, free fuckall */
-		res = -1;
-		goto fa_free;
+		return -1;
 	}
 
 	/* reset in/out buffer */
-	strm.next_out = iobuf;
-	strm.avail_out = pgsz;
+	strm.next_out = tgt;
+	strm.avail_out = tsz;
 	/* point to the stuff we're meant to encode */
 	strm.next_in = buf;
 	strm.avail_in = bsz;
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		;
-	} else if (LIKELY(tgt != NULL)) {
-		/* now then, make *tgt point to the outbuffer */
-		*tgt = iobuf;
-		res = strm.next_out - iobuf;
+		error(0, "cannot deflate ticks: %d\n", rc);
+		res = -1;
+	} else {
+		res = strm.next_out - (typeof(strm.next_out))tgt;
 	}
 	lzma_end(&strm);
-	strm = (typeof(strm))LZMA_STREAM_INIT;
-	return res;
-iob_free:
-	munmap(iobuf, pgsz);
-enc_free:
-	iobuf = NULL;
-	strm = (typeof(strm))LZMA_STREAM_INIT;
-fa_free:
 	return res;
 }
 
 ssize_t
-ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
+ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
-	static lzma_stream strm = LZMA_STREAM_INIT;
 	static size_t pgsz = 0UL;
 	static uint8_t *iobuf = NULL;
-	lzma_ret rc;
 	ssize_t res = 0;
 
 	if (UNLIKELY(buf == NULL)) {
@@ -475,16 +444,37 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 		}
 	}
 
+	if (UNLIKELY((res = ute_encode_raw(iobuf, pgsz, buf, bsz)) < 0)) {
+		*tgt = NULL;
+	} else {
+		/* now then, make *tgt point to the outbuffer */
+		*tgt = iobuf;
+	}
+	return res;
+iob_free:
+	munmap(iobuf, pgsz);
+enc_free:
+	iobuf = NULL;
+fa_free:
+	return res;
+}
+
+static ssize_t
+ute_decode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
+{
+	lzma_stream strm = LZMA_STREAM_INIT;
+	lzma_ret rc;
+	ssize_t res;
+
 	/* set up new decoder */
 	rc = lzma_stream_decoder(&strm, UINT64_MAX, 0);
 	if (UNLIKELY(rc != LZMA_OK)) {
 		/* indicate total failure, free fuckall */
-		res = -1;
-		goto fa_free;
+		return -1;
 	}
 	/* reset in/out buffer */
-	strm.next_out = iobuf;
-	strm.avail_out = pgsz;
+	strm.next_out = tgt;
+	strm.avail_out = tsz;
 	/* point to the stuff we're meant to encode */
 	strm.next_in = buf;
 	strm.avail_in = bsz;
@@ -492,19 +482,49 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
 		error(0, "cannot inflate ticks: %d\n", rc);
-	} else if (LIKELY(tgt != NULL)) {
-		/* now then, make *tgt point to the outbuffer */
-		*tgt = iobuf;
-		res = strm.next_out - iobuf;
+		res = -1;
+	} else {
+		res = strm.next_out - (typeof(strm.next_out))tgt;
 	}
 	lzma_end(&strm);
-	strm = (typeof(strm))LZMA_STREAM_INIT;
+	return res;
+}
+
+ssize_t
+ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
+{
+	static size_t pgsz = 0UL;
+	static uint8_t *iobuf = NULL;
+	ssize_t res = 0;
+
+	if (UNLIKELY(buf == NULL)) {
+		/* oh we're meant to free things */
+		res = 0;
+		if (iobuf != NULL) {
+			goto iob_free;
+		}
+		/* everything should be freed already */
+		goto fa_free;
+	} else if (iobuf == NULL) {
+		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
+		if (UNLIKELY(iobuf == MAP_FAILED)) {
+			res = -1;
+			goto enc_free;
+		}
+	}
+
+	if (UNLIKELY((res = ute_decode_raw(iobuf, pgsz, buf, bsz)) < 0)) {
+		*tgt = NULL;
+	} else {
+		/* now then, make *tgt point to the outbuffer */
+		*tgt = iobuf;
+	}
 	return res;
 iob_free:
 	munmap(iobuf, pgsz);
 enc_free:
 	iobuf = NULL;
-	strm = (typeof(strm))LZMA_STREAM_INIT;
 fa_free:
 	return res;
 }

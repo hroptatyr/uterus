@@ -1262,7 +1262,7 @@ struct mmap_pg_s {
 	size_t z;
 };
 
-#define mmap_page_initialiser()		((struct mmap_pg_s){NULL, 0UL, 0UL})
+#define mmap_page_initialiser()		{NULL, 0UL, 0UL}
 
 static int
 mmap_page_p(struct mmap_pg_s p)
@@ -1277,7 +1277,7 @@ mmap_page(int fd, int pflags, int mflags, off_t off, size_t len)
 	size_t clen;
 
 	if (UNLIKELY((p = mmap_any(fd, pflags, mflags, off, len)) == NULL)) {
-		return mmap_page_initialiser();
+		return (struct mmap_pg_s)mmap_page_initialiser();
 	}
 	/* check if page is compressed */
 	if ((clen = page_compressed_p(p)) && clen <= len) {

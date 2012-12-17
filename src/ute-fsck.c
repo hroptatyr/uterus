@@ -574,6 +574,13 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (argi->compress_given && argi->decompress_given) {
+		fputs("\
+only one of -z|--compress and -d|--decompress can be given\n", stderr);
+		res = 1;
+		goto out;
+	}
+
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
 		const int fl = file_flags(ctx, fn);

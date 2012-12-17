@@ -1254,11 +1254,29 @@ static struct mmap_pg_s
 mmap_page(int fd, int pflags, int mflags, off_t off, size_t len)
 {
 	void *p;
+	size_t clen;
 
 	if (UNLIKELY((p = mmap_any(fd, pflags, mflags, off, len)) == NULL)) {
 		return mmap_page_initialiser();
 	}
+	/* check if page is compressed */
+	if ((clen = page_compressed_p(p)) && clen <= len) {
+		/* length in memory, i.e. after decompressing */
+		size_t mlen;
+		const uint32_t *pu32 = p;
+		void *x = NULL;
 
+		UDEBUG("decomp'ing %p[%zu] == %u/%zu\n",
+		       pu32 + 1, len, pu32[0], clen);
+		mlen = ute_decode(&x, pu32 + 1, pu32[0]);
+		UDEBUG("got %zu<-%u\n", mlen, pu32[0]);
+		/* after decompression we can't really do with the orig page */
+		munmap_any(p, off, len);
+		/* prepare return value */
+		p = x;
+		off = 0UL;
+		len = mlen;
+	}
 	return (struct mmap_pg_s){p, off, len};
 }
 

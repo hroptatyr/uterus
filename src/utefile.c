@@ -1324,9 +1324,13 @@ lzma_comp(utectx_t ctx)
 			pi = mmap_page(
 				ctx->fd, pflags, MAP_PRIVATE,
 				ftr[i].foff, ftr[i].flen);
+			if (UNLIKELY(!mmap_page_p(pi))) {
+				UDEBUG("big bugger, skipping page %zu\n", i);
+				goto next;
+			}
 		}
 		if (LIKELY(i + 1 < npg) &&
-		    UNLIKELY(ftr[i].foff + ftr[i].flen > ftr[i + 1].foff)) {
+		    UNLIKELY(ftr[i].foff + pi.z > ftr[i + 1].foff)) {
 			/* we need a private map of the guy afterwards */
 			pn = mmap_page(
 				ctx->fd, pflags, MAP_PRIVATE,
@@ -1343,15 +1347,20 @@ lzma_comp(utectx_t ctx)
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
-			if (LIKELY(p != NULL)) {
-				p[0] = (uint32_t)cz;
-				/* copy payload */
-				memcpy(p + 1, cp, cz);
-				/* memset the rest */
-				memset((char*)(p + 1) + cz, 0, fz - cz);
-				/* diskify */
-				munmap_any((void*)p, fo, fo + fz);
+			if (UNLIKELY(p == NULL)) {
+				UDEBUG("big bugger, skipping page %zu\n", i);
+				goto next;
 			}
+
+			/* adhere to our own page proto */
+			p[0] = (uint32_t)cz;
+			/* copy payload */
+			memcpy(p + 1, cp, cz);
+			/* memset the rest */
+			memset((char*)(p + 1) + cz, 0, fz - cz);
+			/* diskify */
+			munmap_any((void*)p, fo, fo + fz);
+
 			/* also make sure to update the ftr */
 			add_ftr(ctx, i, (struct uteftr_cell_s){
 					fo, fz, pi.z / sizeof(*ctx->seek->sp)
@@ -1359,6 +1368,7 @@ lzma_comp(utectx_t ctx)
 			/* and our global counter */
 			fo += fz;
 		}
+	next:
 		/* definitely munmap pi */
 		munmap_page(pi);
 		/* cross-assign pn to pi/pz */

@@ -388,74 +388,43 @@ creat_hdr(utectx_t ctx)
 #if defined HAVE_LZMA_H
 uint32_t ute_encode_clevel = 6;
 
-ssize_t
-ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
+static ssize_t
+ute_encode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 {
-	static lzma_stream strm = LZMA_STREAM_INIT;
-	static size_t pgsz = 0UL;
-	static uint8_t *iobuf = NULL;
+	lzma_stream strm = LZMA_STREAM_INIT;
 	lzma_ret rc;
-	ssize_t res = 0;
-
-	if (UNLIKELY(buf == NULL)) {
-		/* oh we're meant to free things */
-		res = 0;
-		if (iobuf != NULL) {
-			goto iob_free;
-		}
-		/* everything should be freed already */
-		goto fa_free;
-	} else if (iobuf == NULL) {
-		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
-		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
-		if (UNLIKELY(iobuf == MAP_FAILED)) {
-			res = -1;
-			goto enc_free;
-		}
-	}
+	ssize_t res;
 
 	/* set up new encoder */
 	rc = lzma_easy_encoder(&strm, ute_encode_clevel, LZMA_CHECK_CRC64);
 	if (UNLIKELY(rc != LZMA_OK)) {
 		/* indicate total failure, free fuckall */
-		res = -1;
-		goto fa_free;
+		return -1;
 	}
 
 	/* reset in/out buffer */
-	strm.next_out = iobuf;
-	strm.avail_out = pgsz;
+	strm.next_out = tgt;
+	strm.avail_out = tsz;
 	/* point to the stuff we're meant to encode */
 	strm.next_in = buf;
 	strm.avail_in = bsz;
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		;
-	} else if (LIKELY(tgt != NULL)) {
-		/* now then, make *tgt point to the outbuffer */
-		*tgt = iobuf;
-		res = strm.next_out - iobuf;
+		error(0, "cannot deflate ticks: %d\n", rc);
+		res = -1;
+	} else {
+		res = strm.next_out - (typeof(strm.next_out))tgt;
 	}
 	lzma_end(&strm);
-	strm = (typeof(strm))LZMA_STREAM_INIT;
-	return res;
-iob_free:
-	munmap(iobuf, pgsz);
-enc_free:
-	iobuf = NULL;
-	strm = (typeof(strm))LZMA_STREAM_INIT;
-fa_free:
 	return res;
 }
 
 ssize_t
-ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
+ute_encode(void *tgt[static 1], const void *buf, const size_t bsz)
 {
-	static lzma_stream strm = LZMA_STREAM_INIT;
 	static size_t pgsz = 0UL;
 	static uint8_t *iobuf = NULL;
-	lzma_ret rc;
 	ssize_t res = 0;
 
 	if (UNLIKELY(buf == NULL)) {
@@ -475,16 +444,37 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 		}
 	}
 
+	if (UNLIKELY((res = ute_encode_raw(iobuf, pgsz, buf, bsz)) < 0)) {
+		*tgt = NULL;
+	} else {
+		/* now then, make *tgt point to the outbuffer */
+		*tgt = iobuf;
+	}
+	return res;
+iob_free:
+	munmap(iobuf, pgsz);
+enc_free:
+	iobuf = NULL;
+fa_free:
+	return res;
+}
+
+static ssize_t
+ute_decode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
+{
+	lzma_stream strm = LZMA_STREAM_INIT;
+	lzma_ret rc;
+	ssize_t res;
+
 	/* set up new decoder */
 	rc = lzma_stream_decoder(&strm, UINT64_MAX, 0);
 	if (UNLIKELY(rc != LZMA_OK)) {
 		/* indicate total failure, free fuckall */
-		res = -1;
-		goto fa_free;
+		return -1;
 	}
 	/* reset in/out buffer */
-	strm.next_out = iobuf;
-	strm.avail_out = pgsz;
+	strm.next_out = tgt;
+	strm.avail_out = tsz;
 	/* point to the stuff we're meant to encode */
 	strm.next_in = buf;
 	strm.avail_in = bsz;
@@ -492,19 +482,49 @@ ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
 		error(0, "cannot inflate ticks: %d\n", rc);
-	} else if (LIKELY(tgt != NULL)) {
-		/* now then, make *tgt point to the outbuffer */
-		*tgt = iobuf;
-		res = strm.next_out - iobuf;
+		res = -1;
+	} else {
+		res = strm.next_out - (typeof(strm.next_out))tgt;
 	}
 	lzma_end(&strm);
-	strm = (typeof(strm))LZMA_STREAM_INIT;
+	return res;
+}
+
+ssize_t
+ute_decode(void *tgt[static 1], const void *buf, const size_t bsz)
+{
+	static size_t pgsz = 0UL;
+	static uint8_t *iobuf = NULL;
+	ssize_t res = 0;
+
+	if (UNLIKELY(buf == NULL)) {
+		/* oh we're meant to free things */
+		res = 0;
+		if (iobuf != NULL) {
+			goto iob_free;
+		}
+		/* everything should be freed already */
+		goto fa_free;
+	} else if (iobuf == NULL) {
+		pgsz = UTE_BLKSZ * sizeof(struct sndwch_s);
+		iobuf = mmap(NULL, pgsz, PROT_MEM, MAP_MEM, -1, 0);
+		if (UNLIKELY(iobuf == MAP_FAILED)) {
+			res = -1;
+			goto enc_free;
+		}
+	}
+
+	if (UNLIKELY((res = ute_decode_raw(iobuf, pgsz, buf, bsz)) < 0)) {
+		*tgt = NULL;
+	} else {
+		/* now then, make *tgt point to the outbuffer */
+		*tgt = iobuf;
+	}
 	return res;
 iob_free:
 	munmap(iobuf, pgsz);
 enc_free:
 	iobuf = NULL;
-	strm = (typeof(strm))LZMA_STREAM_INIT;
 fa_free:
 	return res;
 }
@@ -1236,6 +1256,69 @@ tilman_comp(utectx_t ctx)
 #endif	/* AUTO_TILMAN_COMP */
 
 #if defined HAVE_LZMA_H
+struct mmap_pg_s {
+	void *p;
+	off_t o;
+	size_t z;
+};
+
+#define mmap_page_initialiser()		((struct mmap_pg_s){NULL, 0UL, 0UL})
+
+static int
+mmap_page_p(struct mmap_pg_s p)
+{
+	return p.p != NULL;
+}
+
+static struct mmap_pg_s
+mmap_page(int fd, int pflags, int mflags, off_t off, size_t len)
+{
+	void *p;
+	size_t clen;
+
+	if (UNLIKELY((p = mmap_any(fd, pflags, mflags, off, len)) == NULL)) {
+		return mmap_page_initialiser();
+	}
+	/* check if page is compressed */
+	if ((clen = page_compressed_p(p)) && clen <= len) {
+		/* length in memory, i.e. after decompressing */
+		size_t mlen;
+		const uint32_t *pu32 = p;
+		void *x;
+		size_t z;
+
+		z = UTE_BLKSZ * sizeof(struct sndwch_s);
+		x = mmap(NULL, z, PROT_MEM, MAP_MEM, -1, 0);
+
+		UDEBUG("decomp'ing %p[%zu] == %u/%zu\n",
+		       pu32 + 1, len, pu32[0], clen);
+		mlen = ute_decode_raw(x, z, pu32 + 1, pu32[0]);
+		UDEBUG("got %zu<-%u %p\n", mlen, pu32[0], x);
+		/* after decompression we can't really do with the orig page */
+		munmap_any(p, off, len);
+
+		/* remap so that we don't have to keep track of z != mlen */
+		x = mremap(x, z, mlen, 0);
+
+		/* prepare return value */
+		p = x;
+		off = 0UL;
+		len = mlen;
+	}
+	return (struct mmap_pg_s){p, off, len};
+}
+
+static void
+munmap_page(struct mmap_pg_s p)
+{
+	if (UNLIKELY(!mmap_page_p(p))) {
+		return;
+	}
+	UDEBUG("munmapping (%p[%zu],%zu)\n", p.p, p.o, p.z);
+	munmap_any(p.p, p.o, p.z);
+	return;
+}
+
 static void
 lzma_comp(utectx_t ctx)
 {
@@ -1275,60 +1358,69 @@ lzma_comp(utectx_t ctx)
 	UDEBUG("compressing %zu pages, starting at %zd\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
 		/* i-th page */
-		static void *pi = NULL;
-		static size_t pz = 0UL;
+		static struct mmap_pg_s pi = mmap_page_initialiser();
 		/* next page, just so we have the copy-on-write in place */
-		void *pn = NULL;
+		struct mmap_pg_s pn = mmap_page_initialiser();
 		/* result of compression */
 		void *cp;
 		/* size after compression */
 		ssize_t cz;
 
-		if (pi == NULL) {
-			pi = mmap_any(
+		if (!mmap_page_p(pi)) {
+			pi = mmap_page(
 				ctx->fd, pflags, MAP_PRIVATE,
-				ftr[i].foff, pz = ftr[i].flen);
+				ftr[i].foff, ftr[i].flen);
+			if (UNLIKELY(!mmap_page_p(pi))) {
+				UDEBUG("big bugger, skipping page %zu\n", i);
+				goto next;
+			}
 		}
 		if (LIKELY(i + 1 < npg) &&
-		    UNLIKELY(ftr[i].foff + ftr[i].flen > ftr[i + 1].foff)) {
+		    UNLIKELY(ftr[i].foff + pi.z > ftr[i + 1].foff)) {
 			/* we need a private map of the guy afterwards */
-			pn = mmap_any(
+			pn = mmap_page(
 				ctx->fd, pflags, MAP_PRIVATE,
 				ftr[i + 1].foff, ftr[i + 1].flen);
 		}
 
-		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n",
-		       i, pi, ftr[i].foff, pz);
-		if (LIKELY((cz = ute_encode(&cp, pi, pz)) > 0)) {
+		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n", i, pi.p, pi.o, pi.z);
+		if (LIKELY((cz = ute_encode(&cp, pi.p, pi.z)) > 0)) {
 			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
+
+			UDEBUG("got %zu->%zu\n", pi.z, cz);
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
-			if (LIKELY(p != NULL)) {
-				p[0] = (uint32_t)cz;
-				/* copy payload */
-				memcpy(p + 1, cp, cz);
-				/* memset the rest */
-				memset((char*)(p + 1) + cz, 0, fz - cz);
-				/* diskify */
-				munmap_any((void*)p, fo, fo + fz);
+			if (UNLIKELY(p == NULL)) {
+				UDEBUG("big bugger, skipping page %zu\n", i);
+				goto next;
 			}
+
+			/* adhere to our own page proto */
+			p[0] = (uint32_t)cz;
+			/* copy payload */
+			memcpy(p + 1, cp, cz);
+			/* memset the rest */
+			memset((char*)(p + 1) + cz, 0, fz - cz);
+			/* diskify */
+			munmap_any((void*)p, fo, fo + fz);
+
 			/* also make sure to update the ftr */
 			add_ftr(ctx, i, (struct uteftr_cell_s){
-					fo, fz, pz / sizeof(*ctx->seek->sp)
+					fo, fz, pi.z / sizeof(*ctx->seek->sp)
 						});
 			/* and our global counter */
 			fo += fz;
 		}
+	next:
 		/* definitely munmap pi */
-		munmap_any(pi, ftr[i].foff, ftr[i].flen);
+		munmap_page(pi);
 		/* cross-assign pn to pi/pz */
 		pi = pn;
-		pz = ftr[i + 1].flen;
 	}
 	/* free resources */
 	free(ftr);

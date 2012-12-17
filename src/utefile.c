@@ -598,7 +598,7 @@ seek_get_offs(utectx_t ctx, uint32_t pg)
 	size_t off;
 	size_t len;
 
-	if (ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED && ctx->ftr->c != NULL) {
+	if (ctx->ftr->c != NULL) {
 		/* use the footer info */
 		const struct uteftr_cell_s *cells = ctx->ftr->c;
 
@@ -908,6 +908,8 @@ store_ftrz(utectx_t ctx, size_t z)
 #define PROT_FLUSH	(PROT_READ | PROT_WRITE)
 #define MAP_FLUSH	(MAP_SHARED)
 
+#define MARKER_TICK	(-1)
+
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
@@ -956,7 +958,7 @@ flush_tpc(utectx_t ctx)
 		memcpy(p, ctx->tpc->sk.sp, sisz);
 		/* memset the rest with the marker tick */
 		if (sisz < sz) {
-			memset(p + sisz, -1, sz - sisz);
+			memset(p + sisz, MARKER_TICK, sz - sisz);
 		}
 		munmap_any(p, fsz, sz);
 		/* up the npages counter */
@@ -1388,13 +1390,13 @@ lzma_comp(utectx_t ctx)
 			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
 
-			UDEBUG("got %zu->%zu\n", pi.z, cz);
+			UDEBUG("got %zu->%zd\n", pi.z, cz);
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
 			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
-				ctx->fd, pflags, MAP_SHARED, fo, fo + fz);
+				ctx->fd, pflags, MAP_SHARED, fo, fz);
 			if (UNLIKELY(p == NULL)) {
 				UDEBUG("big bugger, skipping page %zu\n", i);
 				goto next;
@@ -1407,11 +1409,11 @@ lzma_comp(utectx_t ctx)
 			/* memset the rest */
 			memset((char*)(p + 1) + cz, 0, fz - cz);
 			/* diskify */
-			munmap_any((void*)p, fo, fo + fz);
+			munmap_any((void*)p, fo, fz);
 
 			/* also make sure to update the ftr */
 			add_ftr(ctx, i, (struct uteftr_cell_s){
-					fo, fz, pi.z / sizeof(*ctx->seek->sp)
+					fo, fz, pi.z / tsz
 						});
 			/* and our global counter */
 			fo += fz;
@@ -1430,6 +1432,101 @@ lzma_comp(utectx_t ctx)
 	return;
 }
 
+static void
+lzma_decomp(utectx_t ctx)
+{
+/* decompress all pages in CTX and, by side-effect, set CTX's fsz slot
+ * (file size) to the total file size after decompressing */
+	utectx_t tgt;
+	const size_t npg = ute_npages(ctx);
+	const size_t tsz = sizeof(*ctx->seek->sp);
+	int pflags = __pflags(ctx);
+	off_t fo;
+
+	if (UNLIKELY(npg == 0)) {
+		return;
+	} else if (UNLIKELY(pflags == PROT_READ)) {
+		return;
+	} else if (unlink(ctx->fname) < 0) {
+		return;
+	} else if (UNLIKELY((tgt = ute_open(
+				     ctx->fname,
+				     UO_CREAT | UO_TRUNC)) == NULL)) {
+		return;
+	}
+
+	/* seek to the first page (target file offset!)
+	 * this can be very well different from the source file offset
+	 * we somehow still need an API thing to let us know that the
+	 * target file offset is to be changed */
+	fo = UTEHDR_MAX_SIZE;
+
+	UDEBUG("decompressing %zu pages, starting at %jd\n", npg, fo);
+	for (size_t i = 0; i < npg; i++) {
+		/* get the offset in the source file */
+		struct sk_offs_s so = seek_get_offs(ctx, i);
+		/* i-th page */
+		uint32_t *pi;
+		/* result of decompression, page in the anon file */
+		void *ti;
+		/* size after decompression */
+		size_t tz;
+		ssize_t dz;
+
+		pi = (void*)mmap_any(
+			ctx->fd, PROT_READ, MAP_SHARED, so.foff, so.flen);
+
+		/* pi is private (i.e. COW) so copy to the real file
+		 * mmap from FO to FO + FZ
+		 * if FSZ < FO + FZ, extend the file */
+		tz = page_size(tgt, i);
+		UDEBUG("mmapping [%zu,%zu]\n", fo, fo + tz);
+		if (UNLIKELY(!ute_trunc(tgt, fo + tz))) {
+			UDEBUG("can't truncate, skipping page %zu\n", i);
+			goto next;
+		}
+		ti = (void*)mmap_any(tgt->fd, PROT_FLUSH, MAP_SHARED, fo, tz);
+		if (UNLIKELY(ti == NULL)) {
+			UDEBUG("big bugger, skipping page %zu\n", i);
+			goto next;
+		}
+
+		UDEBUG("decomp'ing pg %zu  (%p[%jd],%zu), really %u\n",
+		       i, pi, so.foff, so.flen, pi[0]);
+		if (LIKELY((dz = ute_decode_raw(ti, tz, pi + 1, pi[0])) > 0)) {
+			UDEBUG("inflate %zu->%zd (predicted %zu)\n",
+			       so.flen, dz, tz);
+
+			/* also make sure to update the ftr */
+			add_ftr(tgt, i, (struct uteftr_cell_s){
+					fo, dz, dz / tsz
+						});
+		}
+
+		/* diskify */
+		munmap_any((void*)ti, fo, tz);
+		/* our global file size tracker */
+		if (LIKELY(dz > 0)) {
+			fo += dz;
+		}
+
+	next:
+		/* definitely munmap pi */
+		UDEBUG("munmapping %p[%jd],%zu\n", pi, so.foff, so.flen);
+		munmap_any((char*)pi, so.foff, so.flen);
+	}
+
+	/* set ctx file size */
+	tgt->fsz = fo;
+	tgt->hdrc->flags &= ~UTEHDR_FLAG_COMPRESSED;
+
+	/* clone the slut */
+	ute_clone_slut(tgt, ctx);
+	/* close the target, do the rename and everything */
+	ute_close(tgt);
+	return;
+}
+
 #else  /* !HAVE_LZMA_H */
 
 static void
@@ -1437,6 +1534,13 @@ lzma_comp(utectx_t UNUSED(ctx))
 {
 	return;
 }
+
+static void
+lzma_decomp(utectx_t UNUSED(ctx))
+{
+	return;
+}
+
 #endif	/* HAVE_LZMA_H */
 
 static void MAYBE_NOINLINE
@@ -1822,6 +1926,12 @@ ute_close(utectx_t ctx)
 	    ctx->hdrc->flags & UTEHDR_FLAG_DIRTY) {
 		/* final compression */
 		lzma_comp(ctx);
+	} else if (!(ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) &&
+		   (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED) &&
+		   (ctx->hdrc->flags & UTEHDR_FLAG_DIRTY)) {
+		/* we're asked for decompression */
+		ctx->hdrc->flags |= UTEHDR_FLAG_COMPRESSED;
+		lzma_decomp(ctx);
 	}
 	/* serialise the slut */
 	flush_slut(ctx);

@@ -1497,9 +1497,6 @@ lzma_decomp(utectx_t ctx)
 			UDEBUG("inflate %zu->%zd (predicted %zu)\n",
 			       so.flen, dz, tz);
 
-			/* memset the rest */
-			memset((char*)ti + dz, MARKER_TICK, tz - dz);
-
 			/* also make sure to update the ftr */
 			add_ftr(tgt, i, (struct uteftr_cell_s){
 					fo, dz, dz / tsz

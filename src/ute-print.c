@@ -97,16 +97,16 @@ find_printer(const char opt[static 1])
 		return res;
 	}
 	if ((sym = find_sym(pr_dso, "pr")) != NULL) {
-		res.prf = (ssize_t(*)())pr_sym;
+		res.prf = (ssize_t(*)())sym;
 	}
 	if ((sym = find_sym(pr_dso, "init")) != NULL) {
-		res.initf = (void(*)())pr_sym;
+		res.initf = (void(*)())sym;
 	}
 	if ((sym = find_sym(pr_dso, "fini")) != NULL) {
-		res.finif = (void(*)())pr_sym;
+		res.finif = (void(*)())sym;
 	}
 	if ((sym = find_sym(pr_dso, "init_main")) != NULL) {
-		res.init_main_f = (int(*)())pr_sym;
+		res.init_main_f = (int(*)())sym;
 	}
 	return res;
 }

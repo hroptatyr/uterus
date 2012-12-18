@@ -104,13 +104,13 @@ bkts_cleanse(bkts_t b)
 static bool
 xcand_empty_p(xcand_t c)
 {
-	return c->bcnt == 0 && c->acnt == 0;
+	return c->bcnt == 0U && c->acnt == 0U;
 }
 
 static bool
 xcand_trades_p(xcand_t c)
 {
-	return c->tcnt != 0;
+	return c->tcnt != 0U;
 }
 
 static void
@@ -119,12 +119,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 	switch (sl1t_ttf(t)) {
 	case SL1T_TTF_BID:
 		c->bc->c = t->bid;
-		if (c->bcnt == 0) {
+		if (c->bcnt == 0U) {
 			c->bc->o = t->bid;
 			c->bc->h = t->bid;
 			c->bc->l = t->bid;
-		}
-		if (t->bid > c->bc->h) {
+		} else if (t->bid > c->bc->h) {
 			c->bc->h = t->bid;
 		} else if (t->bid < c->bc->l) {
 			c->bc->l = t->bid;
@@ -133,12 +132,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		break;
 	case SL1T_TTF_ASK:
 		c->ac->c = t->ask;
-		if (c->acnt == 0) {
+		if (c->acnt == 0U) {
 			c->ac->o = t->ask;
 			c->ac->h = t->ask;
 			c->ac->l = t->ask;
-		}
-		if (t->ask > c->ac->h) {
+		} else if (t->ask > c->ac->h) {
 			c->ac->h = t->ask;
 		} else if (t->ask < c->ac->l) {
 			c->ac->l = t->ask;
@@ -148,12 +146,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 	case SL1T_TTF_TRA:
 		c->tc->c = t->tra;
 		c->tcnt++;
-		if (c->tcnt == 0) {
+		if (c->tcnt == 0U) {
 			c->tc->o = t->tra;
 			c->tc->h = t->tra;
 			c->tc->l = t->tra;
-		}
-		if (t->tra > c->tc->h) {
+		} else if (t->tra > c->tc->h) {
 			c->tc->h = t->tra;
 		} else if (t->tra < c->tc->l) {
 			c->tc->l = t->tra;
@@ -161,12 +158,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		break;
 	case SL1T_TTF_BIDASK:
 		c->bc->c = t->bp;
-		if (c->bcnt == 0) {
+		if (c->bcnt == 0U) {
 			c->bc->o = t->bp;
 			c->bc->h = t->bp;
 			c->bc->l = t->bp;
-		}
-		if (t->bp > c->bc->h) {
+		} else if (t->bp > c->bc->h) {
 			c->bc->h = t->bp;
 		} else if (t->bp < c->bc->l) {
 			c->bc->l = t->bp;
@@ -174,12 +170,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		c->bcnt++;
 
 		c->ac->c = t->ap;
-		if (c->acnt == 0) {
+		if (c->acnt == 0U) {
 			c->ac->o = t->ap;
 			c->ac->h = t->ap;
 			c->ac->l = t->ap;
-		}
-		if (t->ap > c->ac->h) {
+		} else if (t->ap > c->ac->h) {
 			c->ac->h = t->ap;
 		} else if (t->ap < c->ac->l) {
 			c->ac->l = t->ap;

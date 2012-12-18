@@ -378,10 +378,18 @@ write_cand(chndl_ctx_t ctx, uint16_t cidx)
 	scom_thdr_set_ttf(c[1]->hdr, SCDL_FLAVOUR | SL1T_TTF_ASK);
 
 	/* set cnt and sta_ts */
-	c[0]->sta_ts = ts - ctx->opts->interval;
-	c[0]->cnt = ctx->bkt->cand[cidx].bcnt;
-	c[1]->sta_ts = ts - ctx->opts->interval;
-	c[1]->cnt = ctx->bkt->cand[cidx].acnt;
+	if (c[0]->sta_ts == 0U) {
+		c[0]->sta_ts = ts - ctx->opts->interval;
+	}
+	if (c[0]->cnt == 0U) {
+		c[0]->cnt = ctx->bkt->cand[cidx].bcnt;
+	}
+	if (c[1]->sta_ts == 0U) {
+		c[1]->sta_ts = ts - ctx->opts->interval;
+	}
+	if (c[1]->cnt == 0U) {
+		c[1]->cnt = ctx->bkt->cand[cidx].acnt;
+	}
 
 	/* kick off */
 	ute_add_tick(ctx->wrr, AS_SCOM(c[0]));
@@ -399,8 +407,12 @@ check_trades:
 		scom_thdr_set_msec(c[2]->hdr, 0);
 		scom_thdr_set_ttf(c[2]->hdr, SCDL_FLAVOUR | SL1T_TTF_TRA);
 
-		c[2]->sta_ts = ts - ctx->opts->interval;
-		c[2]->cnt = ctx->bkt->cand[cidx].tcnt;
+		if (c[2]->sta_ts == 0U) {
+			c[2]->sta_ts = ts - ctx->opts->interval;
+		}
+		if (c[2]->cnt == 0U) {
+			c[2]->cnt = ctx->bkt->cand[cidx].tcnt;
+		}
 
 		ute_add_tick(ctx->wrr, AS_SCOM(c[2]));
 	}

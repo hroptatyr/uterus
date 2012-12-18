@@ -245,7 +245,6 @@ copy_sym(chndl_ctx_t ctx, uint16_t cidx)
 static void
 write_cand(chndl_ctx_t ctx, uint16_t cidx)
 {
-	xcand_t xn;
 	scdl_t c[2];
 	uint16_t nidx;
 	time_t ts;
@@ -254,8 +253,8 @@ write_cand(chndl_ctx_t ctx, uint16_t cidx)
 		return;
 	}
 
-	c[0] = (xn = ctx->bkt->cand + cidx)->bc;
-	c[1] = (xn = ctx->bkt->cand + cidx)->ac;
+	c[0] = ctx->bkt->cand[cidx].bc;
+	c[1] = ctx->bkt->cand[cidx].ac;
 	nidx = copy_sym(ctx, cidx);
 	ts = get_buckets_time(ctx->bkt);
 
@@ -272,13 +271,13 @@ write_cand(chndl_ctx_t ctx, uint16_t cidx)
 
 	/* set cnt and sta_ts */
 	c[0]->sta_ts = ts - ctx->opts->interval;
-	c[0]->cnt = xn->bcnt;
+	c[0]->cnt = ctx->bkt->cand[cidx].bcnt;
 	c[1]->sta_ts = ts - ctx->opts->interval;
-	c[1]->cnt = xn->acnt;
+	c[1]->cnt = ctx->bkt->cand[cidx].acnt;
 
 	/* kick off */
-	ute_add_tick(ctx->wrr, AS_SCOM(c + 0));
-	ute_add_tick(ctx->wrr, AS_SCOM(c + 1));
+	ute_add_tick(ctx->wrr, AS_SCOM(c[0]));
+	ute_add_tick(ctx->wrr, AS_SCOM(c[1]));
 	return;
 }
 

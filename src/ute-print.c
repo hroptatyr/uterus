@@ -112,7 +112,7 @@ find_printer(const char opt[static 1])
 }
 
 static void
-unfind_printer(UNUSED(struct printer_s pr))
+unfind_printer(UNUSED(struct printer_s prer))
 {
 	if (pr_dso) {
 		close_aux(pr_dso);
@@ -300,7 +300,7 @@ main(int argc, char *argv[])
 	};
 	struct pr_ctx_s ctx[1] = {{0}};
 	struct pr_opt_s opt[1] = {{0}};
-	struct printer_s pr;
+	struct printer_s prer;
 	int printer_specific_options_p = 0;
 	const char *fmt;
 	int res = 0;
@@ -335,12 +335,12 @@ main(int argc, char *argv[])
 	/* initialise the module system */
 	ute_module_init();
 
-	if (UNLIKELY((pr = find_printer(fmt), pr.prf == NULL))) {
+	if (UNLIKELY((prer = find_printer(fmt), prer.prf == NULL))) {
 		/* we need a printer, so piss off here */
 		fputs("printer format unknown\n", stderr);
 		res = 1;
 		goto out;
-	} else if (printer_specific_options_p && pr.init_main_f == NULL) {
+	} else if (printer_specific_options_p && prer.init_main_f == NULL) {
 		fputs("\
 printer specific options given but cannot find printer\n", stderr);
 		res = 1;
@@ -365,8 +365,8 @@ printer specific options given but cannot find printer\n", stderr);
 	ctx->opts = opt;
 
 	/* check and call initialiser if any */
-	if (pr.init_main_f != NULL) {
-		if ((res = pr.init_main_f(ctx, argc, argv))) {
+	if (prer.init_main_f != NULL) {
+		if ((res = prer.init_main_f(ctx, argc, argv))) {
 			if (res < 0) {
 				res = 1;
 			} else {
@@ -375,8 +375,8 @@ printer specific options given but cannot find printer\n", stderr);
 			}
 			goto clo_out;
 		}
-	} else if (pr.initf != NULL) {
-		pr.initf(ctx);
+	} else if (prer.initf != NULL) {
+		prer.initf(ctx);
 	}
 
 	if (argi->inputs_num == 0 && !isatty(STDIN_FILENO)) {
@@ -401,26 +401,26 @@ printer specific options given but cannot find printer\n", stderr);
 				/* last page then? */
 				nrd -= slsz;
 			}
-			prpg(ctx, pg, nrd, pr.prf);
+			prpg(ctx, pg, nrd, prer.prf);
 		}
 
 	} else {
 		for (unsigned int j = 0; j < argi->inputs_num; j++) {
-			pr1(ctx, argi->inputs[j], pr.prf);
+			pr1(ctx, argi->inputs[j], prer.prf);
 		}
 	}
 
 	/* check and call finaliser if any */
 fina:
-	if (pr.finif != NULL) {
-		pr.finif(ctx);
+	if (prer.finif != NULL) {
+		prer.finif(ctx);
 	}
 clo_out:
 	/* close the output file */
 	close(ctx->outfd);
 
 out:
-	unfind_printer(pr);
+	unfind_printer(prer);
 	ute_module_fini();
 	print_parser_free(argi);
 	return res;

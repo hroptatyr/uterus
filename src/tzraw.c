@@ -308,10 +308,10 @@ __tai_offs(zif_t z, int32_t t)
 	const int32_t tai_offs_epoch = 10;
 	size_t charcnt = be32toh(z->hdr->tzh_charcnt);
 	size_t leapcnt = be32toh(z->hdr->tzh_leapcnt);
-	struct {
+	const struct {
 		uint32_t t;
 		int32_t corr;
-	} *leaps = (void*)(z->zn + charcnt);
+	} *leaps = (const void*)(z->zn + charcnt);
 	size_t idx;
 
 	if (UNLIKELY((idx = leapcnt) == 0U || t < 0)) {

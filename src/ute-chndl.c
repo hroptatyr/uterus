@@ -104,13 +104,13 @@ bkts_cleanse(bkts_t b)
 static bool
 xcand_empty_p(xcand_t c)
 {
-	return c->bcnt == 0 && c->acnt == 0;
+	return c->bcnt == 0U && c->acnt == 0U;
 }
 
 static bool
 xcand_trades_p(xcand_t c)
 {
-	return c->tcnt != 0;
+	return c->tcnt != 0U;
 }
 
 static void
@@ -119,12 +119,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 	switch (sl1t_ttf(t)) {
 	case SL1T_TTF_BID:
 		c->bc->c = t->bid;
-		if (c->bcnt == 0) {
+		if (c->bcnt == 0U) {
 			c->bc->o = t->bid;
 			c->bc->h = t->bid;
 			c->bc->l = t->bid;
-		}
-		if (t->bid > c->bc->h) {
+		} else if (t->bid > c->bc->h) {
 			c->bc->h = t->bid;
 		} else if (t->bid < c->bc->l) {
 			c->bc->l = t->bid;
@@ -133,12 +132,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		break;
 	case SL1T_TTF_ASK:
 		c->ac->c = t->ask;
-		if (c->acnt == 0) {
+		if (c->acnt == 0U) {
 			c->ac->o = t->ask;
 			c->ac->h = t->ask;
 			c->ac->l = t->ask;
-		}
-		if (t->ask > c->ac->h) {
+		} else if (t->ask > c->ac->h) {
 			c->ac->h = t->ask;
 		} else if (t->ask < c->ac->l) {
 			c->ac->l = t->ask;
@@ -147,26 +145,24 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		break;
 	case SL1T_TTF_TRA:
 		c->tc->c = t->tra;
-		c->tcnt++;
-		if (c->tcnt == 0) {
+		if (c->tcnt == 0U) {
 			c->tc->o = t->tra;
 			c->tc->h = t->tra;
 			c->tc->l = t->tra;
-		}
-		if (t->tra > c->tc->h) {
+		} else if (t->tra > c->tc->h) {
 			c->tc->h = t->tra;
 		} else if (t->tra < c->tc->l) {
 			c->tc->l = t->tra;
 		}
+		c->tcnt++;
 		break;
 	case SL1T_TTF_BIDASK:
 		c->bc->c = t->bp;
-		if (c->bcnt == 0) {
+		if (c->bcnt == 0U) {
 			c->bc->o = t->bp;
 			c->bc->h = t->bp;
 			c->bc->l = t->bp;
-		}
-		if (t->bp > c->bc->h) {
+		} else if (t->bp > c->bc->h) {
 			c->bc->h = t->bp;
 		} else if (t->bp < c->bc->l) {
 			c->bc->l = t->bp;
@@ -174,12 +170,11 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		c->bcnt++;
 
 		c->ac->c = t->ap;
-		if (c->acnt == 0) {
+		if (c->acnt == 0U) {
 			c->ac->o = t->ap;
 			c->ac->h = t->ap;
 			c->ac->l = t->ap;
-		}
-		if (t->ap > c->ac->h) {
+		} else if (t->ap > c->ac->h) {
 			c->ac->h = t->ap;
 		} else if (t->ap < c->ac->l) {
 			c->ac->l = t->ap;
@@ -195,14 +190,29 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 static void
 xcand_push_snp(xcand_t c, const_ssnp_t snp)
 {
-	c->bc->h = snp->bp;
-	c->bc->l = snp->bp;
-	c->bc->o = snp->bp;
 	c->bc->c = snp->bp;
-	c->ac->h = snp->ap;
-	c->ac->l = snp->ap;
-	c->ac->o = snp->ap;
+	if (c->bcnt == 0U) {
+		c->bc->h = snp->bp;
+		c->bc->l = snp->bp;
+		c->bc->o = snp->bp;
+	} else if (snp->bp > c->bc->h) {
+		c->bc->h = snp->bp;
+	} else if (snp->bp < c->bc->l) {
+		c->bc->l = snp->bp;
+	}
+	c->bcnt++;
+
 	c->ac->c = snp->ap;
+	if (c->acnt == 0U) {
+		c->ac->h = snp->ap;
+		c->ac->l = snp->ap;
+		c->ac->o = snp->ap;
+	} else if (snp->ap > c->ac->h) {
+		c->ac->h = snp->ap;
+	} else if (snp->ap < c->ac->l) {
+		c->ac->l = snp->ap;
+	}
+	c->acnt++;
 	return;
 }
 
@@ -211,13 +221,37 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 {
 	switch (scdl_ttf(cdl)) {
 	case SL1T_TTF_BID:
-		*c->bc = *cdl;
+		c->bc->c = cdl->c;
+		if (c->bcnt == 0U) {
+			*c->bc = *cdl;
+		} else if (cdl->h > c->bc->h) {
+			c->bc->h = cdl->h;
+		} else if (cdl->l < c->bc->l) {
+			c->bc->l = cdl->l;
+		}
+		c->bcnt++;
 		break;
 	case SL1T_TTF_ASK:
-		*c->ac = *cdl;
+		c->ac->c = cdl->c;
+		if (c->acnt == 0U) {
+			*c->ac = *cdl;
+		} else if (cdl->h > c->ac->h) {
+			c->ac->h = cdl->h;
+		} else if (cdl->l < c->ac->l) {
+			c->ac->l = cdl->l;
+		}
+		c->acnt++;
 		break;
 	case SL1T_TTF_TRA:
-		*c->tc = *cdl;
+		c->tc->c = cdl->c;
+		if (c->tcnt == 0U) {
+			*c->tc = *cdl;
+		} else if (cdl->h > c->tc->h) {
+			c->tc->h = cdl->h;
+		} else if (cdl->l < c->tc->l) {
+			c->tc->l = cdl->l;
+		}
+		c->tcnt++;
 		break;
 	default:
 		break;
@@ -344,10 +378,18 @@ write_cand(chndl_ctx_t ctx, uint16_t cidx)
 	scom_thdr_set_ttf(c[1]->hdr, SCDL_FLAVOUR | SL1T_TTF_ASK);
 
 	/* set cnt and sta_ts */
-	c[0]->sta_ts = ts - ctx->opts->interval;
-	c[0]->cnt = ctx->bkt->cand[cidx].bcnt;
-	c[1]->sta_ts = ts - ctx->opts->interval;
-	c[1]->cnt = ctx->bkt->cand[cidx].acnt;
+	if (c[0]->sta_ts == 0U) {
+		c[0]->sta_ts = ts - ctx->opts->interval;
+	}
+	if (c[0]->cnt == 0U) {
+		c[0]->cnt = ctx->bkt->cand[cidx].bcnt;
+	}
+	if (c[1]->sta_ts == 0U) {
+		c[1]->sta_ts = ts - ctx->opts->interval;
+	}
+	if (c[1]->cnt == 0U) {
+		c[1]->cnt = ctx->bkt->cand[cidx].acnt;
+	}
 
 	/* kick off */
 	ute_add_tick(ctx->wrr, AS_SCOM(c[0]));
@@ -357,14 +399,20 @@ check_trades:
 	/* tra candle */
 	if (xcand_trades_p(ctx->bkt->cand + cidx)) {
 		c[2] = ctx->bkt->cand[cidx].tc;
+		nidx = copy_sym(ctx, cidx);
+		ts = get_buckets_time(ctx->bkt);
 
 		scom_thdr_set_tblidx(c[2]->hdr, nidx);
 		scom_thdr_set_sec(c[2]->hdr, ts);
 		scom_thdr_set_msec(c[2]->hdr, 0);
 		scom_thdr_set_ttf(c[2]->hdr, SCDL_FLAVOUR | SL1T_TTF_TRA);
 
-		c[2]->sta_ts = ts - ctx->opts->interval;
-		c[2]->cnt = ctx->bkt->cand[cidx].tcnt;
+		if (c[2]->sta_ts == 0U) {
+			c[2]->sta_ts = ts - ctx->opts->interval;
+		}
+		if (c[2]->cnt == 0U) {
+			c[2]->cnt = ctx->bkt->cand[cidx].tcnt;
+		}
 
 		ute_add_tick(ctx->wrr, AS_SCOM(c[2]));
 	}

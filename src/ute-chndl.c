@@ -190,14 +190,29 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 static void
 xcand_push_snp(xcand_t c, const_ssnp_t snp)
 {
-	c->bc->h = snp->bp;
-	c->bc->l = snp->bp;
-	c->bc->o = snp->bp;
 	c->bc->c = snp->bp;
-	c->ac->h = snp->ap;
-	c->ac->l = snp->ap;
-	c->ac->o = snp->ap;
+	if (c->bcnt == 0U) {
+		c->bc->h = snp->bp;
+		c->bc->l = snp->bp;
+		c->bc->o = snp->bp;
+	} else if (snp->bp > c->bc->h) {
+		c->bc->h = snp->bp;
+	} else if (snp->bp < c->bc->l) {
+		c->bc->l = snp->bp;
+	}
+	c->bcnt++;
+
 	c->ac->c = snp->ap;
+	if (c->acnt == 0U) {
+		c->ac->h = snp->ap;
+		c->ac->l = snp->ap;
+		c->ac->o = snp->ap;
+	} else if (snp->ap > c->ac->h) {
+		c->ac->h = snp->ap;
+	} else if (snp->ap < c->ac->l) {
+		c->ac->l = snp->ap;
+	}
+	c->acnt++;
 	return;
 }
 
@@ -206,13 +221,37 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 {
 	switch (scdl_ttf(cdl)) {
 	case SL1T_TTF_BID:
-		*c->bc = *cdl;
+		c->bc->c = cdl->c;
+		if (c->bcnt == 0U) {
+			*c->bc = *cdl;
+		} else if (cdl->h > c->bc->h) {
+			c->bc->h = cdl->h;
+		} else if (cdl->l < c->bc->l) {
+			c->bc->l = cdl->l;
+		}
+		c->bcnt++;
 		break;
 	case SL1T_TTF_ASK:
-		*c->ac = *cdl;
+		c->ac->c = cdl->c;
+		if (c->acnt == 0U) {
+			*c->ac = *cdl;
+		} else if (cdl->h > c->ac->h) {
+			c->ac->h = cdl->h;
+		} else if (cdl->l < c->ac->l) {
+			c->ac->l = cdl->l;
+		}
+		c->acnt++;
 		break;
 	case SL1T_TTF_TRA:
-		*c->tc = *cdl;
+		c->tc->c = cdl->c;
+		if (c->tcnt == 0U) {
+			*c->tc = *cdl;
+		} else if (cdl->h > c->tc->h) {
+			c->tc->h = cdl->h;
+		} else if (cdl->l < c->tc->l) {
+			c->tc->l = cdl->l;
+		}
+		c->tcnt++;
 		break;
 	default:
 		break;

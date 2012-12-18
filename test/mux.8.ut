@@ -6,6 +6,9 @@ OUTFILE="testload.ute"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXXXX")
 cat <<EOF > "${CMDFILE}"
 cat '${INFILE}' | "\${TOOL}" mux -f ibhist -o '${OUTFILE}' -
+if test "${endian}" = "big"; then
+	"\${TOOL}" fsck --little-endian '${OUTFILE}'
+fi
 EOF
 
 ## STDIN

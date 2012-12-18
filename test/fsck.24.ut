@@ -1,7 +1,7 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/fsck.17.ref.ute"
+INFILE="${srcdir}/fsck.17.ref.leute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing decompression/compression"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
@@ -13,6 +13,6 @@ cp -a '${INFILE}' '${OUTFILE}'
 EOF
 
 ## outfile reference, hopefully this is portable
-REFFILE="fsck.17.ref.ute"
+REFFILE="fsck.17.ref.leute"
 
 ## fsck.24.ut ends here

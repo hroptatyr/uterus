@@ -1,7 +1,7 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/fsck.17.ref.ute"
+INFILE="${srcdir}/fsck.17.ref.leute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing decompression/compression"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
@@ -12,6 +12,6 @@ cat <<EOF > "${CMDFILE}"
 EOF
 
 ## outfile reference, hopefully this is portable
-REFFILE="fsck.17.ref.ute"
+REFFILE="fsck.17.ref.leute"
 
 ## fsck.23.ut ends here

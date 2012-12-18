@@ -11,6 +11,6 @@ cat <<EOF > "${CMDFILE}"
 EOF
 
 ## outfile reference, hopefully this is portable
-REFFILE="fsck.17.ref.ute"
+REFFILE="fsck.17.ref.leute"
 
 ## fsck.17.ut ends here

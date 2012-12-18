@@ -91,21 +91,21 @@ static struct printer_s
 find_printer(const char opt[static 1])
 {
 	struct printer_s res = {NULL, NULL, NULL, NULL};
-	ute_dso_sym_t pr_sym;
+	ute_dso_sym_t sym;
 
 	if ((pr_dso = open_aux(opt)) == NULL) {
 		return res;
 	}
-	if ((pr_sym = find_sym(pr_dso, "pr")) != NULL) {
+	if ((sym = find_sym(pr_dso, "pr")) != NULL) {
 		res.prf = (ssize_t(*)())pr_sym;
 	}
-	if ((pr_sym = find_sym(pr_dso, "init")) != NULL) {
+	if ((sym = find_sym(pr_dso, "init")) != NULL) {
 		res.initf = (void(*)())pr_sym;
 	}
-	if ((pr_sym = find_sym(pr_dso, "fini")) != NULL) {
+	if ((sym = find_sym(pr_dso, "fini")) != NULL) {
 		res.finif = (void(*)())pr_sym;
 	}
-	if ((pr_sym = find_sym(pr_dso, "init_main")) != NULL) {
+	if ((sym = find_sym(pr_dso, "init_main")) != NULL) {
 		res.init_main_f = (int(*)())pr_sym;
 	}
 	return res;

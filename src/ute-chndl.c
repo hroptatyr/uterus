@@ -119,20 +119,71 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 	switch (sl1t_ttf(t)) {
 	case SL1T_TTF_BID:
 		c->bc->c = t->bid;
+		if (c->bcnt == 0) {
+			c->bc->o = t->bid;
+			c->bc->h = t->bid;
+			c->bc->l = t->bid;
+		}
+		if (t->bid > c->bc->h) {
+			c->bc->h = t->bid;
+		} else if (t->bid < c->bc->l) {
+			c->bc->l = t->bid;
+		}
 		c->bcnt++;
 		break;
 	case SL1T_TTF_ASK:
 		c->ac->c = t->ask;
+		if (c->acnt == 0) {
+			c->ac->o = t->ask;
+			c->ac->h = t->ask;
+			c->ac->l = t->ask;
+		}
+		if (t->ask > c->ac->h) {
+			c->ac->h = t->ask;
+		} else if (t->ask < c->ac->l) {
+			c->ac->l = t->ask;
+		}
 		c->acnt++;
 		break;
 	case SL1T_TTF_TRA:
 		c->tc->c = t->tra;
 		c->tcnt++;
+		if (c->tcnt == 0) {
+			c->tc->o = t->tra;
+			c->tc->h = t->tra;
+			c->tc->l = t->tra;
+		}
+		if (t->tra > c->tc->h) {
+			c->tc->h = t->tra;
+		} else if (t->tra < c->tc->l) {
+			c->tc->l = t->tra;
+		}
 		break;
 	case SL1T_TTF_BIDASK:
 		c->bc->c = t->bp;
+		if (c->bcnt == 0) {
+			c->bc->o = t->bp;
+			c->bc->h = t->bp;
+			c->bc->l = t->bp;
+		}
+		if (t->bp > c->bc->h) {
+			c->bc->h = t->bp;
+		} else if (t->bp < c->bc->l) {
+			c->bc->l = t->bp;
+		}
 		c->bcnt++;
+
 		c->ac->c = t->ap;
+		if (c->acnt == 0) {
+			c->ac->o = t->ap;
+			c->ac->h = t->ap;
+			c->ac->l = t->ap;
+		}
+		if (t->ap > c->ac->h) {
+			c->ac->h = t->ap;
+		} else if (t->ap < c->ac->l) {
+			c->ac->l = t->ap;
+		}
 		c->acnt++;
 		break;
 	default:
@@ -144,7 +195,13 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 static void
 xcand_push_snp(xcand_t c, const_ssnp_t snp)
 {
+	c->bc->h = snp->bp;
+	c->bc->l = snp->bp;
+	c->bc->o = snp->bp;
 	c->bc->c = snp->bp;
+	c->ac->h = snp->ap;
+	c->ac->l = snp->ap;
+	c->ac->o = snp->ap;
 	c->ac->c = snp->ap;
 	return;
 }

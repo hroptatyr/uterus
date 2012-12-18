@@ -1,20 +1,40 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/fsck.17.ref.ute"
+INFILE="${srcdir}/fsck.17.ref.leute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing in situ decompression of compressed data"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 
+endian()
+{
+	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
+	if test "${ind}" = "0"; then
+		echo "big"
+	elif test "${ind}" = "1"; then
+		echo "little"
+	else
+		echo "unknown"
+	fi
+}
+
+if test "$(endian)" = "big"; then
+	INFILE="${srcdir}/fsck.17.ref.beute"
+	REFFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+else
+	INFILE="${srcdir}/fsck.17.ref.leute"
+	REFFILE="${srcdir}/mux.7.ref.ute"
+fi
+
 cat <<EOF > "${CMDFILE}"
+if test "$(endian)" = "big"; then
+	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
+fi
 cp -d '${INFILE}' '${OUTFILE}'
 "\${TOOL}" fsck --decompress '${OUTFILE}'
 ## truncate and overwrite ftr fields
 dd if='/dev/zero' of='${OUTFILE}' ibs=4 obs=4 seek=6 count=2 conv=notrunc
 truncate -s -16 '${OUTFILE}'
 EOF
-
-## outfile reference, hopefully this is portable
-REFFILE="mux.7.ref.ute"
 
 ## fsck.22.ut ends here

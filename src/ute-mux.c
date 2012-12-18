@@ -164,7 +164,7 @@ find_muxer(const char *opt)
 }
 
 static void
-unfind_muxer(UNUSED(struct muxer_s mux))
+unfind_muxer(UNUSED(struct muxer_s mxer))
 {
 	if (mux_dso) {
 		close_aux(mux_dso);

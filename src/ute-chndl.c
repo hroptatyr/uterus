@@ -119,6 +119,12 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 	case SL1T_TTF_TRA:
 		/* trade candle? */
 		break;
+	case SL1T_TTF_BIDASK:
+		c->bc->c = t->bp;
+		c->bcnt++;
+		c->ac->c = t->ap;
+		c->acnt++;
+		break;
 	default:
 		break;
 	}
@@ -159,6 +165,7 @@ xcand_push(xcand_t c, scom_t t)
 	case SL1T_TTF_BID:
 	case SL1T_TTF_ASK:
 	case SL1T_TTF_TRA:
+	case SL1T_TTF_BIDASK:
 		xcand_push_l1t(c, (const void*)t);
 		break;
 	case SSNP_FLAVOUR:

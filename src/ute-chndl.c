@@ -80,8 +80,11 @@ struct xcand_s {
 	struct scdl_s bc[1];
 	/* ask candle */
 	struct scdl_s ac[1];
+	/* tra candle */
+	struct scdl_s tc[1];
 	uint32_t bcnt;
 	uint32_t acnt;
+	uint32_t tcnt;
 };
 
 struct bkts_s {
@@ -104,6 +107,12 @@ xcand_empty_p(xcand_t c)
 	return c->bcnt == 0 && c->acnt == 0;
 }
 
+static bool
+xcand_trades_p(xcand_t c)
+{
+	return c->tcnt != 0;
+}
+
 static void
 xcand_push_l1t(xcand_t c, const_sl1t_t t)
 {
@@ -117,7 +126,8 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		c->acnt++;
 		break;
 	case SL1T_TTF_TRA:
-		/* trade candle? */
+		c->tc->c = t->tra;
+		c->tcnt++;
 		break;
 	case SL1T_TTF_BIDASK:
 		c->bc->c = t->bp;
@@ -150,7 +160,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 		*c->ac = *cdl;
 		break;
 	case SL1T_TTF_TRA:
-		/* trade candles? really? */
+		*c->tc = *cdl;
 		break;
 	default:
 		break;
@@ -252,12 +262,12 @@ copy_sym(chndl_ctx_t ctx, uint16_t cidx)
 static void
 write_cand(chndl_ctx_t ctx, uint16_t cidx)
 {
-	scdl_t c[2];
+	scdl_t c[3];
 	uint16_t nidx;
 	time_t ts;
 
 	if (xcand_empty_p(ctx->bkt->cand + cidx)) {
-		return;
+		goto check_trades;
 	}
 
 	c[0] = ctx->bkt->cand[cidx].bc;
@@ -285,6 +295,22 @@ write_cand(chndl_ctx_t ctx, uint16_t cidx)
 	/* kick off */
 	ute_add_tick(ctx->wrr, AS_SCOM(c[0]));
 	ute_add_tick(ctx->wrr, AS_SCOM(c[1]));
+
+check_trades:
+	/* tra candle */
+	if (xcand_trades_p(ctx->bkt->cand + cidx)) {
+		c[2] = ctx->bkt->cand[cidx].tc;
+
+		scom_thdr_set_tblidx(c[2]->hdr, nidx);
+		scom_thdr_set_sec(c[2]->hdr, ts);
+		scom_thdr_set_msec(c[2]->hdr, 0);
+		scom_thdr_set_ttf(c[2]->hdr, SCDL_FLAVOUR | SL1T_TTF_TRA);
+
+		c[2]->sta_ts = ts - ctx->opts->interval;
+		c[2]->cnt = ctx->bkt->cand[cidx].tcnt;
+
+		ute_add_tick(ctx->wrr, AS_SCOM(c[2]));
+	}
 	return;
 }
 

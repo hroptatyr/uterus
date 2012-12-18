@@ -13,6 +13,6 @@ if test "${endian}" = "big"; then
 fi
 EOF
 
-REFFILE="mux.7.ref.ute"
+OUTFILE_SHA1="1b9ab07823cfbf289060c0779f67fd8ea51d959d"
 
 ## chndl.1.ut ends here

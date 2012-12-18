@@ -1,16 +1,24 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/fsck.17.ref.ute"
+INFILE="${srcdir}/fsck.17.ref.leute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing ex situ decompression of compressed file"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 
+if test "${endian}" = "big"; then
+	INFILE="${srcdir}/fsck.17.ref.beute"
+	REFFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+elif test "${endian}" = "little"; then
+	INFILE="${srcdir}/fsck.17.ref.leute"
+	REFFILE="${srcdir}/mux.7.ref.ute"
+fi
+
 cat <<EOF > "${CMDFILE}"
+if test "${endian}" = "big"; then
+	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
+fi
 "\${TOOL}" fsck --decompress -o '${OUTFILE}' '${INFILE}'
 EOF
-
-## outfile reference, hopefully this is portable
-REFFILE="mux.7.ref.ute"
 
 ## fsck.21.ut ends here

@@ -1,16 +1,20 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/fsck.17.ref.ute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing ex situ compression of compressed file"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 
+if test "${endian}" = "big"; then
+	INFILE="${srcdir}/fsck.17.ref.beute"
+	REFFILE="${srcdir}/fsck.17.ref.beute"
+elif test "${endian}" = "little"; then
+	INFILE="${srcdir}/fsck.17.ref.leute"
+	REFFILE="${srcdir}/fsck.17.ref.leute"
+fi
+
 cat <<EOF > "${CMDFILE}"
 "\${TOOL}" fsck --compress -o '${OUTFILE}' '${INFILE}'
 EOF
-
-## outfile reference, hopefully this is portable
-REFFILE="fsck.17.ref.ute"
 
 ## fsck.19.ut ends here

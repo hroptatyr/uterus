@@ -1,20 +1,21 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/mux.7.ref.ute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
-COMMENT="testing in situ compression"
+COMMENT="testing ex situ conversions"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 
 if test "${endian}" = "big"; then
-	REFFILE="${srcdir}/fsck.17.ref.beute"
+	INFILE="${srcdir}/mux.7.ref.beute"
+	REFFILE="${srcdir}/mux.7.ref.beute"
 elif test "${endian}" = "little"; then
-	REFFILE="${srcdir}/fsck.17.ref.leute"
+	INFILE="${srcdir}/mux.7.ref.ute"
+	REFFILE="${srcdir}/mux.7.ref.ute"
 fi
 
 cat <<EOF > "${CMDFILE}"
 cp -d '${INFILE}' '${OUTFILE}'
-"\${TOOL}" fsck --compress '${OUTFILE}'
+"\${TOOL}" fsck '${OUTFILE}'
 EOF
 
-## fsck.18.ut ends here
+## fsck.28.ut ends here

@@ -82,6 +82,18 @@ else
 	srcdir=$(xrealpath "${srcdir}")
 fi
 
+## define endian variable so scripts can use it
+{
+	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
+	if test "${ind}" = "0"; then
+		endian="big"
+	elif test "${ind}" = "1"; then
+		endian="little"
+	else
+		endian="unknown"
+	fi
+}
+
 ## source the check
 . "${testfile}" || fail=1
 

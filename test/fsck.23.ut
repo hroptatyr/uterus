@@ -1,17 +1,33 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/fsck.17.ref.leute"
 OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing decompression/compression"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+
+endian()
+{
+	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
+	if test "${ind}" = "0"; then
+		echo "big"
+	elif test "${ind}" = "1"; then
+		echo "little"
+	else
+		echo "unknown"
+	fi
+}
+
+if test "$(endian)" = "big"; then
+	INFILE="${srcdir}/fsck.17.ref.beute"
+	REFFILE="${srcdir}/fsck.17.ref.beute"
+else
+	INFILE="${srcdir}/fsck.17.ref.leute"
+	REFFILE="${srcdir}/fsck.17.ref.leute"
+fi
 
 cat <<EOF > "${CMDFILE}"
 "\${TOOL}" fsck --decompress -o '${OUTFILE}' '${INFILE}'
 "\${TOOL}" fsck --compress '${OUTFILE}'
 EOF
-
-## outfile reference, hopefully this is portable
-REFFILE="fsck.17.ref.leute"
 
 ## fsck.23.ut ends here

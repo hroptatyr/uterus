@@ -119,6 +119,8 @@ ut_tests += fsck.24.ut
 endif  HAVE_LZMA
 ut_tests += fsck.25.ut
 ut_tests += fsck.26.ut
+ut_tests += fsck.27.ut
+ut_tests += fsck.28.ut
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 EXTRA_DIST += fsck.17.ref.leute

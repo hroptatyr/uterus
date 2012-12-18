@@ -1316,7 +1316,7 @@ munmap_page(struct mmap_pg_s p)
 	if (UNLIKELY(!mmap_page_p(p))) {
 		return;
 	}
-	UDEBUG("munmapping (%p[%zd],%zu)\n", p.p, p.o, p.z);
+	UDEBUG("munmapping (%p[%ld],%zu)\n", p.p, p.o, p.z);
 	munmap_any(p.p, p.o, p.z);
 	return;
 }
@@ -1357,7 +1357,7 @@ lzma_comp(utectx_t ctx)
 	 * target file offset is to be changed */
 	fo = UTEHDR_MIN_SIZE;
 
-	UDEBUG("compressing %zu pages, starting at %jd\n", npg, (intmax_t)fo);
+	UDEBUG("compressing %zu pages, starting at %ld\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
 		/* i-th page */
 		static struct mmap_pg_s pi = mmap_page_initialiser();
@@ -1385,7 +1385,7 @@ lzma_comp(utectx_t ctx)
 				ftr[i + 1].foff, ftr[i + 1].flen);
 		}
 
-		UDEBUG("comp'ing pg %zu  (%p[%zu],%zu)\n", i, pi.p, pi.o, pi.z);
+		UDEBUG("comp'ing pg %zu  (%p[%ld],%zu)\n", i, pi.p, pi.o, pi.z);
 		if (LIKELY((cz = ute_encode(&cp, pi.p, pi.z)) > 0)) {
 			uint32_t *p;
 			size_t fz = ROUND(cz + sizeof(*p), tsz);
@@ -1394,7 +1394,7 @@ lzma_comp(utectx_t ctx)
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
-			UDEBUG("mmapping [%zu,%zu]\n", fo, fo + fz);
+			UDEBUG("mmapping [%ld,%ld]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fz);
 			if (UNLIKELY(p == NULL)) {
@@ -1461,7 +1461,7 @@ lzma_decomp(utectx_t ctx)
 	 * target file offset is to be changed */
 	fo = UTEHDR_MAX_SIZE;
 
-	UDEBUG("decompressing %zu pages, starting at %jd\n", npg, fo);
+	UDEBUG("decompressing %zu pages, starting at %ld\n", npg, fo);
 	for (size_t i = 0; i < npg; i++) {
 		/* get the offset in the source file */
 		struct sk_offs_s so = seek_get_offs(ctx, i);
@@ -1480,7 +1480,7 @@ lzma_decomp(utectx_t ctx)
 		 * mmap from FO to FO + FZ
 		 * if FSZ < FO + FZ, extend the file */
 		tz = page_size(tgt, i);
-		UDEBUG("mmapping [%zu,%zu]\n", fo, fo + tz);
+		UDEBUG("mmapping [%ld,%ld]\n", fo, fo + tz);
 		if (UNLIKELY(!ute_trunc(tgt, fo + tz))) {
 			UDEBUG("can't truncate, skipping page %zu\n", i);
 			goto next;
@@ -1491,7 +1491,7 @@ lzma_decomp(utectx_t ctx)
 			goto next;
 		}
 
-		UDEBUG("decomp'ing pg %zu  (%p[%jd],%zu), really %u\n",
+		UDEBUG("decomp'ing pg %zu  (%p[%zu],%zu), really %u\n",
 		       i, pi, so.foff, so.flen, pi[0]);
 		if (LIKELY((dz = ute_decode_raw(ti, tz, pi + 1, pi[0])) > 0)) {
 			UDEBUG("inflate %zu->%zd (predicted %zu)\n",
@@ -1512,7 +1512,7 @@ lzma_decomp(utectx_t ctx)
 
 	next:
 		/* definitely munmap pi */
-		UDEBUG("munmapping %p[%jd],%zu\n", pi, so.foff, so.flen);
+		UDEBUG("munmapping %p[%zu],%zu\n", pi, so.foff, so.flen);
 		munmap_any((char*)pi, so.foff, so.flen);
 	}
 

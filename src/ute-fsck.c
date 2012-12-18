@@ -134,14 +134,15 @@ error(int eno, const char *fmt, ...)
 #endif	/* WORDS_BIGENDIAN */
 
 static void
-conv_1_swap(scom_thdr_t ti, size_t tbsz)
+conv_1_swap(scom_thdr_t ti, size_t tz)
 {
+/* convert the tick in TI to opposite endianness */
 	uint32_t *sndwch = (uint32_t*)ti;
 	uint64_t *sndw64 = (uint64_t*)ti;
 
 	/* header is always 64b */
 	sndw64[0] = swap64(sndw64[0]);
-	switch (tbsz) {
+	switch (tz) {
 	case 4:
 		sndwch[8] = swap32(sndwch[8]);
 		sndwch[9] = swap32(sndwch[9]);
@@ -284,39 +285,44 @@ fsckp(fsck_ctx_t ctx, uteseek_t sk, utectx_t hdl, int old_iss, scidx_t last)
 }
 
 static void
-conv_sk_swap(fsck_ctx_t ctx, uteseek_t sk)
+conv_sk_swap(fsck_ctx_t ctx, uteseek_t sk, bool src_is_native_endian_p)
 {
 /* only inplace (in situ) conversion is supported */
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
 
 	if (ctx->dryp) {
 		return;
 	}
-	for (size_t i = sk->si * ssz, tsz; i < sk_sz; i += tsz) {
-		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
-		size_t xsz;
+	for (struct sndwch_s *sp = sk->sp + sk->si,
+		     *ep = sk->sp + seek_tick_size(sk);
+	     sp < ep;) {
+		scom_thdr_t ti = AS_SCOM_THDR(sp);
+		size_t tz;
 
-		/* determine the length for the increment */
-		tsz = scom_byte_size(ti);
-		xsz = scom_tick_size(ti);
+		if (src_is_native_endian_p) {
+			tz = scom_tick_size(ti);
+		} else {
+			uint64_t x = swap64(ti->u);
+			tz = scom_tick_size(AS_SCOM(&x));
+		}
 
-		conv_1_swap(ti, xsz);
+		/* just do the conversion */
+		conv_1_swap(ti, tz);
+		sp += tz;
 	}
 	return;
 }
 
 static void
-conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk)
+conv_sk_betole(fsck_ctx_t ctx, uteseek_t sk, bool src_is_native_endian_p)
 {
-	conv_sk_swap(ctx, sk);
+	conv_sk_swap(ctx, sk, src_is_native_endian_p);
 	return;
 }
 
 static void
-conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk)
+conv_sk_letobe(fsck_ctx_t ctx, uteseek_t sk, bool src_is_native_endian_p)
 {
-	conv_sk_swap(ctx, sk);
+	conv_sk_swap(ctx, sk, src_is_native_endian_p);
 	return;
 }
 
@@ -428,7 +434,11 @@ conv_le(fsck_ctx_t ctx, utectx_t hdl)
 			/* create a new seek */
 			seek_page(sk, hdl, p);
 			/* convert that one page */
-			conv_sk_betole(ctx, sk);
+#if defined WORDS_BIGENDIAN
+			conv_sk_betole(ctx, sk, true);
+#else  /* !WORDS_BIGENDIAN */
+			conv_sk_betole(ctx, sk, false);
+#endif	/* WORDS_BIGENDIAN */
 			/* flush the old seek */
 			flush_seek(sk);
 		}
@@ -454,7 +464,11 @@ conv_be(fsck_ctx_t ctx, utectx_t hdl)
 			/* create a new seek */
 			seek_page(sk, hdl, p);
 			/* convert that one page */
-			conv_sk_letobe(ctx, sk);
+#if defined WORDS_BIGENDIAN
+			conv_sk_letobe(ctx, sk, false);
+#else  /* !WORDS_BIGENDIAN */
+			conv_sk_letobe(ctx, sk, true);
+#endif	/* WORDS_BIGENDIAN */
 			/* flush the old seek */
 			flush_seek(sk);
 		}

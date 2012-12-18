@@ -1,0 +1,21 @@
+## -*- shell-script -*-
+
+TOOL=ute
+OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+COMMENT="testing ex situ conversions"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+
+if test "${endian}" = "big"; then
+	INFILE="${srcdir}/mux.4.ref.beute"
+	REFFILE="${srcdir}/mux.4.ref.beute"
+elif test "${endian}" = "little"; then
+	INFILE="${srcdir}/mux.4.ref.ute"
+	REFFILE="${srcdir}/mux.4.ref.ute"
+fi
+
+cat <<EOF > "${CMDFILE}"
+cp -d '${INFILE}' '${OUTFILE}'
+"\${TOOL}" fsck '${OUTFILE}'
+EOF
+
+## fsck.26.ut ends here

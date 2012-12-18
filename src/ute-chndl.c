@@ -145,7 +145,6 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		break;
 	case SL1T_TTF_TRA:
 		c->tc->c = t->tra;
-		c->tcnt++;
 		if (c->tcnt == 0U) {
 			c->tc->o = t->tra;
 			c->tc->h = t->tra;
@@ -155,6 +154,7 @@ xcand_push_l1t(xcand_t c, const_sl1t_t t)
 		} else if (t->tra < c->tc->l) {
 			c->tc->l = t->tra;
 		}
+		c->tcnt++;
 		break;
 	case SL1T_TTF_BIDASK:
 		c->bc->c = t->bp;

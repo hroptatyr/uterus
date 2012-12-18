@@ -6,28 +6,16 @@ OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 COMMENT="testing in situ decompression of compressed data"
 CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
 
-endian()
-{
-	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
-	if test "${ind}" = "0"; then
-		echo "big"
-	elif test "${ind}" = "1"; then
-		echo "little"
-	else
-		echo "unknown"
-	fi
-}
-
-if test "$(endian)" = "big"; then
+if test "${endian}" = "big"; then
 	INFILE="${srcdir}/fsck.17.ref.beute"
 	REFFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
-else
+elif test "${endian}" = "little"; then
 	INFILE="${srcdir}/fsck.17.ref.leute"
 	REFFILE="${srcdir}/mux.7.ref.ute"
 fi
 
 cat <<EOF > "${CMDFILE}"
-if test "$(endian)" = "big"; then
+if test "${endian}" = "big"; then
 	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
 fi
 cp -d '${INFILE}' '${OUTFILE}'

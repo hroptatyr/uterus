@@ -93,6 +93,7 @@ EXTRA_DIST += shnot.2.ref.ute
 
 ut_tests += chndl.1.ut
 ut_tests += chndl.2.ut
+EXTRA_DIST += chndl.2.ref.ute
 
 ut_tests += fsck.1.ut
 ut_tests += fsck.2.ut

@@ -391,6 +391,8 @@ check_trades:
 	/* tra candle */
 	if (xcand_trades_p(ctx->bkt->cand + cidx)) {
 		c[2] = ctx->bkt->cand[cidx].tc;
+		nidx = copy_sym(ctx, cidx);
+		ts = get_buckets_time(ctx->bkt);
 
 		scom_thdr_set_tblidx(c[2]->hdr, nidx);
 		scom_thdr_set_sec(c[2]->hdr, ts);

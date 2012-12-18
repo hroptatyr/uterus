@@ -145,7 +145,7 @@ static struct muxer_s
 find_muxer(const char *opt)
 {
 	struct muxer_s res = {NULL, NULL};
-	ute_dso_sym_t mux_sym;
+	ute_dso_sym_t sym;
 
 	if (opt == NULL) {
 		/* ah, default muxer is ute himself */
@@ -154,11 +154,11 @@ find_muxer(const char *opt)
 		return (struct muxer_s){NULL, NULL};
 	}
 	/* try and resolve at least the mux symbol */
-	if ((mux_sym = find_sym(mux_dso, "mux")) != NULL) {
-		res.muxf = (void(*)())mux_sym;
+	if ((sym = find_sym(mux_dso, "mux")) != NULL) {
+		res.muxf = (void(*)())sym;
 	}
-	if ((mux_sym = find_sym(mux_dso, "mux_main")) != NULL) {
-		res.mux_main_f = (int(*)())mux_sym;
+	if ((sym = find_sym(mux_dso, "mux_main")) != NULL) {
+		res.mux_main_f = (int(*)())sym;
 	}
 	return res;
 }

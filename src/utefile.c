@@ -1357,7 +1357,7 @@ lzma_comp(utectx_t ctx)
 	 * target file offset is to be changed */
 	fo = UTEHDR_MIN_SIZE;
 
-	UDEBUG("compressing %zu pages, starting at %jd\n", npg, fo);
+	UDEBUG("compressing %zu pages, starting at %jd\n", npg, (intmax_t)fo);
 	for (size_t i = 0; i < npg; i++) {
 		/* i-th page */
 		static struct mmap_pg_s pi = mmap_page_initialiser();

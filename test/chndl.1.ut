@@ -1,0 +1,18 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.7.ref.ute"
+OUTFILE="testload.ute"
+COMMENT="half-hour candles cannot be refined"
+CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+
+cat <<EOF > "${CMDFILE}"
+"\${TOOL}" chndl -i 60 -o '${OUTFILE}' '${INFILE}'
+if test "${endian}" = "big"; then
+	"\${TOOL}" fsck --little-endian '${OUTFILE}'
+fi
+EOF
+
+REFFILE="mux.7.ref.ute"
+
+## chndl.1.ut ends here

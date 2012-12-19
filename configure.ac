@@ -62,6 +62,15 @@ compiler does not fully support them.
 Change either the CFLAGS or the compiler.
 Good day.
 ])
+elif test "${sxe_cv_have_anon_structs_init}" != "yes"; then
+	AC_MSG_WARN([C compiler needs archaeological treatment
+
+uterus' codebase is modern and makes use of modern compiler features
+but your compiler does not fully support them.
+The build won't fail but you will use legacy constructs and hacks
+which have not seen any form of testing.
+Fingers crossed it works innit?
+])
 fi
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])

@@ -222,6 +222,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 	switch (scdl_ttf(cdl)) {
 	case SL1T_TTF_BID:
 		c->bc->c = cdl->c;
+		c->bc->cnt += cdl->cnt;
 		if (c->bcnt == 0U) {
 			*c->bc = *cdl;
 		} else if (cdl->h > c->bc->h) {
@@ -233,6 +234,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 		break;
 	case SL1T_TTF_ASK:
 		c->ac->c = cdl->c;
+		c->ac->cnt += cdl->cnt;
 		if (c->acnt == 0U) {
 			*c->ac = *cdl;
 		} else if (cdl->h > c->ac->h) {
@@ -244,6 +246,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 		break;
 	case SL1T_TTF_TRA:
 		c->tc->c = cdl->c;
+		c->tc->cnt += cdl->cnt;
 		if (c->tcnt == 0U) {
 			*c->tc = *cdl;
 		} else if (cdl->h > c->tc->h) {
@@ -619,8 +622,49 @@ main(int argc, char *argv[])
 		/* (re)initialise our buckets */
 		init_buckets(ctx, hdl, bkt);
 		/* otherwise print all them ticks */
-		UTE_ITER(ti, hdl) {
-			bucketiser(ctx, ti);
+		if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
+			/* promote to native endianness */
+#define AS_GEN(x)	((const struct gen_s*)(x))
+			struct gen_s {
+				union scom_thdr_u scom[1];
+				uint32_t v[14];
+			};
+
+			UTE_ITER_CUST(ti, tsz, hdl) {
+				/* tmp storage for the flip */
+				struct gen_s tmp;
+
+				if (UNLIKELY(ti == NULL)) {
+					tsz = 1;
+					continue;
+				}
+
+				/* swap ti into buf */
+				tmp.scom->u = htooe64(ti->u);
+				switch ((tsz = scom_tick_size(tmp.scom))) {
+				case 4:
+				default:
+					tsz = 1;
+					continue;
+				case 2:
+					tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
+					tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
+					tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
+					tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
+				case 1:
+					tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
+					tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
+					break;
+				}
+				/* now to what we always do */
+				bucketiser(ctx, tmp.scom);
+			}
+
+		} else {
+			/* no quireks in this one */
+			UTE_ITER(ti, hdl) {
+				bucketiser(ctx, ti);
+			}
 		}
 		/* last round, just emit what we've got */
 		new_candle(ctx);

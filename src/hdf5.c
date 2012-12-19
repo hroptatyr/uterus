@@ -97,12 +97,15 @@ struct atom_s {
 	uint32_t ttf;
 	uint32_t sta;
 	union {
-		double d[4];
+		double d[6];
 		struct {
 			double o;
 			double h;
 			double l;
 			double c;
+
+			double v;
+			double w;
 		};
 	};
 };
@@ -868,11 +871,13 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 		double h;
 		double l;
 		double c;
+		double v;
 
 		o = ffff_m30_d((m30_t)cdl->o);
 		h = ffff_m30_d((m30_t)cdl->h);
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
+		v = cdl->cnt;
 
 		bang_idx(__gmctx, idx, (struct atom_s){
 				 .ts = sec, .ttf = ttf,
@@ -881,6 +886,7 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 					 .h = h,
 					 .l = l,
 					 .c = c,
+					 .v = v,
 					 });
 		break;
 	}

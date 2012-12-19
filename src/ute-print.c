@@ -195,12 +195,6 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			uint32_t v[14];
 		};
 
-#if !defined __bswap_64 && defined __swap64
-# define __bswap_64	__swap64
-#endif	/* !__bswap_64 && __swap64 */
-#if !defined __bswap_32 && defined __swap32
-# define __bswap_32	__swap32
-#endif	/* !__bswap_32 && __swap32 */
 		/* transparent flipping */
 		UTE_ITER_CUST(ti, tsz, hdl) {
 			/* tmp storage for the flip */
@@ -212,19 +206,16 @@ pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
 			}
 
 			/* swap ti into buf */
-			tmp.scom->u = __bswap_64(ti->u);
+			tmp.scom->u = htooe64(ti->u);
 			switch ((tsz = scom_tick_size(tmp.scom))) {
-			case 1:
-				tmp.v[0] = __bswap_32(AS_GEN(ti)->v[0]);
-				tmp.v[1] = __bswap_32(AS_GEN(ti)->v[1]);
-				break;
 			case 2:
-				tmp.v[0] = __bswap_32(AS_GEN(ti)->v[0]);
-				tmp.v[1] = __bswap_32(AS_GEN(ti)->v[1]);
-				tmp.v[2] = __bswap_32(AS_GEN(ti)->v[2]);
-				tmp.v[3] = __bswap_32(AS_GEN(ti)->v[3]);
-				tmp.v[4] = __bswap_32(AS_GEN(ti)->v[4]);
-				tmp.v[5] = __bswap_32(AS_GEN(ti)->v[5]);
+				tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
+				tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
+				tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
+				tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
+			case 1:
+				tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
+				tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
 				break;
 			case 4:
 			default:

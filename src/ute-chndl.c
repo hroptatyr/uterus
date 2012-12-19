@@ -222,6 +222,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 	switch (scdl_ttf(cdl)) {
 	case SL1T_TTF_BID:
 		c->bc->c = cdl->c;
+		c->bc->cnt += cdl->cnt;
 		if (c->bcnt == 0U) {
 			*c->bc = *cdl;
 		} else if (cdl->h > c->bc->h) {
@@ -233,6 +234,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 		break;
 	case SL1T_TTF_ASK:
 		c->ac->c = cdl->c;
+		c->ac->cnt += cdl->cnt;
 		if (c->acnt == 0U) {
 			*c->ac = *cdl;
 		} else if (cdl->h > c->ac->h) {
@@ -244,6 +246,7 @@ xcand_push_cdl(xcand_t c, const_scdl_t cdl)
 		break;
 	case SL1T_TTF_TRA:
 		c->tc->c = cdl->c;
+		c->tc->cnt += cdl->cnt;
 		if (c->tcnt == 0U) {
 			*c->tc = *cdl;
 		} else if (cdl->h > c->tc->h) {

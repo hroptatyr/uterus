@@ -38,8 +38,6 @@ SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
 SXE_CHECK_LIBLTDL
-## we need C11 anon structs
-SXE_CHECK_ANON_STRUCTS
 
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])
@@ -52,17 +50,28 @@ SXE_FUNC_MKOSTEMP
 AX_ZONEINFO([right])
 
 ## check for working c1x features
-SXE_CHECK_ANON_STRUCTS([
-	AC_DEFINE([__C1X], [1], [Whether c1x work])
-	], [
-	AC_MSG_WARN([C compiler unusable
+SXE_CHECK_ANON_STRUCTS_DECL
+SXE_CHECK_ANON_STRUCTS_INIT
+SXE_CHECK_SLOPPY_STRUCTS_INIT
+
+if test "${sxe_cv_have_anon_structs_decl}" != "yes"; then
+        AC_MSG_ERROR([C compiler unusable
 
 uterus make extensive use of c11 anonymous structs/unions but your
 compiler does not fully support them.
 Change either the CFLAGS or the compiler.
 Good day.
 ])
+elif test "${sxe_cv_have_anon_structs_init}" != "yes"; then
+	AC_MSG_WARN([C compiler needs archaeological treatment
+
+uterus' codebase is modern and makes use of modern compiler features
+but your compiler does not fully support them.
+The build won't fail but you will use legacy constructs and hacks
+which have not seen any form of testing.
+Fingers crossed it works innit?
 ])
+fi
 
 AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 

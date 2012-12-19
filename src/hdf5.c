@@ -97,12 +97,15 @@ struct atom_s {
 	uint32_t ttf;
 	uint32_t sta;
 	union {
-		double d[4];
+		double d[6];
 		struct {
 			double o;
 			double h;
 			double l;
 			double c;
+
+			double v;
+			double w;
 		};
 	};
 };
@@ -148,11 +151,16 @@ __resize(void *p, size_t nol, size_t nnu, size_t blsz)
 {
 	const size_t ol = nol * blsz;
 	const size_t nu = nnu * blsz;
-	void *res = realloc(p, nu);
-	if (nu > ol) {
-		memset((char*)res + ol, 0, nu - ol);
+
+	if (UNLIKELY(nu == 0U)) {
+		munmap(p, ol);
+		p = NULL;
+	} else if (UNLIKELY(p == NULL)) {
+		p = mmap(NULL, nu, PROT_MEM, MAP_MEM, -1, 0);
+	} else {
+		p = mremap(p, ol, nu, MREMAP_MAYMOVE);
 	}
-	return res;
+	return p;
 }
 
 
@@ -382,7 +390,7 @@ static void
 hdf5_open_plain(mctx_t ctx, const char *fn)
 {
 	hsize_t dims[] = {0, 0};
-	hsize_t maxdims[] = {4 * 3, H5S_UNLIMITED};
+	hsize_t maxdims[] = {8, H5S_UNLIMITED};
 
 	/* generate the handle */
         ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -412,6 +420,16 @@ hdf5_close_plain(mctx_t ctx)
 	return;
 }
 
+static inline __attribute__((const, pure)) size_t
+ttf_dimen(uint16_t ttf)
+{
+	if (ttf & 0x3) {
+		/* one of them candle things, with vol and wap */
+		return 6U;
+	}
+	return 4U;
+}
+
 static void
 cache_flush_4(
 	const hid_t dat, const hid_t mem,
@@ -437,7 +455,7 @@ cache_flush_4(
 	}
 
 	/* nbang more rows, make sure we're at least as wide as we say */
-	nu_dims[0] = 4;
+	nu_dims[0] = ttf_dimen(ttf);
 	nu_dims[1] = bangd + nbang;
 	H5Dset_extent(dat, nu_dims);
 	spc = H5Dget_space(dat);
@@ -515,6 +533,10 @@ cache_flush_plain(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
+	if (ttf_dimen(ttf) > 4U) {
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 4/*vol*/, cch, ttf);
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 5/*wap*/, cch, ttf);
+	}
 
 	/* same for timestamps */
 	spc = H5Dget_space(tss);
@@ -551,7 +573,7 @@ cache_flush_2ts(
 	double vals[2 * CHUNK_INC];
 	hsize_t nu_dims[] = {0, 0};
 	hsize_t mix[] = {0, 0};
-	hsize_t sta[] = {4, bangd};
+	hsize_t sta[] = {ttf_dimen(ttf), bangd};
 	hsize_t cnt[] = {2, -1};
 	hid_t spc;
 	size_t nbang = 0;
@@ -572,7 +594,7 @@ cache_flush_2ts(
 	}
 
 	/* nbang more rows, make sure we're at least as wide as we say */
-	nu_dims[0] = 6;
+	nu_dims[0] = sta[0] + 2;
 	nu_dims[1] = bangd + nbang;
 	H5Dset_extent(dat, nu_dims);
 	spc = H5Dget_space(dat);
@@ -607,6 +629,10 @@ cache_flush_mlab(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
+	if (ttf_dimen(ttf) > 4U) {
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 4/*vol*/, cch, ttf);
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 5/*wap*/, cch, ttf);
+	}
 
 	/* flush */
 	cache_flush_2ts(dat, ctx->mem, ol_dims[1], cch, ttf);
@@ -626,8 +652,7 @@ static const struct h5cb_s *h5cb;
 static void
 cache_init(mctx_t ctx)
 {
-	ctx->cch = malloc(sizeof(*ctx->cch));
-	ctx->cch->nbang = 0UL;
+	ctx->cch = NULL;
 	ctx->nidxs = 0UL;
 	return;
 }
@@ -679,7 +704,7 @@ cache_fini(mctx_t ctx)
 			ctx->cch[i].tsgrp = 0;
 		}
 	}
-	free(ctx->cch);
+	__resize(ctx->cch, ctx->nidxs + 1U, 0U, sizeof(*ctx->cch));
 	return;
 }
 
@@ -700,22 +725,14 @@ get_cch(mctx_t ctx, uint16_t idx)
 }
 
 static void
-bang5idx(
-	mctx_t ctx, uint16_t idx, uint16_t ttf,
-	time_t sta_ts, time_t end_ts,
-	double d1, double d2, double d3, double d4)
+bang_idx(mctx_t ctx, uint16_t idx, struct atom_s val)
 {
 	const cache_t cch = get_cch(ctx, idx);
 	const size_t nbang = cch->nbang;
 	atom_t vals = cch->vals;
 
-	vals[nbang].ts = end_ts;
-	vals[nbang].ttf = ttf;
-	vals[nbang].sta = (uint32_t)sta_ts;
-	vals[nbang].o = d1;
-	vals[nbang].h = d2;
-	vals[nbang].l = d3;
-	vals[nbang].c = d4;
+	vals[nbang] = val;
+
 	/* check if we need to flush the whole shebang */
 	if (++cch->nbang < countof(cch->vals)) {
 		/* yay, we're safe */
@@ -819,6 +836,7 @@ fini(pr_ctx_t UNUSED(pctx))
 ssize_t
 pr(pr_ctx_t pctx, scom_t st)
 {
+	static int tick_warn = 0;
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
 	uint16_t idx = scom_thdr_tblidx(st);
@@ -827,6 +845,20 @@ pr(pr_ctx_t pctx, scom_t st)
 	__gmctx->u = pctx->uctx;
 
 	switch (ttf) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_ASK:
+	case SL1T_TTF_TRA:
+	case SL1T_TTF_FIX:
+	case SL1T_TTF_STL:
+	case SL1T_TTF_AUC:
+		if (UNLIKELY(!tick_warn)) {
+			fputs("\
+Ticks in hdf5 files are the worst idea since vegetables.\n\
+If you think this message is flawed contact upstream and explain your\n\
+usecase, along with your idea of how the hdf5 result should look.\n", stderr);
+			tick_warn = 1;
+		}
+		break;
 		/* we only process shnots here */
 	case SSNP_FLAVOUR: {
 		const_ssnp_t snp = (const void*)st;
@@ -840,7 +872,16 @@ pr(pr_ctx_t pctx, scom_t st)
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5idx(__gmctx, idx, ttf, sec, sec, bp, ap, bq, aq);
+		bang_idx(__gmctx, idx, (struct atom_s){
+				 .ts = sec, .ttf = ttf,
+					 .sta = sec,
+					 .d[0] = bp,
+					 .d[1] = ap,
+					 .d[2] = bq,
+					 .d[3] = aq,
+					 .d[4] = 0.0,
+					 .d[5] = 0.0,
+					 });
 		break;
 	}
 	case SL1T_TTF_BID | SCDL_FLAVOUR:
@@ -854,13 +895,24 @@ pr(pr_ctx_t pctx, scom_t st)
 		double h;
 		double l;
 		double c;
+		double v;
 
 		o = ffff_m30_d((m30_t)cdl->o);
 		h = ffff_m30_d((m30_t)cdl->h);
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
+		v = cdl->cnt;
 
-		bang5idx(__gmctx, idx, ttf, cdl->sta_ts, sec, o, h, l, c);
+		bang_idx(__gmctx, idx, (struct atom_s){
+				 .ts = sec, .ttf = ttf,
+					 .sta = cdl->sta_ts,
+					 .o = o,
+					 .h = h,
+					 .l = l,
+					 .c = c,
+					 .v = v,
+					 .w = 0.0,
+					 });
 		break;
 	}
 	default:

@@ -879,6 +879,8 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 					 .d[1] = ap,
 					 .d[2] = bq,
 					 .d[3] = aq,
+					 .d[4] = 0.0,
+					 .d[5] = 0.0,
 					 });
 		break;
 	}
@@ -909,6 +911,7 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 					 .l = l,
 					 .c = c,
 					 .v = v,
+					 .w = 0.0,
 					 });
 		break;
 	}

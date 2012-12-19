@@ -151,11 +151,16 @@ __resize(void *p, size_t nol, size_t nnu, size_t blsz)
 {
 	const size_t ol = nol * blsz;
 	const size_t nu = nnu * blsz;
-	void *res = realloc(p, nu);
-	if (nu > ol) {
-		memset((char*)res + ol, 0, nu - ol);
+
+	if (UNLIKELY(nu == 0U)) {
+		munmap(p, ol);
+		p = NULL;
+	} else if (UNLIKELY(p == NULL)) {
+		p = mmap(NULL, nu, PROT_MEM, MAP_MEM, -1, 0);
+	} else {
+		p = mremap(p, ol, nu, MREMAP_MAYMOVE);
 	}
-	return res;
+	return p;
 }
 
 
@@ -647,8 +652,7 @@ static const struct h5cb_s *h5cb;
 static void
 cache_init(mctx_t ctx)
 {
-	ctx->cch = malloc(sizeof(*ctx->cch));
-	ctx->cch->nbang = 0UL;
+	ctx->cch = NULL;
 	ctx->nidxs = 0UL;
 	return;
 }
@@ -700,7 +704,7 @@ cache_fini(mctx_t ctx)
 			ctx->cch[i].tsgrp = 0;
 		}
 	}
-	free(ctx->cch);
+	__resize(ctx->cch, ctx->nidxs + 1U, 0U, sizeof(*ctx->cch));
 	return;
 }
 

@@ -385,7 +385,7 @@ static void
 hdf5_open_plain(mctx_t ctx, const char *fn)
 {
 	hsize_t dims[] = {0, 0};
-	hsize_t maxdims[] = {4 * 3, H5S_UNLIMITED};
+	hsize_t maxdims[] = {8, H5S_UNLIMITED};
 
 	/* generate the handle */
         ctx->fil = H5Fcreate(fn, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -415,6 +415,16 @@ hdf5_close_plain(mctx_t ctx)
 	return;
 }
 
+static inline __attribute__((const, pure)) size_t
+ttf_dimen(uint16_t ttf)
+{
+	if (ttf & 0x3) {
+		/* one of them candle things, with vol and wap */
+		return 6U;
+	}
+	return 4U;
+}
+
 static void
 cache_flush_4(
 	const hid_t dat, const hid_t mem,
@@ -440,7 +450,7 @@ cache_flush_4(
 	}
 
 	/* nbang more rows, make sure we're at least as wide as we say */
-	nu_dims[0] = 4;
+	nu_dims[0] = ttf_dimen(ttf);
 	nu_dims[1] = bangd + nbang;
 	H5Dset_extent(dat, nu_dims);
 	spc = H5Dget_space(dat);
@@ -518,6 +528,10 @@ cache_flush_plain(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
+	if (ttf_dimen(ttf) > 4U) {
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 4/*vol*/, cch, ttf);
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 5/*wap*/, cch, ttf);
+	}
 
 	/* same for timestamps */
 	spc = H5Dget_space(tss);
@@ -554,7 +568,7 @@ cache_flush_2ts(
 	double vals[2 * CHUNK_INC];
 	hsize_t nu_dims[] = {0, 0};
 	hsize_t mix[] = {0, 0};
-	hsize_t sta[] = {4, bangd};
+	hsize_t sta[] = {ttf_dimen(ttf), bangd};
 	hsize_t cnt[] = {2, -1};
 	hid_t spc;
 	size_t nbang = 0;
@@ -575,7 +589,7 @@ cache_flush_2ts(
 	}
 
 	/* nbang more rows, make sure we're at least as wide as we say */
-	nu_dims[0] = 6;
+	nu_dims[0] = sta[0] + 2;
 	nu_dims[1] = bangd + nbang;
 	H5Dset_extent(dat, nu_dims);
 	spc = H5Dget_space(dat);
@@ -610,6 +624,10 @@ cache_flush_mlab(mctx_t ctx, size_t idx, size_t ttf, const cache_t cch)
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 1/*high*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 2/*low*/, cch, ttf);
 	cache_flush_4(dat, ctx->mem, ol_dims[1], 3/*close*/, cch, ttf);
+	if (ttf_dimen(ttf) > 4U) {
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 4/*vol*/, cch, ttf);
+		cache_flush_4(dat, ctx->mem, ol_dims[1], 5/*wap*/, cch, ttf);
+	}
 
 	/* flush */
 	cache_flush_2ts(dat, ctx->mem, ol_dims[1], cch, ttf);

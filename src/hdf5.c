@@ -819,6 +819,7 @@ fini(pr_ctx_t UNUSED(pctx))
 ssize_t
 pr(pr_ctx_t pctx, scom_t st)
 {
+	static int tick_warn = 0;
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
 	uint16_t idx = scom_thdr_tblidx(st);
@@ -827,6 +828,20 @@ pr(pr_ctx_t pctx, scom_t st)
 	__gmctx->u = pctx->uctx;
 
 	switch (ttf) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_ASK:
+	case SL1T_TTF_TRA:
+	case SL1T_TTF_FIX:
+	case SL1T_TTF_STL:
+	case SL1T_TTF_AUC:
+		if (UNLIKELY(!tick_warn)) {
+			fputs("\
+Ticks in hdf5 files are the worst idea since vegetables.\n\
+If you think this message is flawed contact upstream and explain your\n\
+usecase, along with your idea of how the hdf5 result should look.\n", stderr);
+			tick_warn = 1;
+		}
+		break;
 		/* we only process shnots here */
 	case SSNP_FLAVOUR: {
 		const_ssnp_t snp = (const void*)st;

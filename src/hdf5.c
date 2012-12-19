@@ -872,6 +872,7 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
+#if defined HAVE_ANON_STRUCTS_INIT
 		bang_idx(__gmctx, idx, (struct atom_s){
 				 .ts = sec, .ttf = ttf,
 					 .sta = sec,
@@ -882,6 +883,21 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 					 .d[4] = 0.0,
 					 .d[5] = 0.0,
 					 });
+#else  /* !HAVE_ANON_STRUCTS_INIT */
+		struct atom_s tmp;
+
+		tmp.ts = sec;
+		tmp.ttf = ttf;
+		tmp.sta = sec;
+		tmp.d[0] = bp;
+		tmp.d[1] = ap;
+		tmp.d[2] = bq;
+		tmp.d[3] = aq;
+		tmp.d[4] = 0.0;
+		tmp.d[5] = 0.0;
+
+		bang_idx(__gmctx, idx, tmp);
+#endif	/* HAVE_ANON_STRUCTS_INIT */
 		break;
 	}
 	case SL1T_TTF_BID | SCDL_FLAVOUR:
@@ -903,6 +919,7 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 		c = ffff_m30_d((m30_t)cdl->c);
 		v = cdl->cnt;
 
+#if defined HAVE_ANON_STRUCTS_INIT
 		bang_idx(__gmctx, idx, (struct atom_s){
 				 .ts = sec, .ttf = ttf,
 					 .sta = cdl->sta_ts,
@@ -913,6 +930,21 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 					 .v = v,
 					 .w = 0.0,
 					 });
+#else  /* !HAVE_ANON_STRUCTS_INIT */
+		struct atom_s tmp;
+
+		tmp.ts = sec;
+		tmp.ttf = ttf;
+		tmp.sta = cdl->sta_ts;
+		tmp.o = o;
+		tmp.h = h;
+		tmp.l = l;
+		tmp.c = c;
+		tmp.v = v;
+		tmp.w = 0.0;
+
+		bang_idx(__gmctx, idx, tmp);
+#endif	/* HAVE_ANON_STRUCTS_INIT */
 		break;
 	}
 	default:

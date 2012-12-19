@@ -700,22 +700,14 @@ get_cch(mctx_t ctx, uint16_t idx)
 }
 
 static void
-bang5idx(
-	mctx_t ctx, uint16_t idx, uint16_t ttf,
-	time_t sta_ts, time_t end_ts,
-	double d1, double d2, double d3, double d4)
+bang_idx(mctx_t ctx, uint16_t idx, struct atom_s val)
 {
 	const cache_t cch = get_cch(ctx, idx);
 	const size_t nbang = cch->nbang;
 	atom_t vals = cch->vals;
 
-	vals[nbang].ts = end_ts;
-	vals[nbang].ttf = ttf;
-	vals[nbang].sta = (uint32_t)sta_ts;
-	vals[nbang].o = d1;
-	vals[nbang].h = d2;
-	vals[nbang].l = d3;
-	vals[nbang].c = d4;
+	vals[nbang] = val;
+
 	/* check if we need to flush the whole shebang */
 	if (++cch->nbang < countof(cch->vals)) {
 		/* yay, we're safe */
@@ -855,7 +847,14 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 		bq = ffff_m30_d((m30_t)snp->bq);
 		aq = ffff_m30_d((m30_t)snp->aq);
 
-		bang5idx(__gmctx, idx, ttf, sec, sec, bp, ap, bq, aq);
+		bang_idx(__gmctx, idx, (struct atom_s){
+				 .ts = sec, .ttf = ttf,
+					 .sta = sec,
+					 .d[0] = bp,
+					 .d[1] = ap,
+					 .d[2] = bq,
+					 .d[3] = aq,
+					 });
 		break;
 	}
 	case SL1T_TTF_BID | SCDL_FLAVOUR:
@@ -875,7 +874,14 @@ usecase, along with your idea of how the hdf5 result should look.\n", stderr);
 		l = ffff_m30_d((m30_t)cdl->l);
 		c = ffff_m30_d((m30_t)cdl->c);
 
-		bang5idx(__gmctx, idx, ttf, cdl->sta_ts, sec, o, h, l, c);
+		bang_idx(__gmctx, idx, (struct atom_s){
+				 .ts = sec, .ttf = ttf,
+					 .sta = cdl->sta_ts,
+					 .o = o,
+					 .h = h,
+					 .l = l,
+					 .c = c,
+					 });
 		break;
 	}
 	default:

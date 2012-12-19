@@ -365,13 +365,25 @@ dnl standards are flavours supported by the compiler chosen with AC_PROG_CC
 		for i in []stds[]; do
 			SXE_CHECK_COMPILER_FLAGS([-std="${i}"], [
 				std="-std=${i}"
-				break
+				save_CC="${CC}"
+				CC="${CC} ${std}"
+				SXE_CHECK_ANON_STRUCTS_DECL
+				CC="${save_CC}"
+				if test "${sxe_cv_have_anon_structs_decl}" \
+					= "yes"; then
+					break
+				fi
 			])
 		done
 
 		AC_MSG_CHECKING([for preferred CC std])
 		AC_MSG_RESULT([${std}])
 		CC="${CC} ${std}"
+
+		## while we're at it, check for anon initialising too
+		SXE_CHECK_ANON_STRUCTS_INIT
+		## oh and sloppy sloppy init
+		SXE_CHECK_SLOPPY_STRUCTS_INIT
 		;;
 	esac
 

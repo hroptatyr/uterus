@@ -148,8 +148,10 @@ print_tick_sym(pr_ctx_t pctx, scom_t st)
 
 /**
  * Public print function.
- * Implemented through DSOs. */
-extern ssize_t pr(pr_ctx_t pctx, scom_t st);
+ * Implemented through DSOs.
+ * The return value should indicate whether or not the tick in ST
+ * has been processed, a value <0 indicates failure. */
+extern int pr(pr_ctx_t pctx, scom_t st);
 
 /**
  * For printers that need initialisation and finalisation. */

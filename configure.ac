@@ -46,6 +46,14 @@ AC_CHECK_HEADERS([byteswap.h])
 ## check for mkostemp
 SXE_FUNC_MKOSTEMP
 
+## and ssize_t
+AC_CHECK_HEADERS([sys/types.h])
+AC_CHECK_TYPES([ssize_t], [], [], [[
+#if defined HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+]])
+
 ## check for tzfile.h
 AX_ZONEINFO([right])
 

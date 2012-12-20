@@ -1,98 +1,31 @@
 #!/bin/sh
 
-usage()
-{
-	cat <<EOF 
-$(basename ${0}) [OPTION] TEST_FILE
-
---builddir DIR  specify where tools can be found
---srcdir DIR    specify where the source tree resides
---hash PROG     use hasher PROG instead of md5sum
---husk PROG     use husk around tool, e.g. 'valgrind -v'
-
--h, --help      print a short help screen
-EOF
-}
-
-CLINE=$(getopt -o h \
-	--long help,builddir:,srcdir:,hash:,husk: -n "${0}" -- "${@}")
-eval set -- "${CLINE}"
-while true; do
-	case "${1}" in
-	"-h"|"--help")
-		usage
-		exit 0
-		;;
-	"--builddir")
-		builddir="${2}"
-		shift 2
-		;;
-	"--srcdir")
-		srcdir="${2}"
-		shift 2
-		;;
-	"--hash")
-		hash="${2}"
-		shift 2
-		;;
-	"--husk")
-		HUSK="${2}"
-		shift 2
-		;;
-	--)
-		shift
-		break
-		;;
-	*)
-		echo "could not parse options" >&2
-		exit 1
-		;;
-	esac
-done
-
-## now in ${1} should be the test file
-testfile="${1}"
+## should be called by ut-test
+if test -z "${testfile}"; then
+	exit 1
+fi
 
 ## some helper funs
 xrealpath()
 {
 	readlink -f "${1}" 2>/dev/null || \
 	realpath "${1}" 2>/dev/null || \
-	( cd "$(dirname "${1}")" || exit 1
-		tmp_target="$(basename "${1}")"
+	( cd "`dirname "${1}"`" || exit 1
+		tmp_target="`basename "${1}"`"
 		# Iterate down a (possible) chain of symlinks
 		while test -L "${tmp_target}"; do
-			tmp_target="$(readlink "${tmp_target}")"
-			cd "$(dirname "${tmp_target}")" || exit 1
-			tmp_target="$(basename "${tmp_target}")"
+			tmp_target="`readlink "${tmp_target}"`"
+			cd "`dirname "${tmp_target}"`" || exit 1
+			tmp_target="`basename "${tmp_target}"`"
 		done
-		echo "$(pwd -P || pwd)/${tmp_target}"
+		echo "`pwd -P || pwd`/${tmp_target}"
 	) 2>/dev/null
 }
 
 ## setup
 fail=0
-tool_stdout=$(mktemp "/tmp/tmp.XXXXXXXXXX")
-tool_stderr=$(mktemp "/tmp/tmp.XXXXXXXXXX")
-
-## also set srcdir in case the testfile needs it
-if test -z "${srcdir}"; then
-	srcdir=$(xrealpath $(dirname "${0}"))
-else
-	srcdir=$(xrealpath "${srcdir}")
-fi
-
-## define endian variable so scripts can use it
-{
-	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
-	if test "${ind}" = "0"; then
-		endian="big"
-	elif test "${ind}" = "1"; then
-		endian="little"
-	else
-		endian="unknown"
-	fi
-}
+tool_stdout=`mktemp "/tmp/tmp.XXXXXXXXXX"`
+tool_stderr=`mktemp "/tmp/tmp.XXXXXXXXXX"`
 
 ## source the check
 . "${testfile}" || fail=1
@@ -101,12 +34,12 @@ rm_if_not_src()
 {
 	file="${1}"
 	srcd="${2:-${srcdir}}"
-	dirf=$(dirname "${file}")
+	dirf=`dirname "${file}"`
 
 	if test "${dirf}" -ef "${srcd}"; then
 		## treat as precious source file
 		:
-	elif test "$(pwd)" -ef "${srcd}"; then
+	elif test "`pwd`" -ef "${srcd}"; then
 		## treat as precious source file
 		:
 	else
@@ -150,7 +83,7 @@ eval_echo()
 		echo >&3
 	else
 		echo "<<EOF" >&3
-		tmpf=$(mktemp "/tmp/tmp.XXXXXXXXXX")
+		tmpf=`mktemp "/tmp/tmp.XXXXXXXXXX"`
 		tee "${tmpf}" >&3
 		echo "EOF" >&3
 	fi
@@ -164,7 +97,7 @@ eval_echo()
 exec_echo()
 {
 	local ret
-	local HUSK="${1}"
+	local husk="${1}"
 	shift
 
 	## repeat stdin to &3
@@ -178,8 +111,8 @@ hexdiff()
 {
 	local file1="${1}"
 	local file2="${2}"
-	local tmp1=$(mktemp)
-	local tmp2=$(mktemp)
+	local tmp1=`mktemp "/tmp/tmp.XXXXXXXX"`
+	local tmp2=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 	hextool()
 	{
@@ -204,25 +137,25 @@ fi
 
 ## set finals
 if test -x "${builddir}/${TOOL}"; then
-	TOOL=$(xrealpath "${builddir}/${TOOL}")
+	TOOL=`xrealpath "${builddir}/${TOOL}"`
 fi
 
-stdin=$(find_file "${stdin}")
-stdout=$(find_file "${stdout}")
-stderr=$(find_file "${stderr}")
+stdin=`find_file "${stdin}"`
+stdout=`find_file "${stdout}"`
+stderr=`find_file "${stderr}"`
 
 ## for binary reference files
 if test -n "${REFFILE}"; then
-	REFFILE=$(find_file "${REFFILE}")
+	REFFILE=`find_file "${REFFILE}"`
 fi
 
 ## check if we used a CMDFILE instead of CMDLINE
 if test -n "${CMDFILE}"; then
-	CMDFILE=$(find_file "${CMDFILE}")
-	exec_echo "${HUSK}" "${CMDFILE}" 3>&2 \
+	CMDFILE=`find_file "${CMDFILE}"`
+	exec_echo "${husk}" "${CMDFILE}" 3>&2 \
 		> "${tool_stdout}" 2> "${tool_stderr}" || fail=${?}
 else
-	eval_echo "${HUSK}" "${TOOL}" "${CMDLINE}" \
+	eval_echo "${husk}" "${TOOL}" "${CMDLINE}" \
 		< "${stdin:-/dev/null}" \
 		3>&2 \
 		> "${tool_stdout}" 2> "${tool_stderr}" || fail=${?}

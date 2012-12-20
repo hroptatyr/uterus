@@ -8,7 +8,7 @@ COMMENT="cleaned up print.a.ute without endian indicator"
 ## STDIN
  
 ## STDOUT
-stdout=$(mktemp "/tmp/tmp.XXXXXXXXXX")
+stdout=`mktemp "/tmp/tmp.XXXXXXXXXX"`
 cat > "${stdout}" <<EOF
 TESJPY	2012-01-15T22:00:02.766+00:00	1	1	77.0560	1500000
 TESJPY	2012-01-15T22:00:02.766+00:00	1	2	77.0600	750000

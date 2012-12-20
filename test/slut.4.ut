@@ -8,6 +8,6 @@ COMMENT="no slut in print.d.ute"
 ## STDIN
 
 ## STDOUT
-stdout=$(mktemp)
+stdout=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 ## slut.4.ut ends here

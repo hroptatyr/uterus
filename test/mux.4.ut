@@ -9,18 +9,6 @@ CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
 
 ## STDOUT
 
-big_endian_p()
-{
-	ind=$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6)
-	if test "${ind}" = "0"; then
-		return 0
-	elif test "${ind}" = "1"; then
-		return 1
-	else
-		return 2
-	fi
-}
-
 ## outfile sum
 OUTFILE_SHA1="
 f73a3dbe4338c30f86f3ba14a835fa4699aa146a

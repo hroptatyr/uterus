@@ -38,6 +38,8 @@
 #if !defined INCLUDED_utefile_private_h_
 #define INCLUDED_utefile_private_h_
 
+/* for ssize_t */
+#include <unistd.h>
 #include "nifty.h"
 
 #if defined DEBUG_FLAG

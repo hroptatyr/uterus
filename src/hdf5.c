@@ -42,6 +42,10 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
+#if defined HAVE_SYS_TYPES_H
+/* for ssize_t */
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 
 /* hdf5 glue */
 #include <hdf5.h>

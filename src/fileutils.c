@@ -24,8 +24,14 @@
  * Author:  Theppitak Karoonboonyanan <thep@linux.thai.net>
  */
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <string.h>
 #include <stdlib.h>
+#if defined HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 
 #include "fileutils.h"
 

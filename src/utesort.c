@@ -43,6 +43,10 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#if defined HAVE_SYS_TYPES_H
+/* for ssize_t */
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 #include <fcntl.h>
 #include "utefile-private.h"
 #include "utefile.h"

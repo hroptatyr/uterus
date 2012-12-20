@@ -41,6 +41,10 @@
 #endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdio.h>
+#if defined HAVE_SYS_TYPES_H
+/* for ssize_t */
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>

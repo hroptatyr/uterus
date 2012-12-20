@@ -7,7 +7,7 @@ LC_ALL = C
 AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L -I$(abs_top_srcdir)/src
 AM_LDFLAGS = -L$(abs_top_builddir)/src
 
-EXTRA_DIST = $(ut_tests) $(UT_LOG_COMPILER)
+EXTRA_DIST = $(ut_tests) $(UT_LOG_COMPILER) $(BUILT_SOURCES)
 TESTS = $(ut_tests) $(bin_tests)
 BUILT_SOURCES =
 check_PROGRAMS =

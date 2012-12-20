@@ -9,12 +9,13 @@ AM_LDFLAGS = -L$(abs_top_builddir)/src
 
 EXTRA_DIST = $(ut_tests) $(UT_LOG_COMPILER)
 TESTS = $(ut_tests) $(bin_tests)
+BUILT_SOURCES =
 check_PROGRAMS =
 ut_tests =
 bin_tests =
 
 TEST_EXTENSIONS = .ut
-UT_LOG_COMPILER = $(srcdir)/ut-test.sh
+UT_LOG_COMPILER = $(builddir)/ut-test
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src --hash sha1sum
 
 ut_tests += mux.1.ut
@@ -155,6 +156,12 @@ bin_tests += core-file-2
 bin_tests += core-file-3
 bin_tests += core-file-4
 
+check_PROGRAMS += ut-test
+BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
+
+## ggo rule
+%.c %.h: %.ggo
+	$(AM_V_GEN) gengetopt -F $* -i $<
 
 .NOTPARALLEL:
 

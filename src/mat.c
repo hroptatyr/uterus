@@ -459,7 +459,7 @@ bang5idx(
 	return;
 }
 
-ssize_t
+int
 pr(pr_ctx_t UNUSED(pctx), scom_t st)
 {
 	uint32_t sec = scom_thdr_sec(st);

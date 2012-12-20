@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.d.ariva"
 OUTFILE="testload.ute"
-CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="same as mux.b.ariva but needs sorting"
 cat <<EOF > "${CMDFILE}"
 cat '${INFILE}' | "\${TOOL}" mux -f ariva - -o '${OUTFILE}'

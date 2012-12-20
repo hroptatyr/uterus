@@ -46,6 +46,10 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
+#if defined HAVE_SYS_TYPES_H
+/* for ssize_t */
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 #include "date.h"
 #include "prchunk.h"
 #include "utefile.h"
@@ -396,7 +400,7 @@ mux(mux_ctx_t ctx)
 	return;
 }
 
-ssize_t
+int
 pr(pr_ctx_t pctx, scom_t st)
 {
 	char tl[MAX_LINE_LEN];
@@ -473,8 +477,10 @@ pr(pr_ctx_t pctx, scom_t st)
 	*p = '\0';
 
 	/* and off we go */
-	write(pctx->outfd, tl, res = p - tl);
-	return res;
+	if (write(pctx->outfd, tl, p - tl) < 0) {
+		return -1;
+	}
+	return 0;
 }
 
 /* uta.c ends here */

@@ -4,17 +4,19 @@
 LANG = C
 LC_ALL = C
 
-AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L -I$(abs_top_srcdir)/src
+AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
+AM_CPPFLAGS += -I$(abs_top_srcdir)/src
 AM_LDFLAGS = -L$(abs_top_builddir)/src
 
-EXTRA_DIST = $(ut_tests) $(UT_LOG_COMPILER)
+EXTRA_DIST = $(ut_tests) $(BUILT_SOURCES)
 TESTS = $(ut_tests) $(bin_tests)
+BUILT_SOURCES =
 check_PROGRAMS =
 ut_tests =
 bin_tests =
 
 TEST_EXTENSIONS = .ut
-UT_LOG_COMPILER = $(srcdir)/ut-test.sh
+UT_LOG_COMPILER = $(builddir)/ut-test
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src --hash sha1sum
 
 ut_tests += mux.1.ut
@@ -155,6 +157,13 @@ bin_tests += core-file-2
 bin_tests += core-file-3
 bin_tests += core-file-4
 
+check_PROGRAMS += ut-test
+BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
+EXTRA_DIST += ut-test.sh
+
+## ggo rule
+%.c %.h: %.ggo
+	$(AM_V_GEN) gengetopt -F $* -i $<
 
 .NOTPARALLEL:
 

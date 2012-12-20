@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.g.ibhist.xml"
 OUTFILE="testload.ute"
-CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 cat <<EOF > "${CMDFILE}"
 "\${TOOL}" mux -f ibhist '${INFILE}' -o '${OUTFILE}'

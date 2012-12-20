@@ -43,6 +43,10 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#if defined HAVE_SYS_TYPES_H
+/* for ssize_t */
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 #include <fcntl.h>
 #include "utefile-private.h"
 #include "utefile.h"
@@ -1300,7 +1304,7 @@ mmap_page(int fd, int pflags, int mflags, off_t off, size_t len)
 		munmap_any(p, off, len);
 
 		/* remap so that we don't have to keep track of z != mlen */
-		x = mremap(x, z, mlen, 0);
+		x = mremap(x, z, mlen, MREMAP_MAYMOVE);
 
 		/* prepare return value */
 		p = x;

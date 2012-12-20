@@ -76,7 +76,7 @@ init_i2s(uteslut_t s, size_t initial_alloc_sz)
 	s->nsyms = 0;
 	/* just alloc some syms now
 	 * alloc stepping is 128, 1024, 8192, 65536 */
-	s->itbl = mmap(s->itbl, itsz, PROT_MEM, MAP_MEM, 0, 0);
+	s->itbl = mmap(s->itbl, itsz, PROT_MEM, MAP_MEM, -1, 0);
 	return;
 }
 

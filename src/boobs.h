@@ -61,7 +61,7 @@
 /* start off with opposite-endianness converters */
 #if defined htooe16
 /* yay, nothing to do really */
-#elif __GNUC_PREREQ (4, 7)
+#elif defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 7
 # define htooe16(x)	__builtin_bswap16(x)
 #elif defined __bswap_16
 # define htooe16(x)	__bswap_16(x)
@@ -69,7 +69,7 @@
 # define htooe16(x)	__swap16(x)
 #else
 # warning htooe16() will not convert anything
-# define htooe16(x)
+# define htooe16(x)	(x)
 #endif	/* htooe16 */
 
 #if !defined be16toh
@@ -95,14 +95,8 @@
 #if !defined htobe16
 # if defined WORDS_BIGENDIAN
 #  define htobe16(x)	(x)
-# elif __GNUC_PREREQ (4, 7)
-#  define htobe16(x)	__builtin_bswap16(x)
-# elif defined __bswap_16
-#  define htobe16(x)	__bswap_16(x)
-# elif defined __swap16
-#  define htobe16(x)	__swap16(x)
-# else
-#  error cannot figure out how to convert host uint16_t to big-endian
+# else	/* need swabbing */
+#  define htobe16(x)	htooe16(x)
 # endif
 #endif	/* !htobe16 */
 
@@ -118,7 +112,7 @@
 /* just to abstract over pure swapping */
 #if defined htooe32
 /* yay, nothing to do really */
-#elif __GNUC_PREREQ (4, 7)
+#elif defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 7
 # define htooe32(x)	__builtin_bswap32(x)
 #elif defined __bswap_32
 # define htooe32(x)	__bswap_32(x)
@@ -126,7 +120,7 @@
 # define htooe32(x)	__swap32(x)
 #else
 # warning htooe32() will not convert anything
-# define htooe32(x)
+# define htooe32(x)	(x)
 #endif
 
 /* and even now we may be out of luck */
@@ -169,7 +163,7 @@
 
 #if defined htooe64
 /* yay, nothing to do really */
-#elif __GNUC_PREREQ (4, 7)
+#elif defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 7
 # define htooe64(x)	__builtin_bswap64(x)
 #elif defined __bswap_64
 # define htooe64(x)	__bswap_64(x)
@@ -177,7 +171,7 @@
 # define htooe64(x)	__swap64(x)
 #else
 # warning htooe64() will not convert anything
-# define htooe64(x)
+# define htooe64(x)	(x)
 #endif
 
 #if !defined be64toh

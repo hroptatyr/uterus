@@ -833,7 +833,7 @@ fini(pr_ctx_t UNUSED(pctx))
 	return;
 }
 
-ssize_t
+int
 pr(pr_ctx_t pctx, scom_t st)
 {
 	static int tick_warn = 0;

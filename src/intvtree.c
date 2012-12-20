@@ -86,9 +86,13 @@ static const __node_t nil = &__nil;
  * ute_sort() does a itree_trav_in_order() and in the callback it
  * does a itree_find_*_cb() which then causes a deadlock
  * HENCE we define: */
+#undef pthread_mutex_init
 #define pthread_mutex_init(x, y)
+#undef pthread_mutex_destroy
 #define pthread_mutex_destroy(x)
+#undef pthread_mutex_lock
 #define pthread_mutex_lock(x)
+#undef pthread_mutex_unlock
 #define pthread_mutex_unlock(x)
 
 

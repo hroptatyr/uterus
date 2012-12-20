@@ -40,6 +40,10 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <stdio.h>
+#if defined HAVE_SYS_TYPES_H
+/* for ssize_t */
+# include <sys/types.h>
+#endif	/* HAVE_SYS_TYPES_H */
 #include <fcntl.h>
 #include "utefile.h"
 #include "boobs.h"
@@ -81,7 +85,7 @@
 static ute_dso_t pr_dso;
 
 struct printer_s {
-	ssize_t(*prf)(pr_ctx_t, scom_t);
+	int(*prf)(pr_ctx_t, scom_t);
 	int(*init_main_f)(pr_ctx_t, int, char*[]);
 	void(*initf)(pr_ctx_t);
 	void(*finif)(pr_ctx_t);
@@ -97,7 +101,7 @@ find_printer(const char opt[static 1])
 		return res;
 	}
 	if ((sym = find_sym(pr_dso, "pr")) != NULL) {
-		res.prf = (ssize_t(*)())sym;
+		res.prf = (int(*)())sym;
 	}
 	if ((sym = find_sym(pr_dso, "init")) != NULL) {
 		res.initf = (void(*)())sym;
@@ -155,7 +159,7 @@ print_mudems(void)
 }
 
 static void MAYBE_NOINLINE
-pr1(pr_ctx_t ctx, const char *f, ssize_t(*prf)(pr_ctx_t, scom_t))
+pr1(pr_ctx_t ctx, const char *f, int(*prf)(pr_ctx_t, scom_t))
 {
 	utectx_t hdl;
 
@@ -246,7 +250,7 @@ rdpg(char *restrict tgt, size_t tsz, int fd)
 }
 
 static ssize_t
-prpg(pr_ctx_t ctx, char *tpg, size_t tsz, ssize_t(*prf)(pr_ctx_t, scom_t))
+prpg(pr_ctx_t ctx, char *tpg, size_t tsz, int(*prf)(pr_ctx_t, scom_t))
 {
 	char *eot = tpg + tsz;
 	ssize_t res = 0;

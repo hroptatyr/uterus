@@ -2,7 +2,7 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.4.ref.beute"
-OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 REFFILE="${srcdir}/mux.4.ref.ute"
 COMMENT="testing ex situ conversions"
 CMDLINE="fsck --little-endian '${INFILE}' -o '${OUTFILE}'"

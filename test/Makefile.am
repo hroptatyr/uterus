@@ -4,7 +4,8 @@
 LANG = C
 LC_ALL = C
 
-AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=201001L -I$(abs_top_srcdir)/src
+AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
+AM_CPPFLAGS += -I$(abs_top_srcdir)/src
 AM_LDFLAGS = -L$(abs_top_builddir)/src
 
 EXTRA_DIST = $(ut_tests) $(BUILT_SOURCES)

@@ -13,7 +13,7 @@ elif test "${endian}" = "little"; then
 fi
 
 cat <<EOF > "${CMDFILE}"
-cp -d '${INFILE}' '${OUTFILE}'
+cp '${INFILE}' '${OUTFILE}'
 "\${TOOL}" fsck --compress '${OUTFILE}'
 EOF
 

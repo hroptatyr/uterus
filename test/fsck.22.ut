@@ -18,7 +18,7 @@ cat <<EOF > "${CMDFILE}"
 if test "${endian}" = "big"; then
 	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
 fi
-cp -d '${INFILE}' '${OUTFILE}'
+cp '${INFILE}' '${OUTFILE}'
 "\${TOOL}" fsck --decompress '${OUTFILE}'
 ## truncate and overwrite ftr fields
 dd if='/dev/zero' of='${OUTFILE}' ibs=4 obs=4 seek=6 count=2 conv=notrunc

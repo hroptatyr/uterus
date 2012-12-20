@@ -1,9 +1,9 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-OUTFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing decompression/compression"
-CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 if test "${endian}" = "big"; then
 	INFILE="${srcdir}/fsck.17.ref.beute"

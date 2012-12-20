@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.i.uta"
 OUTFILE="testload.ute"
-CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXX")
+CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 cat <<EOF > "${CMDFILE}"
 cat '${INFILE}' | "\${TOOL}" mux -f uta -o '${OUTFILE}' -

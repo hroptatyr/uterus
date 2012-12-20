@@ -7,7 +7,7 @@ CMDLINE="slut '${INFILE}'"
 ## STDIN
 
 ## STDOUT
-stdout=$(mktemp)
+stdout=`mktemp`
 cat <<EOF > "${stdout}"
 1	TESJPY
 EOF

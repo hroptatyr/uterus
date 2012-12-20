@@ -7,7 +7,7 @@ CMDLINE="fsck -n '${INFILE}'"
 ## STDIN
 
 ## STDOUT
-stdout=$(mktemp)
+stdout=`mktemp`
 cat <<EOF > "${stdout}"
 file \`${INFILE}' needs upgrading (ute format 0.1) ...
 EOF

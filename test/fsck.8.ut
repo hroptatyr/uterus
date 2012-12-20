@@ -7,6 +7,6 @@ CMDLINE="fsck -n '${INFILE}'"
 ## STDIN
 
 ## STDOUT
-stdout=$(mktemp)
+stdout=`mktemp`
 
 ## fsck.8.ut ends here

@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.f.ibhist.xml"
 OUTFILE="testload.ute"
-CMDFILE=$(mktemp "/tmp/tmp.XXXXXXXXXX")
+CMDFILE=`mktemp "/tmp/tmp.XXXXXXXXXX"`
 cat <<EOF > "${CMDFILE}"
 cat '${INFILE}' | "\${TOOL}" mux -f ibhist -o '${OUTFILE}' -
 if test "${endian}" = "big"; then

@@ -44,6 +44,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"

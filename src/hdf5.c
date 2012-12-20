@@ -42,10 +42,6 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
-#if defined HAVE_SYS_TYPES_H
-/* for ssize_t */
-# include <sys/types.h>
-#endif	/* HAVE_SYS_TYPES_H */
 
 /* hdf5 glue */
 #include <hdf5.h>
@@ -837,7 +833,7 @@ fini(pr_ctx_t UNUSED(pctx))
 	return;
 }
 
-ssize_t
+int
 pr(pr_ctx_t pctx, scom_t st)
 {
 	static int tick_warn = 0;

@@ -20,9 +20,9 @@ if test "${endian}" = "big"; then
 fi
 cp '${INFILE}' '${OUTFILE}'
 "\${TOOL}" fsck --decompress '${OUTFILE}'
-## truncate and overwrite ftr fields
+## truncate and overwrite ftr fields, HARDCODING ALARM
 dd if='/dev/zero' of='${OUTFILE}' ibs=4 obs=4 seek=6 count=2 conv=notrunc
-head -c -16 '${OUTFILE}' > '${OUTFILE}.tmp'
+head -c 68720 '${OUTFILE}' > '${OUTFILE}.tmp'
 mv '${OUTFILE}.tmp' '${OUTFILE}'
 EOF
 

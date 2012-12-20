@@ -111,8 +111,8 @@ hexdiff()
 {
 	local file1="${1}"
 	local file2="${2}"
-	local tmp1=`mktemp`
-	local tmp2=`mktemp`
+	local tmp1=`mktemp "/tmp/tmp.XXXXXXXX"`
+	local tmp2=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 	hextool()
 	{

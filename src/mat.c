@@ -43,10 +43,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/mman.h>
-#if defined HAVE_SYS_TYPES_H
-/* for ssize_t */
-# include <sys/types.h>
-#endif	/* HAVE_SYS_TYPES_H */
 
 #include "utefile.h"
 #include "ute-print.h"
@@ -463,7 +459,7 @@ bang5idx(
 	return;
 }
 
-ssize_t
+int
 pr(pr_ctx_t UNUSED(pctx), scom_t st)
 {
 	uint32_t sec = scom_thdr_sec(st);

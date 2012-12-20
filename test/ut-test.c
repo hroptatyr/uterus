@@ -72,7 +72,7 @@ main(int argc, char *argv[])
 	{
 		static const char fn[] = "ut-test.sh";
 		static char buf[4096];
-		size_t idx;
+		size_t idx = 0UL;
 
 		if (srcdir && (idx = strlen(srcdir))) {
 			memcpy(buf, srcdir, idx);

@@ -98,7 +98,7 @@ make_expobuf(int fd)
 		/* target read rate */
 		res->fl = EB_PGSZ;
 		/* get us a nice large page buffer here */
-		res->data = mmap(NULL, EB_PGSZ, PROT_MEM, MAP_MEM, 0, 0);
+		res->data = mmap(NULL, EB_PGSZ, PROT_MEM, MAP_MEM, -1, 0);
 	}
 	res->idx = 0;
 	res->fi = 0;

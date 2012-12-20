@@ -38,6 +38,8 @@
 #define INCLUDED_ute_print_h_
 
 #include <string.h>
+/* for ssize_t */
+#include <unistd.h>
 #include "scommon.h"
 #include "nifty.h"
 

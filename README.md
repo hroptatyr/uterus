@@ -1,4 +1,13 @@
+Synopsis
+========
+
+Set of tools to convert, merge, filter and export tick data files.
+
++ github page: <https://github.com/hroptatyr/uterus>
++ downloads: <https://bitbucket.org/hroptatyr/uterus/downloads>
+
 Problem 1:
+----------
 I have a tonne of end of day MetaStock data.  I have this tool XYZ but
 it expects data in OMZ format, one stock at a time.
 I have found this converter ABC:
@@ -8,6 +17,7 @@ Does anyone have any other converters or a copy of ABC?
 
 
 Problem 2:
+----------
 HELP PLEASE!!  I've just spent almost two days trying to import intraday
 Metastock data into XYZ and I've given up.  Importing Metastock EOD data
 is however very easy; but I don't know what the problem is when I try to
@@ -15,6 +25,7 @@ import 1-min or 5-mn intraday Metastock data into XYZ.
 
 
 Problem 3:
+----------
 I am currently using a local real time provider that streams live data
 to my Metastock Pro v8 Real Time Program but sometimes I lose my
 internet connection and end up with gaps in my intraday charts.  However
@@ -56,6 +67,7 @@ different data vendor needs different treatment.
 
 
 DISCLAIMER:
+-----------
 Being deliberately vague, uterus promises nothing and keeps probably
 even less.  It is irregularly maintained and by no means complete.
 

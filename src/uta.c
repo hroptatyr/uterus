@@ -130,10 +130,18 @@ parse_symbol(const char **cursor)
 	static char symbuf[64];
 	size_t len;
 
-	if (p[0] == '0' && p[1] == '\t') {
-		/* fuckall symbol */
-		*cursor += 2;
-		return NULL;
+	switch (*p) {
+	case '0':
+	case '?':
+		if (p[1] == '\t') {
+			/* fuckall symbol */
+			(*cursor)++;
+		case '\t':
+			(*cursor)++;
+			return NULL;
+		}
+	default:
+		break;
 	}
 
 	/* otherwise it could be a real symbol, read up to the tab */

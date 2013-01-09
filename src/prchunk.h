@@ -48,6 +48,8 @@
 
 typedef struct prch_ctx_s *prch_ctx_t;
 
+#define PRCHUNK_EOL	'\0'
+
 /* non-reentrant! */
 FDECL prch_ctx_t init_prchunk(int fd);
 FDECL void free_prchunk(prch_ctx_t);

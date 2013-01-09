@@ -200,10 +200,10 @@ yield2:
 		set_loff(ctx, ctx->lno, p - ctx->buf);
 		if (UNLIKELY(p[-1] == '\r')) {
 			/* oh god, when is this nightmare gonna end */
-			p[-1] = '\0';
+			p[-1] = PRCHUNK_EOL;
 			set_lftermd(ctx, ctx->lno);
 		}
-		*p = '\0';
+		*p = PRCHUNK_EOL;
 		off = ++p;
 		/* count it as line and check if we need more */
 		if (++ctx->lno >= MAX_NLINES) {
@@ -360,7 +360,7 @@ prchunk_rechunk(prch_ctx_t ctx, char dlm, int ncols)
 		/* store the offset of the column within the line */
 		set_col_off(ctx, lno, cno++, co);
 		/* prepare the counters for the next round */
-		*p = '\0';
+		*p = PRCHUNK_EOL;
 		off = ++p;
 		rsz = bno - off;
 	}

@@ -142,7 +142,9 @@ parse_symbol(const char **cursor)
 		return *cursor = NULL;
 	}
 	/* copy to tmp buffer, do we need ute_sym2idx() with a len? */
-	len = p - *cursor;
+	if ((len = p - *cursor) >= sizeof(symbuf)) {
+		len = sizeof(symbuf) - 1;
+	}
 	memcpy(symbuf, *cursor, len);
 	symbuf[len] = '\0';
 	*cursor = p + 1;

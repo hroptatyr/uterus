@@ -67,8 +67,10 @@
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
 # include <assert.h>
+# define UDEBUG(args...)	fprintf(stderr, args)
 #else  /* !DEBUG_FLAG */
 # define assert(args...)
+# define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
 #define DEFINE_GORY_STUFF

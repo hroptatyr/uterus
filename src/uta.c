@@ -99,9 +99,23 @@ hex2int(const char **cursor)
 	int res = 0;
 	const char *p;
 	for (p = *cursor; *p != '\t' && *p != '\n' && *p != '|'; p++) {
-		res = (res << 4) + (*p - '0');
+		switch (*p) {
+		case '0' ... '9':
+			res = (res << 4) + (*p - '0');
+			break;
+		case 'a' ... 'f':
+			res = (res << 4) + (*p - 'a' + 10U);
+			break;
+		case 'A' ... 'F':
+			res = (res << 4) + (*p - 'A' + 10U);
+			break;
+		default:
+			res = 0;
+			goto ffw;
+		}
 	}
 	if (*p == '|') {
+	ffw:
 		/* fast-forward to the next cell */
 		for (; *p != '\t' && *p != '\n'; p++);
 	}

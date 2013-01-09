@@ -1,0 +1,18 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/mux.l.uta"
+OUTFILE="testload.ute"
+CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+
+cat <<EOF > "${CMDFILE}"
+"\${TOOL}" mux -f uta '${INFILE}' -o '${OUTFILE}'
+"\${TOOL}" print '${OUTFILE}'
+EOF
+
+## STDIN
+
+## STDOUT
+stdout="${INFILE}"
+
+## mux.18.ut ends here

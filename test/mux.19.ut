@@ -1,14 +1,14 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE="${srcdir}/mux.l.uta"
+INFILE="${srcdir}/mux.m.uta"
 OUTFILE="testload.ute"
 CMDLINE="mux -f uta '${INFILE}' -o '${OUTFILE}'"
 
 if test "${endian}" = "big"; then
-	REFFILE="${srcdir}/mux.4.ref.beute"
+	REFFILE="${srcdir}/print.e.beute"
 elif test "${endian}" = "little" ;then
-	REFFILE="${srcdir}/mux.4.ref.ute"
+	REFFILE="${srcdir}/print.e.ute"
 fi
 
 ## mux.19.ut ends here

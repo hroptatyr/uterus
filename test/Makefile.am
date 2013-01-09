@@ -57,6 +57,8 @@ EXTRA_DIST += mux.h.dukas.bi5
 EXTRA_DIST += mux.i.uta
 EXTRA_DIST += mux.j.uta
 EXTRA_DIST += mux.k.uta
+EXTRA_DIST += mux.l.uta
+EXTRA_DIST += mux.m.uta
 
 EXTRA_DIST += mux.4.ref.ute
 EXTRA_DIST += mux.4.ref.beute

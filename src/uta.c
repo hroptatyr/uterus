@@ -228,10 +228,11 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	cursor = line;
 
 	/* symbol comes next, or `nothing' or `C-c' */
-	sym = parse_symbol(&cursor);
-
-	/* receive time stamp, always first on line */
-	if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
+	if (UNLIKELY((sym = parse_symbol(&cursor), cursor == NULL))) {
+		/* symbol parse error, innit? */
+		return -1;
+	} else if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
+		/* time stamp buggered */
 		return -1;
 	} else if (UNLIKELY(*cursor++ != '\t')) {
 		return -1;

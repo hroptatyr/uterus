@@ -100,7 +100,7 @@ hex2int(const char **cursor)
 {
 	int res = 0;
 	const char *p;
-	for (p = *cursor; *p != '\t' && *p != '\n' && *p != '|'; p++) {
+	for (p = *cursor; *p != '\t' && *p != PRCHUNK_EOL && *p != '|'; p++) {
 		switch (*p) {
 		case '0' ... '9':
 			res = (res << 4) + (*p - '0');
@@ -119,7 +119,7 @@ hex2int(const char **cursor)
 	if (*p == '|') {
 	ffw:
 		/* fast-forward to the next cell */
-		for (; *p != '\t' && *p != '\n'; p++);
+		for (; *p != '\t' && *p != PRCHUNK_EOL; p++);
 	}
 	*cursor = p;
 	return res;
@@ -169,7 +169,7 @@ parse_zoff(const char *str, const char **on)
 
 	if (UNLIKELY(*(*on)++ != ':')) {
 		/* just skip to the next tab or newline */
-		for (*on = str; **on != '\t' && **on != '\n'; (*on)++);
+		for (*on = str; **on != '\t' && **on != PRCHUNK_EOL; (*on)++);
 		return 0;
 	}
 	min_off = ffff_strtol(*on, on, 0);
@@ -219,7 +219,7 @@ decfld(const char **cursor)
 	/* what's next? */
 
 	/* zap to next tab */
-	for (; **cursor != '\t' && **cursor != '\n'; (*cursor)++);
+	for (; **cursor != '\t' && **cursor != PRCHUNK_EOL; (*cursor)++);
 	return 0;
 }
 
@@ -293,7 +293,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 			return -1;
 		}
 		l1->v[1] = ffff_m30_get_s(&cursor).u;
-		if (*cursor++ != '\n') {
+		if (*cursor++ != PRCHUNK_EOL) {
 			return -1;
 		}
 

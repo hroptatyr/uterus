@@ -67,8 +67,10 @@
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
 # include <assert.h>
+# define UDEBUG(args...)	fprintf(stderr, args)
 #else  /* !DEBUG_FLAG */
 # define assert(args...)
+# define UDEBUG(args...)
 #endif	/* DEBUG_FLAG */
 
 #define DEFINE_GORY_STUFF
@@ -98,12 +100,26 @@ hex2int(const char **cursor)
 {
 	int res = 0;
 	const char *p;
-	for (p = *cursor; *p != '\t' && *p != '\n' && *p != '|'; p++) {
-		res = (res << 4) + (*p - '0');
+	for (p = *cursor; *p != '\t' && *p != PRCHUNK_EOL && *p != '|'; p++) {
+		switch (*p) {
+		case '0' ... '9':
+			res = (res << 4) + (*p - '0');
+			break;
+		case 'a' ... 'f':
+			res = (res << 4) + (*p - 'a' + 10U);
+			break;
+		case 'A' ... 'F':
+			res = (res << 4) + (*p - 'A' + 10U);
+			break;
+		default:
+			res = 0;
+			goto ffw;
+		}
 	}
 	if (*p == '|') {
+	ffw:
 		/* fast-forward to the next cell */
-		for (; *p != '\t' && *p != '\n'; p++);
+		for (; *p != '\t' && *p != PRCHUNK_EOL; p++);
 	}
 	*cursor = p;
 	return res;
@@ -116,10 +132,18 @@ parse_symbol(const char **cursor)
 	static char symbuf[64];
 	size_t len;
 
-	if (p[0] == '0' && p[1] == '\t') {
-		/* fuckall symbol */
-		*cursor += 2;
-		return NULL;
+	switch (*p) {
+	case '0':
+	case '?':
+		if (p[1] == '\t') {
+			/* fuckall symbol */
+			(*cursor)++;
+		case '\t':
+			(*cursor)++;
+			return NULL;
+		}
+	default:
+		break;
 	}
 
 	/* otherwise it could be a real symbol, read up to the tab */
@@ -128,7 +152,9 @@ parse_symbol(const char **cursor)
 		return *cursor = NULL;
 	}
 	/* copy to tmp buffer, do we need ute_sym2idx() with a len? */
-	len = p - *cursor;
+	if ((len = p - *cursor) >= sizeof(symbuf)) {
+		len = sizeof(symbuf) - 1;
+	}
 	memcpy(symbuf, *cursor, len);
 	symbuf[len] = '\0';
 	*cursor = p + 1;
@@ -143,7 +169,7 @@ parse_zoff(const char *str, const char **on)
 
 	if (UNLIKELY(*(*on)++ != ':')) {
 		/* just skip to the next tab or newline */
-		for (*on = str; **on != '\t' && **on != '\n'; (*on)++);
+		for (*on = str; **on != '\t' && **on != PRCHUNK_EOL; (*on)++);
 		return 0;
 	}
 	min_off = ffff_strtol(*on, on, 0);
@@ -193,7 +219,7 @@ decfld(const char **cursor)
 	/* what's next? */
 
 	/* zap to next tab */
-	for (; **cursor != '\t' && **cursor != '\n'; (*cursor)++);
+	for (; **cursor != '\t' && **cursor != PRCHUNK_EOL; (*cursor)++);
 	return 0;
 }
 
@@ -214,10 +240,11 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	cursor = line;
 
 	/* symbol comes next, or `nothing' or `C-c' */
-	sym = parse_symbol(&cursor);
-
-	/* receive time stamp, always first on line */
-	if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
+	if (UNLIKELY((sym = parse_symbol(&cursor), cursor == NULL))) {
+		/* symbol parse error, innit? */
+		return -1;
+	} else if (UNLIKELY(parse_rcv_stmp(AS_SCOM_THDR(tl), &cursor) < 0)) {
+		/* time stamp buggered */
 		return -1;
 	} else if (UNLIKELY(*cursor++ != '\t')) {
 		return -1;
@@ -266,7 +293,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 			return -1;
 		}
 		l1->v[1] = ffff_m30_get_s(&cursor).u;
-		if (*cursor++ != '\n') {
+		if (*cursor++ != PRCHUNK_EOL) {
 			return -1;
 		}
 

@@ -13,8 +13,6 @@ EOF
 ## STDIN
 
 ## STDOUT
-STDOUT="${CMPFILE}"
-
-## outfile sum
+stdout="${CMPFILE}"
 
 ## mux.17.ut ends here

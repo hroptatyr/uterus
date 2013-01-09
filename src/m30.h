@@ -493,7 +493,10 @@ ffff_m30_get_s(const char **nptr)
 		r30.expo = 2;
 		r30.mant = __30_23_get_s(mant, mend - mant);
 	}
-	r30.mant = !neg ? r30.mant : -r30.mant;
+
+	if (UNLIKELY(neg)) {
+		r30.mant = -r30.mant;
+	}
 	return r30;
 }
 
@@ -527,7 +530,10 @@ ffff_m30_23_get_s(const char **nptr)
 	 *   so mend - mant is the number of integral digits */
 	r30.expo = 2;
 	r30.mant = __30_23_get_s(mant, mend - mant);
-	r30.mant = !neg ? r30.mant : -r30.mant;
+
+	if (UNLIKELY(neg)) {
+		r30.mant = -r30.mant;
+	}
 	return r30;
 }
 

@@ -12,8 +12,6 @@ EOF
 ## STDIN
 
 ## STDOUT
-STDOUT="${INFILE}"
-
-## outfile sum
+stdout="${INFILE}"
 
 ## mux.15.ut ends here

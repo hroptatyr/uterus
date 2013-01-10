@@ -338,15 +338,15 @@ value   name   indicates
 0x0004  fix    a fixing tick
 0x0005  stl    a settlement tick
 0x0006  auc    an auction tick
-0x0007  bidask a tick to capture both bid and ask price, snap shot
+0x0007  g32    a generic tick using 2 32bit payloads
 0x0008  vol    a (pure) volume tick (uses m62 payloads)
 0x0009  vpr    a price volume tick (uses m62 payloads)
 0x000a  vwp    a VWAP tick (vpr divided by vol)
-0x000b  spl    a split tick, two m30s denoting before and after
-0x000c  oi     an open interest tick (number of all open long contracts)
-0x000d  g32    a generic tick using 2 32bit payloads
-0x000e  g64    a generic tick using 1 64bit payload
-0x000f  reserved
+0x000b  oi     an open interest tick (number of all open long contracts)
+0x000c  bidask a tick to capture both bid and ask price, snap shot
+0x000d  l2b    level-2 bid setter tick, qty of 0 means unset
+0x000e  l2a    level-2 ask setter tick, qty of 0 means unset
+0x000f  g64    a generic tick using 1 64bit payload
 @end verbatim
 
 The scom header is designed to be maximally useful.  When dealing with

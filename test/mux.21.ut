@@ -1,0 +1,14 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE=`mktemp "/tmp/tmp.XXXXXXXXXX"`
+OUTFILE="testload.ute"
+CMDLINE="mux -f uta '${INFILE}' -o '${OUTFILE}'"
+COMMENT="empty ute file"
+
+OUTFILE_SHA1="
+a362babede4b5a5cd70546cb5ced76b015da5153
+dc3567e0933f137b8cc5401fe11708a1d64d0bf2
+"
+
+## mux.21.ut ends here

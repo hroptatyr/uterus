@@ -224,6 +224,12 @@ decfld(const char **cursor)
 }
 
 static int
+__u64_payload_p(uint16_t ttf)
+{
+	return (ttf & 0x0cU) == 0x08U || (ttf & 0x0fU) == 0x0fU;
+}
+
+static int
 read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 {
 	const char *cursor;
@@ -284,8 +290,30 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	scom_thdr_set_ttf(AS_SCOM_THDR(tl), (uint16_t)ttf);
 
 	/* now on to the payload */
-	if (ttf < SCOM_FLAG_LM) {
-		/* single payload */
+	if (ttf < SCOM_FLAG_LM && UNLIKELY(__u64_payload_p(ttf))) {
+		/* single payload, 1 u6 */
+		struct sl1t_s *l1 = (void*)tl;
+
+		l1->w[0] = ffff_m62_get_s(&cursor).u;
+		if (*cursor++ != PRCHUNK_EOL) {
+			return -1;
+		}
+
+	} else if (ttf < SCOM_FLAG_LM) {
+		/* single payload, 2 u32s */
+		struct sl1t_s *l1 = (void*)tl;
+
+		l1->v[0] = ffff_m30_get_s(&cursor).u;
+		if (*cursor++ != '\t') {
+			return -1;
+		}
+		l1->v[1] = ffff_m30_get_s(&cursor).u;
+		if (*cursor++ != PRCHUNK_EOL) {
+			return -1;
+		}
+
+	} else if (ttf < SCOM_FLAG_LM && ttf < SL1T_TTF_BIDASK) {
+		/* single payload, 1 u64s */
 		struct sl1t_s *l1 = (void*)tl;
 
 		l1->v[0] = ffff_m30_get_s(&cursor).u;
@@ -298,15 +326,25 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 		}
 
 	} else if (ttf >= SCOM_FLAG_LM && ttf < SCOM_FLAG_L2M) {
-		/* double payload, at least 4 m30s(?) */
+		/* double payload */
 		struct sl1t_lm_s *lm = (void*)tl;
+		size_t i = 0;
 
-		for (size_t i = 0; i < 4; i++) {
+		if (UNLIKELY(__u64_payload_p(ttf))) {
+			/* double payload, 1 u64, 2 u32s */
+			lm->w[0] = ffff_m62_get_s(&cursor).u;
+			if (*cursor++ != '\t') {
+				return -1;
+			}
+			i = 2;
+		}
+		for (; i < 4; i++) {
 			lm->v[i] = ffff_m30_get_s(&cursor).u;
 			if (*cursor++ != '\t') {
 				return -1;
 			}
 		}
+
 		/* now come 2 generic fields, just read the hex portion */
 		if (LIKELY(*cursor != '?')) {
 			lm->v[4] = hex2int(&cursor);
@@ -360,25 +398,23 @@ __pr_snap(char *tgt, scom_t st)
 	*p++ = '\t';
 	/* ask price */
 	p += ffff_m30_s(p, (m30_t)snp->ap);
-	if (scom_thdr_ttf(st) == SSNP_FLAVOUR) {
-		/* real snaps reach out further */
-		*p++ = '\t';
-		/* bid quantity */
-		p += ffff_m30_s(p, (m30_t)snp->bq);
-		*p++ = '\t';
-		/* ask quantity */
-		p += ffff_m30_s(p, (m30_t)snp->aq);
-		*p++ = '\t';
-		/* volume-weighted trade price */
-		p += sprintf(p, "%08x", snp->tvpr);
-		*p++ = '|';
-		p += ffff_m30_s(p, (m30_t)snp->tvpr);
-		*p++ = '\t';
-		/* trade quantity */
-		p += sprintf(p, "%08x", snp->tq);
-		*p++ = '|';
-		p += ffff_m30_s(p, (m30_t)snp->tq);
-	}
+	/* real snaps reach out further */
+	*p++ = '\t';
+	/* bid quantity */
+	p += ffff_m30_s(p, (m30_t)snp->bq);
+	*p++ = '\t';
+	/* ask quantity */
+	p += ffff_m30_s(p, (m30_t)snp->aq);
+	*p++ = '\t';
+	/* volume-weighted trade price */
+	p += sprintf(p, "%08x", snp->tvpr);
+	*p++ = '|';
+	p += ffff_m30_s(p, (m30_t)snp->tvpr);
+	*p++ = '\t';
+	/* trade quantity */
+	p += sprintf(p, "%08x", snp->tq);
+	*p++ = '|';
+	p += ffff_m30_s(p, (m30_t)snp->tq);
 	return p - tgt;
 }
 
@@ -388,11 +424,16 @@ __pr_cdl(char *tgt, scom_t st)
 	const_scdl_t cdl = (const void*)st;
 	char *p = tgt;
 
-	/* h(igh) */
-	p += ffff_m30_s(p, (m30_t)cdl->h);
-	*p++ = '\t';
-	/* l(ow) */
-	p += ffff_m30_s(p, (m30_t)cdl->l);
+	if (LIKELY(!__u64_payload_p(scom_thdr_ttf(st)))) {
+		/* h(igh) */
+		p += ffff_m30_s(p, (m30_t)cdl->h);
+		*p++ = '\t';
+		/* l(ow) */
+		p += ffff_m30_s(p, (m30_t)cdl->l);
+	} else {
+		/* h(igh) */
+		p += ffff_m62_s(p, (m62_t)cdl->vol);
+	}
 	*p++ = '\t';
 	/* o(pen) */
 	p += ffff_m30_s(p, (m30_t)cdl->o);
@@ -465,6 +506,11 @@ pr(pr_ctx_t pctx, scom_t st)
 	case SL1T_TTF_FIX:
 	case SL1T_TTF_STL:
 	case SL1T_TTF_AUC:
+	case SL1T_TTF_G32:
+
+	case SL1T_TTF_BIDASK:
+	case SL2T_TTF_BID:
+	case SL2T_TTF_ASK:
 		l1t = (const void*)st;
 		/* price value */
 		p += ffff_m30_s(p, (m30_t)l1t->v[0]);
@@ -474,7 +520,9 @@ pr(pr_ctx_t pctx, scom_t st)
 		break;
 	case SL1T_TTF_VOL:
 	case SL1T_TTF_VPR:
+	case SL1T_TTF_VWP:
 	case SL1T_TTF_OI:
+	case SL1T_TTF_G64:
 		/* just one huge value, will there be a m62? */
 		l1t = (const void*)st;
 		p += ffff_m62_s(p, (m62_t)l1t->w[0]);
@@ -487,12 +535,14 @@ pr(pr_ctx_t pctx, scom_t st)
 	case SL1T_TTF_FIX | SCOM_FLAG_LM:
 	case SL1T_TTF_STL | SCOM_FLAG_LM:
 	case SL1T_TTF_AUC | SCOM_FLAG_LM:
+		/* vol candles */
+	case SL1T_TTF_VOL | SCOM_FLAG_LM:
+		/* all the distinctions happen in __pr_cdl() */
 		p += __pr_cdl(p, st);
 		break;
 
 		/* snaps */
 	case SSNP_FLAVOUR:
-	case SBAP_FLAVOUR:
 		p += __pr_snap(p, st);
 		break;
 

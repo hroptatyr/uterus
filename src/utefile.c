@@ -985,6 +985,7 @@ flush_slut(utectx_t ctx)
 	char *p;
 	void *stbl = NULL;
 	size_t stsz = 0;
+	size_t hdrz = ute_hdrz(ctx);
 	sidx_t off = ctx->fsz;
 
 	/* dont try at all in read-only mode */
@@ -999,6 +1000,11 @@ flush_slut(utectx_t ctx)
 		return;
 	} else if (UNLIKELY(stsz == 0)) {
 		goto out;
+	}
+	/* make sure we start behind the header */
+	if (UNLIKELY(off < hdrz)) {
+		ute_trunc(ctx, hdrz);
+		off = hdrz;
 	}
 	/* extend to take STSZ (plus alignment) additional bytes */
 	if (!ute_extend(ctx, stsz)) {
@@ -1783,7 +1789,7 @@ make_utectx(const char *fn, int fd, int oflags)
 	res->oflags = (uint16_t)oflags;
 
 	if ((oflags & UO_TRUNC) ||
-	    (st.st_size == 0 && (oflags & UO_CREAT))) {
+	    (res->fsz == 0U && (oflags & UO_CREAT))) {
 		/* user requested truncation, or creation */
 		creat_hdr(res);
 	} else if (res->fsz > 0 && cache_hdr(res) < 0) {

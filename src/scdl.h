@@ -86,9 +86,9 @@ struct scdl_s {
 			/* volume, oi, etc. */
 			uint64_t vol;
 			/* wap (vwap, oiwap) */
-			uint32_t wap;
+			uint32_t vwap;
 			/* nothing */
-			uint32_t:32;
+			uint32_t twap;
 
 			/* carries the starting stamp of this candle */
 			uint32_t:32;

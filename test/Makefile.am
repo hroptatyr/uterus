@@ -46,6 +46,7 @@ ut_tests += mux.17.ut
 ut_tests += mux.18.ut
 ut_tests += mux.19.ut
 ut_tests += mux.20.ut
+ut_tests += mux.21.ut
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5

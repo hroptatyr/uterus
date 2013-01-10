@@ -224,6 +224,12 @@ decfld(const char **cursor)
 }
 
 static int
+__u64_payload_p(uint16_t ttf)
+{
+	return (ttf & 0x0cU) == 0x08U || (ttf & 0x0fU) == 0x0fU;
+}
+
+static int
 read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 {
 	const char *cursor;
@@ -284,8 +290,30 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	scom_thdr_set_ttf(AS_SCOM_THDR(tl), (uint16_t)ttf);
 
 	/* now on to the payload */
-	if (ttf < SCOM_FLAG_LM) {
-		/* single payload */
+	if (ttf < SCOM_FLAG_LM && UNLIKELY(__u64_payload_p(ttf))) {
+		/* single payload, 1 u6 */
+		struct sl1t_s *l1 = (void*)tl;
+
+		l1->w[0] = ffff_m62_get_s(&cursor).u;
+		if (*cursor++ != PRCHUNK_EOL) {
+			return -1;
+		}
+
+	} else if (ttf < SCOM_FLAG_LM) {
+		/* single payload, 2 u32s */
+		struct sl1t_s *l1 = (void*)tl;
+
+		l1->v[0] = ffff_m30_get_s(&cursor).u;
+		if (*cursor++ != '\t') {
+			return -1;
+		}
+		l1->v[1] = ffff_m30_get_s(&cursor).u;
+		if (*cursor++ != PRCHUNK_EOL) {
+			return -1;
+		}
+
+	} else if (ttf < SCOM_FLAG_LM && ttf < SL1T_TTF_BIDASK) {
+		/* single payload, 1 u64s */
 		struct sl1t_s *l1 = (void*)tl;
 
 		l1->v[0] = ffff_m30_get_s(&cursor).u;
@@ -298,15 +326,25 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 		}
 
 	} else if (ttf >= SCOM_FLAG_LM && ttf < SCOM_FLAG_L2M) {
-		/* double payload, at least 4 m30s(?) */
+		/* double payload */
 		struct sl1t_lm_s *lm = (void*)tl;
+		size_t i = 0;
 
-		for (size_t i = 0; i < 4; i++) {
+		if (UNLIKELY(__u64_payload_p(ttf))) {
+			/* double payload, 1 u64, 2 u32s */
+			lm->w[0] = ffff_m62_get_s(&cursor).u;
+			if (*cursor++ != '\t') {
+				return -1;
+			}
+			i = 2;
+		}
+		for (; i < 4; i++) {
 			lm->v[i] = ffff_m30_get_s(&cursor).u;
 			if (*cursor++ != '\t') {
 				return -1;
 			}
 		}
+
 		/* now come 2 generic fields, just read the hex portion */
 		if (LIKELY(*cursor != '?')) {
 			lm->v[4] = hex2int(&cursor);
@@ -386,7 +424,7 @@ __pr_cdl(char *tgt, scom_t st)
 	const_scdl_t cdl = (const void*)st;
 	char *p = tgt;
 
-	if (LIKELY(scom_thdr_ttf(st) & 0x0f < SL1T_TTF_VOL)) {
+	if (LIKELY(!__u64_payload_p(scom_thdr_ttf(st)))) {
 		/* h(igh) */
 		p += ffff_m30_s(p, (m30_t)cdl->h);
 		*p++ = '\t';

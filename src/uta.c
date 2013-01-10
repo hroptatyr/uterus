@@ -360,25 +360,23 @@ __pr_snap(char *tgt, scom_t st)
 	*p++ = '\t';
 	/* ask price */
 	p += ffff_m30_s(p, (m30_t)snp->ap);
-	if (scom_thdr_ttf(st) == SSNP_FLAVOUR) {
-		/* real snaps reach out further */
-		*p++ = '\t';
-		/* bid quantity */
-		p += ffff_m30_s(p, (m30_t)snp->bq);
-		*p++ = '\t';
-		/* ask quantity */
-		p += ffff_m30_s(p, (m30_t)snp->aq);
-		*p++ = '\t';
-		/* volume-weighted trade price */
-		p += sprintf(p, "%08x", snp->tvpr);
-		*p++ = '|';
-		p += ffff_m30_s(p, (m30_t)snp->tvpr);
-		*p++ = '\t';
-		/* trade quantity */
-		p += sprintf(p, "%08x", snp->tq);
-		*p++ = '|';
-		p += ffff_m30_s(p, (m30_t)snp->tq);
-	}
+	/* real snaps reach out further */
+	*p++ = '\t';
+	/* bid quantity */
+	p += ffff_m30_s(p, (m30_t)snp->bq);
+	*p++ = '\t';
+	/* ask quantity */
+	p += ffff_m30_s(p, (m30_t)snp->aq);
+	*p++ = '\t';
+	/* volume-weighted trade price */
+	p += sprintf(p, "%08x", snp->tvpr);
+	*p++ = '|';
+	p += ffff_m30_s(p, (m30_t)snp->tvpr);
+	*p++ = '\t';
+	/* trade quantity */
+	p += sprintf(p, "%08x", snp->tq);
+	*p++ = '|';
+	p += ffff_m30_s(p, (m30_t)snp->tq);
 	return p - tgt;
 }
 
@@ -465,6 +463,11 @@ pr(pr_ctx_t pctx, scom_t st)
 	case SL1T_TTF_FIX:
 	case SL1T_TTF_STL:
 	case SL1T_TTF_AUC:
+	case SL1T_TTF_G32:
+
+	case SL1T_TTF_BIDASK:
+	case SL2T_TTF_BID:
+	case SL2T_TTF_ASK:
 		l1t = (const void*)st;
 		/* price value */
 		p += ffff_m30_s(p, (m30_t)l1t->v[0]);
@@ -474,7 +477,9 @@ pr(pr_ctx_t pctx, scom_t st)
 		break;
 	case SL1T_TTF_VOL:
 	case SL1T_TTF_VPR:
+	case SL1T_TTF_VWP:
 	case SL1T_TTF_OI:
+	case SL1T_TTF_G64:
 		/* just one huge value, will there be a m62? */
 		l1t = (const void*)st;
 		p += ffff_m62_s(p, (m62_t)l1t->w[0]);
@@ -492,7 +497,6 @@ pr(pr_ctx_t pctx, scom_t st)
 
 		/* snaps */
 	case SSNP_FLAVOUR:
-	case SBAP_FLAVOUR:
 		p += __pr_snap(p, st);
 		break;
 

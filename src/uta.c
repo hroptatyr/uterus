@@ -386,11 +386,16 @@ __pr_cdl(char *tgt, scom_t st)
 	const_scdl_t cdl = (const void*)st;
 	char *p = tgt;
 
-	/* h(igh) */
-	p += ffff_m30_s(p, (m30_t)cdl->h);
-	*p++ = '\t';
-	/* l(ow) */
-	p += ffff_m30_s(p, (m30_t)cdl->l);
+	if (LIKELY(scom_thdr_ttf(st) & 0x0f < SL1T_TTF_VOL)) {
+		/* h(igh) */
+		p += ffff_m30_s(p, (m30_t)cdl->h);
+		*p++ = '\t';
+		/* l(ow) */
+		p += ffff_m30_s(p, (m30_t)cdl->l);
+	} else {
+		/* h(igh) */
+		p += ffff_m62_s(p, (m62_t)cdl->vol);
+	}
 	*p++ = '\t';
 	/* o(pen) */
 	p += ffff_m30_s(p, (m30_t)cdl->o);
@@ -492,6 +497,9 @@ pr(pr_ctx_t pctx, scom_t st)
 	case SL1T_TTF_FIX | SCOM_FLAG_LM:
 	case SL1T_TTF_STL | SCOM_FLAG_LM:
 	case SL1T_TTF_AUC | SCOM_FLAG_LM:
+		/* vol candles */
+	case SL1T_TTF_VOL | SCOM_FLAG_LM:
+		/* all the distinctions happen in __pr_cdl() */
 		p += __pr_cdl(p, st);
 		break;
 

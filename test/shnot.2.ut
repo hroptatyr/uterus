@@ -20,12 +20,6 @@ if test "${endian}" = "big"; then
 fi
 EOF
 
-## STDIN
- 
-## STDOUT
-OUTFILE_SHA1="3ce22976091112cdd7456ac43a35a6a37d3c9172"
-## was 304535076361eecdef076e0f3e1d0d331a85e6fe before ssnp got introduced
-
 REFFILE="shnot.2.ref.ute"
 
 ## shnot.2.ut ends here

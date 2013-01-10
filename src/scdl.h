@@ -81,6 +81,20 @@ struct scdl_s {
 			/* use this free slot for a counter */
 			uint32_t cnt;
 		};
+
+		struct {
+			/* volume, oi, etc. */
+			uint64_t vol;
+			/* wap (vwap, oiwap) */
+			uint32_t vwap;
+			/* nothing */
+			uint32_t twap;
+
+			/* carries the starting stamp of this candle */
+			uint32_t:32;
+			/* use this free slot for a counter */
+			uint32_t:32;
+		};
 	} __attribute__((aligned(8)));
 };
 #define __STRUCT_SCDL_S_DEFINED

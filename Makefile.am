@@ -39,6 +39,7 @@ LANG = C
 LC_ALL = C
 
 ACLOCAL_AMFLAGS = -I m4
+EXTRA_DIST =
 
 SUBDIRS =
 if DESCEND_LIBLTDL
@@ -52,8 +53,9 @@ pkgconfig_DATA =
 pkgconfig_DATA += libuterus.pc
 pkgconfig_DATA += uterus.pc
 
-EXTRA_DIST = .version git-version-gen
+EXTRA_DIST += .version git-version-gen
 EXTRA_DIST += uterus.magic
+EXTRA_DIST += README.md
 
 if HAVE_FILE
 pkgdata_DATA = uterus.mgc

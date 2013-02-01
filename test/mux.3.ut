@@ -2,15 +2,14 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.c.dukas.bi5"
-OUTFILE="testload.ute"
-CMDLINE="mux --refdate 1328605200 -f dukas '${INFILE}' -o '${OUTFILE}' --all"
+CMDLINE="mux --refdate 1328605200 -f dukas '${INFILE}' -o '${TS_OUTFILE}' --all"
 
 ## STDIN
 
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 ae3af8424eb82b33aa596332f44e84e0ddc841cc
 ae44fa173308aa8796279ad925a3e46f1b84bd1d
 "

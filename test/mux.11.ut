@@ -2,17 +2,16 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.b.ariva"
-OUTFILE="testload.ute"
 CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 cat <<EOF > "${CMDFILE}"
-cat '${INFILE}' | "\${TOOL}" mux -f ariva -o '${OUTFILE}' -
+cat '${INFILE}' | "\${TOOL}" mux -f ariva -o '${TS_OUTFILE}' -
 EOF
 ## STDIN
 
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 f73a3dbe4338c30f86f3ba14a835fa4699aa146a
 0a09ae4a3c76ea45378d1997d772d6d03ed6edd4
 "

@@ -2,7 +2,6 @@
 
 TOOL=ute
 INFILE="${srcdir}/fsck.17.ref.leute"
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing ex situ decompression of compressed file"
 CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
@@ -18,7 +17,7 @@ cat <<EOF > "${CMDFILE}"
 if test "${endian}" = "big"; then
 	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
 fi
-"\${TOOL}" fsck --decompress -o '${OUTFILE}' '${INFILE}'
+"\${TOOL}" fsck --decompress -o '${TS_OUTFILE}' '${INFILE}'
 EOF
 
 ## fsck.21.ut ends here

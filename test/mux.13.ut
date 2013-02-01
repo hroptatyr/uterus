@@ -2,14 +2,13 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.h.dukas.bi5"
-OUTFILE="testload.ute"
 CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
 cat <<EOF > "${CMDFILE}"
-TMPOUT='${OUTFILE}'
+TMPOUT='${TS_OUTFILE}'
 "\${TOOL}" mux -f dukas --refdate 1328475600 --name 'AUDUSD' '${INFILE}' -o "\${TMPOUT}"
 if test "${endian}" = "big"; then
-	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${OUTFILE}'
+	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${TS_OUTFILE}'
 	rm -f -- "\${TMPOUT}"
 fi
 EOF

@@ -1,7 +1,6 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing ex situ compression of compressed file"
 CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
@@ -14,7 +13,7 @@ elif test "${endian}" = "little"; then
 fi
 
 cat <<EOF > "${CMDFILE}"
-"\${TOOL}" fsck --compress -o '${OUTFILE}' '${INFILE}'
+"\${TOOL}" fsck --compress -o '${TS_OUTFILE}' '${INFILE}'
 EOF
 
 ## fsck.19.ut ends here

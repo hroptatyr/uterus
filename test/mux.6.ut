@@ -2,8 +2,7 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.e.ariva"
-OUTFILE="testload.ute"
-CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="mux -f ariva '${INFILE}' -o '${TS_OUTFILE}'"
 COMMENT="broken ariva file"
 
 ## STDIN
@@ -11,7 +10,7 @@ COMMENT="broken ariva file"
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 1400f044313acd2faf1ee7825acddc4d39c3d383
 2ccef2c0b53f7f502737a486bc5714103609fc55
 "

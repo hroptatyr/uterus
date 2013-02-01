@@ -2,7 +2,6 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.11.ref.ute"
-OUTFILE="testload.ute"
 COMMENT="half-hour candles cannot be refined"
 CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
@@ -12,9 +11,9 @@ if test "${endian}" = "big"; then
 	TMPIN=\`mktemp "/tmp/tmp.XXXXXXXX"\`
 	"\${TOOL}" fsck --big-endian -o "\${TMPIN}" '${INFILE}'
 fi
-"\${TOOL}" chndl -i 60 -o '${OUTFILE}' "\${TMPIN}"
+"\${TOOL}" chndl -i 60 -o '${TS_OUTFILE}' "\${TMPIN}"
 if test "${endian}" = "big"; then
-	"\${TOOL}" fsck --little-endian '${OUTFILE}'
+	"\${TOOL}" fsck --little-endian '${TS_OUTFILE}'
 fi
 EOF
 

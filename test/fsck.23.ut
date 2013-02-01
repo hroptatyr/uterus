@@ -1,7 +1,6 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing decompression/compression"
 CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 
@@ -14,8 +13,8 @@ elif test "${endian}" = "little"; then
 fi
 
 cat <<EOF > "${CMDFILE}"
-"\${TOOL}" fsck --decompress -o '${OUTFILE}' '${INFILE}'
-"\${TOOL}" fsck --compress '${OUTFILE}'
+"\${TOOL}" fsck --decompress -o '${TS_OUTFILE}' '${INFILE}'
+"\${TOOL}" fsck --compress '${TS_OUTFILE}'
 EOF
 
 ## fsck.23.ut ends here

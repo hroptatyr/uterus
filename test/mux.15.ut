@@ -11,6 +11,6 @@ EOF
 ## STDIN
 
 ## STDOUT
-stdout="${INFILE}"
+TS_EXP_STDOUT="${INFILE}"
 
 ## mux.15.ut ends here

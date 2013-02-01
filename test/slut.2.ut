@@ -8,6 +8,6 @@ COMMENT="no slut in print.b.ute"
 ## STDIN
 
 ## STDOUT
-stdout=`mktemp "/tmp/tmp.XXXXXXXX"`
+touch "${TS_EXP_STDOUT}"
 
 ## slut.2.ut ends here

@@ -7,8 +7,7 @@ CMDLINE="fsck -n '${INFILE}'"
 ## STDIN
 
 ## STDOUT
-stdout=`mktemp "/tmp/tmp.XXXXXXXX"`
-cat <<EOF > "${stdout}"
+cat > "${TS_EXP_STDOUT}" <<EOF
 file \`${INFILE}' has no endianness indicator ...
 EOF
 

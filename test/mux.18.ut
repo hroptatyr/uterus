@@ -12,6 +12,6 @@ EOF
 ## STDIN
 
 ## STDOUT
-stdout="${INFILE}"
+TS_EXP_STDOUT="${INFILE}"
 
 ## mux.18.ut ends here

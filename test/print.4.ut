@@ -8,8 +8,7 @@ COMMENT="cleaned up print.b.ute"
 ## STDIN
  
 ## STDOUT
-stdout=`mktemp "/tmp/tmp.XXXXXXXXXX"`
-cat > "${stdout}" <<EOF
+cat > "${TS_EXP_STDOUT}" <<EOF
 0	2012-01-15T22:00:02.766+00:00	0	1	77.0560	1500000
 0	2012-01-15T22:00:02.766+00:00	0	2	77.0600	750000
 0	2012-01-15T22:00:02.998+00:00	0	1	77.0550	750000

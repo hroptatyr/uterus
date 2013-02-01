@@ -12,6 +12,6 @@ EOF
 ## STDIN
 
 ## STDOUT
-stdout="${CMPFILE}"
+TS_EXP_STDOUT="${CMPFILE}"
 
 ## mux.16.ut ends here

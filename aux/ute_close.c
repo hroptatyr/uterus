@@ -42,14 +42,13 @@
 /* our stuff */
 #include "uterus.h"
 #include "nifty.h"
+#include "ute_handle.h"
 
-static utectx_t
-snarf_handle(const mxArray *hdl)
+static void
+wipe_handle(const mxArray *arr)
 {
-	if (!mxIsOpaque(hdl)) {
-		return NULL;
-	}
-	return ((void**)mxGetData(hdl))[0];
+	umx_put_handle(arr, NULL);
+	return;
 }
 
 
@@ -63,11 +62,12 @@ mexFunction(
 	if (nrhs != 1) {
 		mexErrMsgTxt("invalid usage, see `help ute_close'");
 		return;
-	} else if ((hdl = snarf_handle(prhs[0])) == NULL) {
+	} else if ((hdl = umx_get_handle(prhs[0])) == NULL) {
 		mexErrMsgTxt("ute handle seems buggered");
 		return;
 	}
 	ute_close(hdl);
+	wipe_handle(prhs[0]);
 	return;
 }
 

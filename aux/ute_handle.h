@@ -1,4 +1,4 @@
-/*** ute_open.c -- ute bottle opener for matlab
+/*** ute_handle.h -- ute bottle wraps
  *
  * Copyright (C) 2013 Sebastian Freundt
  *
@@ -34,50 +34,49 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ***/
-#if defined HAVE_CONFIG_H
-# include "config.h"
-#endif	/* HAVE_CONFIG_H */
-#include <stdint.h>
-/* matlab stuff */
-#include <mex.h>
-/* our stuff */
-#include "uterus.h"
-#include "nifty.h"
-#include "ute_handle.h"
+#if !defined INCLUDED_ute_handle_h_
+#define INCLUDED_ute_handle_h_
 
-static char*
-snarf_fname(const mxArray *fn)
+#include <stdbool.h>
+#include <mex.h>
+#include "nifty.h"
+
+static inline bool
+mxIsIndex(const mxArray *arr)
 {
-	return mxArrayToString(fn);
+	if (mxINDEX_CLASS == mxUINT64_CLASS) {
+		return mxIsUint64(arr);
+	} else if (mxINDEX_CLASS == mxUINT32_CLASS) {
+		return mxIsUint32(arr);
+	}
+	return false;
 }
 
-
-void
-mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+static inline void*
+umx_get_handle(const mxArray *arr)
 {
-	utectx_t hdl;
-	char *fn;
+	void **ptr;
 
-	if (nrhs != 1 || nlhs != 1) {
-		mexErrMsgTxt("invalid usage, see `help ute_open'");
+	if (UNLIKELY(!mxIsIndex(arr))) {
+		return NULL;
+	} else if (UNLIKELY((ptr = (void**)mxGetData(arr)) == NULL)) {
+		return NULL;
+	}
+	return ptr[0];
+}
+
+static inline void
+umx_put_handle(const mxArray *tgt, void *hdl)
+{
+	void **ptr;
+
+	if (UNLIKELY(!mxIsIndex(tgt))) {
 		return;
-	} else if ((fn = snarf_fname(prhs[0])) == NULL) {
-		mexErrMsgTxt("cannot determine file name to open");
-		return;
-	} else if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
-		mexErrMsgTxt("could not open ute file");
+	} else if (UNLIKELY((ptr = (void**)mxGetData(tgt)) == NULL)) {
 		return;
 	}
-	/* free file name */
-	mxFree(fn);
-	/* otherwise just assign the handle */
-	{
-		mwSize dims[] = {2};
-		plhs[0] = mxCreateNumericArray(
-			countof(dims), dims, mxINDEX_CLASS, mxREAL);
-	}
-	umx_put_handle(plhs[0], hdl);
+	ptr[0] = hdl;
 	return;
 }
 
-/* ute_open.c ends here */
+#endif	/* INCLUDED_ute_handle_h_ */

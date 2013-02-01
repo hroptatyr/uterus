@@ -13,6 +13,7 @@ fi
 
 cat <<EOF > "${CMDFILE}"
 cp '${INFILE}' '${TS_OUTFILE}'
+chmod u+w '${TS_OUTFILE}'
 "\${TOOL}" fsck --compress '${TS_OUTFILE}'
 EOF
 

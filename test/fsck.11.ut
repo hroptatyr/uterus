@@ -8,6 +8,7 @@ CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
 cp '${INFILE}' '${TS_OUTFILE}'
+chmod u+w '${TS_OUTFILE}'
 "\${TOOL}" fsck --big-endian '${TS_OUTFILE}'
 EOF
 

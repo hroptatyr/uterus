@@ -18,6 +18,7 @@ if test "${endian}" = "big"; then
 	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
 fi
 cp '${INFILE}' '${TS_OUTFILE}'
+chmod u+w '${TS_OUTFILE}'
 "\${TOOL}" fsck --decompress '${TS_OUTFILE}'
 ## truncate and overwrite ftr fields, HARDCODING ALARM
 dd if='/dev/zero' of='${TS_OUTFILE}' ibs=4 obs=4 seek=6 count=2 conv=notrunc

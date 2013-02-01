@@ -5,11 +5,9 @@ INFILE="${srcdir}/mux.h.dukas.bi5"
 CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
-TMPOUT='${TS_OUTFILE}'
-"\${TOOL}" mux -f dukas --refdate 1328475600 --name 'AUDUSD' '${INFILE}' -o "\${TMPOUT}"
+"\${TOOL}" mux -f dukas --refdate 1328475600 --name 'AUDUSD' '${INFILE}' -o '${TS_OUTFILE}'
 if test "${endian}" = "big"; then
-	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${TS_OUTFILE}'
-	rm -f -- "\${TMPOUT}"
+	"\${TOOL}" fsck --little-endian '${TS_OUTFILE}'
 fi
 EOF
 

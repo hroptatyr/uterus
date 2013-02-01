@@ -1,6 +1,6 @@
 ### Makefile.am -- uterus master make file
 ##
-## Copyright (C) 2008 - 2010  Sebastian Freundt
+## Copyright (C) 2008-2013  Sebastian Freundt
 ##
 ## Author:  Sebastian Freundt <hroptatyr@fresse.org>
 ##

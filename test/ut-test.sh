@@ -106,6 +106,41 @@ eval_echo()
 	return ${ret}
 }
 
+exec_echo()
+{
+	local ret
+	local husk="${1}"
+	shift
+
+	## repeat stdin to &3
+	echo "TOOL=${TOOL}" | cat - "${@}" >&3
+	echo "TOOL=${TOOL}" | cat - "${@}" | "/bin/sh"
+	ret=${?}
+	return ${ret}
+}
+
+hexdiff()
+{
+	local file1="${1}"
+	local file2="${2}"
+	local tmp1=`mktemp "/tmp/tmp.XXXXXXXX"`
+	local tmp2=`mktemp "/tmp/tmp.XXXXXXXX"`
+
+	hextool()
+	{
+		local file="${1}"
+		command -p "hexdump" -C "${file}" || \
+			command -p "xxd" "${file}" || \
+			command -p "od" -A x -v -t x2 "${file}"
+	}
+
+	hextool "${file1}" > "${tmp1}"
+	hextool "${file2}" > "${tmp2}"
+	diff -u "${tmp1}" "${tmp2}"
+
+	rm -f "${tmp1}" "${tmp2}"
+}
+
 ## check if everything's set
 if test -z "${TOOL}"; then
 	echo "variable \${TOOL} not set" >&2
@@ -124,11 +159,19 @@ fi
 stdout="${TS_EXP_STDOUT}"
 stderr="${TS_EXP_STDERR}"
 
-eval_echo "${HUSK}" "${TOOL}" "${CMDLINE}" \
-	< "${stdin:-/dev/null}" \
-	3>&2 \
-	> "${tool_stdout}" 2> "${tool_stderr}"
-tool_exit_code=${?}
+
+## check if we used a CMDFILE instead of CMDLINE
+if test -n "${CMDFILE}"; then
+	exec_echo "${husk}" "${CMDFILE}" 3>&2 \
+		> "${tool_stdout}" 2> "${tool_stderr}"
+	tool_exit_code=${?}
+else
+	eval_echo "${husk}" "${TOOL}" "${CMDLINE}" \
+		< "${stdin:-/dev/null}" \
+		3>&2 \
+		> "${tool_stdout}" 2> "${tool_stderr}"
+	tool_exit_code=${?}
+fi
 
 echo
 if test "${TS_EXP_EXIT_CODE}" != "${tool_exit_code}"; then
@@ -155,16 +198,26 @@ elif test -s "${tool_stderr}"; then
 fi
 
 ## check if we need to hash stuff
-if test -n "${TS_OUTFILE_SHA1}"; then
+if test -n "${REFFILE}"; then
+	## check for differing files
+	if ! diff -q "${REFFILE}" "${TS_OUTFILE}"; then
+		## failed due to diff -q returning non-nil
+		fail=1
+		hexdiff "${REFFILE}" "${TS_OUTFILE}"
+	fi
+elif test -n "${TS_OUTFILE_SHA1}"; then
 	if sum="`ts_sha1sum "${TS_OUTFILE}"`"; then
-		if test "${sum}" != "${TS_OUTFILE_SHA1}"; then
-			cat <<EOF >&2
+		fail=1
+		for i in ${TS_OUTFILE_SHA1}; do
+			if test "${sum}" = "${i}"; then
+				fail=0
+			fi
+		done
+		test "${fail}" = "1" && cat <<EOF >&2
 outfile (${TS_OUTFILE}) hashes do not match:
 SHOULD BE: ${TS_OUTFILE_SHA1}
 ACTUAL:    ${sum}
 EOF
-		fail=1
-		fi
 	else
 		fail=1
 	fi

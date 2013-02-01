@@ -45,7 +45,7 @@ SUBDIRS =
 if DESCEND_LIBLTDL
 SUBDIRS += libltdl
 endif
-SUBDIRS += src info test
+SUBDIRS += src info aux test
 
 pkgconfigdir = @libdir@/pkgconfig
 pkgconfig_DATA =

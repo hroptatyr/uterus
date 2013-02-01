@@ -13,6 +13,6 @@ file \`${INFILE}' has no endianness indicator ...
 file \`${INFILE}' page 0 needs sorting ...
 EOF
 
-EXPECT_EXIT_CODE=1
+TS_EXP_EXIT_CODE=1
 
 ## fsck.3.ut ends here

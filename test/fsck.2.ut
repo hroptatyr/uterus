@@ -12,6 +12,6 @@ cat <<EOF > "${stdout}"
 file \`${INFILE}' has no endianness indicator ...
 EOF
 
-EXPECT_EXIT_CODE=1
+TS_EXP_EXIT_CODE=1
 
 ## fsck.2.ut ends here

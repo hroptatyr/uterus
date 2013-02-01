@@ -174,6 +174,4 @@ EXTRA_DIST += ut-test.sh
 clean-local:
 	-rm -rf *.tmpd
 
-.NOTPARALLEL:
-
 ## Makefile.am ends here

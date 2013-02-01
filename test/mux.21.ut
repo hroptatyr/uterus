@@ -1,7 +1,9 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-INFILE=`mktemp "/tmp/tmp.XXXXXXXXXX"`
+INFILE="${TS_TMPDIR}/infile-empty"
+touch "${INFILE}"
+
 CMDLINE="mux -f uta '${INFILE}' -o '${TS_OUTFILE}'"
 COMMENT="empty ute file"
 

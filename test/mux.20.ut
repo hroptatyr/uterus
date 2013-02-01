@@ -4,8 +4,7 @@ TOOL=ute
 INFILE="${srcdir}/mux.l.uta"
 CMDLINE="mux -f uta - -o '${TS_OUTFILE}'"
 
-stdin=`mktemp "/tmp/tmp.XXXXXXXXXX"`
-cat <<EOF > "${stdin}"
+cat > "${TS_STDIN}" <<EOF
 something not adhering to the uta line format and longer than 64 bytes
 EOF
 

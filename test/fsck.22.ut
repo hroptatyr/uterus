@@ -7,7 +7,7 @@ CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	INFILE="${srcdir}/fsck.17.ref.beute"
-	REFFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+	REFFILE="${TS_TMPDIR}/reffile-bigendian"
 elif test "${endian}" = "little"; then
 	INFILE="${srcdir}/fsck.17.ref.leute"
 	REFFILE="${srcdir}/mux.7.ref.ute"

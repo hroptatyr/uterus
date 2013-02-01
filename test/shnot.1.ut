@@ -24,6 +24,6 @@ EOF
  
 ## STDOUT
 
-REFFILE="shnot.1.ref.ute"
+REFFILE="${srcdir}/shnot.1.ref.ute"
 
 ## shnot.1.ut ends here

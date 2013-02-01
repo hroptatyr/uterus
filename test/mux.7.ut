@@ -13,6 +13,6 @@ fi
 EOF
 
 ## outfile reference
-REFFILE="mux.7.ref.ute"
+REFFILE="${srcdir}/mux.7.ref.ute"
 
 ## mux.7.ut ends here

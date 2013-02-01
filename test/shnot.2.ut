@@ -20,6 +20,6 @@ if test "${endian}" = "big"; then
 fi
 EOF
 
-REFFILE="shnot.2.ref.ute"
+REFFILE="${srcdir}/shnot.2.ref.ute"
 
 ## shnot.2.ut ends here

@@ -18,6 +18,6 @@ if test "${endian}" = "big"; then
 fi
 EOF
 
-REFFILE="chndl.2.ref.ute"
+REFFILE="${srcdir}/chndl.2.ref.ute"
 
 ## chndl.2.ut ends here

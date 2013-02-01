@@ -16,6 +16,6 @@ EOF
 ## STDOUT
 
 ## reference
-REFFILE="mux.8.ref.ute"
+REFFILE="${srcdir}/mux.8.ref.ute"
 
 ## mux.8.ut ends here

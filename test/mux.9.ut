@@ -17,6 +17,6 @@ EOF
 ## STDOUT
 
 ## reference file
-REFFILE="mux.9.ref.ute"
+REFFILE="${srcdir}/mux.9.ref.ute"
 
 ## mux.9.ut ends here

@@ -2,7 +2,7 @@
 
 TOOL=ute
 COMMENT="testing ex situ compression of compressed file"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	INFILE="${srcdir}/fsck.17.ref.beute"

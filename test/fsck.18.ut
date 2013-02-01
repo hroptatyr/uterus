@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.7.ref.ute"
 COMMENT="testing in situ compression"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	REFFILE="${srcdir}/fsck.17.ref.beute"

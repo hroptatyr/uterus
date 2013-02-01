@@ -4,7 +4,7 @@ TOOL=ute
 INFILE="${srcdir}/mux.4.ref.ute"
 REFFILE="${srcdir}/mux.4.ref.ute"
 COMMENT="testing inplace conversions"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
 cp '${INFILE}' '${TS_OUTFILE}'

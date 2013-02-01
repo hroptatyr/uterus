@@ -3,7 +3,7 @@
 TOOL=ute
 INFILE="${srcdir}/mux.11.ref.ute"
 COMMENT="half-hour candles cannot be refined"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
 TMPIN='${INFILE}'

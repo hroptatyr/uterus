@@ -17,7 +17,7 @@ bin_tests =
 
 TEST_EXTENSIONS = .ut
 UT_LOG_COMPILER = $(builddir)/ut-test
-AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src --hash sha1sum
+AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
 
 ut_tests += mux.1.ut
 ut_tests += mux.2.ut

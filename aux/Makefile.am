@@ -49,6 +49,19 @@ ute_nticks_la_LDFLAGS = $(AM_LDFLAGS)
 ute_nticks_la_LDFLAGS += $(MEX_LDFLAGS)
 ute_nticks_la_LDFLAGS += $(XCCLDFLAGS)
 ute_nticks_la_LIBADD = $(top_builddir)/src/libuterus.la
+
+mex_LTLIBRARIES += ute_slut.la
+mex_DATA += ute_slut.m
+ute_slut_la_SOURCES = ute_slut.c
+ute_slut_la_SOURCES += ute_handle.h
+ute_slut_la_CPPFLAGS = $(AM_CPPFLAGS) -DMATLAB_MEX_FILE
+ute_slut_la_CPPFLAGS += $(matlab_CFLAGS)
+ute_slut_la_CPPFLAGS += -I$(top_srcdir)/src
+ute_slut_la_CPPFLAGS += -I$(top_builddir)/src
+ute_slut_la_LDFLAGS = $(AM_LDFLAGS)
+ute_slut_la_LDFLAGS += $(MEX_LDFLAGS)
+ute_slut_la_LDFLAGS += $(XCCLDFLAGS)
+ute_slut_la_LIBADD = $(top_builddir)/src/libuterus.la
 endif  BUILD_MATCLI
 EXTRA_DIST += $(mex_DATA)
 

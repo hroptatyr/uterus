@@ -71,11 +71,7 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	/* free file name */
 	mxFree(fn);
 	/* otherwise just assign the handle */
-	{
-		mwSize dims[] = {2};
-		plhs[0] = mxCreateNumericArray(
-			countof(dims), dims, mxINDEX_CLASS, mxREAL);
-	}
+	plhs[0] = make_umx_handle();
 	umx_put_handle(plhs[0], hdl);
 	return;
 }

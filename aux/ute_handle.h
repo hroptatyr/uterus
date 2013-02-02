@@ -38,8 +38,18 @@
 #define INCLUDED_ute_handle_h_
 
 #include <stdbool.h>
+/* matlab stuff */
 #include <mex.h>
+/* our stuff */
+#include "uterus.h"
 #include "nifty.h"
+
+static inline mxArray*
+make_umx_handle(void)
+{
+	mwSize dims[] = {3};
+	return mxCreateNumericArray(countof(dims), dims, mxINDEX_CLASS, mxREAL);
+}
 
 static inline bool
 mxIsIndex(const mxArray *arr)
@@ -52,30 +62,30 @@ mxIsIndex(const mxArray *arr)
 	return false;
 }
 
-static inline void*
+static inline utectx_t
 umx_get_handle(const mxArray *arr)
 {
-	void **ptr;
+	intptr_t *ptr;
 
 	if (UNLIKELY(!mxIsIndex(arr))) {
 		return NULL;
-	} else if (UNLIKELY((ptr = (void**)mxGetData(arr)) == NULL)) {
+	} else if (UNLIKELY((ptr = mxGetData(arr)) == NULL)) {
 		return NULL;
 	}
-	return ptr[0];
+	return (void*)ptr[0];
 }
 
 static inline void
-umx_put_handle(const mxArray *tgt, void *hdl)
+umx_put_handle(const mxArray *tgt, utectx_t hdl)
 {
-	void **ptr;
+	intptr_t *ptr;
 
 	if (UNLIKELY(!mxIsIndex(tgt))) {
 		return;
-	} else if (UNLIKELY((ptr = (void**)mxGetData(tgt)) == NULL)) {
+	} else if (UNLIKELY((ptr = mxGetData(tgt)) == NULL)) {
 		return;
 	}
-	ptr[0] = hdl;
+	ptr[0] = (intptr_t)hdl;
 	return;
 }
 

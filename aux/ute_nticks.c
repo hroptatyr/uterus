@@ -49,6 +49,7 @@ void
 mexFunction(int UNUSED(nlhs), mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 	utectx_t hdl;
+	size_t nt;
 
 	if (nrhs != 1) {
 		mexErrMsgTxt("invalid usage, see `help ute_nticks'");
@@ -57,15 +58,8 @@ mexFunction(int UNUSED(nlhs), mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		mexErrMsgTxt("ute handle seems buggered");
 		return;
 	}
-	{
-		mwSize dims[] = {1};
-		plhs[0] = mxCreateNumericArray(
-			countof(dims), dims, mxINDEX_CLASS, mxREAL);
-	}
-	{
-		size_t *z = mxGetData(plhs[0]);
-		*z = ute_nticks(hdl);
-	}
+	nt = umx_get_nticks(prhs[0]);
+	plhs[0] = mxCreateDoubleScalar((double)nt);
 	return;
 }
 

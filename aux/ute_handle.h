@@ -89,4 +89,19 @@ umx_put_handle(const mxArray *tgt, utectx_t hdl)
 	return;
 }
 
+static inline size_t
+umx_get_nticks(const mxArray *src)
+{
+	intptr_t *ptr;
+
+	if (UNLIKELY(!mxIsIndex(src))) {
+		return 0UL;
+	} else if (UNLIKELY((ptr = mxGetData(src)) == NULL)) {
+		return 0UL;
+	} else if (UNLIKELY(ptr[2] == 0)) {
+		ptr[2] = ute_nticks((void*)ptr[0]);
+	}
+	return ptr[2];
+}
+
 #endif	/* INCLUDED_ute_handle_h_ */

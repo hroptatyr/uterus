@@ -2,8 +2,7 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.d.ariva"
-OUTFILE="testload.ute"
-CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="mux -f ariva '${INFILE}' -o '${TS_OUTFILE}'"
 COMMENT="same as mux.b.ariva but needs sorting"
 
 ## STDIN
@@ -11,7 +10,7 @@ COMMENT="same as mux.b.ariva but needs sorting"
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 ac1ce20dca1b9e4c5a2aeb0f7840c6926ea4f06d
 5496df332f669293a0456d773d4ad025acf64c30
 "

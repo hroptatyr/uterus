@@ -2,13 +2,12 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.g.ibhist.xml"
-OUTFILE="testload.ute"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
-"\${TOOL}" mux -f ibhist '${INFILE}' -o '${OUTFILE}'
+"\${TOOL}" mux -f ibhist '${INFILE}' -o '${TS_OUTFILE}'
 if test "${endian}" = "big"; then
-	"\${TOOL}" fsck --little-endian '${OUTFILE}'
+	"\${TOOL}" fsck --little-endian '${TS_OUTFILE}'
 fi
 EOF
 
@@ -17,6 +16,6 @@ EOF
 ## STDOUT
 
 ## reference file
-REFFILE="mux.9.ref.ute"
+REFFILE="${srcdir}/mux.9.ref.ute"
 
 ## mux.9.ut ends here

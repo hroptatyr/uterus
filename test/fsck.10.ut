@@ -2,14 +2,13 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.4.ref.ute"
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 REFFILE="${srcdir}/mux.4.ref.ute"
 COMMENT="testing inplace conversions"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
-cp '${INFILE}' '${OUTFILE}'
-"\${TOOL}" fsck --little-endian '${OUTFILE}'
+cp '${INFILE}' '${TS_OUTFILE}'
+"\${TOOL}" fsck --little-endian '${TS_OUTFILE}'
 EOF
 
 ## fsck.10.ut ends here

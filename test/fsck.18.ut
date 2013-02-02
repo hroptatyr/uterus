@@ -2,9 +2,8 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.7.ref.ute"
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing in situ compression"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	REFFILE="${srcdir}/fsck.17.ref.beute"
@@ -13,8 +12,9 @@ elif test "${endian}" = "little"; then
 fi
 
 cat <<EOF > "${CMDFILE}"
-cp '${INFILE}' '${OUTFILE}'
-"\${TOOL}" fsck --compress '${OUTFILE}'
+cp '${INFILE}' '${TS_OUTFILE}'
+chmod u+w '${TS_OUTFILE}'
+"\${TOOL}" fsck --compress '${TS_OUTFILE}'
 EOF
 
 ## fsck.18.ut ends here

@@ -2,17 +2,16 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.l.uta"
-OUTFILE="testload.ute"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
-"\${TOOL}" mux -f uta '${INFILE}' -o '${OUTFILE}'
-"\${TOOL}" print '${OUTFILE}'
+"\${TOOL}" mux -f uta '${INFILE}' -o '${TS_OUTFILE}'
+"\${TOOL}" print '${TS_OUTFILE}'
 EOF
 
 ## STDIN
 
 ## STDOUT
-stdout="${INFILE}"
+TS_EXP_STDOUT="${INFILE}"
 
 ## mux.18.ut ends here

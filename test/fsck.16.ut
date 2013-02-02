@@ -2,9 +2,8 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.4.ref.ute"
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 REFFILE="${srcdir}/mux.4.ref.beute"
 COMMENT="testing ex situ conversions"
-CMDLINE="fsck --big-endian '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="fsck --big-endian '${INFILE}' -o '${TS_OUTFILE}'"
 
 ## fsck.16.ut ends here

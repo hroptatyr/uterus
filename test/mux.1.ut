@@ -2,15 +2,14 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.a.dukasq"
-OUTFILE="testload.ute"
-CMDLINE="mux -f dukas '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="mux -f dukas '${INFILE}' -o '${TS_OUTFILE}'"
 
 ## STDIN
 
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 97126a40937f040521df8a5f961fea82b2ae43c6
 d1fa5a40f6e769b067021b7f4a1fc3431de5c6d7
 "

@@ -17,7 +17,7 @@ bin_tests =
 
 TEST_EXTENSIONS = .ut
 UT_LOG_COMPILER = $(builddir)/ut-test
-AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src --hash sha1sum
+AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
 
 ut_tests += mux.1.ut
 ut_tests += mux.2.ut
@@ -171,6 +171,7 @@ EXTRA_DIST += ut-test.sh
 %.c %.h: %.ggo
 	$(AM_V_GEN) gengetopt -F $* -i $<
 
-.NOTPARALLEL:
+clean-local:
+	-rm -rf *.tmpd
 
 ## Makefile.am ends here

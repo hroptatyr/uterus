@@ -2,13 +2,12 @@
 
 TOOL=ute
 INFILE="${srcdir}/fsck.17.ref.leute"
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing in situ decompression of compressed data"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	INFILE="${srcdir}/fsck.17.ref.beute"
-	REFFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+	REFFILE="${TS_TMPDIR}/reffile-bigendian"
 elif test "${endian}" = "little"; then
 	INFILE="${srcdir}/fsck.17.ref.leute"
 	REFFILE="${srcdir}/mux.7.ref.ute"
@@ -18,12 +17,13 @@ cat <<EOF > "${CMDFILE}"
 if test "${endian}" = "big"; then
 	"\${TOOL}" fsck --big-endian "${srcdir}/mux.7.ref.ute" -o '${REFFILE}'
 fi
-cp '${INFILE}' '${OUTFILE}'
-"\${TOOL}" fsck --decompress '${OUTFILE}'
+cp '${INFILE}' '${TS_OUTFILE}'
+chmod u+w '${TS_OUTFILE}'
+"\${TOOL}" fsck --decompress '${TS_OUTFILE}'
 ## truncate and overwrite ftr fields, HARDCODING ALARM
-dd if='/dev/zero' of='${OUTFILE}' ibs=4 obs=4 seek=6 count=2 conv=notrunc
-head -c 68720 '${OUTFILE}' > '${OUTFILE}.tmp'
-mv '${OUTFILE}.tmp' '${OUTFILE}'
+dd if='/dev/zero' of='${TS_OUTFILE}' ibs=4 obs=4 seek=6 count=2 conv=notrunc
+head -c 68720 '${TS_OUTFILE}' > '${TS_OUTFILE}.tmp'
+mv '${TS_OUTFILE}.tmp' '${TS_OUTFILE}'
 EOF
 
 ## fsck.22.ut ends here

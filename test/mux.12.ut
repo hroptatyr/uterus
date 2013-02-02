@@ -2,11 +2,10 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.d.ariva"
-OUTFILE="testload.ute"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 COMMENT="same as mux.b.ariva but needs sorting"
 cat <<EOF > "${CMDFILE}"
-cat '${INFILE}' | "\${TOOL}" mux -f ariva - -o '${OUTFILE}'
+cat '${INFILE}' | "\${TOOL}" mux -f ariva - -o '${TS_OUTFILE}'
 EOF
 
 ## STDIN
@@ -14,7 +13,7 @@ EOF
 ## STDOUT
 
 ## outfile sums
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 ac1ce20dca1b9e4c5a2aeb0f7840c6926ea4f06d
 5496df332f669293a0456d773d4ad025acf64c30
 "

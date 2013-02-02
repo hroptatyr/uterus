@@ -2,12 +2,11 @@
 
 TOOL=ute
 INFILE="${srcdir}/print.c.ute"
-OUTFILE="testload.ute"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 cat <<EOF > "${CMDFILE}"
 TMPIN='${INFILE}'
-TMPOUT='${OUTFILE}'
+TMPOUT='${TS_OUTFILE}'
 if test "${endian}" = "big"; then
 	TMPIN=\`mktemp "/tmp/tmp.XXXXXXXX"\`
 	TMPOUT=\`mktemp "/tmp/tmp.XXXXXXXX"\`
@@ -15,7 +14,7 @@ if test "${endian}" = "big"; then
 fi
 "\${TOOL}" shnot -i 60 -o "\${TMPOUT}" "\${TMPIN}"
 if test "${endian}" = "big"; then
-	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${OUTFILE}'
+	"\${TOOL}" fsck --little-endian "\${TMPOUT}" -o '${TS_OUTFILE}'
 	rm -f -- "\${TMPIN}" "\${TMPOUT}"
 fi
 EOF
@@ -24,6 +23,6 @@ EOF
  
 ## STDOUT
 
-REFFILE="shnot.1.ref.ute"
+REFFILE="${srcdir}/shnot.1.ref.ute"
 
 ## shnot.1.ut ends here

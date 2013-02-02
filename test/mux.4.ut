@@ -2,15 +2,14 @@
 
 TOOL=ute
 INFILE="${srcdir}/mux.b.ariva"
-OUTFILE="testload.ute"
-CMDLINE="mux -f ariva '${INFILE}' -o '${OUTFILE}'"
+CMDLINE="mux -f ariva '${INFILE}' -o '${TS_OUTFILE}'"
 
 ## STDIN
 
 ## STDOUT
 
 ## outfile sum
-OUTFILE_SHA1="
+TS_OUTFILE_SHA1="
 f73a3dbe4338c30f86f3ba14a835fa4699aa146a
 0a09ae4a3c76ea45378d1997d772d6d03ed6edd4
 "

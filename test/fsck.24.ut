@@ -1,9 +1,8 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing decompression/compression"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	INFILE="${srcdir}/fsck.17.ref.beute"
@@ -14,9 +13,9 @@ elif test "${endian}" = "little"; then
 fi
 
 cat <<EOF > "${CMDFILE}"
-cp '${INFILE}' '${OUTFILE}'
-"\${TOOL}" fsck --decompress '${OUTFILE}'
-"\${TOOL}" fsck --compress '${OUTFILE}'
+cp '${INFILE}' '${TS_OUTFILE}'
+"\${TOOL}" fsck --decompress '${TS_OUTFILE}'
+"\${TOOL}" fsck --compress '${TS_OUTFILE}'
 EOF
 
 ## fsck.24.ut ends here

@@ -1,9 +1,8 @@
 ## -*- shell-script -*-
 
 TOOL=ute
-OUTFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
 COMMENT="testing ex situ conversions"
-CMDFILE=`mktemp "/tmp/tmp.XXXXXXXX"`
+CMDFILE="${TS_TMPDIR}/cmdfile"
 
 if test "${endian}" = "big"; then
 	INFILE="${srcdir}/mux.7.ref.beute"
@@ -14,8 +13,8 @@ elif test "${endian}" = "little"; then
 fi
 
 cat <<EOF > "${CMDFILE}"
-cp '${INFILE}' '${OUTFILE}'
-"\${TOOL}" fsck '${OUTFILE}'
+cp '${INFILE}' '${TS_OUTFILE}'
+"\${TOOL}" fsck '${TS_OUTFILE}'
 EOF
 
 ## fsck.28.ut ends here

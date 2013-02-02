@@ -467,7 +467,17 @@ ute_sort(utectx_t ctx)
 	sks = xnew_array(struct uteseek_s, npages);
 	load_runs(sks, ctx, 0, npages, npages);
 
-	hdl = ute_open(ctx->fname, UO_CREAT | UO_TRUNC);
+	{
+		uint16_t oflags = UO_CREAT | UO_TRUNC;
+
+		if (UNLIKELY(ctx->oflags & UO_ANON)) {
+			/* ok, we could short cut it here if the file's
+			 * about to be deleted anyway ...
+			 * maybe later */
+			oflags |= UO_ANON;
+		}
+		hdl = ute_open(ctx->fname, oflags);
+	}
 
 	/* prepare the strategy, we use the last cell as iterator */
 	str->last = str->first;

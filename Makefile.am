@@ -1,6 +1,6 @@
 ### Makefile.am -- uterus master make file
 ##
-## Copyright (C) 2008 - 2010  Sebastian Freundt
+## Copyright (C) 2008-2013  Sebastian Freundt
 ##
 ## Author:  Sebastian Freundt <hroptatyr@fresse.org>
 ##
@@ -45,7 +45,7 @@ SUBDIRS =
 if DESCEND_LIBLTDL
 SUBDIRS += libltdl
 endif
-SUBDIRS += src info test
+SUBDIRS += src info aux test
 
 pkgconfigdir = @libdir@/pkgconfig
 pkgconfig_DATA =

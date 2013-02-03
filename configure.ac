@@ -113,6 +113,17 @@ AM_CONDITIONAL([WORDS_BIGENDIAN], [test "${ac_cv_c_bigendian}" = "yes"])
 AC_CHECK_TOOL([FILE], [file])
 AM_CONDITIONAL([HAVE_FILE], [test -n "${FILE}"])
 
+## check for matlab
+AC_ARG_WITH([matlab], [
+AS_HELP_STRING([--with-matlab], [Build matlab contribs, default: no.])],
+        [dnl
+                SXE_CHECK_MATLAB([${withval}])
+                if test -n "${sxe_cv_matlabroot}"; then
+                        with_matlab="yes"
+                fi
+        ], [with_matlab="no"])
+AM_CONDITIONAL([BUILD_MATCLI], [test "${with_matlab}" = "yes"])
+
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"
 utedir="${libexecdir}/ute"
@@ -124,6 +135,7 @@ AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([uterus.pc])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
+AC_CONFIG_FILES([aux/Makefile])
 AC_CONFIG_FILES([info/Makefile])
 AC_CONFIG_FILES([test/Makefile])
 AC_OUTPUT

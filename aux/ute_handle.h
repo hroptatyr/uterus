@@ -104,4 +104,31 @@ umx_get_nticks(const mxArray *src)
 	return ptr[2];
 }
 
+static inline sidx_t
+umx_get_cidx(const mxArray *src)
+{
+	intptr_t *ptr;
+
+	if (UNLIKELY(!mxIsIndex(src))) {
+		return -1UL;
+	} else if (UNLIKELY((ptr = mxGetData(src)) == NULL)) {
+		return -1UL;
+	}
+	return ptr[1];
+}
+
+static inline void
+umx_set_cidx(const mxArray *src, sidx_t si)
+{
+	intptr_t *ptr;
+
+	if (UNLIKELY(!mxIsIndex(src))) {
+		return;
+	} else if (UNLIKELY((ptr = mxGetData(src)) == NULL)) {
+		return;
+	}
+	ptr[1] = si;
+	return;
+}
+
 #endif	/* INCLUDED_ute_handle_h_ */

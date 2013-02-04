@@ -60,7 +60,7 @@ main(int argc, char *argv[])
 		scom_thdr_set_ttf(AS_SCOM_THDR(stor), SCOM_TTF_UNK);
 		ute_add_tick(ctx, AS_SCOM(stor));
 	}
-	ute_close(ctx);
+	ute_free(ctx);
 	puts(fn);
 	free(fn);
 out:

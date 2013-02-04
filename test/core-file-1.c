@@ -12,7 +12,7 @@ main(void)
 	utectx_t ctx = ute_mktemp(UO_RDWR);
 	char *fn = strdup(ute_fn(ctx));
 
-	ute_close(ctx);
+	ute_free(ctx);
 	puts(fn);
 	free(fn);
 	return 0;

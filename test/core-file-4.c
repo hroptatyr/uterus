@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 		       sngl, dbl, quad, totnt, tot);
 #undef YIELD
 	}
-	ute_close(ctx);
+	ute_free(ctx);
 	puts(fn);
 	free(fn);
 out:

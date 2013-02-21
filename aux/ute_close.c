@@ -54,7 +54,7 @@ wipe_handle(const mxArray *arr)
 
 void
 mexFunction(
-	int UNUSED(nlhs), mxArray *UNUSED(plhs)[],
+	int UNUSED(nlhs), mxArray *UNUSED(plhs[]),
 	int nrhs, const mxArray *prhs[])
 {
 	utectx_t hdl;

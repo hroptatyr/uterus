@@ -274,7 +274,7 @@ ute_trunc(utectx_t ctx, size_t sz)
 	return 0;
 }
 
-bool
+int
 ute_extend(utectx_t ctx, ssize_t z)
 {
 /* extend ute file by at least Z bytes */
@@ -282,15 +282,15 @@ ute_extend(utectx_t ctx, ssize_t z)
 	ssize_t tot;
 
 	if (UNLIKELY((tot = z + ctx->fsz) <= 0)) {
-		return false;
+		return -1;
 	}
 	/* round up */
 	tot = ((tot - 1U) | (tz - 1U)) + 1U;
 	if (__fwr_trunc(ctx->fd, tot) < 0) {
-		return false;
+		return -1;
 	}
 	ctx->fsz = (size_t)tot;
-	return true;
+	return 0;
 }
 
 static void
@@ -950,7 +950,7 @@ flush_tpc(utectx_t ctx)
 	}
 
 	/* extend to take SZ additional bytes */
-	if (!__rdwrp(ctx) || !ute_extend(ctx, sz)) {
+	if (!__rdwrp(ctx) || ute_extend(ctx, sz) < 0) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
@@ -1009,7 +1009,7 @@ flush_slut(utectx_t ctx)
 		off = hdrz;
 	}
 	/* extend to take STSZ (plus alignment) additional bytes */
-	if (!ute_extend(ctx, stsz)) {
+	if (ute_extend(ctx, stsz) < 0) {
 		goto out;
 	}
 	/* align to multiples of page size */
@@ -1114,7 +1114,7 @@ flush_ftr(utectx_t ctx)
 		char *p;
 
 		/* extend to take BNDZ additional bytes */
-		if (!ute_extend(ctx, ftrz)) {
+		if (ute_extend(ctx, ftrz) < 0) {
 			goto out;
 		}
 

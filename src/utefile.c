@@ -215,7 +215,9 @@ get_slut_off(const_utectx_t ctx)
 /* get the offset off the slut within the ute file CTX
  * we go backwards through footer and metadata */
 	const size_t tz = sizeof(*ctx->seek->sp);
-	size_t cand = ctx->fsz - get_ftr_size(ctx) - get_slut_size(ctx);
+	size_t fz = get_ftr_size(ctx);
+	size_t sz = get_slut_size(ctx);
+	size_t cand = ctx->fsz - fz - sz;
 
 	/* round down to previous TZ multiple */
 	return cand & ~(tz - 1);
@@ -253,26 +255,26 @@ get_ploff(utehdr2_t hdr)
 	return 0U;
 }
 
-static inline bool
+static inline int
 __fwr_trunc(int fd, size_t sz)
 {
 	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
-		return false;
+		return -1;
 	}
-	return true;
+	return 0;
 }
 
-static inline bool
+static inline int
 ute_trunc(utectx_t ctx, size_t sz)
 {
-	if (!__fwr_trunc(ctx->fd, sz)) {
-		return false;
+	if (__fwr_trunc(ctx->fd, sz) < 0) {
+		return -1;
 	}
 	ctx->fsz = sz;
-	return true;
+	return 0;
 }
 
-bool
+int
 ute_extend(utectx_t ctx, ssize_t z)
 {
 /* extend ute file by at least Z bytes */
@@ -280,15 +282,15 @@ ute_extend(utectx_t ctx, ssize_t z)
 	ssize_t tot;
 
 	if (UNLIKELY((tot = z + ctx->fsz) <= 0)) {
-		return false;
+		return -1;
 	}
 	/* round up */
 	tot = ((tot - 1U) | (tz - 1U)) + 1U;
-	if (!__fwr_trunc(ctx->fd, tot)) {
-		return false;
+	if (__fwr_trunc(ctx->fd, tot) < 0) {
+		return -1;
 	}
 	ctx->fsz = (size_t)tot;
-	return true;
+	return 0;
 }
 
 static void
@@ -374,19 +376,28 @@ close_hdr(utectx_t ctx)
 	return;
 }
 
-static void
+static int
 creat_hdr(utectx_t ctx)
 {
 	const size_t sz = sizeof(*ctx->hdrc);
 
-	/* trunc to sz */
-	ute_trunc(ctx, sz);
-	/* cache the header */
-	(void)cache_hdr(ctx);
+	/* since someone called us and we're doing truncation
+	 * set the UO_TRUNC flag, even though it might not be a part
+	 * of the original oflags */
+	ctx->oflags |= UO_TRUNC;
+
+	/* trunc to sz and cache the header */
+	if (ute_trunc(ctx, sz) < 0) {
+		/* that's probably not good at all */
+		return -1;
+	} else if (cache_hdr(ctx) < 0) {
+		/* brilliant */
+		return -1;
+	}
 	/* set standard header payload offset, just to be sure it's sane */
 	memset((void*)ctx->hdrc, 0, sz);
 	bump_header(ctx->hdrc);
-	return;
+	return 0;
 }
 
 #if defined HAVE_LZMA_H
@@ -756,7 +767,7 @@ clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src)
 	/* trivial checks */
 	if (LIKELY(off + pgsz >= ctx->fsz)) {
 		/* yep, extend the guy */
-		if (!__rdwrp(ctx) || !__fwr_trunc(ctx->fd, off + pgsz)) {
+		if (!__rdwrp(ctx) || __fwr_trunc(ctx->fd, off + pgsz) < 0) {
 			return -1;
 		}
 		/* truncation successful */
@@ -948,7 +959,7 @@ flush_tpc(utectx_t ctx)
 	}
 
 	/* extend to take SZ additional bytes */
-	if (!__rdwrp(ctx) || !ute_extend(ctx, sz)) {
+	if (!__rdwrp(ctx) || ute_extend(ctx, sz) < 0) {
 		return;
 	}
 	/* span a map covering the SZ new bytes */
@@ -1007,7 +1018,7 @@ flush_slut(utectx_t ctx)
 		off = hdrz;
 	}
 	/* extend to take STSZ (plus alignment) additional bytes */
-	if (!ute_extend(ctx, stsz)) {
+	if (ute_extend(ctx, stsz) < 0) {
 		goto out;
 	}
 	/* align to multiples of page size */
@@ -1112,7 +1123,7 @@ flush_ftr(utectx_t ctx)
 		char *p;
 
 		/* extend to take BNDZ additional bytes */
-		if (!ute_extend(ctx, ftrz)) {
+		if (ute_extend(ctx, ftrz) < 0) {
 			goto out;
 		}
 
@@ -1491,7 +1502,7 @@ lzma_decomp(utectx_t ctx)
 		 * if FSZ < FO + FZ, extend the file */
 		tz = page_size(tgt, i);
 		UDEBUG("mmapping [%ld,%ld]\n", fo, fo + tz);
-		if (UNLIKELY(!ute_trunc(tgt, fo + tz))) {
+		if (UNLIKELY(ute_trunc(tgt, fo + tz) < 0)) {
 			UDEBUG("can't truncate, skipping page %zu\n", i);
 			goto next;
 		}
@@ -1814,7 +1825,7 @@ make_utectx(const char *fn, int fd, int oflags)
 	/* initialise the slut */
 	init_slut();
 
-	if ((oflags & UO_TRUNC) || res->fsz == 0) {
+	if ((res->oflags & UO_TRUNC) || res->fsz == 0) {
 		/* set the largest-value to-date, which is pretty small */
 		res->lvtd = SMALLEST_LVTD;
 		make_slut(res->slut);

@@ -40,6 +40,7 @@
 
 /* for ssize_t */
 #include <unistd.h>
+#include <stdbool.h>
 #include "nifty.h"
 
 #if defined DEBUG_FLAG
@@ -133,7 +134,7 @@ extern size_t ute_npages(utectx_t ctx);
 
 /**
  * Extend (or shrink) the ute file in CTX by SZ bytes. */
-extern bool ute_extend(utectx_t ctx, ssize_t sz);
+extern int ute_extend(utectx_t ctx, ssize_t sz);
 
 
 /* inlines */

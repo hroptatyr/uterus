@@ -117,7 +117,7 @@ ute_mux(mux_ctx_t ctx)
 			/* half page, just add it to the tpc */
 			const size_t nticks = sk_sz / sizeof(*sk->sp);
 			ute_add_ticks(ctx->wrr, sk->sp, nticks);
-		} else if (!ute_extend(ctx->wrr, sk_sz)) {
+		} else if (ute_extend(ctx->wrr, sk_sz) < 0) {
 			/* file extending fucked */
 			error(0, "cannot extend file");
 		} else {

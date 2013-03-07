@@ -381,6 +381,11 @@ creat_hdr(utectx_t ctx)
 {
 	const size_t sz = sizeof(*ctx->hdrc);
 
+	/* since someone called us and we're doing truncation
+	 * set the UO_TRUNC flag, even though it might not be a part
+	 * of the original oflags */
+	ctx->oflags |= UO_TRUNC;
+
 	/* trunc to sz and cache the header */
 	if (ute_trunc(ctx, sz) < 0) {
 		/* that's probably not good at all */

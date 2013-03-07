@@ -1825,7 +1825,7 @@ make_utectx(const char *fn, int fd, int oflags)
 	/* initialise the slut */
 	init_slut();
 
-	if ((oflags & UO_TRUNC) || res->fsz == 0) {
+	if ((res->oflags & UO_TRUNC) || res->fsz == 0) {
 		/* set the largest-value to-date, which is pretty small */
 		res->lvtd = SMALLEST_LVTD;
 		make_slut(res->slut);

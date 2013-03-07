@@ -215,7 +215,9 @@ get_slut_off(const_utectx_t ctx)
 /* get the offset off the slut within the ute file CTX
  * we go backwards through footer and metadata */
 	const size_t tz = sizeof(*ctx->seek->sp);
-	size_t cand = ctx->fsz - get_ftr_size(ctx) - get_slut_size(ctx);
+	size_t fz = get_ftr_size(ctx);
+	size_t sz = get_slut_size(ctx);
+	size_t cand = ctx->fsz - fz - sz;
 
 	/* round down to previous TZ multiple */
 	return cand & ~(tz - 1);

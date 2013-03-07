@@ -255,23 +255,23 @@ get_ploff(utehdr2_t hdr)
 	return 0U;
 }
 
-static inline bool
+static inline int
 __fwr_trunc(int fd, size_t sz)
 {
 	if ((fd < 0) || (ftruncate(fd, sz) < 0)) {
-		return false;
+		return -1;
 	}
-	return true;
+	return 0;
 }
 
-static inline bool
+static inline int
 ute_trunc(utectx_t ctx, size_t sz)
 {
-	if (!__fwr_trunc(ctx->fd, sz)) {
-		return false;
+	if (__fwr_trunc(ctx->fd, sz) < 0) {
+		return -1;
 	}
 	ctx->fsz = sz;
-	return true;
+	return 0;
 }
 
 bool
@@ -286,7 +286,7 @@ ute_extend(utectx_t ctx, ssize_t z)
 	}
 	/* round up */
 	tot = ((tot - 1U) | (tz - 1U)) + 1U;
-	if (!__fwr_trunc(ctx->fd, tot)) {
+	if (__fwr_trunc(ctx->fd, tot) < 0) {
 		return false;
 	}
 	ctx->fsz = (size_t)tot;
@@ -758,7 +758,7 @@ clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src)
 	/* trivial checks */
 	if (LIKELY(off + pgsz >= ctx->fsz)) {
 		/* yep, extend the guy */
-		if (!__rdwrp(ctx) || !__fwr_trunc(ctx->fd, off + pgsz)) {
+		if (!__rdwrp(ctx) || __fwr_trunc(ctx->fd, off + pgsz) < 0) {
 			return -1;
 		}
 		/* truncation successful */
@@ -1493,7 +1493,7 @@ lzma_decomp(utectx_t ctx)
 		 * if FSZ < FO + FZ, extend the file */
 		tz = page_size(tgt, i);
 		UDEBUG("mmapping [%ld,%ld]\n", fo, fo + tz);
-		if (UNLIKELY(!ute_trunc(tgt, fo + tz))) {
+		if (UNLIKELY(ute_trunc(tgt, fo + tz) < 0)) {
 			UDEBUG("can't truncate, skipping page %zu\n", i);
 			goto next;
 		}

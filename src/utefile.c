@@ -376,19 +376,23 @@ close_hdr(utectx_t ctx)
 	return;
 }
 
-static void
+static int
 creat_hdr(utectx_t ctx)
 {
 	const size_t sz = sizeof(*ctx->hdrc);
 
-	/* trunc to sz */
-	ute_trunc(ctx, sz);
-	/* cache the header */
-	(void)cache_hdr(ctx);
+	/* trunc to sz and cache the header */
+	if (ute_trunc(ctx, sz) < 0) {
+		/* that's probably not good at all */
+		return -1;
+	} else if (cache_hdr(ctx) < 0) {
+		/* brilliant */
+		return -1;
+	}
 	/* set standard header payload offset, just to be sure it's sane */
 	memset((void*)ctx->hdrc, 0, sz);
 	bump_header(ctx->hdrc);
-	return;
+	return 0;
 }
 
 #if defined HAVE_LZMA_H

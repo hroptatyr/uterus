@@ -40,6 +40,7 @@
 
 /* for ssize_t */
 #include <unistd.h>
+#include <stdbool.h>
 #include "nifty.h"
 
 #if defined DEBUG_FLAG

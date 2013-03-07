@@ -350,11 +350,8 @@ cache_hdr(utectx_t ctx)
 		/* not perfect but just as good */
 		return 0;
 	}
-	/* otherwise we've probably got a newly created and trunc'd file
-	 * we used to munmap() the header here but today we'll show
-	 * some gratitude, leave it in place and hope someone else deals
-	 * with the issue */
-	return 0;
+	/* otherwise something's fucked */
+	munmap(res, sz);
 err_out:
 	ctx->hdrp = NULL;
 	return -1;

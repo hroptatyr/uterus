@@ -426,7 +426,7 @@ ute_encode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		error(0, "cannot deflate ticks: %d\n", rc);
+		error(0, "cannot deflate ticks: %u\n", rc);
 		res = -1;
 	} else {
 		res = strm.next_out - (typeof(strm.next_out))tgt;
@@ -496,7 +496,7 @@ ute_decode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		error(0, "cannot inflate ticks: %d\n", rc);
+		error(0, "cannot inflate ticks: %u\n", rc);
 		res = -1;
 	} else {
 		res = strm.next_out - (typeof(strm.next_out))tgt;

@@ -279,8 +279,8 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 	}
 
 	BSET_ITER(i, bs) {
-		printf("%s", ute_idx2sym(hdl, i));
-		snarf_ttf(ctx, sk, i);
+		printf("%s", ute_idx2sym(hdl, (uint16_t)i));
+		snarf_ttf(ctx, sk, (uint16_t)i);
 		putchar('\n');
 	}
 

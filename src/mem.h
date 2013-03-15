@@ -1,6 +1,6 @@
 /*** mem.h -- allocators and memory management
  *
- * Copyright (C) 2008-2012 Sebastian Freundt
+ * Copyright (C) 2008-2013 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

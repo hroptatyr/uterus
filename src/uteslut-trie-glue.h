@@ -1,6 +1,6 @@
 /*** uteslut-trie-glue.h -- glue ute and various trie implementations
  *
- * Copyright (C) 2010-2012 Sebastian Freundt
+ * Copyright (C) 2010-2013 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

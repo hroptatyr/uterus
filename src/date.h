@@ -1,6 +1,6 @@
 /*** strptime.h -- faster date routines
  *
- * Copyright (C) 2009-2012 Sebastian Freundt
+ * Copyright (C) 2009-2013 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

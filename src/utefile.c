@@ -1428,7 +1428,7 @@ lzma_comp(utectx_t ctx)
 			/* copy payload */
 			memcpy(p + 1, cp, cz);
 			/* memset the rest */
-			memset((char*)(p + 1) + cz, 0, fz - cz);
+			memset((char*)(p + 1) + cz, 0, fz - cz - sizeof(*p));
 			/* diskify */
 			munmap_any((void*)p, fo, fz);
 

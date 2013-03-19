@@ -418,6 +418,7 @@ ffff_m62_add_ui64(m62_t a, uint64_t b)
 	return res;
 }
 
+#if defined INCLUDED_m30_h_
 static inline m62_t
 ffff_m62_add_mul_m30_ui64(m62_t a, m30_t b, uint64_t c)
 {
@@ -428,6 +429,7 @@ ffff_m62_add_mul_m30_ui64(m62_t a, m30_t b, uint64_t c)
 	M62_SET_EXPO(h, b.expo);
 	return ffff_m62_add(a, h);
 }
+#endif	/* INCLUDED_m30_h_ */
 
 #if !defined DEFINE_GORY_STUFF
 static m62_t

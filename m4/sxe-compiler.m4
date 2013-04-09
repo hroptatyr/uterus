@@ -289,11 +289,11 @@ AC_DEFUN([SXE_WARNFLAGS], [dnl
 		SXE_CHECK_COMPILER_FLAG([-wd 10237], [dnl
 			warnflags="${warnflags} -wd 10237"])])
 
-	dnl SXE_CHECK_COMPILER_FLAG([-diag-disable 2259], [dnl
-	dnl 	warnflags="${warnflags} -diag-disable 2259"], [
-	dnl 	SXE_CHECK_COMPILER_FLAG([-wd 2259], [dnl
-	dnl 		warnflags="${warnflags} -wd 2259"])])
+	SXE_CHECK_COMPILER_FLAG([-debug inline-debug-info], [
+		warnflags="${warnflags} -debug inline-debug-info"])
 
+	SXE_CHECK_COMPILER_FLAG([-diag-enable remark,vec,par], [
+		warnflags="${warnflags} -diag-enable remark,vec,par"])
 
 	AC_MSG_CHECKING([for preferred warning flags])
 	AC_MSG_RESULT([${warnflags}])
@@ -301,6 +301,12 @@ AC_DEFUN([SXE_WARNFLAGS], [dnl
 
 AC_DEFUN([SXE_OPTIFLAGS], [dnl
 	optiflags="-O3"
+
+	SXE_CHECK_COMPILER_FLAG([-ipo256], [
+		optiflags="${optiflags} -ipo256"])
+
+	SXE_CHECK_COMPILER_FLAG([-ipo-jobs256], [
+		optiflags="${optiflags} -ipo-jobs256"])
 ])dnl SXE_OPTIFLAGS
 
 AC_DEFUN([SXE_FEATFLAGS], [dnl

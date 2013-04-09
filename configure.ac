@@ -37,7 +37,11 @@ SXE_CHECK_CFLAGS
 SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
-SXE_CHECK_LIBLTDL
+LT_CONFIG_LTDL_DIR([libltdl])
+LTDL_INIT([recursive])
+# workaround libtool LT_CONFIG_H bug #12262
+AC_CONFIG_COMMANDS_PRE([LT_CONFIG_H=`expr "$LT_CONFIG_H" : '.*/\(.*\)'`])
+AM_CONDITIONAL([DESCEND_LIBLTDL], [test "${with_included_ltdl}" = "yes"])
 
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])
@@ -134,6 +138,7 @@ AC_SUBST([utedir])
 AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([uterus.pc])
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([libltdl/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([aux/Makefile])
 AC_CONFIG_FILES([info/Makefile])

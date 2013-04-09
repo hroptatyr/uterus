@@ -37,6 +37,8 @@ SXE_CHECK_CFLAGS
 SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
+LT_CONFIG_LTDL_DIR([libltdl])
+LTDL_INIT([recursive])
 SXE_CHECK_LIBLTDL
 
 ## check for byteorder utils

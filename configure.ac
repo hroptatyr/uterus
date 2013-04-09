@@ -8,7 +8,7 @@ popdef([version])[]dnl
 AC_INIT([uterus], [GIT_VERSION_GEN], [https://github.com/hroptatyr/uterus])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_HEADER([src/config.h])
+AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
 dnl -------------------------------------------------------------------------

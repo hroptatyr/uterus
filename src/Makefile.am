@@ -143,6 +143,7 @@ ute_print_CPPFLAGS += $(LTDLINCL)
 ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_print_LDADD = libuterus.la
 ute_print_LDADD += $(LIBLTDL)
+ute_print_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
 ute_PROGRAMS += ute-mux
@@ -154,6 +155,7 @@ ute_mux_CPPFLAGS += $(LTDLINCL)
 ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_mux_LDADD = libuterus.la
 ute_mux_LDADD += $(LIBLTDL)
+ute_mux_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
 ute_PROGRAMS += ute-fsck

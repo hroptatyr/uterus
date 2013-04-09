@@ -37,7 +37,9 @@ SXE_CHECK_CFLAGS
 SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
-SXE_CHECK_LIBLTDL
+LT_CONFIG_LTDL_DIR([libltdl])
+LTDL_INIT([convenience])
+AM_CONDITIONAL([DESCEND_LIBLTDL], [test "${with_included_ltdl}" = "yes"])
 
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])

@@ -38,7 +38,7 @@ SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
 LT_CONFIG_LTDL_DIR([libltdl])
-LTDL_INIT([convenience])
+LTDL_INIT([recursive])
 AM_CONDITIONAL([DESCEND_LIBLTDL], [test "${with_included_ltdl}" = "yes"])
 
 ## check for byteorder utils
@@ -136,6 +136,7 @@ AC_SUBST([utedir])
 AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([uterus.pc])
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([libltdl/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([aux/Makefile])
 AC_CONFIG_FILES([info/Makefile])

@@ -139,7 +139,7 @@ ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
-ute_print_CPPFLAGS += $(INCLTDL)
+ute_print_CPPFLAGS += $(LTDLINCL)
 ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_print_LDADD = libuterus.la
 ute_print_LDADD += $(LIBLTDL)
@@ -150,7 +150,7 @@ ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
 ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_CPPFLAGS += -DUTEDIR=\"$(utedir)\"
-ute_mux_CPPFLAGS += $(INCLTDL)
+ute_mux_CPPFLAGS += $(LTDLINCL)
 ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_mux_LDADD = libuterus.la
 ute_mux_LDADD += $(LIBLTDL)

@@ -36,12 +36,6 @@ AC_C_BIGENDIAN
 SXE_CHECK_CFLAGS
 AC_CHECK_TOOLS([AR], [xiar ar], [false])
 
-## libtool goddess^Wgoodness
-SXE_CHECK_LIBTOOL
-LT_CONFIG_LTDL_DIR([libltdl])
-LTDL_INIT([recursive])
-SXE_CHECK_LIBLTDL
-
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])
 AC_CHECK_HEADERS([byteswap.h])
@@ -126,6 +120,13 @@ AS_HELP_STRING([--with-matlab], [Build matlab contribs, default: no.])],
                 fi
         ], [with_matlab="no"])
 AM_CONDITIONAL([BUILD_MATCLI], [test "${with_matlab}" = "yes"])
+
+## libtool goddess^Wgoodness
+## has to be down here as we're turning -Werror'ing off
+SXE_CHECK_LIBTOOL
+LT_CONFIG_LTDL_DIR([libltdl])
+LTDL_INIT([recursive])
+SXE_CHECK_LIBLTDL
 
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"

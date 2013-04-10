@@ -35,7 +35,7 @@ SXE_CHECK_CC
 AC_C_BIGENDIAN
 SXE_CHECK_CFLAGS
 AC_CHECK_TOOLS([AR], [xiar ar], [false])
-SXE_CHECK_LDFLAGS
+
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL
 LT_CONFIG_LTDL_DIR([libltdl])

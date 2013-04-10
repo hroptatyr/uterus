@@ -7,6 +7,8 @@ dnl This file is part of SXEmacs
 AC_DEFUN([SXE_CHECK_LIBTOOL], [dnl
 	AC_MSG_RESULT([starting libtool investigation...])
 
+	save_ac_c_werror_flag="${ac_c_werror_flag}"
+	ac_c_werror_flag=""
 	LT_PREREQ([2.1])
 	LT_INIT([dlopen])
 

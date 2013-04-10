@@ -34,6 +34,7 @@ AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC
 AC_C_BIGENDIAN
 SXE_CHECK_CFLAGS
+AC_CHECK_TOOLS([AR], [xiar ar], [false])
 SXE_CHECK_LDFLAGS
 ## libtool goddess^Wgoodness
 SXE_CHECK_LIBTOOL

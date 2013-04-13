@@ -4,15 +4,22 @@ compiler:
   - gcc
   - clang
 
-before_script:
-  - autoreconf -vfi
+before_install:
+  - sudo apt-get -qq update
+
+install:
   - sudo apt-get install -qq gengetopt
   - sudo apt-get install -qq help2man
   - sudo apt-get install -qq texinfo
   - sudo apt-get install -qq texlive
   - sudo apt-get install -qq liblzma-dev
 
-script: ./configure CPPFLAGS="-DDEBUG_FLAG" && make clean all check distcheck || (cat test/test-suite.log && /bin/false)
+before_script:
+  - autoreconf -vfi
+
+script:
+  - ./configure CPPFLAGS="-DDEBUG_FLAG" &&
+    make clean all check distcheck || (cat test/test-suite.log && /bin/false)
 
 ## whitelist
 branches:

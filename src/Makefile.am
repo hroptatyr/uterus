@@ -143,7 +143,7 @@ ute_print_CPPFLAGS += $(LTDLINCL)
 ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_print_LDADD = libuterus.la
 ute_print_LDADD += $(LIBLTDL)
-ute_print_DEPENDENCIES = $(LTDLDEPS)
+EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
 
 ute_PROGRAMS += ute-mux
@@ -155,7 +155,7 @@ ute_mux_CPPFLAGS += $(LTDLINCL)
 ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
 ute_mux_LDADD = libuterus.la
 ute_mux_LDADD += $(LIBLTDL)
-ute_mux_DEPENDENCIES = $(LTDLDEPS)
+EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
 
 ute_PROGRAMS += ute-fsck
@@ -248,10 +248,13 @@ fxstreet_la_LIBADD = libuterus.la
 	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*
 
 ## for dist or dist check we need binaries, so help2man can work
-dist-hook: libltdlc.la $(bin_PROGRAMS) $(ute_PROGRAMS)
+dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)
 
-libltdlc.la:
+## hack to build libtdl (at least initially) if dist-hook binaries need it
+if DESCEND_LIBLTDL
+$(LTDLDEPS):
 	cd ../libltdl && $(MAKE)
+endif
 
 # 
 # Help the developers get nice post-processed source files

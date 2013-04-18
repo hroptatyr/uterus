@@ -42,6 +42,7 @@
 #if defined HAVE_CONFIG_H
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
+#include <stdint.h>
 /* *bsd except for openbsd */
 #if defined HAVE_SYS_ENDIAN_H
 # include <sys/endian.h>
@@ -62,53 +63,53 @@
 #if defined htooe16
 /* yay, nothing to do really */
 #elif defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 7
-# define htooe16(x)	__builtin_bswap16(x)
+# define htooe16(x)	((uint16_t)__builtin_bswap16((uint16_t)x))
 #elif defined __bswap_16
-# define htooe16(x)	__bswap_16(x)
+# define htooe16(x)	((uint16_t)__bswap_16((uint16_t)x))
 #elif defined __swap16
-# define htooe16(x)	__swap16(x)
+# define htooe16(x)	((uint16_t)__swap16((uint16_t)x))
 #elif defined WORDS_BIGENDIAN && defined le16toh
-# define htooe16(x)	le16toh(x)
+# define htooe16(x)	((uint16_t)le16toh((uint16_t)x))
 #elif !defined WORDS_BIGENDIAN && defined be16toh
-# define htooe16(x)	be16toh(x)
+# define htooe16(x)	((uint16_t)be16toh((uint16_t)x))
 #else
 # warning htooe16() will not convert anything
-# define htooe16(x)	(x)
+# define htooe16(x)	((uint16_t)x)
 #endif	/* htooe16 */
 
 #if !defined be16toh
 # if defined betoh16
-#  define be16toh	betoh16
+#  define be16toh(x)	((uint16_t)betoh16((uint16_t)x))
 # elif defined WORDS_BIGENDIAN
-#  define be16toh(x)	(x)
+#  define be16toh(x)	((uint16_t)x)
 # else	/* means we need swapping */
-#  define be16toh(x)	htooe16(x)
+#  define be16toh(x)	((uint16_t)htooe16((uint16_t)x))
 # endif	 /* betoh16 */
 #endif	/* !be16toh */
 
 #if !defined le16toh
 # if defined letoh16
-#  define le16toh	letoh16
+#  define le16toh(x)	((uint16_t)letoh16((uint16_t)x))
 # elif defined WORDS_BIGENDIAN
-#  define le16toh(x)	htooe16(x)
+#  define le16toh(x)	((uint16_t)htooe16((uint16_t)x))
 # else	/* no swapping needed */
-#  define le16toh(x)	(x)
+#  define le16toh(x)	((uint16_t)x)
 # endif	 /* letoh16 */
 #endif	/* !le16toh */
 
 #if !defined htobe16
 # if defined WORDS_BIGENDIAN
-#  define htobe16(x)	(x)
+#  define htobe16(x)	((uint16_t)x)
 # else	/* need swabbing */
-#  define htobe16(x)	htooe16(x)
+#  define htobe16(x)	((uint16_t)htooe16((uint16_t)x))
 # endif
 #endif	/* !htobe16 */
 
 #if !defined htole16
 # if defined WORDS_BIGENDIAN
-#  define htole16(x)	htooe16(x)
+#  define htole16(x)	((uint16_t)htooe16((uint16_t)x))
 # else	/* no byte swapping needed */
-#  define htole16(x)	(x)
+#  define htole16(x)	((uint16_t)x)
 # endif
 #endif	/* !htole16 */
 
@@ -117,54 +118,54 @@
 #if defined htooe32
 /* yay, nothing to do really */
 #elif defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 7
-# define htooe32(x)	__builtin_bswap32(x)
+# define htooe32(x)	((uint32_t)__builtin_bswap32((uint32_t)x))
 #elif defined __bswap_32
-# define htooe32(x)	__bswap_32(x)
+# define htooe32(x)	((uint32_t)__bswap_32((uint32_t)x))
 #elif defined __swap32
-# define htooe32(x)	__swap32(x)
+# define htooe32(x)	((uint32_t)__swap32((uint32_t)x))
 #elif defined WORDS_BIGENDIAN && defined le32toh
-# define htooe32(x)	le32toh(x)
+# define htooe32(x)	((uint32_t)le32toh((uint32_t)x))
 #elif !defined WORDS_BIGENDIAN && defined be32toh
-# define htooe32(x)	be32toh(x)
+# define htooe32(x)	((uint32_t)be32toh((uint32_t)x))
 #else
 # warning htooe32() will not convert anything
-# define htooe32(x)	(x)
+# define htooe32(x)	((uint32_t)x)
 #endif
 
 /* and even now we may be out of luck */
 #if !defined be32toh
 # if defined betoh32
-#  define be32toh	betoh32
+#  define be32toh(x)	((uint32_t)betoh32((uint32_t)x))
 # elif defined WORDS_BIGENDIAN
-#  define be32toh(x)	(x)
+#  define be32toh(x)	((uint32_t)x)
 # else	/* need some swaps */
-#  define be32toh(x)	htooe32(x)
+#  define be32toh(x)	((uint32_t)htooe32((uint32_t)x))
 # endif
 #endif	/* !be32toh */
 
 #if !defined le32toh
 # if defined letoh32
-#  define le32toh	letoh32
+#  define le32toh(x)	((uint32_t)letoh32((uint32_t)x))
 # elif defined WORDS_BIGENDIAN
-#  define le32toh(x)	htooe32(x)
+#  define le32toh(x)	((uint32_t)htooe32((uint32_t)x))
 # else	/* no byte swapping here */
-#  define le32toh(x)	(x)
+#  define le32toh(x)	((uint32_t)x)
 # endif	 /* letoh32 */
 #endif	/* !le32toh */
 
 #if !defined htobe32
 # if defined WORDS_BIGENDIAN
-#  define htobe32(x)	(x)
+#  define htobe32(x)	((uint32_t)x)
 # else	/* yep, swap me about */
-#  define htobe32(x)	htooe32(x)
+#  define htobe32(x)	((uint32_t)htooe32((uint32_t)x))
 # endif
 #endif	/* !be32toh */
 
 #if !defined htole32
 # if defined WORDS_BIGENDIAN
-#  define htole32(x)	htooe32(x)
+#  define htole32(x)	((uint32_t)htooe32((uint32_t)x))
 # else	/* nothing to swap */
-#  define htole32(x)	(x)
+#  define htole32(x)	((uint32_t)x)
 # endif
 #endif	/* !htole32 */
 
@@ -172,53 +173,53 @@
 #if defined htooe64
 /* yay, nothing to do really */
 #elif defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 7
-# define htooe64(x)	__builtin_bswap64(x)
+# define htooe64(x)	((uint64_t)__builtin_bswap64((uint64_t)x))
 #elif defined __bswap_64
-# define htooe64(x)	__bswap_64(x)
+# define htooe64(x)	((uint64_t)__bswap_64((uint64_t)x))
 #elif defined __swap64
-# define htooe64(x)	__swap64(x)
+# define htooe64(x)	((uint64_t)__swap64((uint64_t)x))
 #elif defined WORDS_BIGENDIAN && defined le64toh
-# define htooe64(x)	le64toh(x)
+# define htooe64(x)	((uint64_t)le64toh((uint64_t)x))
 #elif !defined WORDS_BIGENDIAN && defined be64toh
-# define htooe64(x)	be64toh(x)
+# define htooe64(x)	((uint64_t)be64toh((uint64_t)x))
 #else
 # warning htooe64() will not convert anything
-# define htooe64(x)	(x)
+# define htooe64(x)	((uint64_t)x)
 #endif
 
 #if !defined be64toh
 # if defined betoh64
-#  define be64toh	betoh64
+#  define be64toh(x)	((uint64_t)betoh64((uint64_t)x))
 # elif defined WORDS_BIGENDIAN
-#  define be64toh(x)	(x)
+#  define be64toh(x)	((uint64_t)x)
 # else	/* swapping */
-#  define be64toh(x)	htooe64(x)
+#  define be64toh(x)	((uint64_t)htooe64((uint64_t)x))
 # endif
 #endif	/* !be64toh */
 
 #if !defined le64toh
 # if defined letoh64
-#  define le64toh	letoh64
+#  define le64toh(x)	((uint64_t)letoh64((uint64_t)x))
 # elif defined WORDS_BIGENDIAN
-#  define le64toh(x)	htooe64(x)
+#  define le64toh(x)	((uint64_t)htooe64((uint64_t)x))
 # else	/* nothing to swap */
-#  define le64toh(x)	(x)
+#  define le64toh(x)	((uint64_t)x)
 # endif
 #endif	/* !le64toh */
 
 #if !defined htobe64
 # if defined WORDS_BIGENDIAN
-#  define htobe64(x)	(x)
+#  define htobe64(x)	((uint64_t)x)
 # else
-#  define htobe64(x)	htooe64(x)
+#  define htobe64(x)	((uint64_t)htooe64((uint64_t)x))
 # endif
 #endif	/* !htobe64 */
 
 #if !defined htole64
 # if defined WORDS_BIGENDIAN
-#  define htole64(x)	htooe64(x)
+#  define htole64(x)	((uint64_t)htooe64((uint64_t)x))
 # else	/* no need swapping */
-#  define htole64(x)	(x)
+#  define htole64(x)	((uint64_t)x)
 # endif
 #endif	/* !htole64 */
 

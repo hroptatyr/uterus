@@ -10,5 +10,5 @@ Name: @PACKAGE_NAME@
 Description: Universal Tick Encoders R Us
 Version: @VERSION@
 Libs: -L${libdir} -luterus
-Cflags: -I${headerdir}
+Cflags: -I${includedir}
 

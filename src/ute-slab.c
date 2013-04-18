@@ -278,7 +278,7 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 
 	if (max_idx == 0) {
 		BITSET_LOOP(copyix, i) {
-			uint16_t idx = i;
+			uint16_t idx = (uint16_t)i;
 			const char *sym = ute_idx2sym(hdl, idx);
 			ute_bang_symidx(ctx->out, sym, idx);
 		}

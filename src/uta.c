@@ -181,7 +181,7 @@ parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 {
 	struct tm tm;
 	time_t stamp;
-	long int msec;
+	int msec;
 	int zoff;
 
 	ffff_strptime(*cursor, &tm);
@@ -191,14 +191,14 @@ parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 		return -1;
 	}
 	/* get the millisecs */
-	msec = ffff_strtol(*cursor, cursor, 0);
+	msec = (int)ffff_strtol(*cursor, cursor, 0);
 
 	/* get time zone info */
 	zoff = parse_zoff(*cursor, cursor);
 
 	/* write the results to thdr */
 	scom_thdr_set_sec(thdr, stamp - zoff/*in secs*/);
-	scom_thdr_set_msec(thdr, msec);
+	scom_thdr_set_msec(thdr, (uint16_t)msec);
 	return 0;
 }
 

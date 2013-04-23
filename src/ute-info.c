@@ -237,7 +237,8 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 		fputs("\ttick_t", stdout);
 	}
 	if (ttfs & (1U << SL1T_TTF_BIDASK)) {
-		fputs("\ttick_ba", stdout);
+		/* quote stands for full b/a quote */
+		fputs("\ttick_q", stdout);
 	}
 	if (ttfs & (1U << SSNP_FLAVOUR)) {
 		fputs("\ts", stdout);

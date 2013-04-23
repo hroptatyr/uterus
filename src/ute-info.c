@@ -368,6 +368,15 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 {
 	bset_t bs;
 
+#define PR_BSET(x, fn)							\
+	do {								\
+		BSET_ITER(i, bs) {					\
+			fputs(ute_idx2sym(hdl, (uint16_t)i), stdout);	\
+			fn(ctx, sk, (uint16_t)i);			\
+			putchar('\n');					\
+		}							\
+	} while (0)
+
 	if (UNLIKELY((bs = make_bset()) == NULL)) {
 		return -1;
 	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
@@ -409,22 +418,17 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 			bset_set(bs, scom_thdr_tblidx(tmp.scom));
 		}
 
-		BSET_ITER(i, bs) {
-			printf("%s", ute_idx2sym(hdl, (uint16_t)i));
-			snarf_ttf_flip(ctx, sk, (uint16_t)i);
-			putchar('\n');
-		}
+		/* last candle (or the first ever if no intv is set) */
+		PR_BSET(bs, snarf_ttf_flip);
+
 	} else {
 		/* no flips at all */
 		UTE_ITER(ti, hdl) {
 			bset_set(bs, scom_thdr_tblidx(ti));
 		}
 
-		BSET_ITER(i, bs) {
-			printf("%s", ute_idx2sym(hdl, (uint16_t)i));
-			snarf_ttf(ctx, sk, (uint16_t)i);
-			putchar('\n');
-		}
+		/* last candle (or the first ever if no intv is set) */
+		PR_BSET(bs, snarf_ttf);
 	}
 #undef AS_GEN
 

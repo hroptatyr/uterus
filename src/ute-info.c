@@ -52,6 +52,9 @@
 #include "ssnp.h"
 #include "mem.h"
 #include "boobs.h"
+/* for pr_tsmstz() */
+#include "date.h"
+#include "ute-print.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -75,7 +78,7 @@
 # define UNUSED_nodbg(x)	UNUSED(x)
 #endif	/* DEBUG_FLAG */
 
-typedef struct info_ctx_s *info_ctx_t;
+typedef const struct info_ctx_s *info_ctx_t;
 
 struct info_ctx_s {
 	bool verbp:1;
@@ -219,6 +222,8 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 
 
 /* page wise operations */
+static time_t stmp;
+
 static int
 snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 {
@@ -273,12 +278,21 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 		}
 	}
 
+	if (ctx->intv) {
+		/* print interval too */
+		static char buf[32] = "\t";
+		char *p = buf + 1;
+		p += pr_tsmstz(p, stmp, 0, NULL, 'T');
+		*p = '\0';
+		fputs(buf, stdout);
+	}
+
 	pr_ttfs(intv, ttfs);
 	return 0;
 }
 
 static int
-snarf_ttf_flip(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
+snarf_ttf_flip(info_ctx_t ctx, uteseek_t sk, uint16_t sym)
 {
 	static int intv[16];
 	const size_t ssz = sizeof(*sk->sp);
@@ -360,6 +374,15 @@ snarf_ttf_flip(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 	}
 #undef AS_GEN
 
+	if (ctx->intv) {
+		/* print interval too */
+		static char buf[32] = "\t";
+		char *p = buf + 1;
+		p += pr_tsmstz(p, stmp, 0, NULL, 'T');
+		*p = '\0';
+		fputs(buf, stdout);
+	}
+
 	pr_ttfs(intv, ttfs);
 	return 0;
 }
@@ -368,7 +391,13 @@ static int
 check_stmp(info_ctx_t ctx, scom_t ti)
 {
 	time_t ts = scom_thdr_sec(ti);
-	return ts - ((ts - ctx->modu) % ctx->intv) >= ctx->intv;
+	time_t last = (ts - ctx->modu) % ctx->intv;
+
+	if (ts - last >= ctx->intv) {
+		stmp = ts - last;
+		return 1;
+	}
+	return 0;
 }
 
 /* the actual infoing */

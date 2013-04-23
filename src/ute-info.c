@@ -51,6 +51,7 @@
 #include "scdl.h"
 #include "ssnp.h"
 #include "mem.h"
+#include "boobs.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -168,6 +169,52 @@ pr_intv(int i)
 	}
 }
 
+static void
+pr_ttfs(int intv[static 16], uint32_t ttfs)
+{
+	if (ttfs & (1U << SCOM_TTF_UNK)) {
+		fputs("\tunk", stdout);
+	}
+	if (ttfs & (1U << SL1T_TTF_BID)) {
+		fputs("\ttick_b", stdout);
+	}
+	if (ttfs & (1U << SL1T_TTF_ASK)) {
+		fputs("\ttick_a", stdout);
+	}
+	if (ttfs & (1U << SL1T_TTF_TRA)) {
+		fputs("\ttick_t", stdout);
+	}
+	if (ttfs & (1U << SL1T_TTF_BIDASK)) {
+		/* quote stands for full b/a quote */
+		fputs("\ttick_q", stdout);
+	}
+	if (ttfs & (1U << SSNP_FLAVOUR)) {
+		fputs("\ts", stdout);
+		pr_intv(intv[1]);
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
+		fputs("\tc", stdout);
+		pr_intv(intv[SL1T_TTF_BID]);
+		fputs("_b", stdout);
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_ASK))) {
+		fputs("\tc", stdout);
+		pr_intv(intv[SL1T_TTF_ASK]);
+		fputs("_a", stdout);
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_TRA))) {
+		fputs("\tc", stdout);
+		pr_intv(intv[SL1T_TTF_TRA]);
+		fputs("_t", stdout);
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BIDASK))) {
+		fputs("\tc", stdout);
+		pr_intv(intv[SL1T_TTF_BIDASK]);
+		fputs("_ba", stdout);
+	}
+	return;
+}
+
 
 /* page wise operations */
 static int
@@ -224,46 +271,94 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 		}
 	}
 
-	if (ttfs & (1U << SCOM_TTF_UNK)) {
-		fputs("\tunk", stdout);
+	pr_ttfs(intv, ttfs);
+	return 0;
+}
+
+static int
+snarf_ttf_flip(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
+{
+	static int intv[16];
+	const size_t ssz = sizeof(*sk->sp);
+	const size_t sk_sz = seek_byte_size(sk);
+	uint32_t ttfs = 0U;
+	/* properly padded for big-e and little-e */
+#define AS_GEN(x)	((const struct gen_s*)(x))
+	struct gen_s {
+		union scom_thdr_u scom[1];
+		uint32_t v[14];
+	};
+
+	memset(intv, 0, sizeof(intv));
+	for (size_t i = sk->si, tz; i < sk_sz / ssz; i += tz) {
+		/* tmp storage for the flip */
+		struct gen_s tmp;
+		scom_t ti = AS_SCOM(sk->sp + i);
+
+		if (UNLIKELY(ti == NULL)) {
+			tz = 1;
+			continue;
+		}
+
+		/* swap ti into buf */
+		tmp.scom->u = htooe64(ti->u);
+		switch ((tz = scom_tick_size(tmp.scom))) {
+		case 2:
+			tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
+			tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
+			tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
+			tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
+		case 1:
+			tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
+			tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
+			break;
+		case 4:
+		default:
+			tz = 1;
+			continue;
+		}
+
+		if (scom_thdr_tblidx(tmp.scom) != sym) {
+			/* none of our business at the moment */
+			continue;
+		}
+		/* try and keep track of ttfs */
+		ttfs |= (1U << scom_thdr_ttf(tmp.scom));
+		if (scom_thdr_ttf(tmp.scom) == SSNP_FLAVOUR) {
+			uint32_t stmp = scom_thdr_sec(tmp.scom);
+
+#define INTV(x)		(intv[x])
+			if (!INTV(0)) {
+				;
+			} else if (!INTV(1)) {
+				INTV(1) = stmp - INTV(0);
+			} else if (stmp - INTV(0) == INTV(1)) {
+				;
+			} else {
+				INTV(1) = -1;
+			}
+			/* always keep track of current time */
+			INTV(0) = stmp;
+#undef INTV
+		} else if (scom_thdr_ttf(tmp.scom) > SCDL_FLAVOUR) {
+			/* try and get interval */
+			const_scdl_t x = AS_CONST_SCDL(tmp.scom);
+			int this = x->hdr->sec - x->sta_ts;
+
+#define INTV(x)		(intv[scom_thdr_ttf(x) & 0xf])
+			if (!INTV(tmp.scom)) {
+				/* always store */
+				INTV(tmp.scom) = this;
+			} else if (INTV(tmp.scom) != this) {
+				/* sort of reset */
+				INTV(tmp.scom) = -1;
+			}
+#undef INTV
+		}
 	}
-	if (ttfs & (1U << SL1T_TTF_BID)) {
-		fputs("\ttick_b", stdout);
-	}
-	if (ttfs & (1U << SL1T_TTF_ASK)) {
-		fputs("\ttick_a", stdout);
-	}
-	if (ttfs & (1U << SL1T_TTF_TRA)) {
-		fputs("\ttick_t", stdout);
-	}
-	if (ttfs & (1U << SL1T_TTF_BIDASK)) {
-		/* quote stands for full b/a quote */
-		fputs("\ttick_q", stdout);
-	}
-	if (ttfs & (1U << SSNP_FLAVOUR)) {
-		fputs("\ts", stdout);
-		pr_intv(intv[1]);
-	}
-	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
-		fputs("\tc", stdout);
-		pr_intv(intv[SL1T_TTF_BID]);
-		fputs("_b", stdout);
-	}
-	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_ASK))) {
-		fputs("\tc", stdout);
-		pr_intv(intv[SL1T_TTF_ASK]);
-		fputs("_a", stdout);
-	}
-	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_TRA))) {
-		fputs("\tc", stdout);
-		pr_intv(intv[SL1T_TTF_TRA]);
-		fputs("_t", stdout);
-	}
-	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BIDASK))) {
-		fputs("\tc", stdout);
-		pr_intv(intv[SL1T_TTF_BIDASK]);
-		fputs("_ba", stdout);
-	}
+#undef AS_GEN
+
+	pr_ttfs(intv, ttfs);
 	return 0;
 }
 
@@ -271,27 +366,67 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 static int
 infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 {
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
 	bset_t bs;
 
 	if (UNLIKELY((bs = make_bset()) == NULL)) {
 		return -1;
-	}
-	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
-		scom_thdr_t ti = AS_SCOM_THDR(sk->sp + i / ssz);
+	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
+		/* properly padded for big-e and little-e */
+#define AS_GEN(x)	((const struct gen_s*)(x))
+		struct gen_s {
+			union scom_thdr_u scom[1];
+			uint32_t v[14];
+		};
 
-		bset_set(bs, scom_thdr_tblidx(ti));
+		/* transparent flipping */
+		UTE_ITER_CUST(ti, tsz, hdl) {
+			/* tmp storage for the flip */
+			struct gen_s tmp;
 
-		/* determine the length for the increment */
-		tz = scom_byte_size(ti);
-	}
+			if (UNLIKELY(ti == NULL)) {
+				tsz = 1;
+				continue;
+			}
 
-	BSET_ITER(i, bs) {
-		printf("%s", ute_idx2sym(hdl, (uint16_t)i));
-		snarf_ttf(ctx, sk, (uint16_t)i);
-		putchar('\n');
+			/* swap ti into buf */
+			tmp.scom->u = htooe64(ti->u);
+			switch ((tsz = scom_tick_size(tmp.scom))) {
+			case 2:
+				tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
+				tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
+				tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
+				tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
+			case 1:
+				tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
+				tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
+				break;
+			case 4:
+			default:
+				tsz = 1;
+				continue;
+			}
+			/* now to what we always do */
+			bset_set(bs, scom_thdr_tblidx(tmp.scom));
+		}
+
+		BSET_ITER(i, bs) {
+			printf("%s", ute_idx2sym(hdl, (uint16_t)i));
+			snarf_ttf_flip(ctx, sk, (uint16_t)i);
+			putchar('\n');
+		}
+	} else {
+		/* no flips at all */
+		UTE_ITER(ti, hdl) {
+			bset_set(bs, scom_thdr_tblidx(ti));
+		}
+
+		BSET_ITER(i, bs) {
+			printf("%s", ute_idx2sym(hdl, (uint16_t)i));
+			snarf_ttf(ctx, sk, (uint16_t)i);
+			putchar('\n');
+		}
 	}
+#undef AS_GEN
 
 	free_bset(bs);
 	return 0;

@@ -156,9 +156,9 @@ static void
 pr_intv(int i)
 {
 	if (i <= 0 || i > 86400) {
-		printf("???");
+		fputs("???", stdout);
 	} else if (i == 86400) {
-		printf("eod");
+		fputs("eod", stdout);
 	} else if (i >= 3600 && !(i % 3600)) {
 		printf("%02dh", i / 3600);
 	} else if (i >= 60 && !(i % 60)) {
@@ -225,43 +225,43 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 	}
 
 	if (ttfs & (1U << SCOM_TTF_UNK)) {
-		printf("\tunk");
+		fputs("\tunk", stdout);
 	}
 	if (ttfs & (1U << SL1T_TTF_BID)) {
-		printf("\ttick_b");
+		fputs("\ttick_b", stdout);
 	}
 	if (ttfs & (1U << SL1T_TTF_ASK)) {
-		printf("\ttick_a");
+		fputs("\ttick_a", stdout);
 	}
 	if (ttfs & (1U << SL1T_TTF_TRA)) {
-		printf("\ttick_t");
+		fputs("\ttick_t", stdout);
 	}
 	if (ttfs & (1U << SL1T_TTF_BIDASK)) {
-		printf("\ttick_ba");
+		fputs("\ttick_ba", stdout);
 	}
 	if (ttfs & (1U << SSNP_FLAVOUR)) {
-		printf("\ts");
+		fputs("\ts", stdout);
 		pr_intv(intv[1]);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
-		printf("\tc");
+		fputs("\tc", stdout);
 		pr_intv(intv[SL1T_TTF_BID]);
-		printf("_b");
+		fputs("_b", stdout);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_ASK))) {
-		printf("\tc");
+		fputs("\tc", stdout);
 		pr_intv(intv[SL1T_TTF_ASK]);
-		printf("_a");
+		fputs("_a", stdout);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_TRA))) {
-		printf("\tc");
+		fputs("\tc", stdout);
 		pr_intv(intv[SL1T_TTF_TRA]);
-		printf("_t");
+		fputs("_t", stdout);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BIDASK))) {
-		printf("\tc");
+		fputs("\tc", stdout);
 		pr_intv(intv[SL1T_TTF_BIDASK]);
-		printf("_ba");
+		fputs("_ba", stdout);
 	}
 	return 0;
 }

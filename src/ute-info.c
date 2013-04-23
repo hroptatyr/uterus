@@ -236,6 +236,9 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 	if (ttfs & (1U << SL1T_TTF_TRA)) {
 		printf("\ttick_t");
 	}
+	if (ttfs & (1U << SL1T_TTF_BIDASK)) {
+		printf("\ttick_ba");
+	}
 	if (ttfs & (1U << SSNP_FLAVOUR)) {
 		printf("\ts");
 		pr_intv(intv[1]);
@@ -254,6 +257,11 @@ snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 		printf("\tc");
 		pr_intv(intv[SL1T_TTF_TRA]);
 		printf("_t");
+	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BIDASK))) {
+		printf("\tc");
+		pr_intv(intv[SL1T_TTF_BIDASK]);
+		printf("_ba");
 	}
 	return 0;
 }

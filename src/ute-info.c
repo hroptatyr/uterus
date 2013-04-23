@@ -79,6 +79,8 @@ typedef struct info_ctx_s *info_ctx_t;
 
 struct info_ctx_s {
 	bool verbp:1;
+	int intv;
+	int modu;
 };
 
 
@@ -362,6 +364,13 @@ snarf_ttf_flip(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
 	return 0;
 }
 
+static int
+check_stmp(info_ctx_t ctx, scom_t ti)
+{
+	time_t ts = scom_thdr_sec(ti);
+	return ts - ((ts - ctx->modu) % ctx->intv) >= ctx->intv;
+}
+
 /* the actual infoing */
 static int
 infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
@@ -424,6 +433,10 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 	} else {
 		/* no flips at all */
 		UTE_ITER(ti, hdl) {
+			if (ctx->intv && UNLIKELY(check_stmp(ctx, ti))) {
+				/* new candle it is */
+				PR_BSET(bs, snarf_ttf);
+			}
 			bset_set(bs, scom_thdr_tblidx(ti));
 		}
 
@@ -488,6 +501,16 @@ main(int argc, char *argv[])
 		info_parser_print_help();
 		res = 0;
 		goto out;
+	}
+
+	if (argi->interval_given) {
+		ctx->intv = argi->interval_arg;
+		if (argi->modulus_given) {
+			ctx->modu = argi->modulus_arg;
+		}
+	} else if (argi->modulus_given) {
+		fputs("\
+warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 	}
 
 	/* copy interesting stuff into our own context */

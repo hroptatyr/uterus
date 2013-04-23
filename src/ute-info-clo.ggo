@@ -10,3 +10,11 @@ option "help" h
 option "verbose" v
 	"Print some additional info."
 	optional
+
+option "interval" i
+	"Reset the statistic (and print it) every SECS seconds (default: 0)"
+	int typestr="SECS" optional
+
+option "modulus" m
+	"Start SECS seconds past midnight (default 0)"
+	int typestr="SECS" optional

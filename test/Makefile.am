@@ -143,6 +143,13 @@ ut_tests += slut.2.ut
 ut_tests += slut.3.ut
 ut_tests += slut.4.ut
 
+ut_tests += info.1.ut
+ut_tests += info.2.ut
+ut_tests += info.3.ut
+ut_tests += info.4.ut
+ut_tests += info.5.ut
+ut_tests += info.6.ut
+
 ## test the core api
 LIBUTERUS = $(abs_top_builddir)/src/libuterus.la
 check_PROGRAMS += core-file-1

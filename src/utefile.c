@@ -2264,4 +2264,101 @@ ute_set_endianness(utectx_t ctx, ute_end_t en)
 	return;
 }
 
+/* programmatic iterator */
+scom_t
+ute_iter(utectx_t hdl)
+{
+	static unsigned int st;
+	static sidx_t si;
+	scom_t ti;
+
+	switch (st) {
+	case 0:
+		si = 0;
+		if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
+			st = 3;
+		case 3:;
+			/* we need to flip the ti */
+			static char buf[64];
+			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
+			size_t bz;
+			size_t tz;
+
+			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
+				st = 0;
+				break;
+			}
+
+			/* promote the old header, copy to tmp buffer BUF */
+			scom_promote_v01(nu_ti, ti);
+			tz = scom_tick_size(nu_ti);
+			bz = scom_byte_size(nu_ti);
+			/* copy the rest of the tick into the buffer */
+			memcpy(buf + sizeof(*nu_ti), ti + 1, bz - sizeof(*ti));
+			/* inc the counter */
+			si += tz;
+			/* yield */
+			return nu_ti;
+
+		} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
+			st = 2;
+		case 2:;
+			/* properly padded for big-e and little-e */
+#define AS_GEN(x)	((const struct gen_s*)(x))
+			struct gen_s {
+				union scom_thdr_u scom[1];
+				uint32_t v[14];
+			};
+			static struct gen_s tmp;
+			size_t tz;
+
+			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
+				st = 0;
+				break;
+			}
+
+			/* swap ti into buf */
+			tmp.scom->u = htooe64(ti->u);
+
+			switch ((tz = scom_tick_size(tmp.scom))) {
+			case 2:
+				tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
+				tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
+				tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
+				tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
+			case 1:
+				tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
+				tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
+				break;
+			case 4:
+			default:
+				tz = 1;
+				break;
+			}
+
+			/* inc the counter */
+			si += tz;
+			/* yield */
+			return tmp.scom;
+
+		} else {
+			st = 1;
+		case 1:
+			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
+				st = 0U;
+				break;
+			}
+			/* inc the counter */
+			si += scom_tick_size(ti);
+			/* yield */
+			return ti;
+		}
+
+	default:
+		abort();
+	}
+	return NULL;
+}
+
+
 /* utefile.c ends here */

@@ -181,6 +181,10 @@ extern size_t ute_nticks(utectx_t ctx);
 		     i = 0)
 
 /**
+ * A programmatic version of UTE_ITER. */
+extern scom_t ute_iter(utectx_t hdl);
+
+/**
  * Return the number of symbols tracked in CTX. */
 extern size_t ute_nsyms(utectx_t ctx);
 

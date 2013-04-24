@@ -364,8 +364,12 @@ bset_pr(info_ctx_t ctx)
 
 			if (ctx->intv) {
 				/* print interval too */
-				static char buf[32] = "\t";
-				char *q = buf + 1;
+				static char buf[64];
+				char *q = buf;
+
+				*q++ = '\t';
+				q += pr_tsmstz(q, stmp - ctx->intv, 0, NULL, 'T');
+				*q++ = '\t';
 				q += pr_tsmstz(q, stmp, 0, NULL, 'T');
 				*q = '\0';
 				fputs(buf, stdout);

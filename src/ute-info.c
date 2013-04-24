@@ -52,6 +52,13 @@
 #include "ssnp.h"
 #include "mem.h"
 #include "boobs.h"
+/* for pr_tsmstz() */
+#include "date.h"
+#include "ute-print.h"
+/* for bitsets */
+#undef DECLF
+#define DECLF		static
+#include "gbs.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -75,11 +82,17 @@
 # define UNUSED_nodbg(x)	UNUSED(x)
 #endif	/* DEBUG_FLAG */
 
-typedef struct info_ctx_s *info_ctx_t;
+typedef const struct info_ctx_s *info_ctx_t;
 
 struct info_ctx_s {
 	bool verbp:1;
+	int intv;
+	int modu;
+	utectx_t u;
 };
+
+/* holds the last time stamp */
+static time_t stmp;
 
 
 /* helper functions */
@@ -113,46 +126,7 @@ error(int eno, const char *fmt, ...)
 	return;
 }
 
-typedef void *bset_t;
-
-static bset_t
-make_bset(void)
-{
-	bset_t res = mmap(NULL, 8192U, PROT_MEM, MAP_MEM, -1, 0);
-	return LIKELY(res != MAP_FAILED) ? res : NULL;
-}
-
-static void
-free_bset(bset_t bs)
-{
-	munmap(bs, 8192U);
-	return;
-}
-
-#if !defined CHAR_BIT
-# define CHAR_BIT	(8U)
-#endif	/* CHAR_BIT */
-
-static void
-bset_set(bset_t bs, unsigned int bno)
-{
-/* set BNO-th bit in BS. */
-	long unsigned int m = bno / (sizeof(long unsigned int) * CHAR_BIT);
-	long unsigned int o = bno % (sizeof(long unsigned int) * CHAR_BIT);
-	long unsigned int *blu = bs;
-	blu[m] |= (1UL << o);
-	return;
-}
-
-#define BSET_ITER(i, __bs)						\
-	for (size_t _i_ = 0; _i_ < 8192U / sizeof(long unsigned int); _i_++) \
-		for (long unsigned _b_ = ((long unsigned int*)bs)[_i_];	\
-		     _b_; _b_ = 0)		\
-			for (unsigned int i = _i_ * sizeof(_b_) * CHAR_BIT, \
-				     _j_ = 0;				\
-			     _j_ < sizeof(_b_) * CHAR_BIT; _j_++, i++)	\
-				if ((_b_) & (1UL << (_j_)))
-
+
 static void
 pr_intv(int i)
 {
@@ -190,7 +164,7 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 	}
 	if (ttfs & (1U << SSNP_FLAVOUR)) {
 		fputs("\ts", stdout);
-		pr_intv(intv[1]);
+		pr_intv(intv[5U]);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
 		fputs("\tc", stdout);
@@ -207,169 +181,313 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 		pr_intv(intv[SL1T_TTF_TRA]);
 		fputs("_t", stdout);
 	}
-	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BIDASK))) {
-		fputs("\tc", stdout);
-		pr_intv(intv[SL1T_TTF_BIDASK]);
-		fputs("_ba", stdout);
-	}
 	return;
 }
 
 
-/* page wise operations */
+/* our intervals tracker */
+#define INTV_BLOB	(8U)
+
+struct __iv_s {
+	size_t nsyms;
+	size_t nintv;
+	int *intv;
+};
+
+static struct __iv_s iv[1] = {{0U}};
+
+static int init_intv(size_t nsyms);
+static void fini_intv(void);
+
 static int
-snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
+init_intv(size_t nsyms)
 {
-	static int intv[16];
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
-	uint32_t ttfs = 0U;
-
-	memset(intv, 0, sizeof(intv));
-	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
-		scom_t ti = AS_SCOM(sk->sp + i / ssz);
-
-		/* determine the length for the increment */
-		tz = scom_byte_size(ti);
-
-		if (scom_thdr_tblidx(ti) != sym) {
-			/* none of our business at the moment */
-			continue;
-		}
-		/* try and keep track of ttfs */
-		ttfs |= (1U << scom_thdr_ttf(ti));
-		if (scom_thdr_ttf(ti) == SSNP_FLAVOUR) {
-			uint32_t stmp = scom_thdr_sec(ti);
-
-#define INTV(x)		(intv[x])
-			if (!INTV(0)) {
-				;
-			} else if (!INTV(1)) {
-				INTV(1) = stmp - INTV(0);
-			} else if (stmp - INTV(0) == INTV(1)) {
-				;
-			} else {
-				INTV(1) = -1;
-			}
-			/* always keep track of current time */
-			INTV(0) = stmp;
-#undef INTV
-		} else if (scom_thdr_ttf(ti) > SCDL_FLAVOUR) {
-			/* try and get interval */
-			const_scdl_t x = AS_CONST_SCDL(ti);
-			int this = x->hdr->sec - x->sta_ts;
-
-#define INTV(x)		(intv[scom_thdr_ttf(x) & 0xf])
-			if (!INTV(ti)) {
-				/* always store */
-				INTV(ti) = this;
-			} else if (INTV(ti) != this) {
-				/* sort of reset */
-				INTV(ti) = -1;
-			}
-#undef INTV
-		}
+	if (UNLIKELY(iv->intv != NULL)) {
+		fini_intv();
 	}
 
-	pr_ttfs(intv, ttfs);
-	return 0;
-}
-
-static int
-snarf_ttf_flip(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
-{
-	static int intv[16];
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
-	uint32_t ttfs = 0U;
-	/* properly padded for big-e and little-e */
-#define AS_GEN(x)	((const struct gen_s*)(x))
-	struct gen_s {
-		union scom_thdr_u scom[1];
-		uint32_t v[14];
-	};
-
-	memset(intv, 0, sizeof(intv));
-	for (size_t i = sk->si, tz; i < sk_sz / ssz; i += tz) {
-		/* tmp storage for the flip */
-		struct gen_s tmp;
-		scom_t ti = AS_SCOM(sk->sp + i);
-
-		if (UNLIKELY(ti == NULL)) {
-			tz = 1;
-			continue;
-		}
-
-		/* swap ti into buf */
-		tmp.scom->u = htooe64(ti->u);
-		switch ((tz = scom_tick_size(tmp.scom))) {
-		case 2:
-			tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
-			tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
-			tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
-			tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
-		case 1:
-			tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
-			tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
-			break;
-		case 4:
-		default:
-			tz = 1;
-			continue;
-		}
-
-		if (scom_thdr_tblidx(tmp.scom) != sym) {
-			/* none of our business at the moment */
-			continue;
-		}
-		/* try and keep track of ttfs */
-		ttfs |= (1U << scom_thdr_ttf(tmp.scom));
-		if (scom_thdr_ttf(tmp.scom) == SSNP_FLAVOUR) {
-			uint32_t stmp = scom_thdr_sec(tmp.scom);
-
-#define INTV(x)		(intv[x])
-			if (!INTV(0)) {
-				;
-			} else if (!INTV(1)) {
-				INTV(1) = stmp - INTV(0);
-			} else if (stmp - INTV(0) == INTV(1)) {
-				;
-			} else {
-				INTV(1) = -1;
-			}
-			/* always keep track of current time */
-			INTV(0) = stmp;
-#undef INTV
-		} else if (scom_thdr_ttf(tmp.scom) > SCDL_FLAVOUR) {
-			/* try and get interval */
-			const_scdl_t x = AS_CONST_SCDL(tmp.scom);
-			int this = x->hdr->sec - x->sta_ts;
-
-#define INTV(x)		(intv[scom_thdr_ttf(x) & 0xf])
-			if (!INTV(tmp.scom)) {
-				/* always store */
-				INTV(tmp.scom) = this;
-			} else if (INTV(tmp.scom) != this) {
-				/* sort of reset */
-				INTV(tmp.scom) = -1;
-			}
-#undef INTV
-		}
-	}
-#undef AS_GEN
-
-	pr_ttfs(intv, ttfs);
-	return 0;
-}
-
-/* the actual infoing */
-static int
-infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
-{
-	bset_t bs;
-
-	if (UNLIKELY((bs = make_bset()) == NULL)) {
+	iv->intv = mmap(NULL, 4096U, PROT_MEM, MAP_MEM, -1, 0);
+	if (UNLIKELY(iv->intv == MAP_FAILED)) {
+		iv->intv = NULL;
 		return -1;
+	}
+	iv->nintv = 4096U / (INTV_BLOB * sizeof(*iv->intv));
+	iv->nsyms = nsyms;
+	return 0;
+}
+
+static void
+fini_intv(void)
+{
+	if (LIKELY(iv->intv != NULL)) {
+		size_t mpsz = iv->nintv * INTV_BLOB * sizeof(*iv->intv);
+
+		munmap(iv->intv, mpsz);
+		iv->nintv = 0UL;
+		iv->intv = NULL;
+	}
+	return;
+}
+
+static void
+intv_stretch(void)
+{
+	size_t olsz = iv->nintv * INTV_BLOB * sizeof(*iv->intv);
+	size_t nusz = 2 * olsz;
+
+#if defined MREMAP_MAYMOVE
+	iv->intv = mremap(iv->intv, olsz, nusz, MREMAP_MAYMOVE);
+#else  /* !MREMAP_MAYMOVE */
+	{
+		void *nu = mmap(NULL, nusz, PROT_MEM, MAP_MEM, -1, 0);
+		mempcy(nu, iv->intv, olsz);
+		munmap(iv->intv, olsz);
+		iv->intv = nu;
+	}
+#endif	/* MREMAP_MAYMOVE */
+
+	/* stretch the whole thing,
+	 * double the space means holes after each element */
+	for (size_t i = iv->nintv - 1; i > 0; i--) {
+		int *restrict tgt = iv->intv + INTV_BLOB * 2 * i;
+		const int *src = iv->intv + INTV_BLOB * i;
+
+		memcpy(tgt, src, INTV_BLOB * sizeof(*src));
+		memset(tgt + INTV_BLOB, 0, INTV_BLOB * sizeof(*src));
+	}
+	/* naught-th element won't be moved but we need to zero out
+	 * the slot after it */
+	memset(iv->intv + INTV_BLOB, 0, INTV_BLOB * sizeof(*iv->intv));
+
+	/* and last, keep track of the new number of intv blocks */
+	iv->nintv *= 2;
+	return;
+}
+
+static int*
+__intv_get(unsigned int symi)
+{
+/* retrieve a block of 15 ints matching symbol index SYMI */
+	size_t cand = (iv->nintv * symi) / (iv->nintv + iv->nsyms);
+
+	for (size_t i = cand; i < iv->nintv; i++) {
+		int *res = iv->intv + INTV_BLOB * i;
+
+		if (res[0] == (int)symi) {
+			return res;
+		} else if (!res[0]) {
+			/* empty slot */
+			return res;
+		}
+	}
+	return NULL;
+}
+
+static int*
+intv_get(unsigned int symi)
+{
+	int *res;
+
+	while ((res = __intv_get(symi)) == NULL) {
+		intv_stretch();
+	}
+	return res;
+}
+
+static int*
+intv_ref(unsigned int symi)
+{
+/* retrieve a block of 15 ints matching symbol index SYMI */
+	size_t cand = (iv->nintv * symi) / (iv->nintv + iv->nsyms);
+
+	for (size_t i = cand; i < iv->nintv; i++) {
+		int *res = iv->intv + INTV_BLOB * i;
+
+		if (res[0] == (int)symi) {
+			return res;
+		} else if (!res[0]) {
+			/* empty slot */
+			break;
+		}
+	}
+	return NULL;
+}
+
+
+/* our bitset impl */
+#undef DEFUN
+#define DEFUN		static __attribute__((unused))
+#include "gbs.c"
+
+static struct gbs_s bs[1] = {{0U}};
+
+static int
+init_bset(size_t nsyms)
+{
+	init_gbs(bs, (nsyms + 1U) * 2U * 16U);
+	return bs->nbits > 0 ? 0 : -1;
+}
+
+static void
+free_bset(void)
+{
+	fini_gbs(bs);
+	return;
+}
+
+static void
+bset_clear(void)
+{
+	gbs_shift_lsb(bs, bs->nbits);
+	return;
+}
+
+static void
+bset_set(unsigned int symi, unsigned int ttf)
+{
+	gbs_set(bs, symi * 2U * 16U + (ttf % 32U));
+	return;
+}
+
+static void
+bset_pr(info_ctx_t ctx)
+{
+	unsigned int i = 0;
+
+	for (const uint32_t *p = bs->bits,
+		     *ep = p + (bs->nbits / 8U) / sizeof(*ep);
+	     p < ep; p++, i++) {
+		if (*p) {
+			int *intv = NULL;
+
+			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
+
+			if (ctx->intv) {
+				/* print interval too */
+				static char buf[32] = "\t";
+				char *q = buf + 1;
+				q += pr_tsmstz(q, stmp, 0, NULL, 'T');
+				*q = '\0';
+				fputs(buf, stdout);
+			}
+			if ((*p >> 16U) &&
+			    UNLIKELY((intv = intv_ref(i)) == NULL)) {
+				/* we SHOULD have had an interval */
+				static int fallback[16] = {0};
+				intv = fallback;
+			}
+			pr_ttfs(intv, *p);
+			putchar('\n');
+		}
+	}
+	return;
+}
+
+static int
+check_stmp(info_ctx_t ctx, scom_t ti)
+{
+	time_t ts = scom_thdr_sec(ti);
+	time_t last = (ts - ctx->modu) % ctx->intv;
+
+	if (ts - last >= stmp + ctx->intv) {
+		stmp = ts - last;
+		return 1;
+	}
+	return 0;
+}
+
+
+/* the actual infoing */
+/* we're info'ing single scom's, much like a prf() in ute-print */
+static int
+mark(info_ctx_t ctx, scom_t ti)
+{
+	unsigned int tidx = scom_thdr_tblidx(ti);
+	unsigned int ttf = scom_thdr_ttf(ti);
+
+	if (ctx->intv && UNLIKELY(check_stmp(ctx, ti))) {
+		/* new candle it is */
+		bset_pr(ctx);
+		bset_clear();
+	}
+
+	bset_set(tidx, ttf);
+
+	/* do some interval tracking */
+	if (ttf == SSNP_FLAVOUR || ttf > SCDL_FLAVOUR) {
+		time_t ts = scom_thdr_sec(ti);
+		int *iv = intv_get(tidx);
+
+		/* always bang the index */
+		iv[0] = tidx;
+
+		if (ttf == SSNP_FLAVOUR) {
+			/* this one's got no meaningful `interval length' */
+
+			if (!iv[4]) {
+				;
+			} else if (!iv[5] || iv[5] > ts - iv[4]) {
+				iv[5] = ts - iv[4];
+			}
+			/* always keep track of current time */
+			iv[4] = ts;
+		} else if (ttf > SCDL_FLAVOUR) {
+			const_scdl_t x = AS_CONST_SCDL(ti);
+			int this = ts - x->sta_ts;
+
+			if (!iv[ttf & 0x03U]) {
+				/* store */
+				iv[ttf & 0x03U] = this;
+			} else if (iv[ttf & 0x03U] != this) {
+				/* sort of reset */
+				iv[ttf & 0x03U] = -1;
+			}
+		}
+	}
+	return 0;
+}
+
+/* file wide operations */
+static int
+info1(info_ctx_t ctx, const char *UNUSED(fn))
+{
+	utectx_t hdl = ctx->u;
+	size_t nsyms = ute_nsyms(hdl);
+
+	if (UNLIKELY(init_bset(nsyms) < 0)) {
+		return -1;
+	} else if (UNLIKELY(init_intv(nsyms) < 0)) {
+		free_bset();
+		return -1;
+	}
+
+	/* go through the pages manually */
+	if (ctx->verbp) {
+		printf("pages\t%zu\n", ute_npages(hdl));
+	}
+
+	/* check for ute version */
+	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
+		UTE_ITER_CUST(ti, tsz, hdl) {
+			/* we need to flip the ti */
+			char buf[64];
+			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
+			size_t bsz;
+
+			if (UNLIKELY(ti == NULL)) {
+				tsz = 1;
+				continue;
+			}
+
+			/* promote the old header, copy to tmp buffer BUF */
+			scom_promote_v01(nu_ti, ti);
+			tsz = scom_tick_size(nu_ti);
+			bsz = scom_byte_size(nu_ti);
+			/* copy the rest of the tick into the buffer */
+			memcpy(buf + sizeof(*nu_ti), ti + 1, bsz - sizeof(*ti));
+			/* now to what we always do */
+			mark(ctx, nu_ti);
+		}
 	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
 		/* properly padded for big-e and little-e */
 #define AS_GEN(x)	((const struct gen_s*)(x))
@@ -406,54 +524,20 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 				continue;
 			}
 			/* now to what we always do */
-			bset_set(bs, scom_thdr_tblidx(tmp.scom));
-		}
-
-		BSET_ITER(i, bs) {
-			printf("%s", ute_idx2sym(hdl, (uint16_t)i));
-			snarf_ttf_flip(ctx, sk, (uint16_t)i);
-			putchar('\n');
+			mark(ctx, tmp.scom);
 		}
 	} else {
-		/* no flips at all */
+		/* no flips in this one */
 		UTE_ITER(ti, hdl) {
-			bset_set(bs, scom_thdr_tblidx(ti));
-		}
-
-		BSET_ITER(i, bs) {
-			printf("%s", ute_idx2sym(hdl, (uint16_t)i));
-			snarf_ttf(ctx, sk, (uint16_t)i);
-			putchar('\n');
+			mark(ctx, ti);
 		}
 	}
-#undef AS_GEN
+	/* last candle (or the first ever if no intv is set) */
+	bset_pr(ctx);
 
-	free_bset(bs);
-	return 0;
-}
-
-
-/* file wide operations */
-static int
-info1(info_ctx_t ctx, utectx_t hdl, const char *UNUSED(fn))
-{
-	size_t npg;
-
-	/* go through the pages manually */
-	npg = ute_npages(hdl);
-	if (ctx->verbp) {
-		printf("pages\t%zu\n", npg);
-	}
-	for (size_t p = 0; p < 1U/*assume 1st page info only*/; p++) {
-		struct uteseek_s sk[1];
-
-		/* create a new seek */
-		seek_page(sk, hdl, p);
-		/* info that one page */
-		infop(ctx, sk, hdl);
-		/* flush the old seek */
-		flush_seek(sk);
-	}
+	/* and finalise */
+	free_bset();
+	fini_intv();
 	return 0;
 }
 
@@ -486,6 +570,16 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
+	if (argi->interval_given) {
+		ctx->intv = argi->interval_arg;
+		if (argi->modulus_given) {
+			ctx->modu = argi->modulus_arg;
+		}
+	} else if (argi->modulus_given) {
+		fputs("\
+warning: --modulus without --interval is not meaningful, ignored\n", stderr);
+	}
+
 	/* copy interesting stuff into our own context */
 	if (argi->verbose_given) {
 		ctx->verbp = true;
@@ -503,7 +597,8 @@ main(int argc, char *argv[])
 		}
 
 		/* the actual checking */
-		if (info1(ctx, hdl, fn)) {
+		ctx->u = hdl;
+		if (info1(ctx, fn)) {
 			res = 1;
 		}
 

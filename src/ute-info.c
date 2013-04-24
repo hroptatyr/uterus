@@ -186,7 +186,7 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 
 
 /* our intervals tracker */
-#define INTV_BLOB	(16U)
+#define INTV_BLOB	(8U)
 
 struct __iv_s {
 	size_t nsyms;
@@ -441,12 +441,12 @@ mark(info_ctx_t ctx, scom_t ti)
 			const_scdl_t x = AS_CONST_SCDL(ti);
 			int this = ts - x->sta_ts;
 
-			if (!iv[ttf & 0x0fU]) {
+			if (!iv[ttf & 0x03U]) {
 				/* store */
-				iv[ttf & 0x0fU] = this;
-			} else if (iv[ttf & 0x0fU] != this) {
+				iv[ttf & 0x03U] = this;
+			} else if (iv[ttf & 0x03U] != this) {
 				/* sort of reset */
-				iv[ttf & 0x0fU] = -1;
+				iv[ttf & 0x03U] = -1;
 			}
 		}
 	}

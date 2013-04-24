@@ -55,6 +55,10 @@
 /* for pr_tsmstz() */
 #include "date.h"
 #include "ute-print.h"
+/* for bitsets */
+#undef DECLF
+#define DECLF		static
+#include "gbs.h"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -84,7 +88,11 @@ struct info_ctx_s {
 	bool verbp:1;
 	int intv;
 	int modu;
+	utectx_t u;
 };
+
+/* holds the last time stamp */
+static time_t stmp;
 
 
 /* helper functions */
@@ -118,46 +126,7 @@ error(int eno, const char *fmt, ...)
 	return;
 }
 
-typedef void *bset_t;
-
-static bset_t
-make_bset(void)
-{
-	bset_t res = mmap(NULL, 8192U, PROT_MEM, MAP_MEM, -1, 0);
-	return LIKELY(res != MAP_FAILED) ? res : NULL;
-}
-
-static void
-free_bset(bset_t bs)
-{
-	munmap(bs, 8192U);
-	return;
-}
-
-#if !defined CHAR_BIT
-# define CHAR_BIT	(8U)
-#endif	/* CHAR_BIT */
-
-static void
-bset_set(bset_t bs, unsigned int bno)
-{
-/* set BNO-th bit in BS. */
-	long unsigned int m = bno / (sizeof(long unsigned int) * CHAR_BIT);
-	long unsigned int o = bno % (sizeof(long unsigned int) * CHAR_BIT);
-	long unsigned int *blu = bs;
-	blu[m] |= (1UL << o);
-	return;
-}
-
-#define BSET_ITER(i, __bs)						\
-	for (size_t _i_ = 0; _i_ < 8192U / sizeof(long unsigned int); _i_++) \
-		for (long unsigned _b_ = ((long unsigned int*)bs)[_i_];	\
-		     _b_; _b_ = 0)		\
-			for (unsigned int i = _i_ * sizeof(_b_) * CHAR_BIT, \
-				     _j_ = 0;				\
-			     _j_ < sizeof(_b_) * CHAR_BIT; _j_++, i++)	\
-				if ((_b_) & (1UL << (_j_)))
-
+
 static void
 pr_intv(int i)
 {
@@ -221,170 +190,67 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 }
 
 
-/* page wise operations */
-static time_t stmp;
+/* our bitset impl */
+#undef DEFUN
+#define DEFUN		static __attribute__((unused))
+#include "gbs.c"
+
+static struct gbs_s bs[1] = {{0U}};
 
 static int
-snarf_ttf(info_ctx_t UNUSED(ctx), uteseek_t sk, uint16_t sym)
+init_bset(size_t nsyms)
 {
-	static int intv[16];
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
-	uint32_t ttfs = 0U;
-
-	memset(intv, 0, sizeof(intv));
-	for (size_t i = sk->si * ssz, tz; i < sk_sz; i += tz) {
-		scom_t ti = AS_SCOM(sk->sp + i / ssz);
-
-		/* determine the length for the increment */
-		tz = scom_byte_size(ti);
-
-		if (scom_thdr_tblidx(ti) != sym) {
-			/* none of our business at the moment */
-			continue;
-		}
-		/* try and keep track of ttfs */
-		ttfs |= (1U << scom_thdr_ttf(ti));
-		if (scom_thdr_ttf(ti) == SSNP_FLAVOUR) {
-			uint32_t stmp = scom_thdr_sec(ti);
-
-#define INTV(x)		(intv[x])
-			if (!INTV(0)) {
-				;
-			} else if (!INTV(1)) {
-				INTV(1) = stmp - INTV(0);
-			} else if (stmp - INTV(0) == INTV(1)) {
-				;
-			} else {
-				INTV(1) = -1;
-			}
-			/* always keep track of current time */
-			INTV(0) = stmp;
-#undef INTV
-		} else if (scom_thdr_ttf(ti) > SCDL_FLAVOUR) {
-			/* try and get interval */
-			const_scdl_t x = AS_CONST_SCDL(ti);
-			int this = x->hdr->sec - x->sta_ts;
-
-#define INTV(x)		(intv[scom_thdr_ttf(x) & 0xf])
-			if (!INTV(ti)) {
-				/* always store */
-				INTV(ti) = this;
-			} else if (INTV(ti) != this) {
-				/* sort of reset */
-				INTV(ti) = -1;
-			}
-#undef INTV
-		}
-	}
-
-	if (ctx->intv) {
-		/* print interval too */
-		static char buf[32] = "\t";
-		char *p = buf + 1;
-		p += pr_tsmstz(p, stmp, 0, NULL, 'T');
-		*p = '\0';
-		fputs(buf, stdout);
-	}
-
-	pr_ttfs(intv, ttfs);
-	return 0;
+	init_gbs(bs, (nsyms + 1U) * 2U * 16U);
+	return bs->nbits > 0 ? 0 : -1;
 }
 
-static int
-snarf_ttf_flip(info_ctx_t ctx, uteseek_t sk, uint16_t sym)
+static void
+free_bset(void)
 {
-	static int intv[16];
-	const size_t ssz = sizeof(*sk->sp);
-	const size_t sk_sz = seek_byte_size(sk);
-	uint32_t ttfs = 0U;
-	/* properly padded for big-e and little-e */
-#define AS_GEN(x)	((const struct gen_s*)(x))
-	struct gen_s {
-		union scom_thdr_u scom[1];
-		uint32_t v[14];
-	};
+	fini_gbs(bs);
+	return;
+}
 
-	memset(intv, 0, sizeof(intv));
-	for (size_t i = sk->si, tz; i < sk_sz / ssz; i += tz) {
-		/* tmp storage for the flip */
-		struct gen_s tmp;
-		scom_t ti = AS_SCOM(sk->sp + i);
+static void
+bset_clear(void)
+{
+	gbs_shift_lsb(bs, bs->nbits);
+	return;
+}
 
-		if (UNLIKELY(ti == NULL)) {
-			tz = 1;
-			continue;
-		}
+static void
+bset_set(unsigned int symi, unsigned int ttf)
+{
+	gbs_set(bs, symi * 2U * 16U + (ttf % 32U));
+	return;
+}
 
-		/* swap ti into buf */
-		tmp.scom->u = htooe64(ti->u);
-		switch ((tz = scom_tick_size(tmp.scom))) {
-		case 2:
-			tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
-			tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
-			tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
-			tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
-		case 1:
-			tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
-			tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
-			break;
-		case 4:
-		default:
-			tz = 1;
-			continue;
-		}
+static void
+bset_pr(info_ctx_t ctx)
+{
+	unsigned int i = 0;
 
-		if (scom_thdr_tblidx(tmp.scom) != sym) {
-			/* none of our business at the moment */
-			continue;
-		}
-		/* try and keep track of ttfs */
-		ttfs |= (1U << scom_thdr_ttf(tmp.scom));
-		if (scom_thdr_ttf(tmp.scom) == SSNP_FLAVOUR) {
-			uint32_t stmp = scom_thdr_sec(tmp.scom);
+	for (const uint32_t *p = bs->bits,
+		     *ep = p + (bs->nbits / 8U) / sizeof(*ep);
+	     p < ep; p++, i++) {
+		static int intv[16U];
 
-#define INTV(x)		(intv[x])
-			if (!INTV(0)) {
-				;
-			} else if (!INTV(1)) {
-				INTV(1) = stmp - INTV(0);
-			} else if (stmp - INTV(0) == INTV(1)) {
-				;
-			} else {
-				INTV(1) = -1;
+		if (*p) {
+			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
+
+			if (ctx->intv) {
+				/* print interval too */
+				static char buf[32] = "\t";
+				char *q = buf + 1;
+				q += pr_tsmstz(q, stmp, 0, NULL, 'T');
+				*q = '\0';
+				fputs(buf, stdout);
 			}
-			/* always keep track of current time */
-			INTV(0) = stmp;
-#undef INTV
-		} else if (scom_thdr_ttf(tmp.scom) > SCDL_FLAVOUR) {
-			/* try and get interval */
-			const_scdl_t x = AS_CONST_SCDL(tmp.scom);
-			int this = x->hdr->sec - x->sta_ts;
-
-#define INTV(x)		(intv[scom_thdr_ttf(x) & 0xf])
-			if (!INTV(tmp.scom)) {
-				/* always store */
-				INTV(tmp.scom) = this;
-			} else if (INTV(tmp.scom) != this) {
-				/* sort of reset */
-				INTV(tmp.scom) = -1;
-			}
-#undef INTV
+			pr_ttfs(intv, *p);
+			putchar('\n');
 		}
 	}
-#undef AS_GEN
-
-	if (ctx->intv) {
-		/* print interval too */
-		static char buf[32] = "\t";
-		char *p = buf + 1;
-		p += pr_tsmstz(p, stmp, 0, NULL, 'T');
-		*p = '\0';
-		fputs(buf, stdout);
-	}
-
-	pr_ttfs(intv, ttfs);
-	return 0;
+	return;
 }
 
 static int
@@ -393,30 +259,70 @@ check_stmp(info_ctx_t ctx, scom_t ti)
 	time_t ts = scom_thdr_sec(ti);
 	time_t last = (ts - ctx->modu) % ctx->intv;
 
-	if (ts - last >= ctx->intv) {
+	if (ts - last >= stmp + ctx->intv) {
 		stmp = ts - last;
 		return 1;
 	}
 	return 0;
 }
 
+
 /* the actual infoing */
+/* we're info'ing single scom's, much like a prf() in ute-print */
 static int
-infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
+mark(info_ctx_t ctx, scom_t ti)
 {
-	bset_t bs;
+	if (ctx->intv && UNLIKELY(check_stmp(ctx, ti))) {
+		/* new candle it is */
+		bset_pr(ctx);
+		bset_clear();
+	}
+	{
+		unsigned int tidx = scom_thdr_tblidx(ti);
+		unsigned int ttf = scom_thdr_ttf(ti);
 
-#define PR_BSET(x, fn)							\
-	do {								\
-		BSET_ITER(i, bs) {					\
-			fputs(ute_idx2sym(hdl, (uint16_t)i), stdout);	\
-			fn(ctx, sk, (uint16_t)i);			\
-			putchar('\n');					\
-		}							\
-	} while (0)
+		bset_set(tidx, ttf);
+	}
+	return 0;
+}
 
-	if (UNLIKELY((bs = make_bset()) == NULL)) {
+/* file wide operations */
+static int
+info1(info_ctx_t ctx, const char *UNUSED(fn))
+{
+	utectx_t hdl = ctx->u;
+
+	if (UNLIKELY(init_bset(ute_nsyms(hdl)) < 0)) {
 		return -1;
+	}
+
+	/* go through the pages manually */
+	if (ctx->verbp) {
+		printf("pages\t%zu\n", ute_npages(hdl));
+	}
+
+	/* check for ute version */
+	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
+		UTE_ITER_CUST(ti, tsz, hdl) {
+			/* we need to flip the ti */
+			char buf[64];
+			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
+			size_t bsz;
+
+			if (UNLIKELY(ti == NULL)) {
+				tsz = 1;
+				continue;
+			}
+
+			/* promote the old header, copy to tmp buffer BUF */
+			scom_promote_v01(nu_ti, ti);
+			tsz = scom_tick_size(nu_ti);
+			bsz = scom_byte_size(nu_ti);
+			/* copy the rest of the tick into the buffer */
+			memcpy(buf + sizeof(*nu_ti), ti + 1, bsz - sizeof(*ti));
+			/* now to what we always do */
+			mark(ctx, nu_ti);
+		}
 	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
 		/* properly padded for big-e and little-e */
 #define AS_GEN(x)	((const struct gen_s*)(x))
@@ -453,53 +359,19 @@ infop(info_ctx_t ctx, uteseek_t sk, utectx_t hdl)
 				continue;
 			}
 			/* now to what we always do */
-			bset_set(bs, scom_thdr_tblidx(tmp.scom));
+			mark(ctx, tmp.scom);
 		}
-
-		/* last candle (or the first ever if no intv is set) */
-		PR_BSET(bs, snarf_ttf_flip);
-
 	} else {
-		/* no flips at all */
+		/* no flips in this one */
 		UTE_ITER(ti, hdl) {
-			if (ctx->intv && UNLIKELY(check_stmp(ctx, ti))) {
-				/* new candle it is */
-				PR_BSET(bs, snarf_ttf);
-			}
-			bset_set(bs, scom_thdr_tblidx(ti));
+			mark(ctx, ti);
 		}
-
-		/* last candle (or the first ever if no intv is set) */
-		PR_BSET(bs, snarf_ttf);
 	}
-#undef AS_GEN
+	/* last candle (or the first ever if no intv is set) */
+	bset_pr(ctx);
 
-	free_bset(bs);
-	return 0;
-}
-
-
-/* file wide operations */
-static int
-info1(info_ctx_t ctx, utectx_t hdl, const char *UNUSED(fn))
-{
-	size_t npg;
-
-	/* go through the pages manually */
-	npg = ute_npages(hdl);
-	if (ctx->verbp) {
-		printf("pages\t%zu\n", npg);
-	}
-	for (size_t p = 0; p < 1U/*assume 1st page info only*/; p++) {
-		struct uteseek_s sk[1];
-
-		/* create a new seek */
-		seek_page(sk, hdl, p);
-		/* info that one page */
-		infop(ctx, sk, hdl);
-		/* flush the old seek */
-		flush_seek(sk);
-	}
+	/* and finalise */
+	free_bset();
 	return 0;
 }
 
@@ -559,7 +431,8 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 		}
 
 		/* the actual checking */
-		if (info1(ctx, hdl, fn)) {
+		ctx->u = hdl;
+		if (info1(ctx, fn)) {
 			res = 1;
 		}
 

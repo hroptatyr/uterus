@@ -364,8 +364,12 @@ bset_pr(info_ctx_t ctx)
 
 			if (ctx->intv) {
 				/* print interval too */
-				static char buf[32] = "\t";
-				char *q = buf + 1;
+				static char buf[64];
+				char *q = buf;
+
+				*q++ = '\t';
+				q += pr_tsmstz(q, stmp - ctx->intv, 0, NULL, 'T');
+				*q++ = '\t';
 				q += pr_tsmstz(q, stmp, 0, NULL, 'T');
 				*q = '\0';
 				fputs(buf, stdout);
@@ -466,73 +470,12 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 		printf("pages\t%zu\n", ute_npages(hdl));
 	}
 
-	/* check for ute version */
-	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
-		UTE_ITER_CUST(ti, tsz, hdl) {
-			/* we need to flip the ti */
-			char buf[64];
-			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
-			size_t bsz;
-
-			if (UNLIKELY(ti == NULL)) {
-				tsz = 1;
-				continue;
-			}
-
-			/* promote the old header, copy to tmp buffer BUF */
-			scom_promote_v01(nu_ti, ti);
-			tsz = scom_tick_size(nu_ti);
-			bsz = scom_byte_size(nu_ti);
-			/* copy the rest of the tick into the buffer */
-			memcpy(buf + sizeof(*nu_ti), ti + 1, bsz - sizeof(*ti));
-			/* now to what we always do */
-			mark(ctx, nu_ti);
-		}
-	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
-		/* properly padded for big-e and little-e */
-#define AS_GEN(x)	((const struct gen_s*)(x))
-		struct gen_s {
-			union scom_thdr_u scom[1];
-			uint32_t v[14];
-		};
-
-		/* transparent flipping */
-		UTE_ITER_CUST(ti, tsz, hdl) {
-			/* tmp storage for the flip */
-			struct gen_s tmp;
-
-			if (UNLIKELY(ti == NULL)) {
-				tsz = 1;
-				continue;
-			}
-
-			/* swap ti into buf */
-			tmp.scom->u = htooe64(ti->u);
-			switch ((tsz = scom_tick_size(tmp.scom))) {
-			case 2:
-				tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
-				tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
-				tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
-				tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
-			case 1:
-				tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
-				tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
-				break;
-			case 4:
-			default:
-				tsz = 1;
-				continue;
-			}
-			/* now to what we always do */
-			mark(ctx, tmp.scom);
-		}
-	} else {
-		/* no flips in this one */
-		UTE_ITER(ti, hdl) {
-			mark(ctx, ti);
-		}
+	for (scom_t ti; (ti = ute_iter(ctx->u)) != NULL;) {
+		/* now to what we always do */
+		mark(ctx, ti);
 	}
 	/* last candle (or the first ever if no intv is set) */
+	stmp += ctx->intv;
 	bset_pr(ctx);
 
 	/* and finalise */

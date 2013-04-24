@@ -622,49 +622,9 @@ main(int argc, char *argv[])
 		/* (re)initialise our buckets */
 		init_buckets(ctx, hdl, bkt);
 		/* otherwise print all them ticks */
-		if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
-			/* promote to native endianness */
-#define AS_GEN(x)	((const struct gen_s*)(x))
-			struct gen_s {
-				union scom_thdr_u scom[1];
-				uint32_t v[14];
-			};
-
-			UTE_ITER_CUST(ti, tsz, hdl) {
-				/* tmp storage for the flip */
-				struct gen_s tmp;
-
-				if (UNLIKELY(ti == NULL)) {
-					tsz = 1;
-					continue;
-				}
-
-				/* swap ti into buf */
-				tmp.scom->u = htooe64(ti->u);
-				switch ((tsz = scom_tick_size(tmp.scom))) {
-				case 4:
-				default:
-					tsz = 1;
-					continue;
-				case 2:
-					tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
-					tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
-					tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
-					tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
-				case 1:
-					tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
-					tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
-					break;
-				}
-				/* now to what we always do */
-				bucketiser(ctx, tmp.scom);
-			}
-
-		} else {
-			/* no quireks in this one */
-			UTE_ITER(ti, hdl) {
-				bucketiser(ctx, ti);
-			}
+		for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+			/* now to what we always do */
+			bucketiser(ctx, ti);
 		}
 		/* last round, just emit what we've got */
 		new_candle(ctx);

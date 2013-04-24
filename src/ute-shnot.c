@@ -496,7 +496,8 @@ main(int argc, char *argv[])
 		/* (re)initialise our buckets */
 		init_buckets(ctx, hdl, bkt);
 		/* otherwise print all them ticks */
-		UTE_ITER(ti, hdl) {
+		for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+			/* now to what we always do */
 			bucketiser(ctx, ti);
 		}
 		/* last round, just emit what we've got */

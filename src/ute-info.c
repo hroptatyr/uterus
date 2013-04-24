@@ -164,7 +164,7 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 	}
 	if (ttfs & (1U << SSNP_FLAVOUR)) {
 		fputs("\ts", stdout);
-		pr_intv(intv[1]);
+		pr_intv(intv[5U]);
 	}
 	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BID))) {
 		fputs("\tc", stdout);
@@ -423,9 +423,20 @@ mark(info_ctx_t ctx, scom_t ti)
 
 		if (ttf == SSNP_FLAVOUR) {
 			/* this one's got no meaningful `interval length' */
-			if (iv[SSNP_FLAVOUR]) {
+
+			if (!iv[4]) {
 				;
+			} else if (!iv[5]) {
+				iv[5] = ts - iv[4];
+			} else if (ts - iv[4] == iv[5]) {
+				/* yep that's great */
+				;
+			} else {
+				/* invalidate */
+				iv[5] = -1;
 			}
+			/* always keep track of current time */
+			iv[4] = ts;
 		} else if (ttf > SCDL_FLAVOUR) {
 			const_scdl_t x = AS_CONST_SCDL(ti);
 			int this = ts - x->sta_ts;

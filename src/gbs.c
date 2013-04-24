@@ -136,6 +136,8 @@ resz_gbs(gbs_t bs, size_t nnu_members)
 	{
 		void *nu = mmap(NULL, mpsz, PROT_MEM, MAP_MEM, -1, 0);
 		memcpy(nu, p->bits, olsz);
+		munmap(p->bits, olsz);
+		p->bits = nu;
 	}
 #endif	/* MREMAP_MAYMOVE */
 	p->nbits = nbytes_to_nmemb(mpsz);

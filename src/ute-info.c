@@ -181,11 +181,6 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 		pr_intv(intv[SL1T_TTF_TRA]);
 		fputs("_t", stdout);
 	}
-	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_BIDASK))) {
-		fputs("\tc", stdout);
-		pr_intv(intv[SL1T_TTF_BIDASK]);
-		fputs("_ba", stdout);
-	}
 	return;
 }
 

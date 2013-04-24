@@ -415,7 +415,7 @@ mark(info_ctx_t ctx, scom_t ti)
 
 	/* do some interval tracking */
 	if (ttf == SSNP_FLAVOUR || ttf > SCDL_FLAVOUR) {
-		uint32_t ts = scom_thdr_sec(ti);
+		time_t ts = scom_thdr_sec(ti);
 		int *iv = intv_get(tidx);
 
 		/* always bang the index */
@@ -426,14 +426,8 @@ mark(info_ctx_t ctx, scom_t ti)
 
 			if (!iv[4]) {
 				;
-			} else if (!iv[5]) {
+			} else if (!iv[5] || iv[5] > ts - iv[4]) {
 				iv[5] = ts - iv[4];
-			} else if (ts - iv[4] == iv[5]) {
-				/* yep that's great */
-				;
-			} else {
-				/* invalidate */
-				iv[5] = -1;
 			}
 			/* always keep track of current time */
 			iv[4] = ts;

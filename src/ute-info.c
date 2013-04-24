@@ -190,6 +190,135 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 }
 
 
+/* our intervals tracker */
+#define INTV_BLOB	(16U)
+
+struct __iv_s {
+	size_t nsyms;
+	size_t nintv;
+	int *intv;
+};
+
+static struct __iv_s iv[1] = {{0U}};
+
+static int init_intv(size_t nsyms);
+static void fini_intv(void);
+
+static int
+init_intv(size_t nsyms)
+{
+	if (UNLIKELY(iv->intv != NULL)) {
+		fini_intv();
+	}
+
+	iv->intv = mmap(NULL, 4096U, PROT_MEM, MAP_MEM, -1, 0);
+	if (UNLIKELY(iv->intv == MAP_FAILED)) {
+		iv->intv = NULL;
+		return -1;
+	}
+	iv->nintv = 4096U / (INTV_BLOB * sizeof(*iv->intv));
+	iv->nsyms = nsyms;
+	return 0;
+}
+
+static void
+fini_intv(void)
+{
+	if (LIKELY(iv->intv != NULL)) {
+		size_t mpsz = iv->nintv * INTV_BLOB * sizeof(*iv->intv);
+
+		munmap(iv->intv, mpsz);
+		iv->nintv = 0UL;
+		iv->intv = NULL;
+	}
+	return;
+}
+
+static void
+intv_stretch(void)
+{
+	size_t olsz = iv->nintv * INTV_BLOB * sizeof(*iv->intv);
+	size_t nusz = 2 * olsz;
+
+#if defined MREMAP_MAYMOVE
+	iv->intv = mremap(iv->intv, olsz, nusz, MREMAP_MAYMOVE);
+#else  /* !MREMAP_MAYMOVE */
+	{
+		void *nu = mmap(NULL, nusz, PROT_MEM, MAP_MEM, -1, 0);
+		mempcy(nu, iv->intv, olsz);
+		munmap(iv->intv, olsz);
+		iv->intv = nu;
+	}
+#endif	/* MREMAP_MAYMOVE */
+
+	/* stretch the whole thing,
+	 * double the space means holes after each element */
+	for (size_t i = iv->nintv - 1; i > 0; i--) {
+		int *restrict tgt = iv->intv + INTV_BLOB * 2 * i;
+		const int *src = iv->intv + INTV_BLOB * i;
+
+		memcpy(tgt, src, INTV_BLOB * sizeof(*src));
+		memset(tgt + INTV_BLOB, 0, INTV_BLOB * sizeof(*src));
+	}
+	/* naught-th element won't be moved but we need to zero out
+	 * the slot after it */
+	memset(iv->intv + INTV_BLOB, 0, INTV_BLOB * sizeof(*iv->intv));
+
+	/* and last, keep track of the new number of intv blocks */
+	iv->nintv *= 2;
+	return;
+}
+
+static int*
+__intv_get(unsigned int symi)
+{
+/* retrieve a block of 15 ints matching symbol index SYMI */
+	size_t cand = (iv->nintv * symi) / (iv->nintv + iv->nsyms);
+
+	for (size_t i = cand; i < iv->nintv; i++) {
+		int *res = iv->intv + INTV_BLOB * i;
+
+		if (res[0] == (int)symi) {
+			return res;
+		} else if (!res[0]) {
+			/* empty slot */
+			return res;
+		}
+	}
+	return NULL;
+}
+
+static int*
+intv_get(unsigned int symi)
+{
+	int *res;
+
+	while ((res = __intv_get(symi)) == NULL) {
+		intv_stretch();
+	}
+	return res;
+}
+
+static int*
+intv_ref(unsigned int symi)
+{
+/* retrieve a block of 15 ints matching symbol index SYMI */
+	size_t cand = (iv->nintv * symi) / (iv->nintv + iv->nsyms);
+
+	for (size_t i = cand; i < iv->nintv; i++) {
+		int *res = iv->intv + INTV_BLOB * i;
+
+		if (res[0] == (int)symi) {
+			return res;
+		} else if (!res[0]) {
+			/* empty slot */
+			break;
+		}
+	}
+	return NULL;
+}
+
+
 /* our bitset impl */
 #undef DEFUN
 #define DEFUN		static __attribute__((unused))
@@ -233,9 +362,9 @@ bset_pr(info_ctx_t ctx)
 	for (const uint32_t *p = bs->bits,
 		     *ep = p + (bs->nbits / 8U) / sizeof(*ep);
 	     p < ep; p++, i++) {
-		static int intv[16U];
-
 		if (*p) {
+			int *intv = NULL;
+
 			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
 
 			if (ctx->intv) {
@@ -245,6 +374,12 @@ bset_pr(info_ctx_t ctx)
 				q += pr_tsmstz(q, stmp, 0, NULL, 'T');
 				*q = '\0';
 				fputs(buf, stdout);
+			}
+			if ((*p >> 16U) &&
+			    UNLIKELY((intv = intv_ref(i)) == NULL)) {
+				/* we SHOULD have had an interval */
+				static int fallback[16] = {0};
+				intv = fallback;
 			}
 			pr_ttfs(intv, *p);
 			putchar('\n');
@@ -272,16 +407,42 @@ check_stmp(info_ctx_t ctx, scom_t ti)
 static int
 mark(info_ctx_t ctx, scom_t ti)
 {
+	unsigned int tidx = scom_thdr_tblidx(ti);
+	unsigned int ttf = scom_thdr_ttf(ti);
+
 	if (ctx->intv && UNLIKELY(check_stmp(ctx, ti))) {
 		/* new candle it is */
 		bset_pr(ctx);
 		bset_clear();
 	}
-	{
-		unsigned int tidx = scom_thdr_tblidx(ti);
-		unsigned int ttf = scom_thdr_ttf(ti);
 
-		bset_set(tidx, ttf);
+	bset_set(tidx, ttf);
+
+	/* do some interval tracking */
+	if (ttf == SSNP_FLAVOUR || ttf > SCDL_FLAVOUR) {
+		uint32_t ts = scom_thdr_sec(ti);
+		int *iv = intv_get(tidx);
+
+		/* always bang the index */
+		iv[0] = tidx;
+
+		if (ttf == SSNP_FLAVOUR) {
+			/* this one's got no meaningful `interval length' */
+			if (iv[SSNP_FLAVOUR]) {
+				;
+			}
+		} else if (ttf > SCDL_FLAVOUR) {
+			const_scdl_t x = AS_CONST_SCDL(ti);
+			int this = ts - x->sta_ts;
+
+			if (!iv[ttf & 0x0fU]) {
+				/* store */
+				iv[ttf & 0x0fU] = this;
+			} else if (iv[ttf & 0x0fU] != this) {
+				/* sort of reset */
+				iv[ttf & 0x0fU] = -1;
+			}
+		}
 	}
 	return 0;
 }
@@ -291,8 +452,12 @@ static int
 info1(info_ctx_t ctx, const char *UNUSED(fn))
 {
 	utectx_t hdl = ctx->u;
+	size_t nsyms = ute_nsyms(hdl);
 
-	if (UNLIKELY(init_bset(ute_nsyms(hdl)) < 0)) {
+	if (UNLIKELY(init_bset(nsyms) < 0)) {
+		return -1;
+	} else if (UNLIKELY(init_intv(nsyms) < 0)) {
+		free_bset();
 		return -1;
 	}
 
@@ -372,6 +537,7 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 
 	/* and finalise */
 	free_bset();
+	fini_intv();
 	return 0;
 }
 

@@ -184,6 +184,7 @@ ute_info_SOURCES = ute-info.c ute-info-clo.ggo
 ute_info_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_info_LDFLAGS = $(AM_LDFLAGS) -static
 ute_info_LDADD = libuterus.la
+EXTRA_ute_info_SOURCES = gbs.c gbs.h
 BUILT_SOURCES += ute-info-clo.c ute-info-clo.h
 
 ## muxer/demuxer DSOs

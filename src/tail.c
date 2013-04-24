@@ -234,16 +234,16 @@ tail_fmwrite(const_tail_t t, fmcmb_t stream)
 		return -1;
 	}
 	for (i = 0; i < t->num_tails; i++) {
-		int16_t length;
+		int16_t length = 0;
 
 		if (fm_write_uint32(stream, t->tails[i].next_free) < 0 ||
 		    fm_write_uint32(stream, t->tails[i].data) < 0) {
 			return -1;
 		}
 
-		length = t->tails[i].suffix
-			? strlen(t->tails[i].suffix)
-			: 0;
+		if (t->tails[i].suffix) {
+			length = (int16_t)strlen(t->tails[i].suffix);
+		}
 		if (fm_write_uint16(stream, length) < 0) {
 			return -1;
 		}

@@ -126,6 +126,20 @@ xsnap_push_l1t(xsnap_t s, const_sl1t_t t)
 }
 
 static void
+xsnap_push_q(xsnap_t s, const_sl1t_t t)
+{
+	switch (sl1t_ttf(t)) {
+	case SL1T_TTF_BIDASK:
+		s->sn->bp = t->bp;
+		s->sn->ap = t->ap;
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
+static void
 xsnap_push_snp(xsnap_t s, const_ssnp_t snp)
 {
 	s->sn->bp = snp->bp;
@@ -168,6 +182,9 @@ xsnap_push(xsnap_t s, scom_t t)
 	case SL1T_TTF_ASK:
 	case SL1T_TTF_TRA:
 		xsnap_push_l1t(s, (const void*)t);
+		break;
+	case SL1T_TTF_BIDASK:
+		xsnap_push_q(s, (const void*)t);
 		break;
 	case SSNP_FLAVOUR:
 		xsnap_push_snp(s, (const void*)t);

@@ -253,7 +253,7 @@ pump_slut(int outfd, utectx_t hdl)
 		}
 		/* time to bang! */
 		if (*sym) {
-			ute_bang_symidx(hdl, sym, idx);
+			ute_bang_symidx(hdl, sym, (uint16_t)idx);
 		}
 	}
 	munmap(buf, bsz);

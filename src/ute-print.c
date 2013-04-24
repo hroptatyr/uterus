@@ -169,72 +169,13 @@ pr1(pr_ctx_t ctx, const char *f, int(*prf)(pr_ctx_t, scom_t))
 	}
 	/* otherwise print all them ticks */
 	ctx->uctx = hdl;
-	/* check for ute version */
-	if (UNLIKELY(ute_version(hdl) == UTE_VERSION_01)) {
-		UTE_ITER_CUST(ti, tsz, hdl) {
-			/* we need to flip the ti */
-			char buf[64];
-			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
-			size_t bsz;
 
-			if (UNLIKELY(ti == NULL)) {
-				tsz = 1;
-				continue;
-			}
-
-			/* promote the old header, copy to tmp buffer BUF */
-			scom_promote_v01(nu_ti, ti);
-			tsz = scom_tick_size(nu_ti);
-			bsz = scom_byte_size(nu_ti);
-			/* copy the rest of the tick into the buffer */
-			memcpy(buf + sizeof(*nu_ti), ti + 1, bsz - sizeof(*ti));
-			/* now to what we always do */
-			prf(ctx, nu_ti);
-		}
-	} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
-		/* properly padded for big-e and little-e */
-#define AS_GEN(x)	((const struct gen_s*)(x))
-		struct gen_s {
-			union scom_thdr_u scom[1];
-			uint32_t v[14];
-		};
-
-		/* transparent flipping */
-		UTE_ITER_CUST(ti, tsz, hdl) {
-			/* tmp storage for the flip */
-			struct gen_s tmp;
-
-			if (UNLIKELY(ti == NULL)) {
-				tsz = 1;
-				continue;
-			}
-
-			/* swap ti into buf */
-			tmp.scom->u = htooe64(ti->u);
-			switch ((tsz = scom_tick_size(tmp.scom))) {
-			case 2:
-				tmp.v[2] = htooe32(AS_GEN(ti)->v[2]);
-				tmp.v[3] = htooe32(AS_GEN(ti)->v[3]);
-				tmp.v[4] = htooe32(AS_GEN(ti)->v[4]);
-				tmp.v[5] = htooe32(AS_GEN(ti)->v[5]);
-			case 1:
-				tmp.v[0] = htooe32(AS_GEN(ti)->v[0]);
-				tmp.v[1] = htooe32(AS_GEN(ti)->v[1]);
-				break;
-			case 4:
-			default:
-				tsz = 1;
-				continue;
-			}
-			/* now to what we always do */
-			prf(ctx, tmp.scom);
-		}
-	} else {
-		/* no flips in this one */
-		UTE_ITER(ti, hdl) {
-			prf(ctx, ti);
-		}
+	/* use the co-routine iterator */
+	for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+		/* now to what we always do */
+		prf(ctx, ti);
 	}
+
 	/* oh right, close the handle */
 	ute_close(hdl);
 	return;

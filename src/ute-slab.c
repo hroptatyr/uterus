@@ -209,6 +209,31 @@ open_out(const char *fn, int fl)
 }
 
 static void
+slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
+{
+	uint16_t idx = scom_thdr_tblidx(ti);
+	time_t stmp = scom_thdr_sec(ti);
+
+	/* chain of filters, first one loses */
+	if (max && (idx > max || !bitset_get(filtix, idx))) {
+		/* index no matchee */
+		return;
+	} else if (stmp < ctx->from || stmp >= ctx->till) {
+		/* time stamp no matchee */
+		return;
+	}
+
+	if (max == 0) {
+		/* set the bit in the copyix bitset
+		 * coz we're now interested in banging the symbol */
+		bitset_set(copyix, idx);
+	}
+	/* we passed all them tests, just let him through */
+	ute_add_tick(ctx->out, ti);
+	return;
+}
+
+static void
 slab1(slab_ctx_t ctx, utectx_t hdl)
 {
 	static size_t max_idx = 0UL;
@@ -254,26 +279,9 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
 
-	UTE_ITER(ti, hdl) {
-		uint16_t idx = scom_thdr_tblidx(ti);
-		time_t stmp = scom_thdr_sec(ti);
-
-		/* chain of filters, first one loses */
-		if (max_idx && (idx > max_idx || !bitset_get(filtix, idx))) {
-			/* index no matchee */
-			continue;
-		} else if (stmp < ctx->from || stmp >= ctx->till) {
-			/* time stamp no matchee */
-			continue;
-		}
-
-		if (max_idx == 0) {
-			/* set the bit in the copyix bitset
-			 * coz we're now interested in banging the symbol */
-			bitset_set(copyix, idx);
-		}
-		/* we passed all them tests, just let him through */
-		ute_add_tick(ctx->out, ti);
+	for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+		/* now to what we always do */
+		slabt(ctx, ti, max_idx, filtix, copyix);
 	}
 
 	if (max_idx == 0) {

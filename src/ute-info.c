@@ -471,6 +471,7 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 		mark(ctx, ti);
 	}
 	/* last candle (or the first ever if no intv is set) */
+	stmp += ctx->intv;
 	bset_pr(ctx);
 
 	/* and finalise */

@@ -357,7 +357,12 @@ bset_pr(info_ctx_t ctx)
 	for (const uint32_t *p = bs->bits,
 		     *ep = p + (bs->nbits / 8U) / sizeof(*ep);
 	     p < ep; p++, i++) {
-		if (*p) {
+		/* we're using a feature of little endians, namely that
+		 * bitsets can be accessed through growing pointers without
+		 * changing their meaning */
+		uint32_t bits = htole32(*p);
+
+		if (bits) {
 			int *intv = NULL;
 
 			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
@@ -374,13 +379,13 @@ bset_pr(info_ctx_t ctx)
 				*q = '\0';
 				fputs(buf, stdout);
 			}
-			if ((*p >> 16U) &&
+			if ((bits >> 16U) &&
 			    UNLIKELY((intv = intv_ref(i)) == NULL)) {
 				/* we SHOULD have had an interval */
 				static int fallback[16] = {0};
 				intv = fallback;
 			}
-			pr_ttfs(intv, *p);
+			pr_ttfs(intv, bits);
 			putchar('\n');
 		}
 	}

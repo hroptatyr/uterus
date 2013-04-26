@@ -47,7 +47,7 @@
 static inline mxArray*
 make_umx_handle(void)
 {
-	mwSize dims[] = {3};
+	mwSize dims[] = {1};
 	return mxCreateNumericArray(countof(dims), dims, mxINDEX_CLASS, mxREAL);
 }
 
@@ -86,48 +86,6 @@ umx_put_handle(const mxArray *tgt, utectx_t hdl)
 		return;
 	}
 	ptr[0] = (intptr_t)hdl;
-	return;
-}
-
-static inline size_t
-umx_get_nticks(const mxArray *src)
-{
-	intptr_t *ptr;
-
-	if (UNLIKELY(!mxIsIndex(src))) {
-		return 0UL;
-	} else if (UNLIKELY((ptr = mxGetData(src)) == NULL)) {
-		return 0UL;
-	} else if (UNLIKELY(ptr[2] == 0)) {
-		ptr[2] = ute_nticks((void*)ptr[0]);
-	}
-	return ptr[2];
-}
-
-static inline sidx_t
-umx_get_cidx(const mxArray *src)
-{
-	intptr_t *ptr;
-
-	if (UNLIKELY(!mxIsIndex(src))) {
-		return -1UL;
-	} else if (UNLIKELY((ptr = mxGetData(src)) == NULL)) {
-		return -1UL;
-	}
-	return ptr[1];
-}
-
-static inline void
-umx_set_cidx(const mxArray *src, sidx_t si)
-{
-	intptr_t *ptr;
-
-	if (UNLIKELY(!mxIsIndex(src))) {
-		return;
-	} else if (UNLIKELY((ptr = mxGetData(src)) == NULL)) {
-		return;
-	}
-	ptr[1] = si;
 	return;
 }
 

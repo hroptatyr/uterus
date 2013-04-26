@@ -58,7 +58,7 @@ mexFunction(int UNUSED(nlhs), mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		mexErrMsgTxt("ute handle seems buggered");
 		return;
 	}
-	nt = umx_get_nticks(prhs[0]);
+	nt = ute_nticks(hdl);
 	plhs[0] = mxCreateDoubleScalar((double)nt);
 	return;
 }

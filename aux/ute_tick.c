@@ -54,6 +54,10 @@ scom_dims(scom_t s)
 {
 	size_t dims = 3U;
 
+	if (UNLIKELY(s == NULL)) {
+		return 0U;
+	}
+
 	switch (scom_thdr_ttf(s)) {
 	case SL1T_TTF_BID ... SL1T_TTF_G32:
 	case SL2T_TTF_BID ... SL2T_TTF_ASK:
@@ -103,8 +107,16 @@ umx_render_scom(scom_t s)
 		double tt;
 		double t[];
 	} *t = mxGetData(res);
-	uint16_t si = scom_thdr_tblidx(s);
-	uint16_t ttf = scom_thdr_ttf(s);
+	uint16_t si;
+	uint16_t ttf;
+
+	if (UNLIKELY(s == NULL)) {
+		return res;
+	}
+
+	/* otherwise things should go smoothly here */
+	si = scom_thdr_tblidx(s);
+	ttf = scom_thdr_ttf(s);
 
 	t->dt = matlabify_stamp(s);
 	t->si = (double)si;
@@ -156,8 +168,6 @@ void
 mexFunction(int UNUSED(nlhs), mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 	utectx_t hdl;
-	size_t nt;
-	sidx_t ci;
 	scom_t s;
 
 	if (nrhs != 1) {
@@ -166,22 +176,10 @@ mexFunction(int UNUSED(nlhs), mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	} else if ((hdl = umx_get_handle(prhs[0])) == NULL) {
 		mexErrMsgTxt("ute handle seems buggered");
 		return;
-	} else if ((nt = umx_get_nticks(prhs[0])) == 0) {
-		/* no ticks in there */
-		return;
-	} else if ((ci = umx_get_cidx(prhs[0])) >= nt) {
-		/* bottle empty */
-		return;
 	}
 
-	if ((s = ute_seek(hdl, ci)) != NULL) {
-		size_t tsz = scom_tick_size(s);
-
-		/* update ci counter */
-		umx_set_cidx(prhs[0], ci + tsz);
-
-		plhs[0] = umx_render_scom(s);
-	}
+	s = ute_iter(hdl);
+	plhs[0] = umx_render_scom(s);
 	return;
 }
 

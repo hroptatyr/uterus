@@ -2268,8 +2268,9 @@ ute_set_endianness(utectx_t ctx, ute_end_t en)
 scom_t
 ute_iter(utectx_t hdl)
 {
-	static unsigned int st;
-	static sidx_t si;
+#define st	(hdl->iter_st)
+#define si	(hdl->iter_si)
+#define tmp	(hdl->iter_tmp)
 	scom_t ti;
 
 	switch (st) {
@@ -2279,8 +2280,6 @@ ute_iter(utectx_t hdl)
 			st = 3;
 		case 3:;
 			/* we need to flip the ti */
-			static char buf[64];
-			scom_thdr_t nu_ti = AS_SCOM_THDR(buf);
 			size_t bz;
 			size_t tz;
 
@@ -2290,26 +2289,20 @@ ute_iter(utectx_t hdl)
 			}
 
 			/* promote the old header, copy to tmp buffer BUF */
-			scom_promote_v01(nu_ti, ti);
-			tz = scom_tick_size(nu_ti);
-			bz = scom_byte_size(nu_ti);
+			scom_promote_v01(tmp.scom, ti);
+			tz = scom_tick_size(tmp.scom);
+			bz = scom_byte_size(tmp.scom) - sizeof(*ti);
 			/* copy the rest of the tick into the buffer */
-			memcpy(buf + sizeof(*nu_ti), ti + 1, bz - sizeof(*ti));
+			memcpy(tmp.v, ti + 1, bz);
 			/* inc the counter */
 			si += tz;
 			/* yield */
-			return nu_ti;
+			return tmp.scom;
 
 		} else if (UNLIKELY(ute_check_endianness(hdl) < 0)) {
 			st = 2;
 		case 2:;
 			/* properly padded for big-e and little-e */
-#define AS_GEN(x)	((const struct gen_s*)(x))
-			struct gen_s {
-				union scom_thdr_u scom[1];
-				uint32_t v[14];
-			};
-			static struct gen_s tmp;
 			size_t tz;
 
 			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
@@ -2357,6 +2350,10 @@ ute_iter(utectx_t hdl)
 	default:
 		abort();
 	}
+
+#undef tmp
+#undef si
+#undef st
 	return NULL;
 }
 

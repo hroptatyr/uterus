@@ -58,6 +58,13 @@ typedef const struct utectx_s *const_utectx_t;
 #include "utehdr.h"
 #include "utetpc.h"
 #include "uteslut.h"
+#include "scommon.h"
+
+struct __gen_s {
+	union scom_thdr_u scom[1];
+	uint32_t v[14];
+};
+#define AS_GEN(x)	((const struct __gen_s*)(x))
 
 struct utectx_s {
 	/** file descriptor we're banging on about */
@@ -96,6 +103,13 @@ struct utectx_s {
 		size_t z;
 		struct uteftr_cell_s *c;
 	} ftr[1];
+
+	/* iter magic */
+	struct {
+		unsigned int iter_st;
+		sidx_t iter_si;
+		struct __gen_s iter_tmp;
+	};
 };
 
 /**

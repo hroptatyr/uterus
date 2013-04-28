@@ -172,9 +172,53 @@ bin_tests += core-file-2
 bin_tests += core-file-3
 bin_tests += core-file-4
 
+## testing headers and stuff
+check_PROGRAMS += m30-1
+m30_1_LDFLAGS = $(AM_LDFLAGS) -static
+m30_1_LDADD = $(LIBUTERUS)
+bin_tests += m30-1
+
+check_PROGRAMS += m30-2
+m30_2_LDFLAGS = $(AM_LDFLAGS) -static
+m30_2_LDADD = $(LIBUTERUS)
+bin_tests += m30-2
+
+check_PROGRAMS += m30-3
+m30_3_LDFLAGS = $(AM_LDFLAGS) -static
+m30_3_LDADD = $(LIBUTERUS)
+bin_tests += m30-3
+
+check_PROGRAMS += m30-4
+m30_4_LDFLAGS = $(AM_LDFLAGS) -static
+m30_4_LDADD = $(LIBUTERUS)
+bin_tests += m30-4
+
+check_PROGRAMS += m30-5
+m30_5_LDFLAGS = $(AM_LDFLAGS) -static
+m30_5_LDADD = $(LIBUTERUS)
+bin_tests += m30-5
+
+check_PROGRAMS += m30-6
+m30_6_LDFLAGS = $(AM_LDFLAGS) -static
+m30_6_LDADD = $(LIBUTERUS)
+bin_tests += m30-6
+
+check_PROGRAMS += m30-7
+m30_7_LDFLAGS = $(AM_LDFLAGS) -static
+m30_7_LDADD = $(LIBUTERUS)
+bin_tests += m30-7
+
+check_PROGRAMS += m30-8
+m30_8_LDFLAGS = $(AM_LDFLAGS) -static
+m30_8_LDADD = $(LIBUTERUS)
+bin_tests += m30-8
+
+
+## the test suite code
 check_PROGRAMS += ut-test
 BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
 EXTRA_DIST += ut-test.sh
+
 
 ## ggo rule
 %.c %.h: %.ggo

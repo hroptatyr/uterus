@@ -179,7 +179,11 @@ __30_0_get_s(const char *mant, const char *f, size_t m)
 	case 1:
 		res *= 10U;
 	case 0:
+		break;
 	default:
+		if (*f >= '5' /*&& &f <= '9'*/) {
+			res++;
+		}
 		break;
 	}
 	return res;

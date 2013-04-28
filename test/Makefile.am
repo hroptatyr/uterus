@@ -193,6 +193,26 @@ m30_4_LDFLAGS = $(AM_LDFLAGS) -static
 m30_4_LDADD = $(LIBUTERUS)
 bin_tests += m30-4
 
+check_PROGRAMS += m30-5
+m30_5_LDFLAGS = $(AM_LDFLAGS) -static
+m30_5_LDADD = $(LIBUTERUS)
+bin_tests += m30-5
+
+check_PROGRAMS += m30-6
+m30_6_LDFLAGS = $(AM_LDFLAGS) -static
+m30_6_LDADD = $(LIBUTERUS)
+bin_tests += m30-6
+
+check_PROGRAMS += m30-7
+m30_7_LDFLAGS = $(AM_LDFLAGS) -static
+m30_7_LDADD = $(LIBUTERUS)
+bin_tests += m30-7
+
+check_PROGRAMS += m30-8
+m30_8_LDFLAGS = $(AM_LDFLAGS) -static
+m30_8_LDADD = $(LIBUTERUS)
+bin_tests += m30-8
+
 
 ## the test suite code
 check_PROGRAMS += ut-test

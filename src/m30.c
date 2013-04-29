@@ -246,10 +246,10 @@ ffff_m30_get_s(const char **nptr)
 	if ((p - frac) >= 4 && (mend - mant) <= 1 && (mant[0] < '5')) {
 		r30.expo = 0;
 		r30.mant = __30_0_get_s(mant, frac, p - frac);
-	} else if ((mend - mant) <= 5) {
+	} else if ((mend - mant) < 5 || (mend - mant) == 5 && mant[0] < '5') {
 		r30.expo = 1;
 		r30.mant = __30_1_get_s(mant, mend - mant, frac, p - frac);
-	} else if ((mend - mant) >= 8) {
+	} else if (UNLIKELY((mend - mant) >= 8)) {
 		r30.expo = 3;
 		r30.mant = __30_23_get_s(mant, mend - mant - 4);
 	} else {

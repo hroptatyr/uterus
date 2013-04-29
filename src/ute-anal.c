@@ -131,7 +131,7 @@ static struct anal_pot_s {
 } pot;
 
 static int
-anal(anal_ctx_t ctx, scom_t ti)
+anal(anal_ctx_t UNUSED(ctx), scom_t ti)
 {
 	unsigned int ttf = scom_thdr_ttf(ti);
 	time_t t;
@@ -243,6 +243,98 @@ pr_pot(void)
 	return;
 }
 
+static struct {
+	double asks[256U];
+	double hmap[256U * 256U];
+	size_t idx;
+} hmap;
+
+#include <png.h>
+
+static int
+t_anal(anal_ctx_t UNUSED(ctx), scom_t ti)
+{
+	unsigned int ttf = scom_thdr_ttf(ti);
+	size_t idx = hmap.idx++;
+	double rel_hl = pot.hi / pot.lo - 1.0;
+	double p;
+
+	switch (ttf) {
+	case SL1T_TTF_BID:
+	case SL1T_TTF_BIDASK:
+		p = ffff_m30_d((m30_t){.v = AS_CONST_SL1T(ti)->v[0]});
+		break;
+	default:
+		return 0;
+	}
+
+	hmap.asks[idx] = p;
+	for (size_t i = 0; i < hmap.idx; i++) {
+		hmap.hmap[256U * idx + i] = (p / hmap.asks[i] - 1.0) / rel_hl;
+	}
+	return 0;
+}
+
+static void
+pr_hmap(void)
+{
+	static png_byte *rows[256U];
+	png_structp pp = NULL;
+	png_infop ip = NULL;
+
+	pp = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	ip = png_create_info_struct(pp);
+
+	png_set_IHDR(
+		pp, ip, 256U, 256U, 8/*depth*/,
+		PNG_COLOR_TYPE_RGBA,
+		PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT,
+		PNG_FILTER_TYPE_DEFAULT);
+    
+	for (size_t i = 0; i < 256U; i++) {
+		png_byte *rp;
+
+		rp = rows[i] = (void*)(hmap.hmap + i * 256U);
+		for (size_t j = 0; j < i; j++) {
+			double rij = hmap.hmap[256U * i + j];
+			int v = (int)(256.0 * rij);
+
+			if (v < 0) {
+				uint8_t c = (uint8_t)(256U + v);
+
+				*rp++ = 255U;
+				*rp++ = c;
+				*rp++ = c;
+				*rp++ = (uint8_t)-v;
+			} else if (v > 0) {
+				uint8_t c = (uint8_t)(256U - v);
+
+				*rp++ = c;
+				*rp++ = 255U;
+				*rp++ = c;
+				*rp++ = (uint8_t)v;
+			} else {
+				*rp++ = 255U;
+				*rp++ = 255U;
+				*rp++ = 255U;
+				*rp++ = 0;
+			}
+		}
+		memset(rp, 0, (256U - i) * 4U);
+	}
+
+	FILE *fp = fopen("foo.png", "wb");
+	png_init_io(pp, fp);
+	png_set_rows(pp, ip, rows);
+	png_write_png(pp, ip, PNG_TRANSFORM_IDENTITY, NULL);
+
+	png_destroy_write_struct(&pp, &ip);
+	fclose(fp);
+	return;
+}
+
+
 /* file wide operations */
 static int
 anal1(anal_ctx_t ctx)
@@ -263,6 +355,25 @@ anal1(anal_ctx_t ctx)
 		}
 
 		pr_pot();
+
+		{
+			time_t ref = pot.to;
+			time_t inc = (pot.tc - pot.to) / 255U;
+
+			memset(&hmap, 0, sizeof(hmap));
+			for (scom_t ti; (ti = ute_iter(ctx->u)) != NULL;) {
+				/* now to what we always do */
+				uint16_t ttf = scom_thdr_tblidx(ti);
+				time_t t = scom_thdr_sec(ti);
+
+				if (t >= ref && ttf == i) {
+					t_anal(ctx, ti);
+					ref += inc;
+				}
+			}
+
+			pr_hmap();
+		}
 	}
 	return 0;
 }

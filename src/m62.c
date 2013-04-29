@@ -57,11 +57,11 @@ __62_23_get_s(const char *p, size_t n)
 	/* inverse duff dev, kick the last 4 digits */
 	switch (n & 3) {
 	case 3:
-		res += 100 * (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
 	case 2:
-		res += 10 * (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
 	case 1:
-		res += (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
 	case 0:
 	default:
 		/* is case 4 actually */
@@ -69,11 +69,10 @@ __62_23_get_s(const char *p, size_t n)
 	}
 	/* now in blocks of 4 */
 	for (; n >= 4; n -= 4) {
-		res *= 10000;
-		res += 1000 * (*p++ & 0x0f);
-		res += 100 * (*p++ & 0x0f);
-		res += 10 * (*p++ & 0x0f);
-		res += 1 * (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
+		res = 10U * res + (*p++ & 0x0f);
 	}
 	return res;
 }

@@ -84,21 +84,39 @@ __62_1_get_s(const char *p, size_t n, const char *f, size_t m)
 	uint64_t res;
 
 	/* use the 23_getter to obtain the integral part */
-	res = __62_23_get_s(p, n) * 10000;
+	res = __62_23_get_s(p, n);
 
 	/* just do it */
-	f += m;
 	switch (m) {
-	case 4:
-		res += 1 * (*--f & 0x0f);
-	case 3:
-		res += 10 * (*--f & 0x0f);
-	case 2:
-		res += 100 * (*--f & 0x0f);
-	case 1:
-		res += 1000 * (*--f & 0x0f);
-	case 0:
 	default:
+	case 4:
+		res = 10U * res + (*f++ & 0x0f);
+	case 3:
+		res = 10U * res + (*f++ & 0x0f);
+	case 2:
+		res = 10U * res + (*f++ & 0x0f);
+	case 1:
+		res = 10U * res + (*f++ & 0x0f);
+	case 0:
+		break;
+	}
+
+	/* just multiply powers of 10 now */
+	switch (4 - m) {
+	case 4:
+		res *= 10U;
+	case 3:
+		res *= 10U;
+	case 2:
+		res *= 10U;
+	case 1:
+		res *= 10U;
+	case 0:
+		break;
+	default:
+		if (*f >= '5' /*&& *f <= '9'*/) {
+			res++;
+		}
 		break;
 	}
 	return res;

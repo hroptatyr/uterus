@@ -120,6 +120,10 @@ ffff_m30_get_d(double d);
 extern m30_t ffff_m30_get_s(const char **s);
 
 /**
+ * Like ffff_m30_get_s() but for numbers with expo 2 or 3. */
+extern m30_t ffff_m30_23_get_s(const char **s);
+
+/**
  * Write m30_t object M into buffer BUF. */
 extern size_t ffff_m30_s(char *restrict buf, m30_t m);
 

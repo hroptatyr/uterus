@@ -249,8 +249,7 @@ ffff_m30_get_s(const char **nptr)
 	return r30;
 }
 
-#if 0
-static inline m30_t
+m30_t
 ffff_m30_23_get_s(const char **nptr)
 {
 	/* spray some pointers */
@@ -286,7 +285,6 @@ ffff_m30_23_get_s(const char **nptr)
 	}
 	return r30;
 }
-#endif	/* 0 */
 
 
 /* number serialising */

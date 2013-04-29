@@ -342,51 +342,41 @@ __30_1_get_s(const char *p, size_t n, const char *f, size_t m)
 	/* just do it */
 	switch (n) {
 	case 5:
-		res = 10U * res + (*p++ & 0x0f);
+		res += 100000000 * (*p++ & 0x0f);
 	case 4:
-		res = 10U * res + (*p++ & 0x0f);
+		res += 10000000 * (*p++ & 0x0f);
 	case 3:
-		res = 10U * res + (*p++ & 0x0f);
+		res += 1000000 * (*p++ & 0x0f);
 	case 2:
-		res = 10U * res + (*p++ & 0x0f);
+		res += 100000 * (*p++ & 0x0f);
 	case 1:
-		res = 10U * res + (*p++ & 0x0f);
+		res += 10000 * (*p++ & 0x0f);
 	case 0:
 	default:
 		break;
 	}
 
 	/* just do it */
+	f += m;
 	switch (m) {
-	default:
+	case 8:
+		f--;
+	case 7:
+		f--;
+	case 6:
+		f--;
+	case 5:
+		f--;
 	case 4:
-		res = 10U * res + (*f++ & 0x0f);
+		res += 1 * (*--f & 0x0f);
 	case 3:
-		res = 10U * res + (*f++ & 0x0f);
+		res += 10 * (*--f & 0x0f);
 	case 2:
-		res = 10U * res + (*f++ & 0x0f);
+		res += 100 * (*--f & 0x0f);
 	case 1:
-		res = 10U * res + (*f++ & 0x0f);
+		res += 1000 * (*--f & 0x0f);
 	case 0:
-		break;
-	}
-
-	/* just multiply powers of 10 now */
-	switch (4 - m) {
-	case 4:
-		res *= 10U;
-	case 3:
-		res *= 10U;
-	case 2:
-		res *= 10U;
-	case 1:
-		res *= 10U;
-	case 0:
-		break;
 	default:
-		if (*f >= '5' && *f <= '9') {
-			res++;
-		}
 		break;
 	}
 	return res;
@@ -396,55 +386,50 @@ static uint32_t
 __30_0_get_s(const char *mant, const char *f, size_t m)
 {
 /* only does the fractional part */
-	uint32_t res = 0U;
+	uint32_t res = 0;
 
-	/* start off with the mantissa left of the decimal point */
-	res = mant[0] - '0';
-	switch (m) {
-	default:
-	case 8:
-		res = 10U * res + (*f++ & 0x0f);
-	case 7:
-		res = 10U * res + (*f++ & 0x0f);
-	case 6:
-		res = 10U * res + (*f++ & 0x0f);
-	case 5:
-		res = 10U * res + (*f++ & 0x0f);
-	case 4:
-		res = 10U * res + (*f++ & 0x0f);
-	case 3:
-		res = 10U * res + (*f++ & 0x0f);
-	case 2:
-		res = 10U * res + (*f++ & 0x0f);
-	case 1:
-		res = 10U * res + (*f++ & 0x0f);
-	case 0:
+	switch (mant[0]) {
+	case '1':
+		res = 100000000;
 		break;
+	case '2':
+		res = 200000000;
+		break;
+	case '3':
+		res = 300000000;
+		break;
+	case '4':
+		res = 400000000;
+		break;
+	case '5':
+		res = 500000000;
+		break;
+	case '0':
+		break;
+	default:
+		return 0;
 	}
-	/* just multiply powers of 10 now */
-	switch (8 - m) {
+
+	f += m;
+	switch (m) {
 	case 8:
-		res *= 10U;
+		res += 1 * (*--f & 0x0f);
 	case 7:
-		res *= 10U;
+		res += 10 * (*--f & 0x0f);
 	case 6:
-		res *= 10U;
+		res += 100 * (*--f & 0x0f);
 	case 5:
-		res *= 10U;
+		res += 1000 * (*--f & 0x0f);
 	case 4:
-		res *= 10U;
+		res += 10000 * (*--f & 0x0f);
 	case 3:
-		res *= 10U;
+		res += 100000 * (*--f & 0x0f);
 	case 2:
-		res *= 10U;
+		res += 1000000 * (*--f & 0x0f);
 	case 1:
-		res *= 10U;
+		res += 10000000 * (*--f & 0x0f);
 	case 0:
-		break;
 	default:
-		if (*f >= '5' && *f <= '9') {
-			res++;
-		}
 		break;
 	}
 	return res;

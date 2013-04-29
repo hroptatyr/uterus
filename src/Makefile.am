@@ -38,7 +38,7 @@
 AM_CFLAGS = $(EXTRA_CFLAGS)
 AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
-AM_LDFLAGS =
+AM_LDFLAGS = $(XCCLDFLAGS)
 
 ## headerdir and utedir are defined in c.ac
 
@@ -100,7 +100,7 @@ libuterus_la_SOURCES += trie.c trie.h
 libuterus_la_CPPFLAGS += -DLIBMODE -fPIC
 libuterus_la_CPPFLAGS += -DUSE_DATRIE -DUSE_UTE_SORT
 libuterus_la_CPPFLAGS += $(lzma_CFLAGS)
-libuterus_la_LDFLAGS = $(AM_LDFLAGS) $(XCCLDFLAGS)
+libuterus_la_LDFLAGS = $(AM_LDFLAGS)
 libuterus_la_LDFLAGS += $(lzma_LIBS)
 libuterus_la_LDFLAGS += -version-info 0:2:0
 EXTRA_libuterus_la_SOURCES += triedefs.h

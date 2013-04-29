@@ -974,14 +974,14 @@ seek_sort(uteseek_t sk)
 	size_t noffs = 0;
 	size_t sk_sz = seek_byte_size(sk);
 	void *new;
-#define new_data	((struct sndwch_s*)((char*)new + __pgsz))
+#define new_data	((struct sndwch_s*)((char*)new + UTE_PGSZ))
 #define new_offs	((uint32_t*)(new))
 
 	/* we never hand out bigger pages */
 	assert(sk_sz <= UTE_BLKSZ * sizeof(*sk->sp));
 
 	/* get us another map */
-	new = mmap(NULL, __pgsz + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
+	new = mmap(NULL, UTE_PGSZ + sk_sz, PROT_MEM, MAP_MEM, -1, 0);
 
 #if defined DEBUG_FLAG
 	/* randomise the rest of the seek page */
@@ -1049,7 +1049,7 @@ seek_sort(uteseek_t sk)
 			memcpy(sk->sp, data, sk_sz);
 		}
 		/* munmap()ing is the same in either case */
-		munmap(new, __pgsz + sk_sz);
+		munmap(new, UTE_PGSZ + sk_sz);
 	}
 #if defined DEBUG_FLAG
 	/* tpc should be sorted now innit */

@@ -52,8 +52,8 @@
 # define DECLF	extern
 #endif	/* STATIC_GUTS */
 
-extern size_t __pgsz;
-#define UTE_BLKSZ	(64 * __pgsz)
+#define UTE_PGSZ	(4096U)
+#define UTE_BLKSZ	(64U * UTE_PGSZ)
 
 typedef struct utetpc_s *utetpc_t;
 typedef struct uteseek_s *uteseek_t;

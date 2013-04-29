@@ -82,8 +82,6 @@
 # define ROUND(s, a)		(a * ((s + a - 1) / a))
 #endif	/* !ROUND */
 
-size_t __pgsz;
-
 /* not the best of ideas to have output printing in a lib */
 #include <stdarg.h>
 #include <stdio.h>
@@ -136,15 +134,15 @@ __local_scom_byte_size(scom_t t)
 static char*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
-	sidx_t ofp = off / __pgsz, ofi = off % __pgsz;
-	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * __pgsz);
+	sidx_t ofp = off / UTE_PGSZ, ofi = off % UTE_PGSZ;
+	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * UTE_PGSZ);
 	return LIKELY(p != MAP_FAILED) ? p + ofi : NULL;
 }
 
 static void
 munmap_any(char *map, off_t off, size_t len)
 {
-	sidx_t ofi = off % __pgsz;
+	sidx_t ofi = off % UTE_PGSZ;
 	munmap(map - ofi, len + ofi);
 	return;
 }
@@ -1786,9 +1784,6 @@ make_utectx(const char *fn, int fd, int oflags)
 		/* user didn't request creation, so fuck off here */
 		return NULL;
 	}
-
-	/* set global page size */
-	__pgsz = (size_t)sysconf(_SC_PAGESIZE);
 
 	/* start creating the result */
 	res = calloc(1, sizeof(*res));

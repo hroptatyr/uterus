@@ -64,6 +64,16 @@ libdatrie_a_SOURCES =
 libdatrie_a_CPPFLAGS = $(AM_CPPFLAGS) -DSTATIC_TRIE_GUTS
 libdatrie_a_SOURCES += trie.c trie.h
 
+## m30 stuff
+lib_LTLIBRARIES += libm30.la
+header_HEADERS += m30.h
+header_HEADERS += m62.h
+header_HEADERS += m30-rela.h
+header_HEADERS += m62-rela.h
+libm30_la_SOURCES =
+libm30_la_SOURCES += m30.c
+libm30_la_SOURCES += m62.c
+
 ## buffered writer
 lib_LTLIBRARIES += libuterus.la
 header_HEADERS += uterus.h
@@ -75,8 +85,6 @@ header_HEADERS += scommon.h
 header_HEADERS += sl1t.h
 header_HEADERS += scdl.h
 header_HEADERS += ssnp.h
-header_HEADERS += m30.h m62.h
-header_HEADERS += m30-rela.h m62-rela.h
 header_HEADERS += boobs.h
 libuterus_la_SOURCES =
 EXTRA_libuterus_la_SOURCES =

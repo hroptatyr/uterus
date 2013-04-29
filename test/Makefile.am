@@ -15,6 +15,12 @@ check_PROGRAMS =
 ut_tests =
 bin_tests =
 
+m30_LIBS = $(abs_top_builddir)/src/libm30.la
+
+uterus_LIBS =
+uterus_LIBS += $(abs_top_builddir)/src/libuterus.la
+uterus_LIBS += $(m30_LIBS)
+
 TEST_EXTENSIONS = .ut
 UT_LOG_COMPILER = $(builddir)/ut-test
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
@@ -153,20 +159,19 @@ EXTRA_DIST += info.5.ref.ute
 EXTRA_DIST += info.5.ref.beute
 
 ## test the core api
-LIBUTERUS = $(abs_top_builddir)/src/libuterus.la
 check_PROGRAMS += core-file-1
 check_PROGRAMS += core-file-2
 check_PROGRAMS += core-file-3
 check_PROGRAMS += core-file-4
 
 core_file_1_LDFLAGS = $(AM_LDFLAGS) -static
-core_file_1_LDADD = $(LIBUTERUS)
+core_file_1_LDADD = $(uterus_LIBS)
 core_file_2_LDFLAGS = $(AM_LDFLAGS) -static
-core_file_2_LDADD = $(LIBUTERUS)
+core_file_2_LDADD = $(uterus_LIBS)
 core_file_3_LDFLAGS = $(AM_LDFLAGS) -static
-core_file_3_LDADD = $(LIBUTERUS)
+core_file_3_LDADD = $(uterus_LIBS)
 core_file_4_LDFLAGS = $(AM_LDFLAGS) -static
-core_file_4_LDADD = $(LIBUTERUS)
+core_file_4_LDADD = $(uterus_LIBS)
 bin_tests += core-file-1
 bin_tests += core-file-2
 bin_tests += core-file-3
@@ -175,82 +180,82 @@ bin_tests += core-file-4
 ## testing headers and stuff
 check_PROGRAMS += m30-1
 m30_1_LDFLAGS = $(AM_LDFLAGS) -static
-m30_1_LDADD = $(LIBUTERUS)
+m30_1_LDADD = $(m30_LIBS)
 bin_tests += m30-1
 
 check_PROGRAMS += m30-2
 m30_2_LDFLAGS = $(AM_LDFLAGS) -static
-m30_2_LDADD = $(LIBUTERUS)
+m30_2_LDADD = $(m30_LIBS)
 bin_tests += m30-2
 
 check_PROGRAMS += m30-3
 m30_3_LDFLAGS = $(AM_LDFLAGS) -static
-m30_3_LDADD = $(LIBUTERUS)
+m30_3_LDADD = $(m30_LIBS)
 bin_tests += m30-3
 
 check_PROGRAMS += m30-4
 m30_4_LDFLAGS = $(AM_LDFLAGS) -static
-m30_4_LDADD = $(LIBUTERUS)
+m30_4_LDADD = $(m30_LIBS)
 bin_tests += m30-4
 
 check_PROGRAMS += m30-5
 m30_5_LDFLAGS = $(AM_LDFLAGS) -static
-m30_5_LDADD = $(LIBUTERUS)
+m30_5_LDADD = $(m30_LIBS)
 bin_tests += m30-5
 
 check_PROGRAMS += m30-6
 m30_6_LDFLAGS = $(AM_LDFLAGS) -static
-m30_6_LDADD = $(LIBUTERUS)
+m30_6_LDADD = $(m30_LIBS)
 bin_tests += m30-6
 
 check_PROGRAMS += m30-7
 m30_7_LDFLAGS = $(AM_LDFLAGS) -static
-m30_7_LDADD = $(LIBUTERUS)
+m30_7_LDADD = $(m30_LIBS)
 bin_tests += m30-7
 
 check_PROGRAMS += m30-8
 m30_8_LDFLAGS = $(AM_LDFLAGS) -static
-m30_8_LDADD = $(LIBUTERUS)
+m30_8_LDADD = $(m30_LIBS)
 bin_tests += m30-8
 
 check_PROGRAMS += m30-9
 m30_9_LDFLAGS = $(AM_LDFLAGS) -static
-m30_9_LDADD = $(LIBUTERUS)
+m30_9_LDADD = $(m30_LIBS)
 bin_tests += m30-9
 
 check_PROGRAMS += m30-10
 m30_10_LDFLAGS = $(AM_LDFLAGS) -static
-m30_10_LDADD = $(LIBUTERUS)
+m30_10_LDADD = $(m30_LIBS)
 bin_tests += m30-10
 
 check_PROGRAMS += m30-11
 m30_11_LDFLAGS = $(AM_LDFLAGS) -static
-m30_11_LDADD = $(LIBUTERUS)
+m30_11_LDADD = $(m30_LIBS)
 bin_tests += m30-11
 
 check_PROGRAMS += m30-12
 m30_12_LDFLAGS = $(AM_LDFLAGS) -static
-m30_12_LDADD = $(LIBUTERUS)
+m30_12_LDADD = $(m30_LIBS)
 bin_tests += m30-12
 
 check_PROGRAMS += m30-13
 m30_13_LDFLAGS = $(AM_LDFLAGS) -static
-m30_13_LDADD = $(LIBUTERUS)
+m30_13_LDADD = $(m30_LIBS)
 bin_tests += m30-13
 
 check_PROGRAMS += m30-14
 m30_14_LDFLAGS = $(AM_LDFLAGS) -static
-m30_14_LDADD = $(LIBUTERUS)
+m30_14_LDADD = $(m30_LIBS)
 bin_tests += m30-14
 
 check_PROGRAMS += m30-15
 m30_15_LDFLAGS = $(AM_LDFLAGS) -static
-m30_15_LDADD = $(LIBUTERUS)
+m30_15_LDADD = $(m30_LIBS)
 bin_tests += m30-15
 
 check_PROGRAMS += m30-16
 m30_16_LDFLAGS = $(AM_LDFLAGS) -static
-m30_16_LDADD = $(LIBUTERUS)
+m30_16_LDADD = $(m30_LIBS)
 bin_tests += m30-16
 
 

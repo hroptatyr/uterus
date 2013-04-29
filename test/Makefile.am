@@ -258,6 +258,56 @@ m30_16_LDFLAGS = $(AM_LDFLAGS) -static
 m30_16_LDADD = $(m30_LIBS)
 bin_tests += m30-16
 
+check_PROGRAMS += m62-1
+m62_1_LDFLAGS = $(AM_LDFLAGS) -static
+m62_1_LDADD = $(m30_LIBS)
+bin_tests += m62-1
+
+check_PROGRAMS += m62-2
+m62_2_LDFLAGS = $(AM_LDFLAGS) -static
+m62_2_LDADD = $(m30_LIBS)
+bin_tests += m62-2
+
+check_PROGRAMS += m62-3
+m62_3_LDFLAGS = $(AM_LDFLAGS) -static
+m62_3_LDADD = $(m30_LIBS)
+bin_tests += m62-3
+
+check_PROGRAMS += m62-4
+m62_4_LDFLAGS = $(AM_LDFLAGS) -static
+m62_4_LDADD = $(m30_LIBS)
+bin_tests += m62-4
+
+check_PROGRAMS += m62-5
+m62_5_LDFLAGS = $(AM_LDFLAGS) -static
+m62_5_LDADD = $(m30_LIBS)
+bin_tests += m62-5
+
+check_PROGRAMS += m62-6
+m62_6_LDFLAGS = $(AM_LDFLAGS) -static
+m62_6_LDADD = $(m30_LIBS)
+bin_tests += m62-6
+
+check_PROGRAMS += m62-7
+m62_7_LDFLAGS = $(AM_LDFLAGS) -static
+m62_7_LDADD = $(m30_LIBS)
+bin_tests += m62-7
+
+check_PROGRAMS += m62-8
+m62_8_LDFLAGS = $(AM_LDFLAGS) -static
+m62_8_LDADD = $(m30_LIBS)
+bin_tests += m62-8
+
+check_PROGRAMS += m62-9
+m62_9_LDFLAGS = $(AM_LDFLAGS) -static
+m62_9_LDADD = $(m30_LIBS)
+bin_tests += m62-9
+
+check_PROGRAMS += m62-10
+m62_10_LDFLAGS = $(AM_LDFLAGS) -static
+m62_10_LDADD = $(m30_LIBS)
+bin_tests += m62-10
+
 
 ## the test suite code
 check_PROGRAMS += ut-test

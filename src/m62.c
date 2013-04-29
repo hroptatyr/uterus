@@ -110,28 +110,53 @@ __62_0_get_s(const char *mant, size_t n, const char *f, size_t m)
 	uint64_t res;
 
 	/* use the 23_getter to obtain the integral part */
-	res = __62_23_get_s(mant, n) * 100000000;
+	res = __62_23_get_s(mant, n);
 
-	f += m;
 	switch (m) {
-	case 8:
-		res += 1 * (*--f & 0x0f);
-	case 7:
-		res += 10 * (*--f & 0x0f);
-	case 6:
-		res += 100 * (*--f & 0x0f);
-	case 5:
-		res += 1000 * (*--f & 0x0f);
-	case 4:
-		res += 10000 * (*--f & 0x0f);
-	case 3:
-		res += 100000 * (*--f & 0x0f);
-	case 2:
-		res += 1000000 * (*--f & 0x0f);
-	case 1:
-		res += 10000000 * (*--f & 0x0f);
-	case 0:
 	default:
+	case 8:
+		res = 10U * res + (*f++ & 0x0f);
+	case 7:
+		res = 10U * res + (*f++ & 0x0f);
+	case 6:
+		res = 10U * res + (*f++ & 0x0f);
+	case 5:
+		res = 10U * res + (*f++ & 0x0f);
+	case 4:
+		res = 10U * res + (*f++ & 0x0f);
+	case 3:
+		res = 10U * res + (*f++ & 0x0f);
+	case 2:
+		res = 10U * res + (*f++ & 0x0f);
+	case 1:
+		res = 10U * res + (*f++ & 0x0f);
+	case 0:
+		break;
+	}
+	/* just multiply powers of 10 now */
+	switch (8 - m) {
+	case 8:
+		res *= 10U;
+	case 7:
+		res *= 10U;
+	case 6:
+		res *= 10U;
+	case 5:
+		res *= 10U;
+	case 4:
+		res *= 10U;
+	case 3:
+		res *= 10U;
+	case 2:
+		res *= 10U;
+	case 1:
+		res *= 10U;
+	case 0:
+		break;
+	default:
+		if (*f >= '5' /*&& &f <= '9'*/) {
+			res++;
+		}
 		break;
 	}
 	return res;

@@ -65,20 +65,23 @@ extern "C" {
 static inline bool PURE_CONST
 m62_lt_p(m62_t a, m62_t b)
 {
+	int64_t a_mant = __m62_mant(a);
+	int64_t b_mant = __m62_mant(b);
+
 	switch (a.expo - b.expo) {
 	case 0:
-		return a.mant < b.mant;
+		return a_mant < b_mant;
 	case 1:
-		if (UNLIKELY(a.mant == b.mant / 10000)) {
-			return a.mant * 10000 < b.mant;
+		if (UNLIKELY(a_mant == b_mant / 10000)) {
+			return a_mant * 10000 < b_mant;
 		}
-		return a.mant < b.mant / 10000;
+		return a_mant < b_mant / 10000;
 
 	case -1:
-		if (UNLIKELY(a.mant / 10000 == b.mant)) {
-			return a.mant < b.mant * 10000;
+		if (UNLIKELY(a_mant / 10000 == b_mant)) {
+			return a_mant < b_mant * 10000;
 		}
-		return a.mant / 10000 < b.mant;
+		return a_mant / 10000 < b_mant;
 	case 2:
 	case 3:
 		/* a is too large to be less than b */
@@ -99,18 +102,21 @@ m62_lt_p(m62_t a, m62_t b)
 static inline bool PURE_CONST
 m62_gt_p(m62_t a, m62_t b)
 {
+	int64_t a_mant = __m62_mant(a);
+	int64_t b_mant = __m62_mant(b);
+
 	switch (a.expo - b.expo) {
 	case 0:
-		return a.mant == b.mant;
+		return a_mant == b_mant;
 	case 1:
-		if (UNLIKELY(a.mant == b.mant / 10000)) {
-			return a.mant * 10000 > b.mant;
+		if (UNLIKELY(a_mant == b_mant / 10000)) {
+			return a_mant * 10000 > b_mant;
 		}
 		return false;
 
 	case -1:
-		if (UNLIKELY(a.mant / 10000 == b.mant)) {
-			return a.mant > b.mant * 10000;
+		if (UNLIKELY(a_mant / 10000 == b_mant)) {
+			return a_mant > b_mant * 10000;
 		}
 		return false;
 	case 2:
@@ -133,18 +139,21 @@ m62_gt_p(m62_t a, m62_t b)
 static inline bool PURE_CONST
 m62_eq_p(m62_t a, m62_t b)
 {
+	int64_t a_mant = __m62_mant(a);
+	int64_t b_mant = __m62_mant(b);
+
 	switch (a.expo - b.expo) {
 	case 0:
-		return a.mant == b.mant;
+		return a_mant == b_mant;
 	case 1:
-		if (UNLIKELY(a.mant == b.mant / 10000)) {
-			return a.mant * 10000 == b.mant;
+		if (UNLIKELY(a_mant == b_mant / 10000)) {
+			return a_mant * 10000 == b_mant;
 		}
 		return false;
 
 	case -1:
-		if (UNLIKELY(a.mant / 10000 == b.mant)) {
-			return a.mant == b.mant * 10000;
+		if (UNLIKELY(a_mant / 10000 == b_mant)) {
+			return a_mant == b_mant * 10000;
 		}
 		return false;
 	case 2:

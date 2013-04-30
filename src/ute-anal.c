@@ -368,27 +368,23 @@ prnt_hmap(const char *sym)
 		rp = rows[i] = (void*)(hmap.hmap + i * HMAP_WIDTH);
 		for (size_t j = 0; j < HMAP_WIDTH; j++) {
 			float rij = hmap.hmap[HMAP_WIDTH * i + j];
-			int v = (int)(256.0f * rij);
+			int v = (int)(255.0f * rij);
 
 			if (v < 0) {
-				uint8_t c = (uint8_t)(256U + v);
-
-				*rp++ = 255U;
-				*rp++ = c;
-				*rp++ = c;
+				*rp++ = (uint8_t)-v;
+				*rp++ = 0U;
+				*rp++ = 0U;
 				*rp++ = (uint8_t)-v;
 			} else if (v > 0) {
-				uint8_t c = (uint8_t)(256U - v);
-
-				*rp++ = c;
-				*rp++ = 255U;
-				*rp++ = c;
+				*rp++ = 0U;
+				*rp++ = (uint8_t)v;
+				*rp++ = 0U;
 				*rp++ = (uint8_t)v;
 			} else {
-				*rp++ = 255U;
-				*rp++ = 255U;
-				*rp++ = 255U;
-				*rp++ = 0;
+				*rp++ = 0U;
+				*rp++ = 0U;
+				*rp++ = 0U;
+				*rp++ = 0U;
 			}
 		}
 	}

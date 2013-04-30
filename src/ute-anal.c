@@ -264,18 +264,6 @@ static png_structp pp;
 static png_infop ip;
 
 static void
-init_hmap(void)
-{
-	return;
-}
-
-static void
-fini_hmap(void)
-{
-	return;
-}
-
-static void
 rset_hmap(void)
 {
 	pp = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -404,18 +392,6 @@ out:
 	fclose(fp);
 	return;
 }
-#else  /* !HAVE_PNG_H */
-static void
-init_hmap(void)
-{
-	return;
-}
-
-static void
-fini_hmap(void)
-{
-	return;
-}
 #endif	/* HAVE_PNG_H */
 
 
@@ -425,9 +401,6 @@ anal1(anal_ctx_t ctx)
 {
 	utectx_t hdl = ctx->u;
 	size_t nsyms = ute_nsyms(hdl);
-
-	/* one init to rule them all */
-	init_hmap();
 
 	for (size_t i = 1; i <= nsyms; i++) {
 		const char *sym = ute_idx2sym(ctx->u, i);
@@ -470,8 +443,6 @@ anal1(anal_ctx_t ctx)
 		}
 #endif	/* HAVE_PNG_H */
 	}
-
-	fini_hmap();
 	return 0;
 }
 

@@ -274,6 +274,9 @@ dnl
             HDF5_LDFLAGS="$HDF5_LDFLAGS $EXTRA_LIBS"
         fi
 
+	## quickly remove all -Wl flags
+	HDF5_LDFLAGS=`echo "${HDF5_LDFLAGS}" | $SED 's/ -Wl[^ \t]*//g'`
+
         AC_MSG_CHECKING([for matching HDF5 Fortran wrapper])
         dnl Presume HDF5 Fortran wrapper is just a name variant from H5CC
         H5FC=$(eval echo -n $H5CC | $SED -n 's/cc$/fc/p')

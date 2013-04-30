@@ -59,6 +59,12 @@ main(int argc, char *argv[])
 	/* bang the actual testfile */
 	setenv("testfile", argi->inputs[0], 1);
 
+	/* and our pwd */
+	{
+		static char cwd[4096U];
+		setenv("testdir", getcwd(cwd, sizeof(cwd)), 1);
+	}
+
 	/* promote srcdir */
 	if (srcdir) {
 		static char buf[4096U];

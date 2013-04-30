@@ -245,9 +245,15 @@ pr_pot(void)
 	return;
 }
 
+
+/* hold maps, they indicate the return when going long or short
+ * at one point and close the position at another */
+#define HMAP_WIDTH	(256U)
+
 static struct {
-	double asks[256U];
-	double hmap[256U * 256U];
+	double bids[HMAP_WIDTH];
+	double asks[HMAP_WIDTH];
+	float hmap[HMAP_WIDTH * HMAP_WIDTH];
 	size_t idx;
 } hmap;
 
@@ -274,12 +280,35 @@ rset_hmap(void)
 	ip = png_create_info_struct(pp);
 
 	png_set_IHDR(
-		pp, ip, 256U, 256U, 8/*depth*/,
+		pp, ip, HMAP_WIDTH, HMAP_WIDTH, 8U/*depth*/,
 		PNG_COLOR_TYPE_RGBA,
 		PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT,
 		PNG_FILTER_TYPE_DEFAULT);
-	memset(&hmap, 0, sizeof(hmap));
+
+	memset(&hmap, -1, sizeof(hmap));
+	return;
+}
+
+static void
+fill_hmap(void)
+{
+	double rel_hl = pot.hi / pot.lo - 1.0;
+
+	/* lower half is bid by ask */
+	for (size_t i = 0; i < HMAP_WIDTH; i++) {
+		double b = hmap.bids[i];
+		double a = hmap.asks[i];
+
+		for (size_t j = 0; j < i; j++) {
+			double ret_long = (b / hmap.asks[j] - 1.0f) / rel_hl;
+			double ret_shrt = (hmap.bids[j] / a - 1.0f) / rel_hl;
+
+			/* lower half */
+			hmap.hmap[HMAP_WIDTH * i + j] = (float)ret_long;
+			hmap.hmap[HMAP_WIDTH * j + i] = (float)ret_shrt;
+		}
+	}
 	return;
 }
 
@@ -287,30 +316,39 @@ static int
 t_anal(anal_ctx_t UNUSED(ctx), scom_t ti)
 {
 	unsigned int ttf = scom_thdr_ttf(ti);
-	size_t idx = hmap.idx++;
-	double rel_hl = pot.hi / pot.lo - 1.0;
-	double p;
+	size_t idx = hmap.idx;
 
 	switch (ttf) {
+		m30_t b, a;
 	case SL1T_TTF_BID:
-	case SL1T_TTF_BIDASK:
-		p = ffff_m30_d((m30_t){.v = AS_CONST_SL1T(ti)->v[0]});
+		b = (m30_t){.v = AS_CONST_SL1T(ti)->bid};
+		hmap.bids[idx] = ffff_m30_d(b);
 		break;
+	case SL1T_TTF_ASK:
+		a = (m30_t){.v = AS_CONST_SL1T(ti)->ask};
+		hmap.asks[idx] = ffff_m30_d(a);
+		break;
+	case SL1T_TTF_BIDASK:
+		b = (m30_t){.v = AS_CONST_SL1T(ti)->v[0]};
+		a = (m30_t){.v = AS_CONST_SL1T(ti)->v[1]};
+		hmap.bids[idx] = ffff_m30_d(b);
+		hmap.asks[idx] = ffff_m30_d(a);
+		goto succ;
 	default:
-		return 0;
+		return -1;
 	}
-
-	hmap.asks[idx] = p;
-	for (size_t i = 0; i < hmap.idx; i++) {
-		hmap.hmap[256U * idx + i] = (p / hmap.asks[i] - 1.0) / rel_hl;
+	if (isnan(hmap.bids[idx]) || isnan(hmap.asks[idx])) {
+		return 1;
 	}
+succ:
+	hmap.idx++;
 	return 0;
 }
 
 static void
-pr_hmap(const char *sym)
+prnt_hmap(const char *sym)
 {
-	static png_byte *rows[256U];
+	static png_byte *rows[HMAP_WIDTH];
 	FILE *fp;
 
 	/* construct the file name */
@@ -324,13 +362,13 @@ pr_hmap(const char *sym)
 		}
 	}
 
-	for (size_t i = 0; i < 256U; i++) {
+	for (size_t i = 0; i < HMAP_WIDTH; i++) {
 		png_byte *rp;
 
-		rp = rows[i] = (void*)(hmap.hmap + i * 256U);
-		for (size_t j = 0; j < i; j++) {
-			double rij = hmap.hmap[256U * i + j];
-			int v = (int)(256.0 * rij);
+		rp = rows[i] = (void*)(hmap.hmap + i * HMAP_WIDTH);
+		for (size_t j = 0; j < HMAP_WIDTH; j++) {
+			float rij = hmap.hmap[HMAP_WIDTH * i + j];
+			int v = (int)(256.0f * rij);
 
 			if (v < 0) {
 				uint8_t c = (uint8_t)(256U + v);
@@ -353,7 +391,6 @@ pr_hmap(const char *sym)
 				*rp++ = 0;
 			}
 		}
-		memset(rp, 0, (256U - i) * 4U);
 	}
 
 	png_init_io(pp, fp);
@@ -390,9 +427,10 @@ anal1(anal_ctx_t ctx)
 		/* print the analysis pot */
 		pr_pot();
 
+		/* now on to the hold map */
 		{
 			time_t ref = pot.to;
-			time_t inc = (pot.tc - pot.to) / 255U;
+			time_t inc = (pot.tc - pot.to) / (HMAP_WIDTH - 1U);
 
 			rset_hmap();
 			for (scom_t ti; (ti = ute_iter(ctx->u)) != NULL;) {
@@ -401,12 +439,15 @@ anal1(anal_ctx_t ctx)
 				time_t t = scom_thdr_sec(ti);
 
 				if (t >= ref && ttf == i) {
-					t_anal(ctx, ti);
-					ref += inc;
+					if (t_anal(ctx, ti) == 0) {
+						ref += inc;
+					}
 				}
 			}
+			/* construct the hold map */
+			fill_hmap();
 			/* print the hold map */
-			pr_hmap(sym);
+			prnt_hmap(sym);
 		}
 	}
 

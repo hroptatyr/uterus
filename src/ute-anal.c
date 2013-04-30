@@ -53,6 +53,8 @@
 #include "ssnp.h"
 #include "mem.h"
 #include "m30.h"
+/* for analysis pictures */
+#include <png.h>
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -249,7 +251,37 @@ static struct {
 	size_t idx;
 } hmap;
 
-#include <png.h>
+static png_structp pp;
+static png_infop ip;
+
+static void
+init_hmap(void)
+{
+	return;
+}
+
+static void
+fini_hmap(void)
+{
+	png_destroy_write_struct(&pp, &ip);
+	return;
+}
+
+static void
+rset_hmap(void)
+{
+	pp = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	ip = png_create_info_struct(pp);
+
+	png_set_IHDR(
+		pp, ip, 256U, 256U, 8/*depth*/,
+		PNG_COLOR_TYPE_RGBA,
+		PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT,
+		PNG_FILTER_TYPE_DEFAULT);
+	memset(&hmap, 0, sizeof(hmap));
+	return;
+}
 
 static int
 t_anal(anal_ctx_t UNUSED(ctx), scom_t ti)
@@ -276,22 +308,22 @@ t_anal(anal_ctx_t UNUSED(ctx), scom_t ti)
 }
 
 static void
-pr_hmap(void)
+pr_hmap(const char *sym)
 {
 	static png_byte *rows[256U];
-	png_structp pp = NULL;
-	png_infop ip = NULL;
+	FILE *fp;
 
-	pp = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	ip = png_create_info_struct(pp);
+	/* construct the file name */
+	{
+		size_t ssz = strlen(sym);
+		memcpy(rows, sym, ssz);
+		memcpy((char*)rows + ssz, ".png", sizeof(".png"));
 
-	png_set_IHDR(
-		pp, ip, 256U, 256U, 8/*depth*/,
-		PNG_COLOR_TYPE_RGBA,
-		PNG_INTERLACE_NONE,
-		PNG_COMPRESSION_TYPE_DEFAULT,
-		PNG_FILTER_TYPE_DEFAULT);
-    
+		if (UNLIKELY((fp = fopen((char*)rows, "wb")) == NULL)) {
+			return;
+		}
+	}
+
 	for (size_t i = 0; i < 256U; i++) {
 		png_byte *rp;
 
@@ -324,12 +356,9 @@ pr_hmap(void)
 		memset(rp, 0, (256U - i) * 4U);
 	}
 
-	FILE *fp = fopen("foo.png", "wb");
 	png_init_io(pp, fp);
 	png_set_rows(pp, ip, rows);
 	png_write_png(pp, ip, PNG_TRANSFORM_IDENTITY, NULL);
-
-	png_destroy_write_struct(&pp, &ip);
 	fclose(fp);
 	return;
 }
@@ -342,8 +371,13 @@ anal1(anal_ctx_t ctx)
 	utectx_t hdl = ctx->u;
 	size_t nsyms = ute_nsyms(hdl);
 
+	/* one init to rule them all */
+	init_hmap();
+
 	for (size_t i = 1; i <= nsyms; i++) {
-		UDEBUG("anal'ing %s (%zu) ...\n", ute_idx2sym(ctx->u, i), i);
+		const char *sym = ute_idx2sym(ctx->u, i);
+
+		UDEBUG("anal'ing %s (%zu) ...\n", sym, i);
 		pot.lo = INFINITY;
 		pot.hi = -INFINITY;
 
@@ -353,14 +387,14 @@ anal1(anal_ctx_t ctx)
 				anal(ctx, ti);
 			}
 		}
-
+		/* print the analysis pot */
 		pr_pot();
 
 		{
 			time_t ref = pot.to;
 			time_t inc = (pot.tc - pot.to) / 255U;
 
-			memset(&hmap, 0, sizeof(hmap));
+			rset_hmap();
 			for (scom_t ti; (ti = ute_iter(ctx->u)) != NULL;) {
 				/* now to what we always do */
 				uint16_t ttf = scom_thdr_tblidx(ti);
@@ -371,10 +405,12 @@ anal1(anal_ctx_t ctx)
 					ref += inc;
 				}
 			}
-
-			pr_hmap();
+			/* print the hold map */
+			pr_hmap(sym);
 		}
 	}
+
+	fini_hmap();
 	return 0;
 }
 

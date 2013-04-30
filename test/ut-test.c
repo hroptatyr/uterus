@@ -22,6 +22,7 @@ main(int argc, char *argv[])
 {
 	struct gengetopt_args_info argi[1];
 	const char *srcdir;
+	const char *blddir;
 	char *shpart;
 
 	if (cmdline_parser(argc, argv, argi)) {
@@ -32,10 +33,11 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->builddir_given) {
-		setenv("builddir", argi->builddir_arg, 1);
+		blddir = argi->builddir_arg;
+	} else {
+		blddir = getenv("builddir");
 	}
 	if (argi->srcdir_given) {
-		setenv("srcdir", argi->srcdir_arg, 1);
 		srcdir = argi->srcdir_arg;
 	} else {
 		srcdir = getenv("srcdir");
@@ -59,13 +61,30 @@ main(int argc, char *argv[])
 
 	/* promote srcdir */
 	if (srcdir) {
-		static char buf[4096];
+		static char buf[4096U];
 		ssize_t res;
 
 		if ((res = readlink(srcdir, buf, sizeof(buf))) >= 0) {
 			buf[res] = '\0';
 			srcdir = buf;
 		}
+
+		/* bang the srcdir */
+		setenv("srcdir", srcdir, 1);
+	}
+
+	/* promot builddir */
+	if (blddir) {
+		static char buf[4096U];
+		ssize_t res;
+
+		if ((res = readlink(blddir, buf, sizeof(buf))) >= 0) {
+			buf[res] = '\0';
+			blddir = buf;
+		}
+
+		/* bang builddir */
+		setenv("builddir", blddir, 1);
 	}
 
 	/* build the command */

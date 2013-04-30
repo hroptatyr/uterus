@@ -75,13 +75,6 @@ myexit()
 fail=0
 tsp_create_env || myexit 1
 
-## also set srcdir in case the testfile needs it
-if test -z "${srcdir}"; then
-	srcdir=`xrealpath \`dirname "${0}"\``
-else
-	srcdir=`xrealpath "${srcdir}"`
-fi
-
 ## source the check
 . "${testfile}" || myexit 1
 
@@ -149,7 +142,7 @@ fi
 
 ## set finals
 if test -x "${builddir}/${TOOL}"; then
-	TOOL=`xrealpath "${builddir}/${TOOL}"`
+	TOOL="${builddir}/${TOOL}"
 fi
 
 stdin=""

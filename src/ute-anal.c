@@ -272,7 +272,6 @@ init_hmap(void)
 static void
 fini_hmap(void)
 {
-	png_destroy_write_struct(&pp, &ip);
 	return;
 }
 
@@ -399,9 +398,9 @@ prnt_hmap(const char *sym)
 
 	png_init_io(pp, fp);
 	png_set_rows(pp, ip, rows);
-out:
 	png_write_png(pp, ip, PNG_TRANSFORM_IDENTITY, NULL);
-
+out:
+	png_destroy_write_struct(&pp, &ip);
 	fclose(fp);
 	return;
 }

@@ -6,23 +6,6 @@ if test -z "${testfile}"; then
 	exit 1
 fi
 
-## some helper funs
-xrealpath()
-{
-	readlink -f "${1}" 2>/dev/null || \
-	realpath "${1}" 2>/dev/null || \
-	( cd "`dirname "${1}"`" || exit 1
-		tmp_target="`basename "${1}"`"
-		# Iterate down a (possible) chain of symlinks
-		while test -L "${tmp_target}"; do
-			tmp_target="`readlink "${tmp_target}"`"
-			cd "`dirname "${tmp_target}"`" || exit 1
-			tmp_target="`basename "${tmp_target}"`"
-		done
-		echo "`pwd -P || pwd`/${tmp_target}"
-	) 2>/dev/null
-}
-
 ts_sha1sum()
 {
 	local file="${1}"
@@ -48,7 +31,7 @@ ts_sha1sum()
 
 tsp_create_env()
 {
-	TS_TMPDIR="`basename "${testfile}"`.tmpd"
+	TS_TMPDIR="${testdir}/`basename "${testfile}"`.tmpd"
 	rm -rf "${TS_TMPDIR}" || return 1
 	mkdir "${TS_TMPDIR}" || return 1
 
@@ -74,13 +57,6 @@ myexit()
 ## setup
 fail=0
 tsp_create_env || myexit 1
-
-## also set srcdir in case the testfile needs it
-if test -z "${srcdir}"; then
-	srcdir=`xrealpath \`dirname "${0}"\``
-else
-	srcdir=`xrealpath "${srcdir}"`
-fi
 
 ## source the check
 . "${testfile}" || myexit 1
@@ -149,7 +125,7 @@ fi
 
 ## set finals
 if test -x "${builddir}/${TOOL}"; then
-	TOOL=`xrealpath "${builddir}/${TOOL}"`
+	TOOL="${builddir}/${TOOL}"
 fi
 
 stdin=""

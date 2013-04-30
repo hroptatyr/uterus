@@ -199,12 +199,10 @@ BUILT_SOURCES += ute-info-clo.c ute-info-clo.h
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c
 uta_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-uta_la_LIBADD = $(uterus_LIBS)
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-dukas_la_LIBADD = $(uterus_LIBS)
 ## dukas has a binary too
 noinst_PROGRAMS += ute-mux-dukas
 ute_mux_dukas_SOURCES = dukas.c dukas-clo.ggo
@@ -216,21 +214,18 @@ BUILT_SOURCES += dukas-clo.c dukas-clo.h
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
 mat_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-mat_la_LIBADD = $(uterus_LIBS)
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
 hdf5_la_SOURCES = hdf5.c hdf5-clo.ggo
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
-hdf5_la_LIBADD = $(uterus_LIBS)
 endif  ## HAVE_HDF5
 BUILT_SOURCES += hdf5-clo.c hdf5-clo.h
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
 ariva_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-ariva_la_LIBADD = $(uterus_LIBS)
 
 if HAVE_EXPAT
 ute_LTLIBRARIES += ibhist.la
@@ -238,19 +233,16 @@ ibhist_la_SOURCES = ibhist.c
 ibhist_la_SOURCES += expobuf.h
 ibhist_la_CPPFLAGS = $(AM_CPPFLAGS) $(expat_CFLAGS)
 ibhist_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-ibhist_la_LIBADD = $(uterus_LIBS)
-ibhist_la_LIBADD += $(expat_LIBS)
+ibhist_la_LDFLAGS += $(expat_LIBS)
 endif
 
 ute_LTLIBRARIES += forexfactory.la
 forexfactory_la_SOURCES = forexfactory.c
 forexfactory_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-forexfactory_la_LIBADD = $(uterus_LIBS)
 
 ute_LTLIBRARIES += fxstreet.la
 fxstreet_la_SOURCES = fxstreet.c
 fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-fxstreet_la_LIBADD = $(uterus_LIBS)
 
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)

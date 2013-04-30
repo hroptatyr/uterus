@@ -53,8 +53,10 @@
 #include "ssnp.h"
 #include "mem.h"
 #include "m30.h"
+#if defined HAVE_PNG_H
 /* for analysis pictures */
-#include <png.h>
+# include <png.h>
+#endif	/* HAVE_PNG_H */
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -246,6 +248,7 @@ pr_pot(void)
 }
 
 
+#if defined HAVE_PNG_H
 /* hold maps, they indicate the return when going long or short
  * at one point and close the position at another */
 #define HMAP_WIDTH	(256U)
@@ -398,9 +401,23 @@ prnt_hmap(const char *sym)
 	png_set_rows(pp, ip, rows);
 out:
 	png_write_png(pp, ip, PNG_TRANSFORM_IDENTITY, NULL);
+
 	fclose(fp);
 	return;
 }
+#else  /* !HAVE_PNG_H */
+static void
+init_hmap(void)
+{
+	return;
+}
+
+static void
+fini_hmap(void)
+{
+	return;
+}
+#endif	/* HAVE_PNG_H */
 
 
 /* file wide operations */
@@ -429,6 +446,7 @@ anal1(anal_ctx_t ctx)
 		/* print the analysis pot */
 		pr_pot();
 
+#if defined HAVE_PNG_H
 		/* now on to the hold map */
 		{
 			time_t ref = pot.to;
@@ -451,6 +469,7 @@ anal1(anal_ctx_t ctx)
 			/* print the hold map */
 			prnt_hmap(sym);
 		}
+#endif	/* HAVE_PNG_H */
 	}
 
 	fini_hmap();

@@ -15,11 +15,9 @@ check_PROGRAMS =
 ut_tests =
 bin_tests =
 
-m30_LIBS = $(abs_top_builddir)/src/libm30.la
-
-uterus_LIBS =
-uterus_LIBS += $(abs_top_builddir)/src/libuterus.la
-uterus_LIBS += $(m30_LIBS)
+## we used to provide a separate libm30 but that turned out to be bollocks
+m30_LIBS = $(uterus_LIBS)
+uterus_LIBS = $(abs_top_builddir)/src/libuterus.la
 
 TEST_EXTENSIONS = .ut
 UT_LOG_COMPILER = $(builddir)/ut-test

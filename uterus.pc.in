@@ -9,6 +9,6 @@ utedir=@utedir@
 Name: @PACKAGE_NAME@
 Description: Universal Tick Encoders R Us
 Version: @VERSION@
-Libs: -L${libdir} -luterus -lm30
+Libs: -L${libdir} -luterus
 Cflags: -I${includedir}
 

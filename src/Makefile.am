@@ -64,17 +64,7 @@ libdatrie_a_SOURCES =
 libdatrie_a_CPPFLAGS = $(AM_CPPFLAGS) -DSTATIC_TRIE_GUTS
 libdatrie_a_SOURCES += trie.c trie.h
 
-## m30 stuff
-lib_LTLIBRARIES += libm30.la
-header_HEADERS += m30.h
-header_HEADERS += m62.h
-header_HEADERS += m30-rela.h
-header_HEADERS += m62-rela.h
-libm30_la_SOURCES =
-libm30_la_SOURCES += m30.c
-libm30_la_SOURCES += m62.c
-
-## buffered writer
+## the main thing
 lib_LTLIBRARIES += libuterus.la
 header_HEADERS += uterus.h
 header_HEADERS += utefile.h
@@ -86,6 +76,10 @@ header_HEADERS += sl1t.h
 header_HEADERS += scdl.h
 header_HEADERS += ssnp.h
 header_HEADERS += boobs.h
+header_HEADERS += m30.h
+header_HEADERS += m62.h
+header_HEADERS += m30-rela.h
+header_HEADERS += m62-rela.h
 libuterus_la_SOURCES =
 EXTRA_libuterus_la_SOURCES =
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
@@ -101,6 +95,9 @@ libuterus_la_SOURCES += utesort.c
 libuterus_la_SOURCES += utetpc.c utetpc.h
 libuterus_la_SOURCES += uteslut.c uteslut.h
 libuterus_la_SOURCES += prchunk.c prchunk.h
+## monetary_t reader and writer
+libuterus_la_SOURCES += m30.c
+libuterus_la_SOURCES += m62.c
 ## libdatrie again
 libuterus_la_CPPFLAGS += -DSTATIC_TRIE_GUTS
 libuterus_la_SOURCES += uteslut-trie-glue.h
@@ -110,7 +107,7 @@ libuterus_la_CPPFLAGS += -DUSE_DATRIE -DUSE_UTE_SORT
 libuterus_la_CPPFLAGS += $(lzma_CFLAGS)
 libuterus_la_LDFLAGS = $(AM_LDFLAGS)
 libuterus_la_LDFLAGS += $(lzma_LIBS)
-libuterus_la_LDFLAGS += -version-info 0:2:0
+libuterus_la_LDFLAGS += -version-info 0:3:0
 EXTRA_libuterus_la_SOURCES += triedefs.h
 EXTRA_libuterus_la_SOURCES += fileutils.c fileutils.h
 EXTRA_libuterus_la_SOURCES += darray.c darray.h
@@ -119,7 +116,7 @@ EXTRA_libuterus_la_SOURCES += fmcmb.h
 EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 EXTRA_libuterus_la_SOURCES += nifty.h
 
-uterus_LIBS = libuterus.la libm30.la
+uterus_LIBS = libuterus.la
 
 bin_PROGRAMS += ute
 ute_SOURCES =
@@ -151,7 +148,7 @@ ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_print_CPPFLAGS += $(LTDLINCL)
-ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
+ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_print_LDADD = $(uterus_LIBS)
 ute_print_LDADD += $(LIBLTDL)
 EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
@@ -163,7 +160,7 @@ ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_CPPFLAGS += -DUTEDIR=\"$(utedir)\"
 ute_mux_CPPFLAGS += $(LTDLINCL)
-ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC) -static
+ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_mux_LDADD = $(uterus_LIBS)
 ute_mux_LDADD += $(LIBLTDL)
 EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
@@ -202,12 +199,10 @@ BUILT_SOURCES += ute-info-clo.c ute-info-clo.h
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c
 uta_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-uta_la_LIBADD = $(uterus_LIBS)
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
 dukas_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-dukas_la_LIBADD = $(uterus_LIBS)
 ## dukas has a binary too
 noinst_PROGRAMS += ute-mux-dukas
 ute_mux_dukas_SOURCES = dukas.c dukas-clo.ggo
@@ -219,21 +214,18 @@ BUILT_SOURCES += dukas-clo.c dukas-clo.h
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
 mat_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-mat_la_LIBADD = $(uterus_LIBS)
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
 hdf5_la_SOURCES = hdf5.c hdf5-clo.ggo
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
-hdf5_la_LIBADD = $(uterus_LIBS)
 endif  ## HAVE_HDF5
 BUILT_SOURCES += hdf5-clo.c hdf5-clo.h
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
 ariva_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-ariva_la_LIBADD = $(uterus_LIBS)
 
 if HAVE_EXPAT
 ute_LTLIBRARIES += ibhist.la
@@ -241,19 +233,16 @@ ibhist_la_SOURCES = ibhist.c
 ibhist_la_SOURCES += expobuf.h
 ibhist_la_CPPFLAGS = $(AM_CPPFLAGS) $(expat_CFLAGS)
 ibhist_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-ibhist_la_LIBADD = $(uterus_LIBS)
-ibhist_la_LIBADD += $(expat_LIBS)
+ibhist_la_LDFLAGS += $(expat_LIBS)
 endif
 
 ute_LTLIBRARIES += forexfactory.la
 forexfactory_la_SOURCES = forexfactory.c
 forexfactory_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-forexfactory_la_LIBADD = $(uterus_LIBS)
 
 ute_LTLIBRARIES += fxstreet.la
 fxstreet_la_SOURCES = fxstreet.c
 fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
-fxstreet_la_LIBADD = $(uterus_LIBS)
 
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)

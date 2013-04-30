@@ -68,6 +68,9 @@ main(int argc, char *argv[])
 			buf[res] = '\0';
 			srcdir = buf;
 		}
+		if (realpath(srcdir, buf) != NULL) {
+			srcdir = buf;
+		}
 
 		/* bang the srcdir */
 		setenv("srcdir", srcdir, 1);
@@ -80,6 +83,9 @@ main(int argc, char *argv[])
 
 		if ((res = readlink(blddir, buf, sizeof(buf))) >= 0) {
 			buf[res] = '\0';
+			blddir = buf;
+		}
+		if (realpath(blddir, buf) != NULL) {
 			blddir = buf;
 		}
 

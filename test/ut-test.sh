@@ -31,7 +31,7 @@ ts_sha1sum()
 
 tsp_create_env()
 {
-	TS_TMPDIR="`basename "${testfile}"`.tmpd"
+	TS_TMPDIR="${testdir}/`basename "${testfile}"`.tmpd"
 	rm -rf "${TS_TMPDIR}" || return 1
 	mkdir "${TS_TMPDIR}" || return 1
 

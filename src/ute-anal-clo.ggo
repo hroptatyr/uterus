@@ -1,0 +1,16 @@
+args "--unamed-opts --no-help --long-help --no-handle-error -a anal_args_info -f anal_parser"
+package "ute anal"
+usage "ute anal FILEs..."
+description "Analyse FILEs and print perceptual hash for each time series."
+
+option "help" h
+	"Show this help message."
+	optional
+
+option "interval" i
+	"Reset the statistic (and print it) every SECS seconds (default: 0)"
+	int typestr="SECS" optional
+
+option "modulus" m
+	"Start SECS seconds past midnight (default 0)"
+	int typestr="SECS" optional

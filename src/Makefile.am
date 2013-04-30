@@ -195,6 +195,16 @@ ute_info_LDADD = $(uterus_LIBS)
 EXTRA_ute_info_SOURCES = gbs.c gbs.h
 BUILT_SOURCES += ute-info-clo.c ute-info-clo.h
 
+ute_PROGRAMS += ute-anal
+ute_anal_SOURCES = ute-anal.c ute-anal-clo.ggo
+ute_anal_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
+ute_anal_LDFLAGS = $(AM_LDFLAGS) -static
+if HAVE_LIBPNG
+ute_anal_LDFLAGS += -lpng
+endif  HAVE_LIBPNG
+ute_anal_LDADD = $(uterus_LIBS)
+BUILT_SOURCES += ute-anal-clo.c ute-anal-clo.h
+
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
 uta_la_SOURCES = uta.c

@@ -300,7 +300,7 @@ fill_hmap(void)
 		double b = hmap.bids[i];
 		double a = hmap.asks[i];
 
-		for (size_t j = 0; j < i; j++) {
+		for (size_t j = 0; j <= i; j++) {
 			double ret_long = (b / hmap.asks[j] - 1.0f) / rel_hl;
 			double ret_shrt = (hmap.bids[j] / a - 1.0f) / rel_hl;
 

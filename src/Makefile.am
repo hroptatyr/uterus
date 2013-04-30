@@ -64,17 +64,7 @@ libdatrie_a_SOURCES =
 libdatrie_a_CPPFLAGS = $(AM_CPPFLAGS) -DSTATIC_TRIE_GUTS
 libdatrie_a_SOURCES += trie.c trie.h
 
-## m30 stuff
-lib_LTLIBRARIES += libm30.la
-header_HEADERS += m30.h
-header_HEADERS += m62.h
-header_HEADERS += m30-rela.h
-header_HEADERS += m62-rela.h
-libm30_la_SOURCES =
-libm30_la_SOURCES += m30.c
-libm30_la_SOURCES += m62.c
-
-## buffered writer
+## the main thing
 lib_LTLIBRARIES += libuterus.la
 header_HEADERS += uterus.h
 header_HEADERS += utefile.h
@@ -86,6 +76,10 @@ header_HEADERS += sl1t.h
 header_HEADERS += scdl.h
 header_HEADERS += ssnp.h
 header_HEADERS += boobs.h
+header_HEADERS += m30.h
+header_HEADERS += m62.h
+header_HEADERS += m30-rela.h
+header_HEADERS += m62-rela.h
 libuterus_la_SOURCES =
 EXTRA_libuterus_la_SOURCES =
 libuterus_la_CPPFLAGS = $(AM_CPPFLAGS)
@@ -101,6 +95,9 @@ libuterus_la_SOURCES += utesort.c
 libuterus_la_SOURCES += utetpc.c utetpc.h
 libuterus_la_SOURCES += uteslut.c uteslut.h
 libuterus_la_SOURCES += prchunk.c prchunk.h
+## monetary_t reader and writer
+libuterus_la_SOURCES += m30.c
+libuterus_la_SOURCES += m62.c
 ## libdatrie again
 libuterus_la_CPPFLAGS += -DSTATIC_TRIE_GUTS
 libuterus_la_SOURCES += uteslut-trie-glue.h
@@ -119,7 +116,7 @@ EXTRA_libuterus_la_SOURCES += fmcmb.h
 EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 EXTRA_libuterus_la_SOURCES += nifty.h
 
-uterus_LIBS = libuterus.la libm30.la
+uterus_LIBS = libuterus.la
 
 bin_PROGRAMS += ute
 ute_SOURCES =

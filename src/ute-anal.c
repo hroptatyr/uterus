@@ -393,8 +393,14 @@ prnt_hmap(const char *sym)
 		}
 	}
 
+	/* beautiful png error handling */
+	if (setjmp(png_jmpbuf(pp))) {
+		goto out;
+	}
+
 	png_init_io(pp, fp);
 	png_set_rows(pp, ip, rows);
+out:
 	png_write_png(pp, ip, PNG_TRANSFORM_IDENTITY, NULL);
 	fclose(fp);
 	return;

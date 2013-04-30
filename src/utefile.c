@@ -131,18 +131,31 @@ __local_scom_byte_size(scom_t t)
 
 
 /* aux */
+static inline __attribute__((pure, const)) size_t
+mmap_pgsz(void)
+{
+	static size_t pgsz;
+
+	if (UNLIKELY(!pgsz)) {
+		pgsz = (size_t)sysconf(_SC_PAGESIZE);
+	}
+	return pgsz;
+}
+
 static char*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
-	sidx_t ofp = off / UTE_PGSZ, ofi = off % UTE_PGSZ;
-	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * UTE_PGSZ);
+	size_t pgsz = mmap_pgsz();
+	sidx_t ofp = off / pgsz, ofi = off % pgsz;
+	char *p = mmap(NULL, len + ofi, prot, flags, fd, ofp * pgsz);
 	return LIKELY(p != MAP_FAILED) ? p + ofi : NULL;
 }
 
 static void
 munmap_any(char *map, off_t off, size_t len)
 {
-	sidx_t ofi = off % UTE_PGSZ;
+	size_t pgsz = mmap_pgsz();
+	sidx_t ofi = off % pgsz;
 	munmap(map - ofi, len + ofi);
 	return;
 }

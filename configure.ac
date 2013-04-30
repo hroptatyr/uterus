@@ -103,6 +103,20 @@ AM_CONDITIONAL([HAVE_EXPAT], [test "${have_expat}" = "yes"])
 AX_LIB_HDF5([serial])
 AM_CONDITIONAL([HAVE_HDF5], [test "${with_hdf5}" = "yes"])
 
+## ute anal can do with libpng
+PKG_CHECK_MODULES([libpng], [libpng], [have_libpng="yes"], [have_libpng="no"])
+AM_CONDITIONAL([HAVE_LIBPNG], [test "${have_libpng}" = "yes"])
+if test "${have_libpng}" = "yes"; then
+	## check for the header
+	SXE_DUMP_LIBS
+	CPPFLAGS="${CPPFLAGS} ${libpng_CFLAGS}"
+	AC_CHECK_HEADERS([png.h])
+	if test "${ac_cv_header_png_h}" != "yes"; then
+		have_libpng="no"
+	fi
+	SXE_RESTORE_LIBS
+fi
+
 ## lift big endianness to Makefile level
 AM_CONDITIONAL([WORDS_BIGENDIAN], [test "${ac_cv_c_bigendian}" = "yes"])
 

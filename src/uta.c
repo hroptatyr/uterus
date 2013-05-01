@@ -179,19 +179,20 @@ parse_zoff(const char *str, const char **on)
 static int
 parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 {
+	const char *cp = *cursor;
 	struct tm tm;
 	time_t stamp;
 	int msec;
 	int zoff;
 
-	ffff_strptime(*cursor, &tm);
+	ffff_strptime(cp, &tm);
 	stamp = ffff_timegm(&tm);
-	*cursor += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
-	if (UNLIKELY(*(*cursor)++ != '.')) {
+	cp += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
+	if (UNLIKELY(*cp++ != '.')) {
 		return -1;
 	}
 	/* get the millisecs */
-	msec = (int)ffff_strtol(*cursor, cursor, 0);
+	msec = (int)ffff_strtol(cp, cursor, 0);
 
 	/* get time zone info */
 	zoff = parse_zoff(*cursor, cursor);
@@ -200,6 +201,44 @@ parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 	scom_thdr_set_sec(thdr, stamp - zoff/*in secs*/);
 	scom_thdr_set_msec(thdr, (uint16_t)msec);
 	return 0;
+}
+
+static unsigned int
+parse_cspec(const char **cursor)
+{
+	const char *cp = *cursor;
+	char dig1;
+	char dig2;
+	unsigned int res = 0U;
+
+	if (UNLIKELY(*cp++ != 'c')) {
+		return 0U;
+	}
+
+	if (UNLIKELY((dig1 = *cp++) < '0' || dig1 > '9')) {
+		/* completely fucked */
+		return 0U;
+	} else if ((res = dig1 - '0', (dig2 = *cp++) < '0' || dig2 > '9')) {
+		cp--;
+	} else {
+		res = res * 10U + (dig2 - '0');
+	}
+	switch (*cp++) {
+	case 'd':
+		res *= 24U;
+	case 'h':
+		res *= 60U;
+	case 'm':
+		res *= 60U;
+	case 's':
+		break;
+	default:
+		/* fucked */
+		return 0U;
+	}
+	/* beautiful */
+	*cursor = cp;
+	return res;
 }
 
 static inline unsigned int
@@ -216,7 +255,12 @@ decfld(const char **cursor)
 		/* cursor should be positioned correctly */
 		return scom_thdr_sec(h);
 	}
-	/* what's next? */
+	/* what's next?
+	 * candle specs c??u where ?? is a number and
+	 * u is s for seconds, m for minutes, h for hours, d for days */
+	for (unsigned int cspec; (cspec = parse_cspec(cursor));) {
+		return cspec;
+	}
 
 	/* zap to next tab */
 	for (; **cursor != '\t' && **cursor != PRCHUNK_EOL; (*cursor)++);

@@ -179,19 +179,20 @@ parse_zoff(const char *str, const char **on)
 static int
 parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 {
+	const char *cp = *cursor;
 	struct tm tm;
 	time_t stamp;
 	int msec;
 	int zoff;
 
-	ffff_strptime(*cursor, &tm);
+	ffff_strptime(cp, &tm);
 	stamp = ffff_timegm(&tm);
-	*cursor += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
-	if (UNLIKELY(*(*cursor)++ != '.')) {
+	cp += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
+	if (UNLIKELY(*cp++ != '.')) {
 		return -1;
 	}
 	/* get the millisecs */
-	msec = (int)ffff_strtol(*cursor, cursor, 0);
+	msec = (int)ffff_strtol(cp, cursor, 0);
 
 	/* get time zone info */
 	zoff = parse_zoff(*cursor, cursor);

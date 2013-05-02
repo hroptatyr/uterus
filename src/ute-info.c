@@ -131,7 +131,7 @@ static void
 pr_intv(int i)
 {
 	if (i <= 0 || i > 86400) {
-		fputs("???", stdout);
+		fputs("??", stdout);
 	} else if (i == 86400) {
 		fputs("eod", stdout);
 	} else if (i >= 3600 && !(i % 3600)) {

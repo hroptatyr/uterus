@@ -442,7 +442,14 @@ mark(info_ctx_t ctx, scom_t ti)
 			intv[4] = ts;
 		} else if (ttf > SCDL_FLAVOUR) {
 			const_scdl_t x = AS_CONST_SCDL(ti);
-			int this = ts - x->sta_ts;
+			int this;
+
+			if (ts >= 100000 && x->sta_ts < 100000) {
+				/* must be a candle spec */
+				this = x->sta_ts;
+			} else {
+				this = ts - x->sta_ts;
+			}
 
 			if (!intv[ttf & 0x03U]) {
 				/* store */

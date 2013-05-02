@@ -1,0 +1,14 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/info.7.ref.ute"
+CMDLINE="info '${INFILE}'"
+
+## STDIN
+
+## STDOUT
+cat > "${TS_EXP_STDOUT}" <<EOF
+80012552_FUT_ONE	c30m_b
+EOF
+
+## info.7.ut ends here

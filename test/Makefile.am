@@ -89,6 +89,8 @@ ut_tests += print.5.ut
 ut_tests += print.6.ut
 ut_tests += print.7.ut
 ut_tests += print.8.ut
+ut_tests += print.9.ut
+ut_tests += print.10.ut
 EXTRA_DIST += print.a.ute
 EXTRA_DIST += print.b.ute
 EXTRA_DIST += print.c.ute
@@ -153,8 +155,11 @@ ut_tests += info.3.ut
 ut_tests += info.4.ut
 ut_tests += info.5.ut
 ut_tests += info.6.ut
+ut_tests += info.7.ut
+ut_tests += info.8.ut
 EXTRA_DIST += info.5.ref.ute
 EXTRA_DIST += info.5.ref.beute
+EXTRA_DIST += info.7.ref.ute
 
 ## test the core api
 check_PROGRAMS += core-file-1

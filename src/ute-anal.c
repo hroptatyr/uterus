@@ -379,6 +379,34 @@ prnt_hmap(const char *sym)
 		}
 	}
 
+	/* plot the bid */
+	for (size_t i = 0; i < HMAP_WIDTH; i++) {
+		png_byte *rp;
+		double yb = (hmap.bids[i] - pot.lo) / (pot.hi - pot.lo);
+		double ya = (hmap.asks[i] - pot.lo) / (pot.hi - pot.lo);
+		int vb = (int)(255.0 * (1.0 - yb));
+		int va = (int)(255.0 * (1.0 - ya));
+
+		if (vb > 255) {
+			vb = 255;
+		} else if (vb < 0) {
+			vb = 0;
+		}
+		if (va > 255) {
+			va = 255;
+		} else if (va < 0) {
+			va = 0;
+		}
+
+		rp = (void*)(hmap.hmap + vb * HMAP_WIDTH + i);
+		rp[2] = 255U;
+		rp[3] = 255U;
+
+		rp = (void*)(hmap.hmap + va * HMAP_WIDTH + i);
+		rp[2] = 255U;
+		rp[3] = 255U;
+	}
+
 	/* beautiful png error handling */
 	if (setjmp(png_jmpbuf(pp))) {
 		goto out;

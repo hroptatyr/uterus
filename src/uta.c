@@ -432,6 +432,38 @@ fputn(FILE *whither, const char *p, size_t n)
 #endif	/* USE_DEBUGGING_ASSERTIONS */
 
 static size_t
+pr_cspec(char *restrict tgt, unsigned int cspec)
+{
+	char *restrict p = tgt;
+	char suff;
+
+	if (cspec < 60U) {
+		suff = 's';
+	} else if (cspec < 3600U) {
+		cspec /= 60U;
+		suff = 'm';
+	} else if (cspec < 86400U) {
+		cspec /= 3600U;
+		suff = 'h';
+	} else {
+		cspec /= 86400U;
+		suff = 'd';
+	}
+
+	*p++ = 'c';
+	if (LIKELY(cspec)) {
+		*p++ = (char)((cspec / 10U) + '0');
+		*p++ = (char)((cspec % 10U) + '0');
+	} else {
+		*p++ = '?';
+		*p++ = '?';
+	}
+	*p++ = suff;
+	/* should be 4 always */
+	return p - tgt;
+}
+
+static size_t
 __pr_snap(char *tgt, scom_t st)
 {
 	const_ssnp_t snp = (const void*)st;
@@ -488,7 +520,12 @@ __pr_cdl(char *tgt, scom_t st)
 	/* start of the candle */
 	p += sprintf(p, "%08x", cdl->sta_ts);
 	*p++ = '|';
-	p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
+	if (cdl->sta_ts >= 100000 || scom_thdr_sec(cdl->hdr) < 100000) {
+		p += pr_tsmstz(p, cdl->sta_ts, 0, NULL, 'T');
+	} else {
+		/* might be a candle spec */
+		p += pr_cspec(p, cdl->sta_ts);
+	}
 	*p++ = '\t';
 	/* event count in candle, print 3 times */
 	p += sprintf(p, "%08x", cdl->cnt);

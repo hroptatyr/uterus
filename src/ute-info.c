@@ -181,12 +181,17 @@ pr_ttfs(int intv[static 16], uint32_t ttfs)
 		pr_intv(intv[SL1T_TTF_TRA]);
 		fputs("_t", stdout);
 	}
+	if (ttfs & (1U << (SCDL_FLAVOUR | SL1T_TTF_VOL))) {
+		fputs("\tc", stdout);
+		pr_intv(intv[SL1T_TTF_VOL]);
+		fputs("_v", stdout);
+	}
 	return;
 }
 
 
 /* our intervals tracker */
-#define INTV_BLOB	(8U)
+#define INTV_BLOB	(16U)
 
 struct __iv_s {
 	size_t nsyms;
@@ -451,12 +456,12 @@ mark(info_ctx_t ctx, scom_t ti)
 				this = ts - x->sta_ts;
 			}
 
-			if (!intv[ttf & 0x03U]) {
+			if (!intv[ttf & 0x0fU]) {
 				/* store */
-				intv[ttf & 0x03U] = this;
-			} else if (intv[ttf & 0x03U] != this) {
+				intv[ttf & 0x0fU] = this;
+			} else if (intv[ttf & 0x0fU] != this) {
 				/* sort of reset */
-				intv[ttf & 0x03U] = -1;
+				intv[ttf & 0x0fU] = -1;
 			}
 		}
 	}

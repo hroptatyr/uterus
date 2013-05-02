@@ -1,0 +1,16 @@
+## -*- shell-script -*-
+
+TOOL=ute
+## we ship no info.7.ref.beute, so create that now
+INFILE="${TS_TMPDIR}/info.7.ref.beute"
+"${TOOL}" fsck --big-endian -o "${INFILE}" "${srcdir}/info.7.ref.ute"
+CMDLINE="info '${INFILE}'"
+
+## STDIN
+
+## STDOUT
+cat > "${TS_EXP_STDOUT}" <<EOF
+80012552_FUT_ONE	c30m_b
+EOF
+
+## info.8.ut ends here

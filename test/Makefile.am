@@ -153,8 +153,11 @@ ut_tests += info.3.ut
 ut_tests += info.4.ut
 ut_tests += info.5.ut
 ut_tests += info.6.ut
+ut_tests += info.7.ut
+ut_tests += info.8.ut
 EXTRA_DIST += info.5.ref.ute
 EXTRA_DIST += info.5.ref.beute
+EXTRA_DIST += info.7.ref.ute
 
 ## test the core api
 check_PROGRAMS += core-file-1

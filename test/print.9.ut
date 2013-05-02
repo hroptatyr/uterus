@@ -1,0 +1,15 @@
+## -*- shell-script -*-
+
+TOOL=ute
+INFILE="${srcdir}/info.7.ref.ute"
+CMDLINE="print '${INFILE}'"
+COMMENT="absolute candle specs"
+
+## STDIN
+
+## STDOUT
+cat > "${TS_EXP_STDOUT}" <<EOF
+80012552_FUT_ONE	2010-12-09T15:30:00.000+00:00	1	11	29.6100	29.0600	29.2600	29.5800	00000708|c30m	00000000|0
+EOF
+
+## print.9.ut ends here

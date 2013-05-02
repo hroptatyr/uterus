@@ -3,10 +3,13 @@
 TOOL=ute
 ## we ship no info.7.ref.beute, so create that now
 INFILE="${TS_TMPDIR}/info.7.ref.beute"
-"${TOOL}" fsck --big-endian -o "${INFILE}" "${srcdir}/info.7.ref.ute"
-CMDLINE="info '${INFILE}'"
+CMDFILE="${TS_TMPDIR}/cmdfile"
+COMMENT="info'ing absolute candle specs"
 
-## STDIN
+cat > "${CMDFILE}" <<EOF
+"\${TOOL}" fsck --big-endian -o "${INFILE}" "${srcdir}/info.7.ref.ute"
+"\${TOOL}" info "${INFILE}"
+EOF
 
 ## STDOUT
 cat > "${TS_EXP_STDOUT}" <<EOF

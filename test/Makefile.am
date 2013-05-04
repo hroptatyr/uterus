@@ -316,6 +316,7 @@ bin_tests += m62-10
 
 ## the test suite code
 check_PROGRAMS += ut-test
+ut_test_LDADD = ../src/libversion.a
 BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
 EXTRA_DIST += ut-test.sh
 

@@ -122,6 +122,7 @@ EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 EXTRA_libuterus_la_SOURCES += nifty.h
 
 uterus_LIBS = libuterus.la
+uterus_LIBS += libversion.a
 
 bin_PROGRAMS += ute
 ute_SOURCES =

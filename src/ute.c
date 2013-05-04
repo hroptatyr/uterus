@@ -39,6 +39,7 @@
 #if defined HAVE_CONFIG_H
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
+#include "version.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -86,7 +87,7 @@ DEFCMD(sort)(int UNUSED(argc), char *argv[])
 
 DEFCMD(version)(int UNUSED(argc), char *UNUSED(argv)[])
 {
-	puts("ute " PACKAGE_VERSION);
+	printf("ute %s\n", uterus_version_string);
 	return 0;
 }
 

@@ -218,6 +218,7 @@ uta_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
+dukas_la_LIBADD = libversion.a
 dukas_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ## dukas has a binary too
 noinst_PROGRAMS += ute-mux-dukas
@@ -235,6 +236,7 @@ if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
 hdf5_la_SOURCES = hdf5.c hdf5-clo.ggo
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
+hdf5_la_LIBADD = libversion.a
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
 endif  ## HAVE_HDF5
 BUILT_SOURCES += hdf5-clo.c hdf5-clo.h

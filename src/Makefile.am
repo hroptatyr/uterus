@@ -54,11 +54,20 @@ lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
 EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
+CLEANFILES =
 
 BUILT_SOURCES =
 GGO_HELPERS = common.ggo.in
 
 DSO_LDFLAGS = -shared -avoid-version -module
+
+## version stuff
+noinst_LIBRARIES += libversion.a
+libversion_a_SOURCES =
+libversion_a_SOURCES += version.h
+nodist_libversion_a_SOURCES = version.c
+CLEANFILES += version.c
+EXTRA_DIST += version.c.in
 
 ## the main thing
 lib_LTLIBRARIES += libuterus.la
@@ -249,6 +258,9 @@ forexfactory_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ute_LTLIBRARIES += fxstreet.la
 fxstreet_la_SOURCES = fxstreet.c
 fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
+
+version.c: version.c.in $(top_builddir)/version.mk
+	sed -e 's,[@]VERSION[@],$(VERSION),g' <$(srcdir)/$@.in >$@
 
 ## ggo rule
 %.c %.h: %.ggo $(GGO_HELPERS)

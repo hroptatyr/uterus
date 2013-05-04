@@ -262,9 +262,15 @@ fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 version.c: version.c.in $(top_builddir)/version.mk
 	sed -e 's,[@]VERSION[@],$(VERSION),g' <$(srcdir)/$@.in >$@
 
-## ggo rule
-%.c %.h: %.ggo $(GGO_HELPERS)
-	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*
+## gengetopt rule with sed hack to avoid using VERSION and config.h
+## depend on Makefile.am to survive a git pull
+%.c %.h: %.ggo $(GGO_HELPERS) Makefile.am
+	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $* \
+	&& sed \
+	  -e 's,config.h,version.h,g' \
+	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
+	  $*.h >$*.h-t \
+	&& mv $*.h-t $*.h
 
 ## for dist or dist check we need binaries, so help2man can work
 dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)

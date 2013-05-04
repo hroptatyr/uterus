@@ -320,9 +320,15 @@ BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
 EXTRA_DIST += ut-test.sh
 
 
-## ggo rule
-%.c %.h: %.ggo
-	$(AM_V_GEN) gengetopt -F $* -i $<
+## gengetopt rule with sed hack to avoid using VERSION and config.h
+## depend on Makefile.am to survive a git pull
+%.c %.h: %.ggo Makefile.am
+	$(AM_V_GEN) gengetopt -F $* -i $< \
+	&& sed \
+	  -e 's,config.h,version.h,g' \
+	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
+	  $*.h >$*.h-t \
+	&& mv $*.h-t $*.h
 
 clean-local:
 	-rm -rf *.tmpd

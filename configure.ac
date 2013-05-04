@@ -1,11 +1,7 @@
 AC_PREREQ([2.63])
 
-m4_define([GIT_VERSION_GEN], [dnl
-pushdef([version], [m4_esyscmd([./git-version-gen])])[]dnl
-ifelse([]version[], [], [0.2.6], []version[])[]dnl
-popdef([version])[]dnl
-])
-AC_INIT([uterus], [GIT_VERSION_GEN], [https://github.com/hroptatyr/uterus])
+## t.i.n.a.v = this is not a version, never use it!
+AC_INIT([uterus], [t.i.n.a.v], [https://github.com/hroptatyr/uterus])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([src/config.h])

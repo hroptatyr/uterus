@@ -35,11 +35,14 @@
 ##
 ###
 
+include $(top_builddir)/version.mk
+
 LANG = C
 LC_ALL = C
 
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST =
+DISTCLEANFILES =
 
 SUBDIRS =
 if DESCEND_LIBLTDL
@@ -55,6 +58,8 @@ EXTRA_DIST += git-version-gen
 EXTRA_DIST += uterus.magic
 EXTRA_DIST += README.md
 
+DISTCLEANFILES += version.mk
+
 if HAVE_FILE
 pkgdata_DATA = uterus.mgc
 endif  HAVE_FILE
@@ -63,3 +68,7 @@ CLEANFILES = $(pkgdata_DATA)
 
 uterus.mgc: uterus.magic
 	$(FILE) -C -m $(srcdir)/uterus.magic && mv $(builddir)/uterus.magic.mgc $@
+
+dist-hook:
+	echo $(VERSION) > $(distdir)/version \
+	&& touch -r $(top_builddir)/version.mk $(distdir)/version

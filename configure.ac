@@ -25,6 +25,9 @@ AC_COPYRIGHT(
 AM_INIT_AUTOMAKE([foreign dist-xz color-tests parallel-tests])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
+GIT_VERSION_MAGIC
+AC_CONFIG_LINKS([GNUmakefile:GNUmakefile])
+
 ## the build chain
 AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC

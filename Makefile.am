@@ -66,6 +66,14 @@ endif  HAVE_FILE
 
 CLEANFILES = $(pkgdata_DATA)
 
+# do_subst, inspired by the automake project
+do_subst = ( sed \
+  -e 's,[@]VERSION[@],$(VERSION),g' \
+  -e 's,[@]PACKAGE_VERSION[@],$(PACKAGE_VERSION),g' \
+  -e 's,[@]PACKAGE_STRING[@],$(PACKAGE_STRING),g' \
+  | $(SHELL) ./config.status --file=- \
+  )
+
 uterus.mgc: uterus.magic
 	$(FILE) -C -m $(srcdir)/uterus.magic && mv $(builddir)/uterus.magic.mgc $@
 

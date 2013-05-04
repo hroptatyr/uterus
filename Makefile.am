@@ -42,6 +42,7 @@ LC_ALL = C
 
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST =
+CLEANFILES =
 DISTCLEANFILES =
 
 SUBDIRS =
@@ -53,6 +54,8 @@ SUBDIRS += src info aux test
 pkgconfigdir = @libdir@/pkgconfig
 pkgconfig_DATA =
 pkgconfig_DATA += uterus.pc
+EXTRA_DIST += uterus.pc.in
+CLEANFILES += uterus.pc
 
 EXTRA_DIST += git-version-gen
 EXTRA_DIST += uterus.magic
@@ -64,7 +67,7 @@ if HAVE_FILE
 pkgdata_DATA = uterus.mgc
 endif  HAVE_FILE
 
-CLEANFILES = $(pkgdata_DATA)
+CLEANFILES += $(pkgdata_DATA)
 
 # do_subst, inspired by the automake project
 do_subst = ( sed \
@@ -73,6 +76,12 @@ do_subst = ( sed \
   -e 's,[@]PACKAGE_STRING[@],$(PACKAGE_STRING),g' \
   | $(SHELL) ./config.status --file=- \
   )
+
+uterus.pc: uterus.pc.in
+uterus.pc: version.mk
+	rm -f $@ $@-t
+	$(do_subst) <$(srcdir)/$@.in >$@-t
+	mv -f $@-t $@
 
 uterus.mgc: uterus.magic
 	$(FILE) -C -m $(srcdir)/uterus.magic && mv $(builddir)/uterus.magic.mgc $@

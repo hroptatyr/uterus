@@ -149,7 +149,6 @@ AC_SUBST([headerdir])
 AC_SUBST([utedir])
 
 ## output
-AC_CONFIG_FILES([libuterus.pc])
 AC_CONFIG_FILES([uterus.pc])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([libltdl/Makefile])

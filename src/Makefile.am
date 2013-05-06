@@ -58,12 +58,6 @@ GGO_HELPERS = common.ggo.in
 
 DSO_LDFLAGS = -shared -avoid-version -module
 
-## datrie stuff
-noinst_LIBRARIES += libdatrie.a
-libdatrie_a_SOURCES =
-libdatrie_a_CPPFLAGS = $(AM_CPPFLAGS) -DSTATIC_TRIE_GUTS
-libdatrie_a_SOURCES += trie.c trie.h
-
 ## the main thing
 lib_LTLIBRARIES += libuterus.la
 header_HEADERS += uterus.h

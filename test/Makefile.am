@@ -1,3 +1,5 @@
+include $(top_builddir)/version.mk
+
 # Help the Developers and yourself. Just use the C locale and settings
 # for the compilation. They can still be overriden by make LANG=<whatever>
 # but that is general a not very good idea
@@ -314,13 +316,20 @@ bin_tests += m62-10
 
 ## the test suite code
 check_PROGRAMS += ut-test
+ut_test_LDADD = ../src/libversion.a
 BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
 EXTRA_DIST += ut-test.sh
 
 
-## ggo rule
-%.c %.h: %.ggo
-	$(AM_V_GEN) gengetopt -F $* -i $<
+## gengetopt rule with sed hack to avoid using VERSION and config.h
+## depend on Makefile.am to survive a git pull
+%.c %.h: %.ggo Makefile.am
+	$(AM_V_GEN) gengetopt -F $* -i $< \
+	&& sed \
+	  -e 's,config.h,version.h,g' \
+	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
+	  $*.h >$*.h-t \
+	&& mv $*.h-t $*.h
 
 clean-local:
 	-rm -rf *.tmpd

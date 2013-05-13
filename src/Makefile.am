@@ -35,6 +35,8 @@
 ##
 ###
 
+include $(top_builddir)/version.mk
+
 AM_CFLAGS = $(EXTRA_CFLAGS)
 AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
@@ -52,11 +54,20 @@ lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
 EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
+CLEANFILES =
 
 BUILT_SOURCES =
 GGO_HELPERS = common.ggo.in
 
 DSO_LDFLAGS = -shared -avoid-version -module
+
+## version stuff
+noinst_LIBRARIES += libversion.a
+libversion_a_SOURCES =
+libversion_a_SOURCES += version.h
+nodist_libversion_a_SOURCES = version.c
+CLEANFILES += version.c
+EXTRA_DIST += version.c.in
 
 ## the main thing
 lib_LTLIBRARIES += libuterus.la
@@ -111,6 +122,7 @@ EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 EXTRA_libuterus_la_SOURCES += nifty.h
 
 uterus_LIBS = libuterus.la
+uterus_LIBS += libversion.a
 
 bin_PROGRAMS += ute
 ute_SOURCES =
@@ -206,6 +218,7 @@ uta_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 ute_LTLIBRARIES += dukas.la
 dukas_la_SOURCES = dukas.c
+dukas_la_LIBADD = libversion.a
 dukas_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ## dukas has a binary too
 noinst_PROGRAMS += ute-mux-dukas
@@ -223,6 +236,7 @@ if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
 hdf5_la_SOURCES = hdf5.c hdf5-clo.ggo
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
+hdf5_la_LIBADD = libversion.a
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
 endif  ## HAVE_HDF5
 BUILT_SOURCES += hdf5-clo.c hdf5-clo.h
@@ -248,9 +262,18 @@ ute_LTLIBRARIES += fxstreet.la
 fxstreet_la_SOURCES = fxstreet.c
 fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
-## ggo rule
-%.c %.h: %.ggo $(GGO_HELPERS)
-	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $*
+version.c: version.c.in $(top_builddir)/version.mk
+	sed -e 's,[@]VERSION[@],$(VERSION),g' <$(srcdir)/$@.in >$@
+
+## gengetopt rule with sed hack to avoid using VERSION and config.h
+## depend on Makefile.am to survive a git pull
+%.c %.h: %.ggo $(GGO_HELPERS) Makefile.am
+	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $* \
+	&& sed \
+	  -e 's,config.h,version.h,g' \
+	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
+	  $*.h >$*.h-t \
+	&& mv $*.h-t $*.h
 
 ## for dist or dist check we need binaries, so help2man can work
 dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)

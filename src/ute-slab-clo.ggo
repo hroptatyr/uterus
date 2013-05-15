@@ -40,3 +40,7 @@ option "extract-till" -
 option "extract-day" -
 	"Short for --extract-from='DATE' --extract-till='DATE'"
 	string typestr="DATE" optional
+
+option "explode-by-interval" -
+	"Extract all intervals into their own files."
+	int typestr="SECONDS" optional

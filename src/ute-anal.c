@@ -252,6 +252,8 @@ pr_pot(void)
 /* hold maps, they indicate the return when going long or short
  * at one point and close the position at another */
 #define HMAP_WIDTH	(256U)
+#define HMAP_FACTR	(4U)
+#define MINI_WIDTH	(HMAP_WIDTH / HMAP_FACTR)
 
 static struct {
 	double bids[HMAP_WIDTH];
@@ -392,6 +394,85 @@ out:
 	fclose(fp);
 	return;
 }
+
+static void
+prnt_mini(const char *sym)
+{
+	static png_byte __rows[4U * MINI_WIDTH * MINI_WIDTH];
+	static png_byte *rows[MINI_WIDTH];
+	static png_structp png;
+	static png_infop nfo;
+	FILE *fp;
+
+	/* construct the file name */
+	{
+		size_t ssz = strlen(sym);
+		memcpy(__rows, sym, ssz);
+		memcpy((char*)__rows + ssz, "_mini.png", sizeof("_mini.png"));
+
+		if (UNLIKELY((fp = fopen((char*)__rows, "wb")) == NULL)) {
+			return;
+		}
+	}
+
+	memset(__rows, -1, sizeof(__rows));
+	for (size_t i = 0; i < MINI_WIDTH; i++) {
+		png_byte *rp;
+		double yb = (hmap.bids[HMAP_FACTR * i] - pot.lo) / (pot.hi - pot.lo);
+		double ya = (hmap.asks[HMAP_FACTR * i] - pot.lo) / (pot.hi - pot.lo);
+		int vb = (int)((MINI_WIDTH - 1) * (1.0 - yb));
+		int va = (int)((MINI_WIDTH - 1) * (1.0 - ya));
+
+		if (vb >= (int)MINI_WIDTH) {
+			vb = MINI_WIDTH - 1;
+		} else if (vb < 0) {
+			vb = 0;
+		}
+
+		if (va >= (int)MINI_WIDTH) {
+			va = MINI_WIDTH - 1;
+		} else if (va < 0) {
+			va = 0;
+		}
+
+		rp = __rows + 4U * (vb * MINI_WIDTH + i);
+		rp[0] = 0U;
+		rp[1] = 0U;
+		rp[2] = 255U;
+		rp[3] = 255U;
+
+		rp = __rows + 4U * (va * MINI_WIDTH + i);
+		rp[0] = 0U;
+		rp[1] = 0U;
+		rp[2] = 255U;
+		rp[3] = 255U;
+
+		rows[i] = __rows + 4U * i * MINI_WIDTH;
+	}
+
+	png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	nfo = png_create_info_struct(png);
+
+	png_set_IHDR(
+		png, nfo, MINI_WIDTH, MINI_WIDTH, 8U/*depth*/,
+		PNG_COLOR_TYPE_RGBA,
+		PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT,
+		PNG_FILTER_TYPE_DEFAULT);
+
+	/* beautiful png error handling */
+	if (setjmp(png_jmpbuf(png))) {
+		goto out;
+	}
+
+	png_init_io(png, fp);
+	png_set_rows(png, nfo, rows);
+	png_write_png(png, nfo, PNG_TRANSFORM_IDENTITY, NULL);
+out:
+	png_destroy_write_struct(&png, &nfo);
+	fclose(fp);
+	return;
+}
 #endif	/* HAVE_PNG_H */
 
 
@@ -440,6 +521,8 @@ anal1(anal_ctx_t ctx)
 			fill_hmap();
 			/* print the hold map */
 			prnt_hmap(sym);
+			/* print a mini chart */
+			prnt_mini(sym);
 		}
 #endif	/* HAVE_PNG_H */
 	}

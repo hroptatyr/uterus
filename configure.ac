@@ -152,6 +152,7 @@ AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([libltdl/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([aux/Makefile])
+AC_CONFIG_FILES([aux/matlab/Makefile])
 AC_CONFIG_FILES([info/Makefile])
 AC_CONFIG_FILES([test/Makefile])
 AC_OUTPUT

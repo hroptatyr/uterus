@@ -45,8 +45,11 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <time.h>
+#include <limits.h>
 
 #include "utefile.h"
+#include "date.h"
+#include "ute-print.h"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -55,6 +58,9 @@
 # define assert(args...)
 #endif	/* DEBUG_FLAG */
 
+#if !defined LIKELY
+# define LIKELY(_x)	__builtin_expect((_x), 1)
+#endif	/* !LIKELY */
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !UNLIKELY */
@@ -70,6 +76,9 @@ typedef struct slab_ctx_s *slab_ctx_t;
 struct slab_ctx_s {
 	utectx_t out;
 
+	const char *outfn;
+	unsigned int outfl;
+
 	size_t nidxs;
 	const unsigned int *idxs;
 
@@ -79,6 +88,10 @@ struct slab_ctx_s {
 	/* interval [from, till) for time-based extraction */
 	time_t from;
 	time_t till;
+
+	/* interval for interval based explosion */
+	uint32_t intv;
+	uint32_t last;
 };
 
 static void
@@ -208,6 +221,41 @@ open_out(const char *fn, int fl)
 	return ute_mktemp(fl);
 }
 
+static int
+rotate_intv(slab_ctx_t ctx, uint32_t cur_ts)
+{
+	static char outfn[PATH_MAX];
+	size_t prfz;
+
+	cur_ts -= (cur_ts % ctx->intv);
+
+	/* first of all, finalise the old guy */
+	if (LIKELY(ctx->out != NULL)) {
+		ute_close(ctx->out);
+	}
+	/* construct the out file name */
+	prfz = strlen(ctx->outfn);
+
+	if (UNLIKELY(prfz + 36/*for timestamp and suffix*/ >= sizeof(outfn))) {
+		/* bugger */
+		return -1;
+	}
+	memcpy(outfn, ctx->outfn, prfz);
+	outfn[prfz++] = '-';
+	prfz += pr_tsmstz(outfn + prfz, cur_ts, 0, NULL, 'T');
+	outfn[prfz++] = '.';
+	outfn[prfz++] = 'u';
+	outfn[prfz++] = 't';
+	outfn[prfz++] = 'e';
+	outfn[prfz] = '\0';
+
+	if (UNLIKELY((ctx->out = open_out(outfn, ctx->outfl)) == NULL)) {
+		return -1;
+	}
+	ctx->last = cur_ts;
+	return 0;
+}
+
 static void
 slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
 {
@@ -221,6 +269,15 @@ slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
 	} else if (stmp < ctx->from || stmp >= ctx->till) {
 		/* time stamp no matchee */
 		return;
+	}
+
+	/* check if we need to start a new file */
+	if (UNLIKELY(ctx->intv && ctx->last + ctx->intv <= scom_thdr_sec(ti))) {
+		uint32_t tist = scom_thdr_sec(ti);
+
+		if (UNLIKELY(rotate_intv(ctx, tist) < 0)) {
+			return;
+		}
 	}
 
 	if (max == 0) {
@@ -312,8 +369,6 @@ main(int argc, char *argv[])
 {
 	struct slab_args_info argi[1];
 	struct slab_ctx_s ctx[1] = {{0}};
-	const char *outfn = NULL;
-	int outfl = UO_RDWR;
 	int res = 0;
 
 	if (slab_parser(argc, argv, argi)) {
@@ -354,27 +409,40 @@ main(int argc, char *argv[])
 	if (ctx->till == 0) {
 		ctx->till = 2147483647;
 	}
+	if (argi->explode_by_interval_given) {
+		ctx->intv = argi->explode_by_interval_arg;
+	}
 
 	/* handle outfile */
+	ctx->outfl = UO_CREAT | UO_RDWR;
 	if (argi->output_given && argi->into_given) {
 		error(0, "only one of --output and --into can be given");
 		res = 1;
 		goto out;
 	} else if (argi->output_given) {
-		outfn = argi->output_arg;
-		outfl |= UO_CREAT | UO_TRUNC;
+		ctx->outfn = argi->output_arg;
+		ctx->outfl |= UO_TRUNC;
 	} else if (argi->into_given) {
-		outfn = argi->into_arg;
-		outfl |= UO_CREAT;
+		ctx->outfn = argi->into_arg;
+	} else if (argi->explode_by_interval_given) {
+		/* generate a nice prefix */
+		static char prfx[] = "xplo_XXXXXX";
+
+		if (mkstemp(prfx) >= 0) {
+			ctx->outfn = prfx;
+		}
 	} else {
-		outfn = NULL;
+		ctx->outfn = NULL;
 	}
 
-	if ((ctx->out = open_out(outfn, outfl)) == NULL) {
-		error(0, "cannot open output file '%s'", outfn);
+	if (argi->explode_by_interval_given) {
+		/* no file opening in advance in explosion mode */
+		ctx->out = NULL;
+	} else if ((ctx->out = open_out(ctx->outfn, ctx->outfl)) == NULL) {
+		error(0, "cannot open output file '%s'", ctx->outfn);
 		res = 1;
 		goto out;
-	} else if (outfn == NULL) {
+	} else if (ctx->outfn == NULL) {
 		/* inform the user about our filename decision */
 		puts(ute_fn(ctx->out));
 	}
@@ -398,7 +466,9 @@ main(int argc, char *argv[])
 	}
 
 	/* clear out resources */
-	ute_close(ctx->out);
+	if (ctx->out != NULL) {
+		ute_close(ctx->out);
+	}
 
 out:
 	slab_parser_free(argi);

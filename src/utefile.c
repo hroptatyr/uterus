@@ -2065,6 +2065,39 @@ ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
 	return;
 }
 
+void
+ute_add_tick_as(utectx_t ctx, scom_t t, scom_t h)
+{
+/* add tick T with header info from H. */
+	size_t tsz;
+
+	/* never trust your users, inspect the tick */
+	if (UNLIKELY((h->ttf & 0x30U) == 0x30U)) {
+		error(0, "\
+this version of uterus cannot cope with tick type %x", h->ttf);
+		return;
+	} else if (UNLIKELY(h->u == -1ULL)) {
+		error(0, "invalid tick");
+	}
+
+	/* post tick inspection */
+	tsz = scom_tick_size(h);
+	assert(tpc_active_p(ctx->tpc));
+	if (!tpc_can_hold_p(ctx->tpc, tsz)) {
+		/* great, compute the number of leap ticks */
+		uteseek_t sk = &ctx->tpc->sk;
+		size_t nleap = sk->szrw / sizeof(*sk->sp) - sk->si;
+
+		UDEBUGvv("tpc full (has: %zut/%zut)\n", sk->si, sk->si + nleap);
+		assert(sk->szrw / sizeof(*sk->sp) >= sk->si);
+		seek_rewind(sk, nleap);
+		ute_flush(ctx);
+	}
+	/* and now it's just passing on everything to the tpc adder */
+	tpc_add_as(ctx->tpc, t, h, tsz);
+	return;
+}
+
 size_t
 ute_nticks(utectx_t ctx)
 {

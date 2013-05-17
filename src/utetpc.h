@@ -266,6 +266,10 @@ DECLF void clear_tpc(utetpc_t tpc);
  * Add a tick sandwich T to TPC that consists of NT sandwiches */
 DECLF void tpc_add(utetpc_t tpc, scom_t t, size_t nt);
 
+/**
+ * Like `tpc_add()' but copy the header from H. */
+DECLF void tpc_add_as(utetpc_t tpc, scom_t t, scom_t h, size_t nt);
+
 /* temporary */
 DECLF void seek_sort(uteseek_t);
 DECLF void tpc_sort(utetpc_t);

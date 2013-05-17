@@ -271,21 +271,38 @@ slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
 		return;
 	}
 
-	/* check if we need to start a new file */
-	if (UNLIKELY(ctx->intv && ctx->last + ctx->intv <= scom_thdr_sec(ti))) {
-		uint32_t tist = scom_thdr_sec(ti);
-
-		if (UNLIKELY(rotate_intv(ctx, tist) < 0)) {
-			return;
-		}
-	}
-
 	if (max == 0) {
 		/* set the bit in the copyix bitset
 		 * coz we're now interested in banging the symbol */
 		bitset_set(copyix, idx);
 	}
 	/* we passed all them tests, just let him through */
+	ute_add_tick(ctx->out, ti);
+	return;
+}
+
+static void
+slabi(slab_ctx_t ctx, scom_t ti, utectx_t orig)
+{
+	time_t stmp = scom_thdr_sec(ti);
+
+	/* check if we need to start a new file */
+	if (UNLIKELY(ctx->last + ctx->intv <= stmp)) {
+		uint32_t tist = scom_thdr_sec(ti);
+
+		if (UNLIKELY(rotate_intv(ctx, tist) < 0)) {
+			return;
+		}
+		/* copy the symbol table */
+		for (size_t i = 0; i <= ute_nsyms(orig); i++) {
+			const char *sym = ute_idx2sym(orig, (uint16_t)i);
+
+			if (sym != NULL) {
+				ute_bang_symidx(ctx->out, sym, (uint16_t)i);
+			}
+		}
+	}
+
 	ute_add_tick(ctx->out, ti);
 	return;
 }
@@ -336,9 +353,16 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
 
-	for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
-		/* now to what we always do */
-		slabt(ctx, ti, max_idx, filtix, copyix);
+	if (!ctx->intv) {
+		for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+			/* now to what we always do */
+			slabt(ctx, ti, max_idx, filtix, copyix);
+		}
+	} else {
+		for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+			/* interval slabber */
+			slabi(ctx, ti, hdl);
+		}
 	}
 
 	if (max_idx == 0) {

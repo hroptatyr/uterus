@@ -283,7 +283,7 @@ open_xplo(slab_ctx_t ctx, const char sym[static 1])
 	outfn[prfz] = '\0';
 
 	/* never use UO_TRUNC */
-	return open_out(outfn, ctx->outfl & ~UO_TRUNC);
+	return open_out(outfn, ctx->outfl);
 }
 
 

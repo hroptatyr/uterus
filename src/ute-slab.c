@@ -47,7 +47,8 @@
 #include <time.h>
 #include <limits.h>
 
-#include "utefile.h"
+/* using ute_add_tick_as() */
+#include "utefile-private.h"
 #include "date.h"
 #include "ute-print.h"
 
@@ -256,6 +257,36 @@ rotate_intv(slab_ctx_t ctx, uint32_t cur_ts)
 	return 0;
 }
 
+static utectx_t
+open_xplo(slab_ctx_t ctx, const char sym[static 1])
+{
+	static char outfn[PATH_MAX];
+	size_t ssz;
+	size_t prfz;
+
+	/* construct the out file name */
+	ssz = strlen(sym);
+	prfz = strlen(ctx->outfn);
+
+	if (UNLIKELY(prfz + ssz + 6/*for suffix*/ >= sizeof(outfn))) {
+		/* bugger */
+		return NULL;
+	}
+	memcpy(outfn, ctx->outfn, prfz);
+	outfn[prfz++] = '-';
+	memcpy(outfn + prfz, sym, ssz);
+	prfz += ssz;
+	outfn[prfz++] = '.';
+	outfn[prfz++] = 'u';
+	outfn[prfz++] = 't';
+	outfn[prfz++] = 'e';
+	outfn[prfz] = '\0';
+
+	/* never use UO_TRUNC */
+	return open_out(outfn, ctx->outfl & ~UO_TRUNC);
+}
+
+
 static void
 slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
 {
@@ -375,6 +406,46 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	return;
 }
 
+static void
+xplo1(slab_ctx_t ctx, utectx_t hdl)
+{
+	size_t nsyms;
+	utectx_t out;
+
+	/* number of syms we're talking */
+	nsyms = ute_nsyms(hdl);
+
+	/* generate the outfile */
+	for (size_t i = 1; i <= nsyms; i++) {
+		const char *sym = ute_idx2sym(hdl, (uint16_t)i);
+		uint16_t new_idx;
+
+		/* open the new file */
+		if (UNLIKELY(sym == NULL)) {
+			continue;
+		} else if (UNLIKELY((out = open_xplo(ctx, sym)) == NULL)) {
+			continue;
+		}
+		/* bang the symbol we're talking */
+		new_idx = ute_sym2idx(out, sym);
+
+		for (scom_t ti; (ti = ute_iter(hdl)) != NULL;) {
+
+			if (scom_thdr_tblidx(ti) == (uint16_t)i) {
+				scidx_t hdr[1];
+
+				/* fiddle with the index first */
+				*hdr = *ti;
+				scom_thdr_set_tblidx(hdr, (uint16_t)new_idx);
+				ute_add_tick_as(out, ti, hdr);
+			}
+		}
+
+		ute_close(out);
+	}
+	return;
+}
+
 
 #if defined STANDALONE
 #if defined __INTEL_COMPILER
@@ -482,8 +553,12 @@ main(int argc, char *argv[])
 			continue;
 		}
 
-		/* slab some stuff out of hdl */
-		slab1(ctx, hdl);
+		if (!argi->explode_by_symbol_given) {
+			/* slab some stuff out of hdl */
+			slab1(ctx, hdl);
+		} else {
+			xplo1(ctx, hdl);
+		}
 
 		/* we worship the ute god by giving back what belongs to him */
 		ute_close(hdl);

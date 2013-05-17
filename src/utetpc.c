@@ -229,6 +229,53 @@ tpc_add(utetpc_t tpc, scom_t t, size_t nt)
 	return;
 }
 
+DEFUN void
+tpc_add_as(utetpc_t tpc, scom_t t, scom_t h, size_t nt)
+{
+/* supports variadic ticks */
+	uint64_t skey = tick_sortkey(t);
+
+	if (UNLIKELY(tpc_full_p(tpc) || !tpc_can_hold_p(tpc, nt) || !skey)) {
+#if defined DEBUG_FLAG
+		UDEBUG("not adding tick, reason: ");
+		if (tpc_full_p(tpc)) {
+			UDEBUG(" tpc_full");
+		}
+		if (!tpc_can_hold_p(tpc, nt)) {
+			UDEBUG(" !tpc_can_hold");
+		}
+		if (!skey) {
+			UDEBUG(" skey==0");
+		}
+		UDEBUG("\n");
+#endif	/* DEBUG_FLAG */
+		return;
+	}
+	/* copy the header from H, the rest from T */
+	{
+		void *p = tpc->sk.sp + tpc->sk.si;
+		size_t rezt = nt * sizeof(*tpc->sk.sp) - sizeof(*h);
+
+		memcpy(p, h, sizeof(*h));
+		memcpy((char*)p + sizeof(*h), t + 1, rezt);
+	}
+	/* just add the total byte size as passed on */
+	tpc->sk.si += nt;
+
+	/* maybe mark the whole shebang as unsorted */
+	if (UNLIKELY(skey < tpc->last)) {
+		set_tpc_unsorted(tpc);
+	}
+	/* check if the whole file needs sorting (merging) */
+	if (UNLIKELY(skey < tpc->least)) {
+		/* found a key that's smaller than what has been flushed */
+		set_tpc_needmrg(tpc);
+		tpc->least = skey;
+	}
+	tpc->last = skey;
+	return;
+}
+
 
 /* sorters */
 #include "scommon.h"

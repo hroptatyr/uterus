@@ -247,6 +247,8 @@ static void MAYBE_NOINLINE
 load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 {
 	size_t e = min_size_t(end, npg);
+
+	UDEBUGvv("k <- %zu - %zu  (%zu)\n", sta, e, e - sta);
 	for (size_t k = sta, j = 0; k < e; j++, k++) {
 		/* set up page i */
 		seek_page(sks + j, ctx, k);

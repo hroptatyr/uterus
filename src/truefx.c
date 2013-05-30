@@ -68,6 +68,7 @@ typedef uint8_t symidx_t;
 typedef struct truefx_tl_s *restrict truefx_tl_t;
 
 struct truefx_tl_s {
+	char sym[8U];
 	unsigned int ts;
 	unsigned int ms;
 	m30_t b;
@@ -223,12 +224,13 @@ read_line(mux_ctx_t ctx, truefx_tl_t tl)
 	llen = prchunk_getline(ctx->rdr, &line);
 	ep = line + llen;
 
-	/* we parse the line in 3 steps, receive time stamp, symbol, values */
-	cursor = line;
 	/* skip straight to the timestamp */
-	if (UNLIKELY((cursor = strchr(cursor, ',')) == NULL)) {
+	if (UNLIKELY((cursor = strchr(line, ',')) == NULL)) {
 		goto bugger;
 	}
+	memcpy(tl->sym, line, cursor - line);
+	tl->sym[7U] = '\0';
+
 	/* get the time stamp parsed */
 	if (UNLIKELY(!(cursor++, tl->ts = parse_time(&cursor, ep)))) {
 		goto bugger;
@@ -256,22 +258,16 @@ write_tick(mux_ctx_t ctx, truefx_tl_t tl)
 /* create one or more sparse ticks, sl1t_t objects */
 	static struct sl1t_s t[2];
 	sl1t_t tp = t;
-	static unsigned int last_ts;
-	static unsigned int last_ms;
+	uint16_t idx;
 
-	if (tl->ts < last_ts) {
-		abort();
-	} else if (tl->ts == last_ts && tl->ms < last_ms) {
-		abort();
+	if (UNLIKELY(!(idx = ute_sym2idx(ctx->wrr, tl->sym)))) {
+		return;
 	}
-	last_ts = tl->ts;
-	last_ms = tl->ms;
-
 	if (tl->b.u != bid.u) {
 		sl1t_set_stmp_sec(tp, tl->ts);
 		sl1t_set_stmp_msec(tp, (uint16_t)tl->ms);
 		sl1t_set_ttf(tp, SL1T_TTF_BID);
-		sl1t_set_tblidx(tp, 1);
+		sl1t_set_tblidx(tp, idx);
 		tp->bid = (bid = tl->b).u;
 		tp->bsz = 0;
 		tp++;
@@ -281,7 +277,7 @@ write_tick(mux_ctx_t ctx, truefx_tl_t tl)
 		sl1t_set_stmp_sec(tp, tl->ts);
 		sl1t_set_stmp_msec(tp, (uint16_t)tl->ms);
 		sl1t_set_ttf(tp, SL1T_TTF_ASK);
-		sl1t_set_tblidx(tp, 1);
+		sl1t_set_tblidx(tp, idx);
 		tp->ask = (ask = tl->a).u;
 		tp->asz = 0;
 		tp++;

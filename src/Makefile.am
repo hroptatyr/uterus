@@ -245,6 +245,10 @@ ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
 ariva_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
+ute_LTLIBRARIES += truefx.la
+truefx_la_SOURCES = truefx.c
+truefx_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
+
 if HAVE_EXPAT
 ute_LTLIBRARIES += ibhist.la
 ibhist_la_SOURCES = ibhist.c

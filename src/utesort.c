@@ -429,7 +429,6 @@ load_run(struct uteseek_s s[static 1], size_t ns, utectx_t ctx, strat_node_t nd)
 		if (sks_have_page_p(s, ns, pg)) {
 			/* do nothing */
 			UDEBUGv("sks have pg %u already\n", pg);
-			continue;
 		} else if (seek_page(s + res++, ctx, pg) < 0) {
 			UDEBUGv("UHOH seek page %u no succeedee: %s\n",
 				pg, strerror(errno));
@@ -443,7 +442,7 @@ load_run(struct uteseek_s s[static 1], size_t ns, utectx_t ctx, strat_node_t nd)
 		const size_t sks_nticks = s[i].szrw / sizeof(*s->sp);
 		uint64_t thresh = 0;
 
-		UDEBUGv("sks[%zu].si = %zu/%zu\n", i, s[i].si, sks_nticks);
+		UDEBUGv("sks[%zu (pg %u)].si = %zu/%zu\n", i, s[i].pg, s[i].si, sks_nticks);
 		for (sidx_t j = s[i].si, tsz; j < sks_nticks; j += tsz) {
 			scom_t t = AS_SCOM(s[i].sp + j);
 

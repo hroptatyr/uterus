@@ -429,7 +429,7 @@ load_run(struct uteseek_s s[static 1], size_t ns, utectx_t ctx, strat_node_t nd)
 
 		if (sks_have_page_p(s, ns, pg)) {
 			/* do nothing */
-			UDEBUGv("sks have pg %u already\n", pg);
+			UDEBUGv("sks (z%zu) have pg %u already\n", ns, pg);
 		} else if (seek_page(s + res++, ctx, pg) < 0) {
 			UDEBUGv("UHOH seek page %u no succeedee: %s\n",
 				pg, strerror(errno));
@@ -443,7 +443,8 @@ load_run(struct uteseek_s s[static 1], size_t ns, utectx_t ctx, strat_node_t nd)
 		const size_t sks_nticks = s[i].szrw / sizeof(*s->sp);
 		uint64_t thresh = 0;
 
-		UDEBUGv("sks[%zu (pg %u)].si = %zu/%zu\n", i, s[i].pg, s[i].si, sks_nticks);
+		UDEBUGv("sks[%zu (pg %u)].si = %zu/%zu\n",
+			i, s[i].pg, s[i].si, sks_nticks);
 		for (sidx_t j = s[i].si, tsz; j < sks_nticks; j += tsz) {
 			scom_t t = AS_SCOM(s[i].sp + j);
 
@@ -503,13 +504,12 @@ step_run(
 
 	sks[j].si += tsz;
 	if (seek_eof_p(sks + j)) {
-		UDEBUG("run %zu (pg %u) out of ticks\n", j, pgj);
+		UDEBUG("idx %zu (pg %u) out of ticks\n", j, pgj);
 
 		/* more pages need loading if the currently dropped page is
 		 * mentioned in the next strat node, or if there's no more
 		 * seeks in sks but there's a next strat node */
-		ns = drop_run(sks, ns, j);
-		if (ns == 0U && curnd->next == NULL) {
+		if (curnd->next == NULL) {
 			/* we're finished, yay! */
 			;
 		} else if (ns == 0U || node_has_page_p(curnd->next, pgj)) {
@@ -524,6 +524,8 @@ step_run(
 				ns = (size_t)resns;
 			}
 		}
+		/* don't forget to drop things */
+		ns = drop_run(sks, ns, j);
 	}
 	return ns;
 }

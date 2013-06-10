@@ -622,8 +622,7 @@ ute_sort(utectx_t ctx)
 
 	/* close the ute file */
 	ute_close(hdl);
-	/* dump the pages */
-	dump_runs(sks, ctx, 0, npg, npg);
+	assert(nsks == 0U);
 	free(sks);
 
 	/* free the strategy */

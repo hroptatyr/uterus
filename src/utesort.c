@@ -509,10 +509,10 @@ step_run(
 		/* more pages need loading if the currently dropped page is
 		 * mentioned in the next strat node, or if there's no more
 		 * seeks in sks but there's a next strat node */
-		if (curnd->next == NULL) {
+		if (UNLIKELY(curnd->next == NULL)) {
 			/* we're finished, yay! */
 			;
-		} else if (ns == 0U || node_has_page_p(curnd->next, pgj)) {
+		} else if (node_has_page_p(curnd->next, pgj)) {
 			/* load moar (and advance the current strat node) */
 			ssize_t resns;
 
@@ -525,7 +525,18 @@ step_run(
 			}
 		}
 		/* don't forget to drop things */
-		ns = drop_run(sks, ns, j);
+		if ((ns = drop_run(sks, ns, j)) == 0U && curnd->next != NULL) {
+			/* oh, load the next run anyway now */
+			ssize_t resns;
+
+			str->curr = curnd = curnd->next;
+			if ((resns = load_run(sks, ns, ctx, curnd)) < 0) {
+				/* FUCK! */
+				;
+			} else {
+				ns = (size_t)resns;
+			}
+		}
 	}
 	return ns;
 }

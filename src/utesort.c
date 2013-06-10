@@ -406,14 +406,24 @@ succ:
 }
 
 static int
-sks_have_page_p(struct sks_s s[static 1], uint32_t pg)
+sks_pgbs_get(struct sks_s s[static 1], uint32_t pg)
 {
-	for (size_t i = 0; i < s->nsks; i++) {
-		if (s->sks[i].pg == pg) {
-			return 1;
-		}
-	}
-	return 0;
+	static const size_t pgbs_w = sizeof(*s->pgbs) * 8U;
+	size_t idx = pg / pgbs_w;
+	size_t bit = pg % pgbs_w;
+
+	return (s->pgbs[idx] >> bit) & 0x01;
+}
+
+static void
+sks_pgbs_set(struct sks_s s[static 1], uint32_t pg)
+{
+	static const size_t pgbs_w = sizeof(*s->pgbs) * 8U;
+	size_t idx = pg / pgbs_w;
+	size_t bit = pg % pgbs_w;
+
+	s->pgbs[idx] |= 1U << bit;
+	return;
 }
 
 static int
@@ -438,14 +448,16 @@ load_run(struct sks_s s[static 1], utectx_t ctx, strat_node_t nd)
 		/* set up page i */
 		uint32_t pg = nd->pgs[i];
 
-		if (sks_have_page_p(s, pg)) {
+		if (sks_pgbs_get(s, pg)) {
 			/* do nothing */
-			UDEBUGv("sks (z%zu) have pg %u already\n", s->nsks, pg);
+			UDEBUGv("sks have/had pg %u already\n", pg);
 		} else if (seek_page(s->sks + ns++, ctx, pg) < 0) {
 			UDEBUGv("UHOH seek page %u no succeedee: %s\n",
 				pg, strerror(errno));
 			ns--;
 			break;
+		} else {
+			sks_pgbs_set(s, pg);
 		}
 	}
 

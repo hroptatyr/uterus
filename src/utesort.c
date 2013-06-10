@@ -508,7 +508,8 @@ step_run(
 		/* more pages need loading if the currently dropped page is
 		 * mentioned in the next strat node, or if there's no more
 		 * seeks in sks but there's a next strat node */
-		if ((ns = drop_run(sks, ns, j)) == 0U && curnd->next == NULL) {
+		ns = drop_run(sks, ns, j);
+		if (ns == 0U && curnd->next == NULL) {
 			/* we're finished, yay! */
 			;
 		} else if (ns == 0U || node_has_page_p(curnd->next, pgj)) {

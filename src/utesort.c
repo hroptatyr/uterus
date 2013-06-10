@@ -48,6 +48,7 @@
 # include <sys/types.h>
 #endif	/* HAVE_SYS_TYPES_H */
 #include <fcntl.h>
+#include <errno.h>
 #include "utefile-private.h"
 #include "utefile.h"
 #include "utehdr.h"
@@ -66,6 +67,9 @@
 # define MAYBE_NOINLINE
 #endif	/* DEBUG_FLAG */
 /* for serious debugging */
+#if !defined UDEBUGv
+# define UDEBUGv(args...)
+#endif	/* !UDEBUGv */
 #if !defined UDEBUGvv
 # define UDEBUGvv(args...)
 #endif	/* !UDEBUGvv */
@@ -126,7 +130,10 @@ struct strat_node_s {
 struct strat_s {
 	itree_t it;
 	strat_node_t first;
-	strat_node_t last;
+	union {
+		strat_node_t last;
+		strat_node_t curr;
+	};
 };
 
 struct __mrg_clo_s {
@@ -243,15 +250,20 @@ min_size_t(size_t x, size_t y)
 	return x < y ? x : y;
 }
 
-static void MAYBE_NOINLINE
+static sidx_t MAYBE_NOINLINE
 load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 {
 	size_t e = min_size_t(end, npg);
 
-	UDEBUGvv("k <- %zu - %zu  (%zu)\n", sta, e, e - sta);
+	UDEBUGv("k <- %zu - %zu  (%zu)\n", sta, e, e - sta);
 	for (size_t k = sta, j = 0; k < e; j++, k++) {
 		/* set up page i */
-		seek_page(sks + j, ctx, k);
+		if (seek_page(sks + j, ctx, k) < 0) {
+			UDEBUGv("UHOH seek page %zu no succeedee: %s\n",
+				k, strerror(errno));
+			e = k;
+			break;
+		}
 	}
 
 #if defined DEBUG_FLAG
@@ -259,7 +271,7 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 		const size_t sks_nticks = sks[j].szrw / sizeof(*sks->sp);
 		uint64_t thresh = 0;
 
-		UDEBUGvv("sks[%zu].si = %zu/%zu\n", j, sks[j].si, sks_nticks);
+		UDEBUGv("sks[%zu].si = %zu/%zu\n", j, sks[j].si, sks_nticks);
 		for (sidx_t i = sks[j].si, tsz; i < sks_nticks; i += tsz) {
 			scom_t t = AS_SCOM(sks[j].sp + i);
 
@@ -272,7 +284,7 @@ load_runs(uteseek_t sks, utectx_t ctx, sidx_t sta, sidx_t end, size_t npg)
 		}
 	}
 #endif	/* DEBUG_FLAG */
-	return;
+	return e;
 }
 
 static void
@@ -363,49 +375,112 @@ free_strat(strat_t str)
 	return;
 }
 
-static ssize_t
-min_run(struct uteseek_s *sks, size_t UNUSED(nruns), strat_t str)
+static size_t
+drop_run(struct uteseek_s s[static 1], size_t ns, sidx_t j)
 {
-	ssize_t res = -1;
-	uint64_t min = ULLONG_MAX;
-	strat_node_t curnd = str->last;
+	assert(j < ns);
 
-	if (UNLIKELY(curnd == NULL)) {
-		return res;
+	/* first off, flushing, thoroughly */
+	flush_seek(s + j);
+
+	if (UNLIKELY(j + 1U >= ns)) {
+		/* bit of a short cut, no need to move */
+		goto succ;
 	}
-	/* check current run and next run's pages */
-	for (size_t i = 0; i < curnd->cnt; i++) {
-		scom_t sh;
-		uint32_t pg = curnd->pgs[i];
+	/* memmove around the whole */
+	UDEBUGv("moving [%zu..%zu] <- [%zu..%zu]\n", j, ns - 1, j + 1U, ns);
+	memmove(s + j, s + j + 1U, (ns - (j + 1U)) * sizeof(*s));
+succ:
+	return ns - 1U;
+}
 
-		if ((sh = seek_get_scom(sks + pg)) == NULL) {
-			continue;
-		} else if (sh->u <= min) {
-			res = pg;
-			min = sh->u;
+static int
+sks_have_page_p(struct uteseek_s s[static 1], size_t ns, uint32_t pg)
+{
+	for (size_t i = 0; i < ns; i++) {
+		if (s[i].pg == pg) {
+			return 1;
 		}
 	}
-#if defined DEBUG_FLAG
-	/* there must be no more minimal pages */
-	for (strat_node_t nd = curnd; (nd = nd->next); ) {
-		for (size_t i = 0; i < nd->cnt; i++) {
-			scom_t sh;
-			uint32_t pg = nd->pgs[i];
+	return 0;
+}
 
-			if ((sh = seek_get_scom(sks + pg)) == NULL) {
-				continue;
-			}
-			if (min > sh->u) {
-				UDEBUG("%u cur min %u %zd %lx\n",
-				       str->last->pg, curnd->pg, res, min);
-				UDEBUG("  min'ner one: %u %u %lx\n",
-				       nd->pg, pg, sh->u);
-			}
-			assert(min <= sh->u);
+static int
+node_has_page_p(strat_node_t nd, uint32_t pg)
+{
+	for (size_t i = 0; i < nd->cnt; i++) {
+		if (nd->pgs[i] == pg) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static ssize_t
+load_run(struct uteseek_s s[static 1], size_t ns, utectx_t ctx, strat_node_t nd)
+{
+/* return new size of seek vector S */
+	ssize_t res = ns;
+
+	UDEBUGv("loading run %u (%u pgs)\n", nd->pg, nd->cnt);
+	for (size_t i = 0; i < nd->cnt; i++) {
+		/* set up page i */
+		uint32_t pg = nd->pgs[i];
+
+		if (sks_have_page_p(s, ns, pg)) {
+			/* do nothing */
+			UDEBUGv("sks (z%zu) have pg %u already\n", ns, pg);
+		} else if (seek_page(s + res++, ctx, pg) < 0) {
+			UDEBUGv("UHOH seek page %u no succeedee: %s\n",
+				pg, strerror(errno));
+			res--;
+			break;
+		}
+	}
+
+#if defined DEBUG_FLAG
+	for (size_t i = ns; i < (size_t)res; i++) {
+		const size_t sks_nticks = s[i].szrw / sizeof(*s->sp);
+		uint64_t thresh = 0;
+
+		UDEBUGv("sks[%zu (pg %u)].si = %zu/%zu\n",
+			i, s[i].pg, s[i].si, sks_nticks);
+		for (sidx_t j = s[i].si, tsz; j < sks_nticks; j += tsz) {
+			scom_t t = AS_SCOM(s[i].sp + j);
+
+			/* the seeker should not give us trailing naughts */
+			assert(t->u);
+			assert((t->ttf & 0x30U) != 0x30U);
+			assert(thresh <= t->u);
+			thresh = t->u;
+			tsz = scom_tick_size(t);
 		}
 	}
 #endif	/* DEBUG_FLAG */
 	return res;
+}
+
+static ssize_t
+min_run(struct uteseek_s s[static 1], size_t ns)
+{
+	sidx_t res = (sidx_t)-1;
+	uint64_t min = ULLONG_MAX;
+
+	/* check current run and next run's pages */
+	for (sidx_t i = 0; i < ns; i++) {
+		scom_t sh;
+
+		if ((sh = seek_get_scom(s + i)) == NULL) {
+			continue;
+		} else if (sh->u <= min) {
+			res = i;
+			min = sh->u;
+		}
+	}
+	/* we used to compare the current min value with all values
+	 * in later pages, however, we can't do this check anymore,
+	 * as not all pages are currently loaded */
+	return (ssize_t)res;
 }
 
 static bool
@@ -414,34 +489,64 @@ seek_eof_p(uteseek_t sk)
 	return sk->si >= sk->szrw / sizeof(*sk->sp);
 }
 
-static void
-step_run(struct uteseek_s sks[], unsigned int run, strat_t str)
+static size_t
+step_run(
+	struct uteseek_s sks[static 1], size_t ns,
+	utectx_t ctx, strat_t str, size_t j)
 {
-/* advance the pointer in the RUN-th run and fetch new stuff if need be */
-	strat_node_t curnd = str->last;
-	scom_t cursc = seek_get_scom(sks + run);
+/* advance the pointer in the j-th run and fetch new stuff if need be */
+	strat_node_t curnd = str->curr;
+	scom_t cursc = seek_get_scom(sks + j);
 	size_t tsz = scom_tick_size(cursc);
+	uint32_t pgj = sks[j].pg;
 
-	sks[run].si += tsz;
-	if (seek_eof_p(sks + run)) {
-		UDEBUG("run %u out of ticks\n", run);
-		flush_seek(sks + run);
-		/* now if we flushed the current strategy node's main page
-		 * then also switch to the next strategy node */
-		if (curnd->pg == run) {
-			/* ah. last one in the current strategy node
-			 * get me the hammer */
-			str->last = str->last->next;
+	assert(ns > 0);
+
+	sks[j].si += tsz;
+	if (seek_eof_p(sks + j)) {
+		UDEBUG("idx %zu (pg %u) out of ticks\n", j, pgj);
+
+		/* more pages need loading if the currently dropped page is
+		 * mentioned in the next strat node, or if there's no more
+		 * seeks in sks but there's a next strat node */
+		if (UNLIKELY(curnd->next == NULL)) {
+			/* we're finished, yay! */
+			;
+		} else if (node_has_page_p(curnd->next, pgj)) {
+			/* load moar (and advance the current strat node) */
+			ssize_t resns;
+
+			str->curr = curnd = curnd->next;
+			if ((resns = load_run(sks, ns, ctx, curnd)) < 0) {
+				/* FUCK! */
+				;
+			} else {
+				ns = (size_t)resns;
+			}
+		}
+		/* don't forget to drop things */
+		if ((ns = drop_run(sks, ns, j)) == 0U && curnd->next != NULL) {
+			/* oh, load the next run anyway now */
+			ssize_t resns;
+
+			str->curr = curnd = curnd->next;
+			if ((resns = load_run(sks, ns, ctx, curnd)) < 0) {
+				/* FUCK! */
+				;
+			} else {
+				ns = (size_t)resns;
+			}
 		}
 	}
-	return;
+	return ns;
 }
 
 void
 ute_sort(utectx_t ctx)
 {
 	struct uteseek_s *sks;
-	size_t npages = ute_npages(ctx);
+	size_t nsks;
+	size_t npg = ute_npages(ctx);
 	utectx_t hdl;
 	strat_t str;
 #if defined DEBUG_FLAG
@@ -450,7 +555,7 @@ ute_sort(utectx_t ctx)
 #endif	/* DEBUG_FLAG */
 
 	/* tpc might be in there as well */
-	npages += tpc_has_ticks_p(ctx->tpc);
+	npg += tpc_has_ticks_p(ctx->tpc);
 
 	/* this is to obtain a merge strategy,
 	 * we have several outcomes:
@@ -458,20 +563,24 @@ ute_sort(utectx_t ctx)
 	 * - merge k-way n-pass, where k < #pages in multiple passes */
 	str = sort_strat(ctx);
 
+	/* get the highest CNT */
+	size_t nmaxpg = 0U;
 	for (strat_node_t n = str->first; n; n = n->next) {
 		UDEBUG("page %u, considering\n", n->pg);
+		if (n->cnt > nmaxpg) {
+			nmaxpg = n->cnt;
+		}
 		for (uint32_t i = 0; i < n->cnt; i++) {
 			UDEBUG("  page %u\n", n->pgs[i]);
 		}
 	}
+	UDEBUG("max %zu pages need considering simultaneously\n", nmaxpg);
 
-	/* let's assume we have an all-way merge */
-	sks = xnew_array(struct uteseek_s, npages);
-	load_runs(sks, ctx, 0, npages, npages);
+	/* we merge all of a strat node's pages simultaneously,
+	 * let's assume that an NMAXPG-merge is possible */
+	sks = xnew_array(struct uteseek_s, nmaxpg);
 
-	{
-		uint16_t oflags = UO_CREAT | UO_TRUNC;
-
+	with (uint16_t oflags = UO_CREAT | UO_TRUNC) {
 		if (UNLIKELY(ctx->oflags & UO_ANON)) {
 			/* ok, we could short cut it here if the file's
 			 * about to be deleted anyway ...
@@ -481,11 +590,13 @@ ute_sort(utectx_t ctx)
 		hdl = ute_open(ctx->fname, oflags);
 	}
 
-	/* prepare the strategy, we use the last cell as iterator */
-	str->last = str->first;
-	/* ALL-way merge */
-	assert(min_run(sks, npages, str) >= 0);
-	for (ssize_t j; (j = min_run(sks, npages, str)) >= 0; ) {
+	/* prepare the strategy */
+	nsks = load_run(sks, 0UL, ctx, str->curr = str->first);
+	for (ssize_t j;
+	     /* index of the minimal page in the current sks set */
+	     (j = min_run(sks, nsks)) >= 0;
+	     /* step the j-th run */
+	     nsks = step_run(sks, nsks, ctx, str, (size_t)j)) {
 		scom_t t = seek_get_scom(sks + j);
 
 #if defined DEBUG_FLAG
@@ -499,9 +610,6 @@ ute_sort(utectx_t ctx)
 
 		/* add that bloke */
 		ute_add_tick(hdl, t);
-
-		/* step the j-th run */
-		step_run(sks, (size_t)j, str);
 	}
 
 	/* something must have gone utterly wrong */
@@ -514,8 +622,7 @@ ute_sort(utectx_t ctx)
 
 	/* close the ute file */
 	ute_close(hdl);
-	/* dump the pages */
-	dump_runs(sks, ctx, 0, npages, npages);
+	assert(nsks == 0U);
 	free(sks);
 
 	/* free the strategy */

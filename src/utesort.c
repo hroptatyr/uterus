@@ -388,6 +388,7 @@ drop_run(struct uteseek_s s[static 1], size_t ns, sidx_t j)
 		goto succ;
 	}
 	/* memmove around the whole */
+	UDEBUGv("moving [%zu..%zu] <- [%zu..%zu]\n", j, ns - 1, j + 1U, ns);
 	memmove(s + j, s + j + 1U, (ns - (j + 1U)) * sizeof(*s));
 succ:
 	return ns - 1U;

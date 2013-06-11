@@ -528,7 +528,9 @@ step_run(struct sks_s s[static 1], utectx_t ctx, strat_t str, size_t j)
 	skj->si += tsz;
 	if (seek_eof_p(skj)) {
 		UDEBUG("idx %zu (pg %u) out of ticks\n", j, pgj);
-		UDEBUGv("B %zu seeks under surveillance\n", s->nsks);
+
+		/* let's start dropping */
+		drop_run(s, j);
 
 		/* more pages need loading if the currently dropped page is
 		 * mentioned in the next strat node, or if there's no more
@@ -536,8 +538,7 @@ step_run(struct sks_s s[static 1], utectx_t ctx, strat_t str, size_t j)
 		if (UNLIKELY(curnd->next == NULL)) {
 			/* we're finished, yay! */
 			;
-		} else if (drop_run(s, j) == 0U && s->nsks == 0U ||
-			   node_has_page_p(curnd->next, pgj)) {
+		} else if (s->nsks == 0U || node_has_page_p(curnd->next, pgj)) {
 			/* load moar (and advance the current strat node) */
 			str->curr = curnd = curnd->next;
 			if (load_run(s, ctx, curnd) < 0) {
@@ -545,7 +546,6 @@ step_run(struct sks_s s[static 1], utectx_t ctx, strat_t str, size_t j)
 				return -1;
 			}
 		}
-		UDEBUGv("A %zu seeks under surveillance\n", s->nsks);
 	}
 	return 0;
 }

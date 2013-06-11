@@ -528,6 +528,7 @@ step_run(struct sks_s s[static 1], utectx_t ctx, strat_t str, size_t j)
 	skj->si += tsz;
 	if (seek_eof_p(skj)) {
 		UDEBUG("idx %zu (pg %u) out of ticks\n", j, pgj);
+		UDEBUGv("B %zu seeks under surveillance\n", s->nsks);
 
 		/* more pages need loading if the currently dropped page is
 		 * mentioned in the next strat node, or if there's no more
@@ -544,6 +545,7 @@ step_run(struct sks_s s[static 1], utectx_t ctx, strat_t str, size_t j)
 				return -1;
 			}
 		}
+		UDEBUGv("A %zu seeks under surveillance\n", s->nsks);
 	}
 	return 0;
 }
@@ -602,7 +604,7 @@ ute_sort(utectx_t ctx)
 	/* prepare the strategy */
 	if (load_run(s, ctx, str->curr = str->first) < 0) {
 		/* big bugger */
-		;
+		abort();
 	}
 	for (ssize_t j;
 	     /* index of the minimal page in the current sks set */
@@ -624,8 +626,9 @@ ute_sort(utectx_t ctx)
 		ute_add_tick(hdl, t);
 	}
 
-	/* something must have gone utterly wrong */
+	/* lest something's gone utterly wrong */
 	assert(ute_sorted_p(hdl));
+	assert(s->nsks == 0U);
 
 	UDEBUG("added %zu ticks\n", ntadd);
 
@@ -634,12 +637,11 @@ ute_sort(utectx_t ctx)
 
 	/* close the ute file */
 	ute_close(hdl);
-	assert(s->nsks == 0U);
-	free(s->sks);
-	free(s->pgbs);
 
 	/* free the strategy */
 	free_strat(str);
+	free(s->sks);
+	free(s->pgbs);
 	return;
 }
 

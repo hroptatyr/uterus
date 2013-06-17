@@ -531,7 +531,8 @@ main(int argc, char *argv[])
 		ctx->outfn = NULL;
 	}
 
-	if (argi->explode_by_interval_given) {
+	if (argi->explode_by_interval_given ||
+	    argi->explode_by_symbol_given) {
 		/* no file opening in advance in explosion mode */
 		ctx->out = NULL;
 	} else if ((ctx->out = open_out(ctx->outfn, ctx->outfl)) == NULL) {

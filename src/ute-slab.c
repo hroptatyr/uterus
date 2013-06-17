@@ -519,7 +519,8 @@ main(int argc, char *argv[])
 		ctx->outfl |= UO_TRUNC;
 	} else if (argi->into_given) {
 		ctx->outfn = argi->into_arg;
-	} else if (argi->explode_by_interval_given) {
+	} else if (argi->explode_by_interval_given ||
+		   argi->explode_by_symbol_given) {
 		/* generate a nice prefix */
 		static char prfx[] = "xplo_XXXXXX";
 

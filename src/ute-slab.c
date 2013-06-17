@@ -242,10 +242,6 @@ rotate_intv(slab_ctx_t ctx, uint32_t cur_ts)
 		return -1;
 	}
 	memcpy(outfn, ctx->outfn, prfz);
-	if (outfn[prfz - 1] != '/') {
-		/* not a directory, so append a dash */
-		outfn[prfz++] = '-';
-	}
 	prfz += pr_tsmstz(outfn + prfz, cur_ts, 0, NULL, 'T');
 	outfn[prfz++] = '.';
 	outfn[prfz++] = 'u';
@@ -276,10 +272,6 @@ open_xplo(slab_ctx_t ctx, const char sym[static 1])
 		return NULL;
 	}
 	memcpy(outfn, ctx->outfn, prfz);
-	if (outfn[prfz - 1] != '/') {
-		/* not a directory, so append a dash */
-		outfn[prfz++] = '-';
-	}
 	memcpy(outfn + prfz, sym, ssz);
 	prfz += ssz;
 	outfn[prfz++] = '.';

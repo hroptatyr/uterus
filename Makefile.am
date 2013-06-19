@@ -57,7 +57,7 @@ pkgconfig_DATA += uterus.pc
 EXTRA_DIST += uterus.pc.in
 CLEANFILES += uterus.pc
 
-EXTRA_DIST += git-version-gen
+EXTRA_DIST += build-aux/git-version-gen
 EXTRA_DIST += uterus.magic
 EXTRA_DIST += README.md
 

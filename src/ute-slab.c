@@ -242,7 +242,6 @@ rotate_intv(slab_ctx_t ctx, uint32_t cur_ts)
 		return -1;
 	}
 	memcpy(outfn, ctx->outfn, prfz);
-	outfn[prfz++] = '-';
 	prfz += pr_tsmstz(outfn + prfz, cur_ts, 0, NULL, 'T');
 	outfn[prfz++] = '.';
 	outfn[prfz++] = 'u';
@@ -273,7 +272,6 @@ open_xplo(slab_ctx_t ctx, const char sym[static 1])
 		return NULL;
 	}
 	memcpy(outfn, ctx->outfn, prfz);
-	outfn[prfz++] = '-';
 	memcpy(outfn + prfz, sym, ssz);
 	prfz += ssz;
 	outfn[prfz++] = '.';
@@ -508,6 +506,16 @@ main(int argc, char *argv[])
 		ctx->intv = argi->explode_by_interval_arg;
 	}
 
+	/* check explosion options */
+	if (argi->explode_by_interval_given && argi->explode_by_symbol_given) {
+		error(0, "\
+only one of --explode-by-interval and --explode-by-symbol can be given\n\n\
+If you want to explode a file by both options, pick one option first, then\n\
+run the other option on the generated files\n");
+		res = 1;
+		goto out;
+	}
+
 	/* handle outfile */
 	ctx->outfl = UO_CREAT | UO_RDWR;
 	if (argi->output_given && argi->into_given) {
@@ -519,7 +527,8 @@ main(int argc, char *argv[])
 		ctx->outfl |= UO_TRUNC;
 	} else if (argi->into_given) {
 		ctx->outfn = argi->into_arg;
-	} else if (argi->explode_by_interval_given) {
+	} else if (argi->explode_by_interval_given ||
+		   argi->explode_by_symbol_given) {
 		/* generate a nice prefix */
 		static char prfx[] = "xplo_XXXXXX";
 
@@ -530,7 +539,8 @@ main(int argc, char *argv[])
 		ctx->outfn = NULL;
 	}
 
-	if (argi->explode_by_interval_given) {
+	if (argi->explode_by_interval_given ||
+	    argi->explode_by_symbol_given) {
 		/* no file opening in advance in explosion mode */
 		ctx->out = NULL;
 	} else if ((ctx->out = open_out(ctx->outfn, ctx->outfl)) == NULL) {

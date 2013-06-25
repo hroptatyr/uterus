@@ -482,6 +482,9 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 		return -1;
 	}
 
+	/* reset the global stamp */
+	stmp = 0U;
+
 	/* go through the pages manually */
 	if (ctx->verbp) {
 		printf("pages\t%zu\n", ute_npages(hdl));

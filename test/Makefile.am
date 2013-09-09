@@ -317,18 +317,16 @@ bin_tests += m62-10
 ## the test suite code
 check_PROGRAMS += ut-test
 ut_test_LDADD = ../src/libversion.a
-BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
+BUILT_SOURCES += ut-test.x ut-test.h
 EXTRA_DIST += ut-test.sh
 
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull
-%.c %.h: %.ggo Makefile.am
-	$(AM_V_GEN) gengetopt -F $* -i $< \
-	&& sed \
-	  -e 's,config.h,version.h,g' \
-	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
-	  $*.h >$*.h-t \
+%.x %.h: %.ggo
+	$(AM_V_GEN) gengetopt -F $* -c x -i $<
+	@sed -e 's,_PARSER_VERSION VERSION,_PARSER_VERSION "$(VERSION)",g' \
+	     $*.h > $*.h-t \
 	&& mv $*.h-t $*.h
 
 clean-local:

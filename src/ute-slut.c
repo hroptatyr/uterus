@@ -314,8 +314,8 @@ out:
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-slut-clo.h"
-#include "ute-slut-clo.c"
+#include "ute-slut.xh"
+#include "ute-slut.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

@@ -450,8 +450,8 @@ xplo1(slab_ctx_t ctx, utectx_t hdl)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-slab-clo.h"
-#include "ute-slab-clo.c"
+#include "ute-slab.xh"
+#include "ute-slab.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

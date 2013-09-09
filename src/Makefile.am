@@ -37,7 +37,6 @@
 
 include $(top_builddir)/version.mk
 
-AM_CFLAGS = $(EXTRA_CFLAGS)
 AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
 AM_LDFLAGS = $(XCCLDFLAGS)
@@ -140,14 +139,14 @@ ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot-clo.ggo
 ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_shnot_LDFLAGS = $(AM_LDFLAGS) -static
 ute_shnot_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-shnot-clo.c ute-shnot-clo.h
+BUILT_SOURCES += ute-shnot.x ute-shnot.xh
 
 ute_PROGRAMS += ute-chndl
 ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl-clo.ggo
 ute_chndl_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_chndl_LDFLAGS = $(AM_LDFLAGS) -static
 ute_chndl_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-chndl-clo.c ute-chndl-clo.h
+BUILT_SOURCES += ute-chndl.x ute-chndl.xh
 
 ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
@@ -158,7 +157,7 @@ ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_print_LDADD = $(uterus_LIBS)
 ute_print_LDADD += $(LIBLTDL)
 EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
-BUILT_SOURCES += ute-print-clo.c ute-print-clo.h
+BUILT_SOURCES += ute-print.x ute-print.xh
 
 ute_PROGRAMS += ute-mux
 ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
@@ -170,28 +169,28 @@ ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_mux_LDADD = $(uterus_LIBS)
 ute_mux_LDADD += $(LIBLTDL)
 EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
-BUILT_SOURCES += ute-mux-clo.c ute-mux-clo.h
+BUILT_SOURCES += ute-mux.x ute-mux.xh
 
 ute_PROGRAMS += ute-fsck
 ute_fsck_SOURCES = ute-fsck.c ute-fsck-clo.ggo
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_fsck_LDFLAGS = $(AM_LDFLAGS) -static
 ute_fsck_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-fsck-clo.c ute-fsck-clo.h
+BUILT_SOURCES += ute-fsck.x ute-fsck.xh
 
 ute_PROGRAMS += ute-slut
 ute_slut_SOURCES = ute-slut.c ute-slut-clo.ggo
 ute_slut_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slut_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slut_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-slut-clo.c ute-slut-clo.h
+BUILT_SOURCES += ute-slut.x ute-slut.xh
 
 ute_PROGRAMS += ute-slab
 ute_slab_SOURCES = ute-slab.c ute-slab-clo.ggo
 ute_slab_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slab_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slab_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-slab-clo.c ute-slab-clo.h
+BUILT_SOURCES += ute-slab.x ute-slab.xh
 
 ute_PROGRAMS += ute-info
 ute_info_SOURCES = ute-info.c ute-info-clo.ggo
@@ -199,7 +198,7 @@ ute_info_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_info_LDFLAGS = $(AM_LDFLAGS) -static
 ute_info_LDADD = $(uterus_LIBS)
 EXTRA_ute_info_SOURCES = gbs.c gbs.h
-BUILT_SOURCES += ute-info-clo.c ute-info-clo.h
+BUILT_SOURCES += ute-info.x ute-info.xh
 
 ute_PROGRAMS += ute-anal
 ute_anal_SOURCES = ute-anal.c ute-anal-clo.ggo
@@ -209,7 +208,7 @@ if HAVE_LIBPNG
 ute_anal_LDFLAGS += -lpng
 endif  HAVE_LIBPNG
 ute_anal_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-anal-clo.c ute-anal-clo.h
+BUILT_SOURCES += ute-anal.x ute-anal.xh
 
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
@@ -226,7 +225,7 @@ ute_mux_dukas_SOURCES = dukas.c dukas-clo.ggo
 ute_mux_dukas_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_dukas_LDFLAGS = $(AM_LDFLAGS)
 ute_mux_dukas_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += dukas-clo.c dukas-clo.h
+BUILT_SOURCES += dukas.x dukas.xh
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
@@ -239,7 +238,7 @@ hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LIBADD = libversion.a
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
 endif  ## HAVE_HDF5
-BUILT_SOURCES += hdf5-clo.c hdf5-clo.h
+BUILT_SOURCES += hdf5.x hdf5.xh
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
@@ -271,13 +270,14 @@ version.c: version.c.in $(top_builddir)/version.mk
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull
-%.c %.h: %.ggo $(GGO_HELPERS) Makefile.am
-	$(M4) -I $(srcdir) common.ggo.in $< | gengetopt --no-help -l -F $* \
+%.x %.xh: %.ggo $(GGO_HELPERS) Makefile.am
+	$(M4) -I $(srcdir) common.ggo.in $< | \
+	gengetopt --no-help -c x -H xh -l -F $* \
 	&& sed \
 	  -e 's,config.h,version.h,g' \
 	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
-	  $*.h >$*.h-t \
-	&& mv $*.h-t $*.h
+	  $*.xh >$*.xh-t \
+	&& mv $*.xh-t $*.xh
 
 ## for dist or dist check we need binaries, so help2man can work
 dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)

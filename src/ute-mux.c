@@ -265,8 +265,8 @@ deinit_ticks(mux_ctx_t ctx)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-mux-clo.h"
-#include "ute-mux-clo.c"
+#include "ute-mux.xh"
+#include "ute-mux.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

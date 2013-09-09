@@ -86,6 +86,7 @@ typedef const struct info_ctx_s *info_ctx_t;
 
 struct info_ctx_s {
 	bool verbp:1;
+	bool guessp:1;
 	int intv;
 	int modu;
 	utectx_t u;
@@ -410,6 +411,96 @@ check_stmp(info_ctx_t ctx, scom_t ti)
 	return 0;
 }
 
+/* marking corus, this is mostly interval guessing or recording */
+static void
+mark_ssnp(info_ctx_t UNUSED(ctx), int intv[static restrict 1], scom_t ti)
+{
+/* snapshots have got no meaningful `interval length'
+ * but, conversely, you can snapshoot a timeseries at a fixed frequencyh
+ * here's how we guess this frequency (and we call it intervals later on) */
+	time_t ts = scom_thdr_sec(ti);
+
+	if (!intv[4]) {
+		;
+	} else if (!intv[5] || intv[5] > ts - intv[4]) {
+		intv[5] = ts - intv[4];
+	}
+	/* always keep track of current time */
+	intv[4] = ts;
+	return;
+}
+
+static void
+mark_scdl(info_ctx_t ctx, int intv[static restrict 1], scom_t ti)
+{
+/* candles have a natural width, and if all candles are connected (as
+ * opposed to overlapped or gapped) they give a complete picture of the
+ * market, we assume the width of the candle coincides with the frequency
+ * of candles snaps, if guessing is required we can also have a rough
+ * guess, but we consider the interval sequence 1,5,10,30,... only */
+	time_t ts = scom_thdr_sec(ti);
+	const_scdl_t x = AS_CONST_SCDL(ti);
+	unsigned int ttf = scom_thdr_ttf(ti) & 0x0fU;
+	int this;
+
+	if (!x->sta_ts && !ctx->guessp) {
+		/* do nothing really */
+		goto out;
+
+	} else if (!x->sta_ts) {
+		/* try and guess
+		 * we can use tick types >= 12 (SL1T_TTF_BIDASK, ...) for now
+		 * because no meaningful candle is defined over these */
+		unsigned int tt2;
+
+		switch (ttf) {
+		case SL1T_TTF_BID:
+			tt2 = 12U;
+			break;
+		case SL1T_TTF_ASK:
+			tt2 = 13U;
+			break;
+		case SL1T_TTF_TRA:
+			tt2 = 14U;
+			break;
+		case SL1T_TTF_VOL:
+			tt2 = 15U;
+			break;
+		default:
+			goto out;
+		}
+
+		/* do the guessing, only if we know of prior timestamps */
+		if (intv[tt2] > 0) {
+			if (!(this = ts - intv[tt2])) {
+				/* dont bother */
+				;
+			} else if (!intv[ttf] || this < intv[ttf]) {
+				intv[ttf] = this;
+			}
+		}
+		/* keep track of current time */
+		intv[tt2] = ts;
+		goto out;
+
+	} else if (ts >= 100000 && x->sta_ts < 100000) {
+		/* must be a candle spec */
+		this = x->sta_ts;
+	} else {
+		this = ts - x->sta_ts;
+	}
+
+	if (!intv[ttf]) {
+		/* store */
+		intv[ttf] = this;
+	} else if (intv[ttf] != this) {
+		/* sort of reset */
+		intv[ttf] = -1;
+	}
+out:
+	return;
+}
+
 
 /* the actual infoing */
 /* we're info'ing single scom's, much like a prf() in ute-print */
@@ -429,40 +520,15 @@ mark(info_ctx_t ctx, scom_t ti)
 
 	/* do some interval tracking */
 	if (ttf == SSNP_FLAVOUR || ttf > SCDL_FLAVOUR) {
-		time_t ts = scom_thdr_sec(ti);
 		int *intv = intv_get(tidx);
 
 		/* always bang the index */
 		intv[0] = tidx;
 
 		if (ttf == SSNP_FLAVOUR) {
-			/* this one's got no meaningful `interval length' */
-
-			if (!intv[4]) {
-				;
-			} else if (!intv[5] || intv[5] > ts - intv[4]) {
-				intv[5] = ts - intv[4];
-			}
-			/* always keep track of current time */
-			intv[4] = ts;
+			mark_ssnp(ctx, intv, ti);
 		} else if (ttf > SCDL_FLAVOUR) {
-			const_scdl_t x = AS_CONST_SCDL(ti);
-			int this;
-
-			if (ts >= 100000 && x->sta_ts < 100000) {
-				/* must be a candle spec */
-				this = x->sta_ts;
-			} else {
-				this = ts - x->sta_ts;
-			}
-
-			if (!intv[ttf & 0x0fU]) {
-				/* store */
-				intv[ttf & 0x0fU] = this;
-			} else if (intv[ttf & 0x0fU] != this) {
-				/* sort of reset */
-				intv[ttf & 0x0fU] = -1;
-			}
+			mark_scdl(ctx, intv, ti);
 		}
 	}
 	return 0;
@@ -546,6 +612,9 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 	/* copy interesting stuff into our own context */
 	if (argi->verbose_given) {
 		ctx->verbp = true;
+	}
+	if (argi->guess_given) {
+		ctx->guessp = true;
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {

@@ -135,21 +135,21 @@ ute_LDFLAGS = $(AM_LDFLAGS) -static
 UTE_CMD_CPPFLAGS = -DSTANDALONE
 
 ute_PROGRAMS += ute-shnot
-ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot-clo.ggo
+ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot.ggo
 ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_shnot_LDFLAGS = $(AM_LDFLAGS) -static
 ute_shnot_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-shnot.x ute-shnot.xh
 
 ute_PROGRAMS += ute-chndl
-ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl-clo.ggo
+ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl.ggo
 ute_chndl_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_chndl_LDFLAGS = $(AM_LDFLAGS) -static
 ute_chndl_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-chndl.x ute-chndl.xh
 
 ute_PROGRAMS += ute-print
-ute_print_SOURCES = ute-print.c ute-print.h ute-print-clo.ggo
+ute_print_SOURCES = ute-print.c ute-print.h ute-print.ggo
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_print_CPPFLAGS += $(LTDLINCL)
@@ -160,7 +160,7 @@ EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-print.x ute-print.xh
 
 ute_PROGRAMS += ute-mux
-ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux-clo.ggo
+ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux.ggo
 ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_CPPFLAGS += -DUTEDIR=\"$(utedir)\"
@@ -172,28 +172,28 @@ EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-mux.x ute-mux.xh
 
 ute_PROGRAMS += ute-fsck
-ute_fsck_SOURCES = ute-fsck.c ute-fsck-clo.ggo
+ute_fsck_SOURCES = ute-fsck.c ute-fsck.ggo
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_fsck_LDFLAGS = $(AM_LDFLAGS) -static
 ute_fsck_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-fsck.x ute-fsck.xh
 
 ute_PROGRAMS += ute-slut
-ute_slut_SOURCES = ute-slut.c ute-slut-clo.ggo
+ute_slut_SOURCES = ute-slut.c ute-slut.ggo
 ute_slut_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slut_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slut_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-slut.x ute-slut.xh
 
 ute_PROGRAMS += ute-slab
-ute_slab_SOURCES = ute-slab.c ute-slab-clo.ggo
+ute_slab_SOURCES = ute-slab.c ute-slab.ggo
 ute_slab_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slab_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slab_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-slab.x ute-slab.xh
 
 ute_PROGRAMS += ute-info
-ute_info_SOURCES = ute-info.c ute-info-clo.ggo
+ute_info_SOURCES = ute-info.c ute-info.ggo
 ute_info_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_info_LDFLAGS = $(AM_LDFLAGS) -static
 ute_info_LDADD = $(uterus_LIBS)
@@ -201,7 +201,7 @@ EXTRA_ute_info_SOURCES = gbs.c gbs.h
 BUILT_SOURCES += ute-info.x ute-info.xh
 
 ute_PROGRAMS += ute-anal
-ute_anal_SOURCES = ute-anal.c ute-anal-clo.ggo
+ute_anal_SOURCES = ute-anal.c ute-anal.ggo
 ute_anal_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_anal_LDFLAGS = $(AM_LDFLAGS) -static
 if HAVE_LIBPNG
@@ -221,7 +221,7 @@ dukas_la_LIBADD = libversion.a
 dukas_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ## dukas has a binary too
 noinst_PROGRAMS += ute-mux-dukas
-ute_mux_dukas_SOURCES = dukas.c dukas-clo.ggo
+ute_mux_dukas_SOURCES = dukas.c dukas.ggo
 ute_mux_dukas_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_dukas_LDFLAGS = $(AM_LDFLAGS)
 ute_mux_dukas_LDADD = $(uterus_LIBS)
@@ -233,7 +233,7 @@ mat_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
-hdf5_la_SOURCES = hdf5.c hdf5-clo.ggo
+hdf5_la_SOURCES = hdf5.c hdf5.ggo
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LIBADD = libversion.a
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)

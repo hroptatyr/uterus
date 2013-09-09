@@ -61,7 +61,7 @@ ute.man: $(top_srcdir)/src/ute.c $(top_srcdir)/configure $(top_builddir)/version
 my_bld_texi = $(__bld_texi_$(V))
 __bld_texi_ = $(__bld_texi_$(AM_DEFAULT_VERBOSITY))
 __bld_texi_0 = @echo "  GENTEXI " $*;
-%.texi: $(top_srcdir)/src/%-clo.ggo $(top_builddir)/version.mk
+%.texi: $(top_srcdir)/src/%.ggo $(top_builddir)/version.mk
 	$(my_bld_texi) ${SHELL} \
 		$(srcdir)/gentexi.sh $(top_builddir)/src/$* \
 		$($*_EXAMPLES) > $@ || rm -f -- $@

@@ -410,6 +410,55 @@ check_stmp(info_ctx_t ctx, scom_t ti)
 	return 0;
 }
 
+/* marking corus, this is mostly interval guessing or recording */
+static void
+mark_ssnp(info_ctx_t UNUSED(ctx), int intv[static restrict 1], scom_t ti)
+{
+/* snapshots have got no meaningful `interval length'
+ * but, conversely, you can snapshoot a timeseries at a fixed frequencyh
+ * here's how we guess this frequency (and we call it intervals later on) */
+	time_t ts = scom_thdr_sec(ti);
+
+	if (!intv[4]) {
+		;
+	} else if (!intv[5] || intv[5] > ts - intv[4]) {
+		intv[5] = ts - intv[4];
+	}
+	/* always keep track of current time */
+	intv[4] = ts;
+	return;
+}
+
+static void
+mark_scdl(info_ctx_t UNUSED(ctx), int intv[static restrict 1], scom_t ti)
+{
+/* candles have a natural width, and if all candles are connected (as
+ * opposed to overlapped or gapped) they give a complete picture of the
+ * market, we assume the width of the candle coincides with the frequency
+ * of candles snaps, if guessing is required we can also have a rough
+ * guess, but we consider the interval sequence 1,5,10,30,... only */
+	time_t ts = scom_thdr_sec(ti);
+	const_scdl_t x = AS_CONST_SCDL(ti);
+	unsigned int ttf = scom_thdr_ttf(ti);
+	int this;
+
+	if (ts >= 100000 && x->sta_ts < 100000) {
+		/* must be a candle spec */
+		this = x->sta_ts;
+	} else {
+		this = ts - x->sta_ts;
+	}
+
+	if (!intv[ttf & 0x0fU]) {
+		/* store */
+		intv[ttf & 0x0fU] = this;
+	} else if (intv[ttf & 0x0fU] != this) {
+		/* sort of reset */
+		intv[ttf & 0x0fU] = -1;
+	}
+	return;
+}
+
 
 /* the actual infoing */
 /* we're info'ing single scom's, much like a prf() in ute-print */
@@ -429,40 +478,15 @@ mark(info_ctx_t ctx, scom_t ti)
 
 	/* do some interval tracking */
 	if (ttf == SSNP_FLAVOUR || ttf > SCDL_FLAVOUR) {
-		time_t ts = scom_thdr_sec(ti);
 		int *intv = intv_get(tidx);
 
 		/* always bang the index */
 		intv[0] = tidx;
 
 		if (ttf == SSNP_FLAVOUR) {
-			/* this one's got no meaningful `interval length' */
-
-			if (!intv[4]) {
-				;
-			} else if (!intv[5] || intv[5] > ts - intv[4]) {
-				intv[5] = ts - intv[4];
-			}
-			/* always keep track of current time */
-			intv[4] = ts;
+			mark_ssnp(ctx, intv, ti);
 		} else if (ttf > SCDL_FLAVOUR) {
-			const_scdl_t x = AS_CONST_SCDL(ti);
-			int this;
-
-			if (ts >= 100000 && x->sta_ts < 100000) {
-				/* must be a candle spec */
-				this = x->sta_ts;
-			} else {
-				this = ts - x->sta_ts;
-			}
-
-			if (!intv[ttf & 0x0fU]) {
-				/* store */
-				intv[ttf & 0x0fU] = this;
-			} else if (intv[ttf & 0x0fU] != this) {
-				/* sort of reset */
-				intv[ttf & 0x0fU] = -1;
-			}
+			mark_scdl(ctx, intv, ti);
 		}
 	}
 	return 0;

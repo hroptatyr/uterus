@@ -411,6 +411,40 @@ check_stmp(info_ctx_t ctx, scom_t ti)
 	return 0;
 }
 
+static int
+round_to_seq(int x)
+{
+/* round x up onto our sequence 1,5,10,30,60,... */
+	if (UNLIKELY(x <= 0)) {
+		return x;
+	}
+
+	switch ((unsigned int)x) {
+	case 1:
+		return 1;
+	case 2 ... 5:
+		return 5;
+	case 6 ... 10:
+		return 10;
+	case 11 ... 15:
+		return 15;
+	case 16 ... 30:
+		return 30;
+	case 31 ... 60:
+		return 60;
+	case 61 ... 300:
+		return 300;
+	case 301 ... 600:
+		return 600;
+	case 601 ... 900:
+		return 900;
+	case 901 ... 1800:
+		return 1800;
+	default:
+		return 3600;
+	}
+}
+
 /* marking corus, this is mostly interval guessing or recording */
 static void
 mark_ssnp(info_ctx_t UNUSED(ctx), int intv[static restrict 1], scom_t ti)
@@ -476,7 +510,7 @@ mark_scdl(info_ctx_t ctx, int intv[static restrict 1], scom_t ti)
 				/* dont bother */
 				;
 			} else if (!intv[ttf] || this < intv[ttf]) {
-				intv[ttf] = this;
+				intv[ttf] = round_to_seq(this);
 			}
 		}
 		/* keep track of current time */

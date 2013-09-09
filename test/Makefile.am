@@ -320,6 +320,16 @@ ut_test_LDADD = ../src/libversion.a
 BUILT_SOURCES += ut-test.x ut-test.h
 EXTRA_DIST += ut-test.sh
 
+## our friendly helpers
+check_PROGRAMS += clitoris
+clitoris_CPPFLAGS = $(AM_CPPFLAGS)
+clitoris_CPPFLAGS += -D_GNU_SOURCE
+clitoris_LDFLAGS = $(AM_LDFLAGS) -static
+clitoris_LDADD = -lutil
+BUILT_SOURCES += clitoris.x clitoris.h
+
+check_PROGRAMS += shack
+BUILT_SOURCES += shack.x shack.h
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull

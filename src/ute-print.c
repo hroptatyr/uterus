@@ -216,8 +216,8 @@ get_slut_sz(utehdr2_t p)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-print-clo.h"
-#include "ute-print-clo.c"
+#include "ute-print.xh"
+#include "ute-print.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

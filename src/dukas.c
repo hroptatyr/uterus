@@ -628,8 +628,8 @@ mux(mux_ctx_t ctx)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "dukas-clo.h"
-#include "dukas-clo.c"
+#include "dukas.xh"
+#include "dukas.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

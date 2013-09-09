@@ -510,8 +510,8 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-info-clo.h"
-#include "ute-info-clo.c"
+#include "ute-info.xh"
+#include "ute-info.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

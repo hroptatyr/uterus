@@ -51,6 +51,8 @@
 #include <string.h>
 #include <errno.h>
 #include <pty.h>
+/* check for me */
+#include <wordexp.h>
 
 #if !defined LIKELY
 # define LIKELY(_x)	__builtin_expect((_x), 1)
@@ -169,6 +171,52 @@ static inline clit_bit_t
 clit_make_fn(const char *fn)
 {
 	return (clit_bit_t){.z = -1UL, .fn = fn};
+}
+
+static const char*
+bufexp(const char src[static 1], size_t ssz)
+{
+	static char *buf;
+	static size_t bsz;
+	wordexp_t xp[1];
+
+	if (UNLIKELY(ssz == 0)) {
+		return NULL;
+	}
+
+#define CHKBSZ(x)				\
+	if ((x) > bsz) {			\
+		bsz = ((x) / 256U + 1U) * 256U;	\
+		buf = realloc(buf, bsz);	\
+	}
+
+	/* get our own copy for deep vein massages */
+	CHKBSZ(ssz);
+	memcpy(buf, src, ssz);
+	buf[ssz] = '\0';
+
+	switch (wordexp(buf, xp, WRDE_UNDEF)) {
+	case 0:
+		if (xp->we_wordc > 0) {
+			/* everything's fine */
+			break;
+		}
+	case WRDE_NOSPACE:
+		wordfree(xp);
+	default:
+		return NULL;
+	}
+
+	/* copy the first `argument', back into BUF,
+	 * which is hopefully big enough */
+	with (size_t wz = strlen(xp->we_wordv[0])) {
+		CHKBSZ(wz);
+		memcpy(buf, xp->we_wordv[0], wz);
+		buf[wz] = '\0';
+	}
+
+	wordfree(xp);
+	return buf;
 }
 
 
@@ -320,16 +368,15 @@ find_tst(struct clit_tst_s tst[static 1], const char *bp, size_t bz)
 	with (size_t outz = tst->rest.d - bp) {
 		if (outz &&
 		    /* prefixed '< '? */
-		    UNLIKELY(bp[0] == '<' && bp[1] == ' ') &&
-		    /* not too long */
-		    outz < 256U &&
-		    /* only one line? */
-		    memchr(bp + 2, '\n', outz - 2U - 1U) == NULL) {
+		    UNLIKELY(bp[0] == '<' && bp[1] == ' ')) {
 			/* it's a < FILE comparison */
-			static char fn[256U];
+			const char *fn;
 
-			memcpy(fn, bp + 2, outz - 2U - 1U);
-			tst->out = clit_make_fn(fn);
+			if ((fn = bufexp(bp + 2, outz - 2U - 1U)) != NULL) {
+				tst->out = clit_make_fn(fn);
+			} else {
+				tst->out = (clit_bit_t){0U};
+			}
 		} else {
 			tst->out = (clit_bit_t){.z = outz, bp};
 		}
@@ -669,6 +716,58 @@ set_timeout(unsigned int tdiff)
 	return;
 }
 
+static void
+prepend_path(const char *p)
+{
+#define free_path()	prepend_path(NULL);
+	static char *paths;
+	static size_t pathz;
+	static char *pp;
+	size_t pz;
+
+	if (UNLIKELY(p == NULL)) {
+		/* freeing */
+		if (paths == NULL) {
+			free(paths);
+			paths = pp = NULL;
+		}
+		return;
+	}
+	/* otherwise it'd be safe to compute the strlen() methinks */
+	pz = strlen(p);
+
+	if (UNLIKELY(paths == NULL)) {
+		char *envp = getenv("PATH");
+		size_t envz = strlen(envp);
+
+		/* get us a nice big cushion */
+		pathz = ((envz + pz + 1U) / 256U + 1) * 256U;
+		paths = malloc(pathz);
+		/* glue the current path at the end of the array */
+		pp = (paths + pathz) - (envz + 1U);
+		memcpy(pp, envp, envz + 1U);
+	}
+
+	/* calc prepension pointer */
+	pp -= pz + 1U/*:*/;
+
+	if (UNLIKELY(pp < paths)) {
+		/* awww, not enough space, is there */
+		off_t ppoff = paths + pathz - pp;
+
+		pathz = ((pathz + pz + 1U) / 256U + 1) * 256U;
+		paths = realloc(paths, pathz);
+		/* recalc paths pointer */
+		pp = paths + ppoff;
+	}
+
+	/* actually prepend now */
+	memcpy(pp, p, pz);
+	pp[pz] = ':';
+	setenv("PATH", pp, 1);
+	return;
+}
+
 
 static int verbosep;
 static int ptyp;
@@ -795,22 +894,22 @@ main(int argc, char *argv[])
 		timeo = argi->timeout_arg;
 	}
 
-	/* also bang builddir to path */
-	with (char *blddir = getenv("builddir")) {
-		if (blddir != NULL) {
-			size_t blddiz = strlen(blddir);
-			char *path = getenv("PATH");
-			size_t patz = strlen(path);
-			char *newp;
-
-			newp = malloc(patz + blddiz + 1U/*:*/ + 1U/*\nul*/);
-			memcpy(newp, blddir, blddiz);
-			newp[blddiz] = ':';
-			memcpy(newp + blddiz + 1U, path, patz + 1U);
-			setenv("PATH", newp, 1);
-			free(newp);
+	/* prepend our current directory and our argv[0] directory */
+	with (char *arg0 = argv[0]) {
+		char *dir0;
+		if ((dir0 = strrchr(arg0, '/')) != NULL) {
+			*dir0 = '\0';
+			prepend_path(arg0);
 		}
 	}
+	prepend_path(".");
+	/* also bang builddir to path */
+	with (char *blddir = getenv("builddir")) {
+		if (LIKELY(blddir != NULL)) {
+			prepend_path(blddir);
+		}
+	}
+
 	/* just to be clear about this */
 #if defined WORDS_BIGENDIAN
 	setenv("endian", "big", 1);
@@ -822,9 +921,10 @@ main(int argc, char *argv[])
 		rc = 99;
 	}
 
+	/* resource freeing */
+	free_path();
 out:
 	cmdline_parser_free(argi);
-	/* never succeed */
 	return rc;
 }
 

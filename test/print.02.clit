@@ -1,17 +1,10 @@
-## -*- shell-script -*-
+#!/usr/bin/clitoris ## -*- shell-script -*-
 
-TOOL=ute
-INFILE="${srcdir}/print.b.ute"
-CMDLINE="print '${INFILE}'"
-
-## STDIN
- 
-## STDOUT
-cat > "${TS_EXP_STDOUT}" <<EOF
+$ ute print "${srcdir}/print.b.ute"
 0	2012-01-15T22:00:02.766+00:00	0	1	77.0560	1500000
 0	2012-01-15T22:00:02.766+00:00	0	2	77.0600	750000
 0	2012-01-15T22:00:02.998+00:00	0	1	77.0550	750000
 0	2012-01-15T22:00:02.998+00:00	0	2	77.1000	1690000
-EOF
+$
 
-## print.2.ut ends here
+## print.02.clit ends here

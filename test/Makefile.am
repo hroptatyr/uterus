@@ -87,17 +87,17 @@ EXTRA_DIST += mux.13.ref.ute
 
 if WORDS_BIGENDIAN
 else
-ut_tests += print.1.ut
-ut_tests += print.2.ut
+ut_tests += print.01.clit
+ut_tests += print.02.clit
 endif
-ut_tests += print.3.ut
-ut_tests += print.4.ut
-ut_tests += print.5.ut
-ut_tests += print.6.ut
-ut_tests += print.7.ut
-ut_tests += print.8.ut
-ut_tests += print.9.ut
-ut_tests += print.10.ut
+ut_tests += print.03.clit
+ut_tests += print.04.clit
+ut_tests += print.05.clit
+ut_tests += print.06.clit
+ut_tests += print.07.clit
+ut_tests += print.08.clit
+ut_tests += print.09.clit
+ut_tests += print.10.clit
 EXTRA_DIST += print.a.ute
 EXTRA_DIST += print.b.ute
 EXTRA_DIST += print.c.ute

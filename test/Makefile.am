@@ -21,38 +21,43 @@ bin_tests =
 m30_LIBS = $(uterus_LIBS)
 uterus_LIBS = $(abs_top_builddir)/src/libuterus.la
 
-TEST_EXTENSIONS = .ut
+TEST_EXTENSIONS = .ut .clit
+AM_LOG_COMPILER = false
+
 UT_LOG_COMPILER = $(builddir)/ut-test
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
 
-ut_tests += mux.1.ut
-ut_tests += mux.2.ut
-ut_tests += mux.3.ut
-ut_tests += mux.4.ut
-ut_tests += mux.5.ut
-ut_tests += mux.6.ut
+CLIT_LOG_COMPILER = $(builddir)/clitoris
+AM_CLIT_LOG_FLAGS = -v --builddir $(builddir)
+
+ut_tests += mux.01.clit
+ut_tests += mux.02.clit
+ut_tests += mux.03.clit
+ut_tests += mux.04.clit
+ut_tests += mux.05.clit
+ut_tests += mux.06.clit
 if HAVE_EXPAT
-ut_tests += mux.7.ut
-ut_tests += mux.8.ut
-ut_tests += mux.9.ut
-ut_tests += mux.10.ut
+ut_tests += mux.07.clit
+ut_tests += mux.08.clit
+ut_tests += mux.09.clit
+ut_tests += mux.10.clit
 else  ## !HAVE_EXPAT
-EXTRA_DIST += mux.7.ut
-EXTRA_DIST += mux.8.ut
-EXTRA_DIST += mux.9.ut
-EXTRA_DIST += mux.10.ut
+EXTRA_DIST += mux.07.clit
+EXTRA_DIST += mux.08.clit
+EXTRA_DIST += mux.09.clit
+EXTRA_DIST += mux.10.clit
 endif  ## HAVE_EXPAT
-ut_tests += mux.11.ut
-ut_tests += mux.12.ut
-ut_tests += mux.13.ut
-ut_tests += mux.14.ut
-ut_tests += mux.15.ut
-ut_tests += mux.16.ut
-ut_tests += mux.17.ut
-ut_tests += mux.18.ut
-ut_tests += mux.19.ut
-ut_tests += mux.20.ut
-ut_tests += mux.21.ut
+ut_tests += mux.11.clit
+ut_tests += mux.12.clit
+ut_tests += mux.13.clit
+ut_tests += mux.14.clit
+ut_tests += mux.15.clit
+ut_tests += mux.16.clit
+ut_tests += mux.17.clit
+ut_tests += mux.18.clit
+ut_tests += mux.19.clit
+ut_tests += mux.20.clit
+ut_tests += mux.21.clit
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5

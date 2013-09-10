@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ touch "empty-file"
+$ ute mux -f uta "empty-file" -o "mux.21.ute"
+$ shack "mux.21.ute" a362babe dc3567e0 && rm -- "mux.21.ute"
+$
+
+## mux.21.clit ends here

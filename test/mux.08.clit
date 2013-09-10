@@ -1,0 +1,10 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ cat "${srcdir}/mux.f.ibhist.xml" | ute mux -f ibhist -o "mux.08.ute" -
+$ if test "${endian}" = "big"; then \
+	ute fsck --little-endian "mux.08.ute"; \
+  fi
+$ diff "${srcdir}/mux.8.ref.ute" "mux.08.ute" && rm -- "mux.08.ute"
+$
+
+## mux.08.clit ends here

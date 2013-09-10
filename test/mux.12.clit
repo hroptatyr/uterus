@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## same as mux.b.ariva but needs sorting
+$ cat "${srcdir}/mux.d.ariva" | ute mux -f ariva - -o "mux.12.ute"
+$ shack mux.12.ute ac1ce20d 5496df33 && rm -- "mux.12.ute"
+$
+
+## mux.12.clit ends here

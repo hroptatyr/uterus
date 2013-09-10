@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ cat "${srcdir}/mux.b.ariva" | ute mux -f ariva - -o "mux.11.ute"
+$ shack mux.11.ute f73a3dbe 0a09ae4a && rm -- "mux.11.ute"
+$
+
+## mux.11.clit ends here

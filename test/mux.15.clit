@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ cat "${srcdir}/mux.i.uta" | ute mux -f uta - -o "mux.15.ute"
+$ ute print "mux.15.ute"
+< "${srcdir}/mux.i.uta"
+$
+
+## mux.15.clit ends here

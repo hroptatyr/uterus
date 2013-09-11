@@ -107,13 +107,13 @@ EXTRA_DIST += print.e.beute
 EXTRA_DIST += print.f.ute
 EXTRA_DIST += print.f.beute
 
-ut_tests += shnot.1.ut
-ut_tests += shnot.2.ut
+ut_tests += shnot.01.clit
+ut_tests += shnot.02.clit
 EXTRA_DIST += shnot.1.ref.ute
 EXTRA_DIST += shnot.2.ref.ute
 
-ut_tests += chndl.1.ut
-ut_tests += chndl.2.ut
+ut_tests += chndl.01.clit
+ut_tests += chndl.02.clit
 EXTRA_DIST += chndl.2.ref.ute
 
 ut_tests += fsck.1.ut

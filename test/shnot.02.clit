@@ -1,0 +1,18 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ if test "${endian}" = "big"; then \
+	ute fsck --big-endian "${srcdir}/print.d.ute" -o "shnot.02.inpute"; \
+  elif test "${endian}" = "little"; then \
+	cp -a "${srcdir}/print.d.ute" "shnot.02.inpute"; \
+  fi
+$ ute shnot -i 1 -o "shnot.02.ute" "shnot.02.inpute"
+$ if test "${endian}" = "big"; then \
+	ute fsck --little-endian "shnot.02.ute" -o "shnot.02.outpute"; \
+  elif test "${endian}" = "little"; then \
+	cp -a "shnot.02.ute" "shnot.02.outpute"; \
+  fi
+$ diff "${srcdir}/shnot.2.ref.ute" "shnot.02.outpute" && \
+  rm -- shnot.02.inpute shnot.02.ute shnot.02.outpute
+$
+
+## shnot.02.clit ends here

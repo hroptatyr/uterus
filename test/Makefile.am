@@ -336,6 +336,9 @@ BUILT_SOURCES += clitoris.x clitoris.h
 check_PROGRAMS += shack
 BUILT_SOURCES += shack.x shack.h
 
+check_PROGRAMS += hxdiff
+BUILT_SOURCES += hxdiff.x hxdiff.h
+
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull
 %.x %.h: %.ggo

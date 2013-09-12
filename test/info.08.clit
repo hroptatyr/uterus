@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute fsck --big-endian -o "info.7.ref.beute" "${srcdir}/info.7.ref.ute"
+$ ute info "info.7.ref.beute"
+80012552_FUT_ONE	c30m_b
+$ rm -- "info.7.ref.beute"
+
+## info.08.clit ends here

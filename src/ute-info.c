@@ -87,9 +87,13 @@ typedef const struct info_ctx_s *info_ctx_t;
 struct info_ctx_s {
 	bool verbp:1;
 	bool guessp:1;
+	bool filesp:1;
+
 	int intv;
 	int modu;
+
 	utectx_t u;
+	const char *fn;
 };
 
 /* holds the last time stamp */
@@ -371,6 +375,10 @@ bset_pr(info_ctx_t ctx)
 		if (bits) {
 			int *intv = NULL;
 
+			if (ctx->filesp) {
+				fputs(ctx->fn, stdout);
+				putchar('\t');
+			}
 			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
 
 			if (ctx->intv) {
@@ -409,6 +417,40 @@ check_stmp(info_ctx_t ctx, scom_t ti)
 		return 1;
 	}
 	return 0;
+}
+
+static int
+round_to_seq(int x)
+{
+/* round x up onto our sequence 1,5,10,30,60,... */
+	if (UNLIKELY(x <= 0)) {
+		return x;
+	}
+
+	switch ((unsigned int)x) {
+	case 1:
+		return 1;
+	case 2 ... 5:
+		return 5;
+	case 6 ... 10:
+		return 10;
+	case 11 ... 15:
+		return 15;
+	case 16 ... 30:
+		return 30;
+	case 31 ... 60:
+		return 60;
+	case 61 ... 300:
+		return 300;
+	case 301 ... 600:
+		return 600;
+	case 601 ... 900:
+		return 900;
+	case 901 ... 1800:
+		return 1800;
+	default:
+		return 3600;
+	}
 }
 
 /* marking corus, this is mostly interval guessing or recording */
@@ -476,7 +518,7 @@ mark_scdl(info_ctx_t ctx, int intv[static restrict 1], scom_t ti)
 				/* dont bother */
 				;
 			} else if (!intv[ttf] || this < intv[ttf]) {
-				intv[ttf] = this;
+				intv[ttf] = round_to_seq(this);
 			}
 		}
 		/* keep track of current time */
@@ -553,6 +595,10 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 
 	/* go through the pages manually */
 	if (ctx->verbp) {
+		if (ctx->filesp) {
+			fputs(ctx->fn, stdout);
+			putchar('\t');
+		}
 		printf("pages\t%zu\n", ute_npages(hdl));
 	}
 
@@ -616,6 +662,9 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 	if (argi->guess_given) {
 		ctx->guessp = true;
 	}
+	if (argi->files_given) {
+		ctx->filesp = true;
+	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
@@ -630,6 +679,7 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 
 		/* the actual checking */
 		ctx->u = hdl;
+		ctx->fn = fn;
 		if (info1(ctx, fn)) {
 			res = 1;
 		}

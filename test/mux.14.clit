@@ -1,7 +1,7 @@
 #!/usr/bin/clitoris ## -*- shell-script -*-
 
 $ ute mux -f uta "${srcdir}/mux.i.uta" -o "mux.14.ute"
-$ ute print "mux.14.ute"
+$ ute print "mux.14.ute" && rm -- "mux.14.ute"
 < "${srcdir}/mux.i.uta"
 $
 

@@ -21,38 +21,43 @@ bin_tests =
 m30_LIBS = $(uterus_LIBS)
 uterus_LIBS = $(abs_top_builddir)/src/libuterus.la
 
-TEST_EXTENSIONS = .ut
+TEST_EXTENSIONS = .ut .clit
+AM_LOG_COMPILER = false
+
 UT_LOG_COMPILER = $(builddir)/ut-test
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
 
-ut_tests += mux.1.ut
-ut_tests += mux.2.ut
-ut_tests += mux.3.ut
-ut_tests += mux.4.ut
-ut_tests += mux.5.ut
-ut_tests += mux.6.ut
+CLIT_LOG_COMPILER = $(builddir)/clitoris
+AM_CLIT_LOG_FLAGS = -v --builddir $(builddir)
+
+ut_tests += mux.01.clit
+ut_tests += mux.02.clit
+ut_tests += mux.03.clit
+ut_tests += mux.04.clit
+ut_tests += mux.05.clit
+ut_tests += mux.06.clit
 if HAVE_EXPAT
-ut_tests += mux.7.ut
-ut_tests += mux.8.ut
-ut_tests += mux.9.ut
-ut_tests += mux.10.ut
+ut_tests += mux.07.clit
+ut_tests += mux.08.clit
+ut_tests += mux.09.clit
+ut_tests += mux.10.clit
 else  ## !HAVE_EXPAT
-EXTRA_DIST += mux.7.ut
-EXTRA_DIST += mux.8.ut
-EXTRA_DIST += mux.9.ut
-EXTRA_DIST += mux.10.ut
+EXTRA_DIST += mux.07.clit
+EXTRA_DIST += mux.08.clit
+EXTRA_DIST += mux.09.clit
+EXTRA_DIST += mux.10.clit
 endif  ## HAVE_EXPAT
-ut_tests += mux.11.ut
-ut_tests += mux.12.ut
-ut_tests += mux.13.ut
-ut_tests += mux.14.ut
-ut_tests += mux.15.ut
-ut_tests += mux.16.ut
-ut_tests += mux.17.ut
-ut_tests += mux.18.ut
-ut_tests += mux.19.ut
-ut_tests += mux.20.ut
-ut_tests += mux.21.ut
+ut_tests += mux.11.clit
+ut_tests += mux.12.clit
+ut_tests += mux.13.clit
+ut_tests += mux.14.clit
+ut_tests += mux.15.clit
+ut_tests += mux.16.clit
+ut_tests += mux.17.clit
+ut_tests += mux.18.clit
+ut_tests += mux.19.clit
+ut_tests += mux.20.clit
+ut_tests += mux.21.clit
 EXTRA_DIST += mux.a.dukasq
 EXTRA_DIST += mux.b.ariva
 EXTRA_DIST += mux.c.dukas.bi5
@@ -82,17 +87,17 @@ EXTRA_DIST += mux.13.ref.ute
 
 if WORDS_BIGENDIAN
 else
-ut_tests += print.1.ut
-ut_tests += print.2.ut
+ut_tests += print.01.clit
+ut_tests += print.02.clit
 endif
-ut_tests += print.3.ut
-ut_tests += print.4.ut
-ut_tests += print.5.ut
-ut_tests += print.6.ut
-ut_tests += print.7.ut
-ut_tests += print.8.ut
-ut_tests += print.9.ut
-ut_tests += print.10.ut
+ut_tests += print.03.clit
+ut_tests += print.04.clit
+ut_tests += print.05.clit
+ut_tests += print.06.clit
+ut_tests += print.07.clit
+ut_tests += print.08.clit
+ut_tests += print.09.clit
+ut_tests += print.10.clit
 EXTRA_DIST += print.a.ute
 EXTRA_DIST += print.b.ute
 EXTRA_DIST += print.c.ute
@@ -102,13 +107,13 @@ EXTRA_DIST += print.e.beute
 EXTRA_DIST += print.f.ute
 EXTRA_DIST += print.f.beute
 
-ut_tests += shnot.1.ut
-ut_tests += shnot.2.ut
+ut_tests += shnot.01.clit
+ut_tests += shnot.02.clit
 EXTRA_DIST += shnot.1.ref.ute
 EXTRA_DIST += shnot.2.ref.ute
 
-ut_tests += chndl.1.ut
-ut_tests += chndl.2.ut
+ut_tests += chndl.01.clit
+ut_tests += chndl.02.clit
 EXTRA_DIST += chndl.2.ref.ute
 
 ut_tests += fsck.1.ut
@@ -146,19 +151,19 @@ EXTRA_DIST += fsck.b.ute
 EXTRA_DIST += fsck.17.ref.leute
 EXTRA_DIST += fsck.17.ref.beute
 
-ut_tests += slut.1.ut
-ut_tests += slut.2.ut
-ut_tests += slut.3.ut
-ut_tests += slut.4.ut
+ut_tests += slut.01.clit
+ut_tests += slut.02.clit
+ut_tests += slut.03.clit
+ut_tests += slut.04.clit
 
-ut_tests += info.1.ut
-ut_tests += info.2.ut
-ut_tests += info.3.ut
-ut_tests += info.4.ut
-ut_tests += info.5.ut
-ut_tests += info.6.ut
-ut_tests += info.7.ut
-ut_tests += info.8.ut
+ut_tests += info.01.clit
+ut_tests += info.02.clit
+ut_tests += info.03.clit
+ut_tests += info.04.clit
+ut_tests += info.05.clit
+ut_tests += info.06.clit
+ut_tests += info.07.clit
+ut_tests += info.08.clit
 EXTRA_DIST += info.5.ref.ute
 EXTRA_DIST += info.5.ref.beute
 EXTRA_DIST += info.7.ref.ute
@@ -317,18 +322,29 @@ bin_tests += m62-10
 ## the test suite code
 check_PROGRAMS += ut-test
 ut_test_LDADD = ../src/libversion.a
-BUILT_SOURCES += ut-test-clo.c ut-test-clo.h
+BUILT_SOURCES += ut-test.x ut-test.h
 EXTRA_DIST += ut-test.sh
 
+## our friendly helpers
+check_PROGRAMS += clitoris
+clitoris_CPPFLAGS = $(AM_CPPFLAGS)
+clitoris_CPPFLAGS += -D_GNU_SOURCE
+clitoris_LDFLAGS = $(AM_LDFLAGS) -static
+clitoris_LDADD = -lutil
+BUILT_SOURCES += clitoris.x clitoris.h
+
+check_PROGRAMS += shack
+BUILT_SOURCES += shack.x shack.h
+
+check_PROGRAMS += hxdiff
+BUILT_SOURCES += hxdiff.x hxdiff.h
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull
-%.c %.h: %.ggo Makefile.am
-	$(AM_V_GEN) gengetopt -F $* -i $< \
-	&& sed \
-	  -e 's,config.h,version.h,g' \
-	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
-	  $*.h >$*.h-t \
+%.x %.h: %.ggo
+	$(AM_V_GEN) gengetopt -F $* -c x -i $<
+	@sed -e 's,_PARSER_VERSION VERSION,_PARSER_VERSION "$(VERSION)",g' \
+	     $*.h > $*.h-t \
 	&& mv $*.h-t $*.h
 
 clean-local:

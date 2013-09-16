@@ -1,0 +1,15 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute info "${srcdir}/mux.4.ref.beute"
+GBPUSD@RTFX	tick_b	tick_a	tick_t
+USDCAD@RTFX	tick_b	tick_a	tick_t
+EURUSD@RTFX	tick_b	tick_a	tick_t
+EURJPY@RTFX	tick_b	tick_a	tick_t
+XAG@COMDTY	tick_t
+NZDUSD@RTFX	tick_b	tick_a	tick_t
+USDCHF@RTFX	tick_b	tick_a	tick_t
+XAU@COMDTY	tick_t
+BRT@COMDTY	tick_t
+$
+
+## info.02.clit ends here

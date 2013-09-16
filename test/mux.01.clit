@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux -f dukas "${srcdir}/mux.a.dukasq" -o "mux.01.ute"
+$ shack mux.01.ute 97126a40 d1fa5a40 && rm -- "mux.01.ute"
+$
+
+## mux.01.clit ends here

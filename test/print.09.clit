@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## absolute candle specs
+$ ute print "${srcdir}/info.7.ref.ute"
+80012552_FUT_ONE	2010-12-09T15:30:00.000+00:00	1	11	29.6100	29.0600	29.2600	29.5800	00000708|c30m	00000000|0
+$
+
+## print.09.clit ends here

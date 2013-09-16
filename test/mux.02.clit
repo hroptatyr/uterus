@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux --name 'TESJPY' -f dukas "${srcdir}/mux.a.dukasq" -o "mux.02.ute"
+$ shack mux.02.ute 94b94a36 e31235e3 && rm -- "mux.02.ute"
+$
+
+## mux.02.clit ends here

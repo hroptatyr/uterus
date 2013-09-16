@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux --refdate 1328605200 -f dukas "${srcdir}/mux.c.dukas.bi5" -o "mux.03.ute" --all
+$ shack mux.03.ute ae3af842 ae44fa17 && rm -- "mux.03.ute"
+$
+
+## mux.03.clit ends here

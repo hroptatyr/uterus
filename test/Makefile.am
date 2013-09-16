@@ -28,7 +28,7 @@ UT_LOG_COMPILER = $(builddir)/ut-test
 AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
 
 CLIT_LOG_COMPILER = $(builddir)/clitoris
-AM_CLIT_LOG_FLAGS = -v --builddir $(builddir)
+AM_CLIT_LOG_FLAGS = -v --builddir $(top_builddir)/src
 
 ut_tests += mux.01.clit
 ut_tests += mux.02.clit

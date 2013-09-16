@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute info "${srcdir}/info.5.ref.ute"
+AUDUSD	tick_q
+$
+
+## info.05.clit ends here

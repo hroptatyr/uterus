@@ -442,8 +442,8 @@ fini_buckets(shnot_ctx_t ctx)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-shnot-clo.h"
-#include "ute-shnot-clo.c"
+#include "ute-shnot.xh"
+#include "ute-shnot.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

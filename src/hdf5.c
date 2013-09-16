@@ -752,8 +752,8 @@ static struct mctx_s __gmctx[1];
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "hdf5-clo.h"
-#include "hdf5-clo.c"
+#include "hdf5.xh"
+#include "hdf5.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

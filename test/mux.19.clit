@@ -1,0 +1,11 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux -f uta "${srcdir}/mux.m.uta" -o "mux.19.ute"
+$ if test "${endian}" = "big"; then \
+	diff "${srcdir}/print.e.beute" "mux.19.ute" && rm -- "mux.19.ute"; \
+  elif test "${endian}" = "little"; then \
+	diff "${srcdir}/print.e.ute" "mux.19.ute" && rm -- "mux.19.ute"; \
+  fi
+$
+
+## mux.19.clit ends here

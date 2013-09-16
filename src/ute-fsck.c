@@ -546,8 +546,8 @@ file_flags(fsck_ctx_t ctx, const char *fn)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-fsck-clo.h"
-#include "ute-fsck-clo.c"
+#include "ute-fsck.xh"
+#include "ute-fsck.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

@@ -1,0 +1,18 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ if test "${endian}" = "big"; then \
+	ute fsck --big-endian "${srcdir}/mux.7.ref.ute" -o "chndl.01.inpute"; \
+  elif test "${endian}" = "little"; then \
+	cp -a "${srcdir}/mux.7.ref.ute" "chndl.01.inpute"; \
+  fi
+$ ute chndl -i 60 -o "chndl.01.ute" "chndl.01.inpute"
+$ if test "${endian}" = "big"; then \
+	ute fsck --little-endian "chndl.01.ute" -o "chndl.01.outpute"; \
+  elif test "${endian}" = "little"; then \
+	cp -a "chndl.01.ute" "chndl.01.outpute"; \
+  fi
+$ shack "chndl.01.outpute" 1b9ab078 && \
+  rm -- chndl.01.inpute chndl.01.ute chndl.01.outpute
+$
+
+## chndl.01.clit ends here

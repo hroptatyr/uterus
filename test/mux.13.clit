@@ -1,0 +1,10 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux -f dukas --refdate 1328475600 --name 'AUDUSD' "${srcdir}/mux.h.dukas.bi5" -o "mux.13.ute"
+$ if test "${endian}" = "big"; then \
+	ute fsck --little-endian "mux.13.ute"; \
+  fi
+$ diff "${srcdir}/mux.13.ref.ute" "mux.13.ute" && rm -- "mux.13.ute"
+$
+
+## mux.13.clit ends here

@@ -1,0 +1,9 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux -f uta - -o "mux.20.ute" <<EOF
+something not adhering to the uta line format and longer than 64 bytes
+EOF
+$ shack "mux.20.ute" a362babe dc3567e0 && rm -- "mux.20.ute"
+$
+
+## mux.20.clit ends here

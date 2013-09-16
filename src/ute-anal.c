@@ -535,8 +535,8 @@ anal1(anal_ctx_t ctx)
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "ute-anal-clo.h"
-#include "ute-anal-clo.c"
+#include "ute-anal.xh"
+#include "ute-anal.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
 # pragma warning (default:181)

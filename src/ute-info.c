@@ -87,9 +87,13 @@ typedef const struct info_ctx_s *info_ctx_t;
 struct info_ctx_s {
 	bool verbp:1;
 	bool guessp:1;
+	bool filesp:1;
+
 	int intv;
 	int modu;
+
 	utectx_t u;
+	const char *fn;
 };
 
 /* holds the last time stamp */
@@ -371,6 +375,10 @@ bset_pr(info_ctx_t ctx)
 		if (bits) {
 			int *intv = NULL;
 
+			if (ctx->filesp) {
+				fputs(ctx->fn, stdout);
+				putchar('\t');
+			}
 			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
 
 			if (ctx->intv) {
@@ -587,6 +595,10 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 
 	/* go through the pages manually */
 	if (ctx->verbp) {
+		if (ctx->filesp) {
+			fputs(ctx->fn, stdout);
+			putchar('\t');
+		}
 		printf("pages\t%zu\n", ute_npages(hdl));
 	}
 
@@ -650,6 +662,9 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 	if (argi->guess_given) {
 		ctx->guessp = true;
 	}
+	if (argi->files_given) {
+		ctx->filesp = true;
+	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
 		const char *fn = argi->inputs[j];
@@ -664,6 +679,7 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 
 		/* the actual checking */
 		ctx->u = hdl;
+		ctx->fn = fn;
 		if (info1(ctx, fn)) {
 			res = 1;
 		}

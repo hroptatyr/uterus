@@ -24,3 +24,7 @@ option "guess" -
 information.  The interval sequence is defined as 1,5,10,30,... except \
 for the hour scale, where only 1h intervals exist."
 	optional
+
+option "files" -
+	"Repeat the file names afront lines"
+	optional

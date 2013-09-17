@@ -379,7 +379,13 @@ bset_pr(info_ctx_t ctx)
 				fputs(ctx->fn, stdout);
 				putchar('\t');
 			}
-			fputs(ute_idx2sym(ctx->u, (uint16_t)i), stdout);
+			with (const char *sym = ute_idx2sym(ctx->u, i)) {
+				if (LIKELY(sym != NULL)) {
+					fputs(sym, stdout);
+				} else {
+					fputs("0", stdout);
+				}
+			}
 
 			if (ctx->intv) {
 				/* print interval too */

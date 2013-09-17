@@ -107,7 +107,7 @@ umx_render_scom(scom_t s)
 		double tt;
 		double t[];
 	} *t = mxGetData(res);
-	uint16_t si;
+	unsigned int si;
 	uint16_t ttf;
 
 	if (UNLIKELY(s == NULL)) {

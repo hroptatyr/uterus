@@ -216,7 +216,7 @@ make_tss(mctx_t ctx, const hid_t grp, const char *nam)
 }
 
 static hid_t
-get_grp(mctx_t ctx, uint16_t idx)
+get_grp(mctx_t ctx, unsigned int idx)
 {
 	if (ctx->cch[idx].grp == 0) {
 		const char *dnam;
@@ -232,7 +232,7 @@ get_grp(mctx_t ctx, uint16_t idx)
 }
 
 static hid_t
-get_tsgrp(mctx_t ctx, uint16_t idx)
+get_tsgrp(mctx_t ctx, unsigned int idx)
 {
 	hid_t grp = get_grp(ctx, idx);
 
@@ -246,7 +246,7 @@ get_tsgrp(mctx_t ctx, uint16_t idx)
 }
 
 static hid_t
-get_dat(mctx_t ctx, uint16_t idx, uint16_t ttf)
+get_dat(mctx_t ctx, unsigned int idx, uint16_t ttf)
 {
 	hid_t grp = get_grp(ctx, idx);
 	size_t i = ttf & 0x3;
@@ -262,7 +262,7 @@ get_dat(mctx_t ctx, uint16_t idx, uint16_t ttf)
 }
 
 static hid_t
-get_tss(mctx_t ctx, uint16_t idx, uint16_t ttf)
+get_tss(mctx_t ctx, unsigned int idx, uint16_t ttf)
 {
 	hid_t grp = get_tsgrp(ctx, idx);
 	size_t i = ttf & 0x3;
@@ -709,7 +709,7 @@ cache_fini(mctx_t ctx)
 }
 
 static cache_t
-get_cch(mctx_t ctx, uint16_t idx)
+get_cch(mctx_t ctx, unsigned int idx)
 {
 	/* check for resize */
 	if (idx > ctx->nidxs) {
@@ -725,7 +725,7 @@ get_cch(mctx_t ctx, uint16_t idx)
 }
 
 static void
-bang_idx(mctx_t ctx, uint16_t idx, struct atom_s val)
+bang_idx(mctx_t ctx, unsigned int idx, struct atom_s val)
 {
 	const cache_t cch = get_cch(ctx, idx);
 	const size_t nbang = cch->nbang;
@@ -839,7 +839,7 @@ pr(pr_ctx_t pctx, scom_t st)
 	static int tick_warn = 0;
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
-	uint16_t idx = scom_thdr_tblidx(st);
+	unsigned int idx = scom_thdr_tblidx(st);
 
 	/* bang new ute context */
 	__gmctx->u = pctx->uctx;

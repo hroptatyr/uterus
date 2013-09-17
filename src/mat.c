@@ -444,7 +444,7 @@ fini(pr_ctx_t UNUSED(pctx))
 /* must be here as it uses local vars */
 static void
 bang5idx(
-	size_t row, size_t col, uint16_t idx,
+	size_t row, size_t col, unsigned int idx,
 	double ts, double d1, double d2, double d3, double d4)
 {
 	double *d = (void*)frag_dat->data;
@@ -465,12 +465,12 @@ pr(pr_ctx_t UNUSED(pctx), scom_t st)
 	uint32_t sec = scom_thdr_sec(st);
 	uint16_t msec = scom_thdr_msec(st);
 	uint16_t ttf = scom_thdr_ttf(st);
-	uint16_t idx = scom_thdr_tblidx(st);
+	unsigned int idx = scom_thdr_tblidx(st);
 	/* for the time stamp check */
 	static uint32_t ol_sec = 0U;
 	static uint16_t ol_msec = 0U;
 	static double ts = 0.0;
-	static uint16_t ol_idx = 0U;
+	static unsigned int ol_idx = 0U;
 	/* for dimen checks */
 	size_t arows = frag_hdr->dim.rows;
 	size_t acols = frag_hdr->dim.cols;

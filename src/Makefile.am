@@ -119,6 +119,7 @@ EXTRA_libuterus_la_SOURCES += tail.c tail.h
 EXTRA_libuterus_la_SOURCES += fmcmb.h
 EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 EXTRA_libuterus_la_SOURCES += nifty.h
+EXTRA_libuterus_la_SOURCES += cmd-aux.c
 
 uterus_LIBS = libuterus.la
 uterus_LIBS += libversion.a

@@ -46,12 +46,13 @@
 # include <sys/types.h>
 #endif	/* HAVE_SYS_TYPES_H */
 #include <fcntl.h>
-#include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 
 #include "utefile.h"
+
+#include "cmd-aux.c"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -147,8 +148,7 @@ run_cmd(char **argv, char *const UNUSED(env)[])
 
 	if ((pid = fork()) < 0) {
 		/* FFF: fork failed, fuck! */
-		fprintf(stderr, "cannot fork(): %s: %s\n",
-			argv[0], strerror(errno));
+		error("cannot fork(): %s", argv[0]);
 		return -1;
 	} else if (pid == 0) {
 		/* in child */
@@ -165,13 +165,12 @@ run_cmd(char **argv, char *const UNUSED(env)[])
 	while ((wp = waitpid(pid, &status, 0)) < 0 && errno == EINTR);
 
 	if (wp < 0) {
-		fprintf(stderr, "waitpid for %s failed: %s\n",
-			argv[0], strerror(errno));
+		error("waitpid for %s failed", argv[0]);
 	} else if (wp != pid) {
-		fprintf(stderr, "waitpid is confused (%s)\n", argv[0]);
+		error("waitpid is confused (%s)", argv[0]);
 	} else if (WIFSIGNALED(status)) {
 		res = WTERMSIG(status);
-		fprintf(stderr, "%s died of signal %d\n", argv[0], res);
+		error("%s died of signal %d", argv[0], res);
 		/* This return value is chosen so that code & 0xff
 		 * mimics the exit code that a POSIX shell would report for
 		 * a program that died from this signal. */
@@ -182,7 +181,7 @@ run_cmd(char **argv, char *const UNUSED(env)[])
 			res = -1;
 		}
 	} else {
-		fprintf(stderr, "waitpid is confused (%s)\n", argv[0]);
+		error("waitpid is confused (%s)", argv[0]);
 	}
 	return res;
 }
@@ -240,7 +239,7 @@ pump_slut(int outfd, utectx_t hdl)
 		    *on++ != '\t') {
 			/* line fuckered */
 			fprintf(stderr, "cannot make sense of:\n");
-			write(STDERR_FILENO, prv, nex - prv + 1);
+			fwrite(prv, sizeof(char), nex - prv + 1, stderr);
 			continue;
 		}
 		/* frob the symbol */
@@ -291,8 +290,8 @@ slut1(utectx_t hdl, int editp)
 			/* no-op */
 			;
 		} else if (run_cmd(args, NULL) < 0) {
-			fprintf(stderr, "\
-There was a problem with the editor '%s'.", editor);
+			error("\
+There was a problem with the editor '%s'", editor);
 		}
 	}
 
@@ -344,7 +343,7 @@ main(int argc, char *argv[])
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
-			fprintf(stderr, "cannot open file '%s'\n", fn);
+			error("cannot open file '%s'", fn);
 			continue;
 		} else if (argi->inputs_num > 1) {
 			/* print file names when more than 1 */

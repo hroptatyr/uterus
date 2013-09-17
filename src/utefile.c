@@ -2233,7 +2233,7 @@ ute_tick2(utectx_t ctx, void *tgt, size_t tsz, sidx_t i)
 }
 
 /* slut accessors */
-uint16_t
+unsigned int
 ute_sym2idx(utectx_t ctx, const char *sym)
 {
 	if (UNLIKELY(sym == NULL)) {
@@ -2243,18 +2243,18 @@ ute_sym2idx(utectx_t ctx, const char *sym)
 }
 
 const char*
-ute_idx2sym(utectx_t ctx, uint16_t idx)
+ute_idx2sym(utectx_t ctx, unsigned int idx)
 {
-	return slut_idx2sym(ctx->slut, idx);
+	return slut_idx2sym(ctx->slut, (uint16_t)idx);
 }
 
-uint16_t
-ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx)
+unsigned int
+ute_bang_symidx(utectx_t ctx, const char *sym, unsigned int idx)
 {
 	if (UNLIKELY(sym == NULL)) {
 		return 0;
 	}
-	return slut_bang(ctx->slut, sym, idx);
+	return slut_bang(ctx->slut, sym, (uint16_t)idx);
 }
 
 const char*

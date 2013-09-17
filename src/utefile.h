@@ -47,7 +47,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -150,7 +149,7 @@ extern size_t ute_tick(utectx_t ctx, scom_t *tgt, sidx_t i);
  * Return a copy of the I-th tick in ute file CTX. */
 extern size_t ute_tick2(utectx_t ctx, void *tgt, size_t tsz, sidx_t i);
 
-extern scom_t ute_ffff2(utectx_t, sidx_t, uint16_t);
+extern scom_t ute_ffff2(utectx_t, sidx_t, unsigned int);
 
 /**
  * Add the tick T to the ute context specified by CTX. */
@@ -204,16 +203,17 @@ extern void ute_empty_slut(utectx_t ctx);
 
 /**
  * Given a symbol SYM return the index in the look-up table. */
-extern uint16_t ute_sym2idx(utectx_t ctx, const char *sym);
+extern unsigned int ute_sym2idx(utectx_t ctx, const char *sym);
 
 /**
  * Given an index IDX return the symbol in the look-up table. */
-extern const char *ute_idx2sym(utectx_t ctx, uint16_t idx);
+extern const char *ute_idx2sym(utectx_t ctx, unsigned int idx);
 
 /**
  * Associate SYM with index IDX in CTX's symbol look-up table.
  * Return the newly or previously associated index. */
-extern uint16_t ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx);
+extern unsigned int
+ute_bang_symidx(utectx_t ctx, const char *sym, unsigned int idx);
 
 /**
  * Return the file name (if any) associated with CTX. */

@@ -534,8 +534,8 @@ main(int argc, char *argv[])
 			ctx->modu = argi->modulus_arg;
 		}
 	} else if (argi->modulus_given) {
-		fputs("\
-warning: --modulus without --interval is not meaningful, ignored\n", stderr);
+		error("\
+warning: --modulus without --interval is not meaningful, ignored");
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
@@ -544,7 +544,7 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
-			error(0, "cannot open file `%s'", fn);
+			error("not open file `%s'", fn);
 			res = 1;
 			continue;
 		}

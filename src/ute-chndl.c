@@ -343,7 +343,7 @@ new_candle_p(chndl_ctx_t ctx, scom_t t)
 	return t2 >= t1;
 }
 
-static uint16_t
+static unsigned int
 copy_sym(chndl_ctx_t ctx, uint16_t cidx)
 {
 	const char *cur_sym = ute_idx2sym(ctx->rdr, cidx);
@@ -366,7 +366,7 @@ write_cand(chndl_ctx_t ctx, uint16_t cidx)
 
 	c[0] = ctx->bkt->cand[cidx].bc;
 	c[1] = ctx->bkt->cand[cidx].ac;
-	nidx = copy_sym(ctx, cidx);
+	nidx = (uint16_t)copy_sym(ctx, cidx);
 	ts = get_buckets_time(ctx->bkt);
 
 	/* bid candle */
@@ -402,7 +402,7 @@ check_trades:
 	/* tra candle */
 	if (xcand_trades_p(ctx->bkt->cand + cidx)) {
 		c[2] = ctx->bkt->cand[cidx].tc;
-		nidx = copy_sym(ctx, cidx);
+		nidx = (uint16_t)copy_sym(ctx, cidx);
 		ts = get_buckets_time(ctx->bkt);
 
 		scom_thdr_set_tblidx(c[2]->hdr, nidx);

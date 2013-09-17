@@ -257,7 +257,7 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 	return t2 >= t1;
 }
 
-static uint16_t
+static unsigned int
 copy_sym(shnot_ctx_t ctx, uint16_t cidx)
 {
 	const char *cur_sym = ute_idx2sym(ctx->rdr, cidx);
@@ -280,7 +280,7 @@ write_snap(shnot_ctx_t ctx, uint16_t cidx)
 	}
 
 	sn = (xn = ctx->bkt->snap + cidx)->sn;
-	nidx = copy_sym(ctx, cidx);
+	nidx = (uint16_t)copy_sym(ctx, cidx);
 	ts = get_buckets_time(ctx->bkt);
 	scom_thdr_set_tblidx(sn->hdr, nidx);
 	scom_thdr_set_sec(sn->hdr, ts);

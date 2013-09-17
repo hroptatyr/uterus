@@ -656,8 +656,8 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	}
 	/* lookup the symbol (or create it) */
 	{
-		uint16_t symidx = ute_sym2idx(ctx->wrr, tl->symbuf);
-		atl_set_si(tl, symidx);
+		unsigned int symidx = ute_sym2idx(ctx->wrr, tl->symbuf);
+		atl_set_si(tl, (uint16_t)symidx);
 	}
 
 	/* and now parse the key value pairs */

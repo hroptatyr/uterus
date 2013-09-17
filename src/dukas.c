@@ -352,7 +352,7 @@ dump_tick_bi5(mux_ctx_t ctx, struct dqbi5_s *tl)
 static void
 prepare(mux_ctx_t ctx)
 {
-	uint16_t idx = 0;
+	unsigned int idx = 0;
 
 	if (LIKELY(ctx->opts->sname != NULL)) {
 		idx = ute_sym2idx(ctx->wrr, ctx->opts->sname);
@@ -360,11 +360,11 @@ prepare(mux_ctx_t ctx)
 
 	/* t is static, so set the static components here */
 	sl1t_set_ttf(t + 0, SL1T_TTF_BID);
-	sl1t_set_tblidx(t + 0, idx);
+	sl1t_set_tblidx(t + 0, (uint16_t)idx);
 	sl1t_set_ttf(t + 1, SL1T_TTF_ASK);
-	sl1t_set_tblidx(t + 1, idx);
+	sl1t_set_tblidx(t + 1, (uint16_t)idx);
 	/* also c is static (and a pun), set their components here */
-	scom_thdr_set_tblidx(c->hdr, idx);
+	scom_thdr_set_tblidx(c->hdr, (uint16_t)idx);
 	return;
 }
 

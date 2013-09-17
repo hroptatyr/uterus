@@ -508,7 +508,7 @@ anal1(anal_ctx_t ctx)
 			rset_hmap();
 			for (scom_t ti; (ti = ute_iter(ctx->u)) != NULL;) {
 				/* now to what we always do */
-				uint16_t ttf = scom_thdr_tblidx(ti);
+				unsigned int ttf = scom_thdr_tblidx(ti);
 				time_t t = scom_thdr_sec(ti);
 
 				if (t >= ref && ttf == i) {

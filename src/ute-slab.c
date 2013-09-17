@@ -288,7 +288,7 @@ open_xplo(slab_ctx_t ctx, const char sym[static 1])
 static void
 slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
 {
-	uint16_t idx = scom_thdr_tblidx(ti);
+	unsigned int idx = scom_thdr_tblidx(ti);
 	time_t stmp = scom_thdr_sec(ti);
 
 	/* chain of filters, first one loses */
@@ -369,7 +369,7 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	/* set the bits from the idx */
 	for (size_t i = 0; i < ctx->nidxs; i++) {
 		/* it's unclear what the final name in the outfile should be */
-		uint16_t idx = (uint16_t)ctx->idxs[i];
+		unsigned int idx = ctx->idxs[i];
 		const char *sym = ute_idx2sym(hdl, idx);
 		bitset_set(filtix, idx);
 		ute_bang_symidx(ctx->out, sym, idx);
@@ -377,7 +377,7 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	/* transform and set the rest */
 	for (size_t i = 0; i < ctx->nsyms; i++) {
 		const char *sym = ctx->syms[i];
-		uint16_t idx = ute_sym2idx(hdl, sym);
+		unsigned int idx = ute_sym2idx(hdl, sym);
 		bitset_set(filtix, idx);
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
@@ -416,7 +416,7 @@ xplo1(slab_ctx_t ctx, utectx_t hdl)
 	/* generate the outfile */
 	for (size_t i = 1; i <= nsyms; i++) {
 		const char *sym = ute_idx2sym(hdl, (uint16_t)i);
-		uint16_t new_idx;
+		unsigned int new_idx;
 
 		/* open the new file */
 		if (UNLIKELY(sym == NULL)) {

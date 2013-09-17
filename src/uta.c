@@ -280,7 +280,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	char *line;
 	/* symbol and its index */
 	const char *sym;
-	uint16_t symidx;
+	unsigned int symidx;
 	uint16_t ttf;
 
 	/* get the line, its length and set up the cursor */
@@ -302,7 +302,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 
 	/* next up is the sym-idx in hex */
 	if (LIKELY(*cursor != '?')) {
-		symidx = (uint16_t)hex2int(&cursor);
+		symidx = hex2int(&cursor);
 		if (UNLIKELY(*cursor++ != '\t')) {
 			return -1;
 		}
@@ -330,7 +330,7 @@ read_line(mux_ctx_t ctx, struct sndwch_s *tl)
 	}
 
 	/* bang it all into the target tick */
-	scom_thdr_set_tblidx(AS_SCOM_THDR(tl), symidx);
+	scom_thdr_set_tblidx(AS_SCOM_THDR(tl), (uint16_t)symidx);
 	scom_thdr_set_ttf(AS_SCOM_THDR(tl), ttf);
 
 	/* now on to the payload */

@@ -343,8 +343,8 @@ new_candle_p(chndl_ctx_t ctx, scom_t t)
 	return t2 >= t1;
 }
 
-static uint16_t
-copy_sym(chndl_ctx_t ctx, uint16_t cidx)
+static unsigned int
+copy_sym(chndl_ctx_t ctx, unsigned int cidx)
 {
 	const char *cur_sym = ute_idx2sym(ctx->rdr, cidx);
 	if (UNLIKELY(cur_sym == NULL)) {
@@ -354,10 +354,10 @@ copy_sym(chndl_ctx_t ctx, uint16_t cidx)
 }
 
 static void
-write_cand(chndl_ctx_t ctx, uint16_t cidx)
+write_cand(chndl_ctx_t ctx, unsigned int cidx)
 {
 	scdl_t c[3];
-	uint16_t nidx;
+	unsigned int nidx;
 	time_t ts;
 
 	if (xcand_empty_p(ctx->bkt->cand + cidx)) {
@@ -430,7 +430,7 @@ new_candle(chndl_ctx_t ctx)
 	}
 
 	/* write all the candshots so far */
-	for (uint16_t i = 0; i <= ctx->bkt->nsyms; i++) {
+	for (unsigned int i = 0; i <= ctx->bkt->nsyms; i++) {
 		write_cand(ctx, i);
 	}
 	return;
@@ -465,7 +465,7 @@ check_candle(chndl_ctx_t ctx, scom_t t)
 static void
 bucketiser(chndl_ctx_t ctx, scom_t t)
 {
-	uint16_t i = scom_thdr_tblidx(t);
+	unsigned int i = scom_thdr_tblidx(t);
 	xcand_t b = ctx->bkt->cand + i;
 
 	check_candle(ctx, t);

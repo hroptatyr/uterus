@@ -121,7 +121,7 @@ done:
 #endif	/* INCLUDED_date_h_ */
 
 static inline size_t
-pr_sym(utectx_t ctx, char *restrict buf, uint16_t idx)
+pr_sym(utectx_t ctx, char *restrict buf, unsigned int idx)
 {
 	const char *p;
 	size_t pl = 0;
@@ -137,7 +137,7 @@ pr_sym(utectx_t ctx, char *restrict buf, uint16_t idx)
 static inline ssize_t
 print_tick_sym(pr_ctx_t pctx, scom_t st)
 {
-	uint16_t si = scom_thdr_tblidx(st);
+	unsigned int si = scom_thdr_tblidx(st);
 	ssize_t res = 0;
 
 	if (LIKELY(pctx->uctx != NULL)) {

@@ -260,7 +260,7 @@ write_tick(mux_ctx_t ctx, truefx_tl_t tl)
 	sl1t_t tp = t;
 	uint16_t idx;
 
-	if (UNLIKELY(!(idx = ute_sym2idx(ctx->wrr, tl->sym)))) {
+	if (UNLIKELY(!(idx = (uint16_t)ute_sym2idx(ctx->wrr, tl->sym)))) {
 		return;
 	}
 	if (tl->b.u != bid.u) {

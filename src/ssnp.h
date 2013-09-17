@@ -148,14 +148,14 @@ ssnp_set_stmp_msec(ssnp_t s, uint16_t ms)
 	return;
 }
 
-static inline uint16_t
+static inline unsigned int
 ssnp_tblidx(const_ssnp_t s)
 {
 	return scom_thdr_tblidx(s->hdr);
 }
 
 static inline void
-ssnp_set_tblidx(ssnp_t s, uint16_t i)
+ssnp_set_tblidx(ssnp_t s, unsigned int i)
 {
 	scom_thdr_set_tblidx(s->hdr, i);
 	return;

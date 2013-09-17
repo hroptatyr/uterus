@@ -204,16 +204,16 @@ scom_thdr_set_msec(scom_thdr_t h, uint16_t msec)
 	return;
 }
 
-static inline __attribute__((pure)) uint16_t
+static inline __attribute__((pure)) unsigned int
 scom_thdr_tblidx(scom_t h)
 {
-	return (uint16_t)h->idx;
+	return h->idx;
 }
 
 static inline void
-scom_thdr_set_tblidx(scom_thdr_t h, uint16_t idx)
+scom_thdr_set_tblidx(scom_thdr_t h, unsigned int idx)
 {
-	h->idx = idx;
+	h->idx = (uint16_t)idx;
 	return;
 }
 
@@ -316,7 +316,7 @@ scom_thdr_set_stmp_from_sms(scom_thdr_t h, const struct time_sms_s sms)
 
 /* ctor */
 static inline void
-scom_thdr_fill(scom_thdr_t h, uint32_t sec, uint16_t msec, uint8_t idx)
+scom_thdr_fill(scom_thdr_t h, uint32_t sec, uint16_t msec, uint16_t idx)
 {
 	scom_thdr_set_sec(h, sec);
 	scom_thdr_set_msec(h, msec);

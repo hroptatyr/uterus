@@ -138,14 +138,14 @@ sl1t_set_stmp_msec(sl1t_t t, uint16_t msec)
 	return;
 }
 
-static inline __attribute__((pure)) uint16_t
+static inline __attribute__((pure)) unsigned int
 sl1t_tblidx(const_sl1t_t t)
 {
 	return scom_thdr_tblidx(t->hdr);
 }
 
 static inline void
-sl1t_set_tblidx(sl1t_t t, uint16_t idx)
+sl1t_set_tblidx(sl1t_t t, unsigned int idx)
 {
 	scom_thdr_set_tblidx(t->hdr, idx);
 	return;

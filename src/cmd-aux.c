@@ -49,7 +49,9 @@ verbprf(const char *fmt,...)
 	vfprintf(stderr, fmt, vap);
 	va_end(vap);
 #else  /* !DEBUG_FLAG */
-	if (fmt);
+	if (fmt) {
+		;
+	}
 #endif	/* DEBUG_FLAG */
 	return;
 }

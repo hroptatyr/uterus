@@ -49,10 +49,8 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdarg.h>
 #include <time.h>
 #include <string.h>
-#include <errno.h>
 
 #include "boobs.h"
 #include "scommon.h"
@@ -65,6 +63,8 @@
 
 #define DEFINE_GORY_STUFF
 #include "m30.h"
+
+#include "cmd-aux.c"
 
 typedef union {
 	double d;
@@ -109,23 +109,6 @@ struct dcbi5_s {
 	uint32_t h;
 	float32_t v;
 };
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 
 /* little helpers */
@@ -682,11 +665,11 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			ctx->badfd = STDERR_FILENO;
 		} else if ((fd = open(f, 0)) < 0) {
 			ctx->infd = -1;
-			error(0, "cannot open file '%s'", f);
+			error("cannot open file '%s'", f);
 			/* just try the next bloke */
 			continue;
 		} else if (argi->guess_given && guess(ctx, f) < 0) {
-			error(0, "cannot guess info from '%s'", f);
+			error("cannot guess info from '%s'", f);
 			/* well try to do the actual muxing anyway */
 			;
 		} else {

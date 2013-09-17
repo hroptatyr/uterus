@@ -58,6 +58,8 @@
 # include <png.h>
 #endif	/* HAVE_PNG_H */
 
+#include "cmd-aux.c"
+
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !UNLIKELY */
@@ -87,38 +89,6 @@ struct anal_ctx_s {
 	int modu;
 	utectx_t u;
 };
-
-
-/* helper functions */
-static void
-__attribute__((format(printf, 1, 2), unused))
-verbprf(const char *UNUSED_nodbg(fmt), ...)
-{
-#if defined DEBUG_FLAG
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-#endif	/* DEBUG_FLAG */
-	return;
-}
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 
 /* the actual anal'ing */

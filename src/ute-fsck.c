@@ -43,12 +43,13 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <sys/stat.h>
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
 #include "boobs.h"
+
+#include "cmd-aux.c"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -83,38 +84,6 @@ struct fsck_ctx_s {
 	ute_end_t natend;
 	utectx_t outctx;
 };
-
-
-/* helper functions */
-static void
-__attribute__((format(printf, 1, 2)))
-verbprf(const char *UNUSED_nodbg(fmt), ...)
-{
-#if defined DEBUG_FLAG
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-#endif	/* DEBUG_FLAG */
-	return;
-}
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 
 /* converters */
@@ -506,7 +475,7 @@ ute_compress(utectx_t hdl)
 {
 	const char *fn = ute_fn(hdl);
 
-	error(0, "compression requested for '%s' but no lzma support", fn);
+	error("compression requested for '%s' but no lzma support", fn);
 	return;
 }
 
@@ -515,7 +484,7 @@ ute_decompress(utectx_t hdl)
 {
 	const char *fn = ute_fn(hdl);
 
-	error(0, "decompression requested for '%s' but no lzma support", fn);
+	error("decompression requested for '%s' but no lzma support", fn);
 	return;
 }
 #endif	/* HAVE_LZMA_H */
@@ -529,7 +498,7 @@ file_flags(fsck_ctx_t ctx, const char *fn)
 		return UO_RDONLY;
 	} else if (UNLIKELY(stat(fn, &st) < 0)) {
 		/* we don't want to know what's wrong here */
-		error(0, "cannot process file '%s'", fn);
+		error("cannot process file '%s'", fn);
 		return -1;
 	} else if (UNLIKELY(!ctx->a_dryp && !(st.st_mode & S_IWUSR)) ||
 		   LIKELY(ctx->a_dryp)) {
@@ -600,7 +569,7 @@ main(int argc, char *argv[])
 		const char *fn = argi->output_arg;
 
 		if ((ctx->outctx = ute_open(fn, fl)) == NULL) {
-			error(0, "cannot open output file `%s'", fn);
+			error("cannot open output file `%s'", fn);
 			res = -1;
 			goto out;
 		}
@@ -623,7 +592,7 @@ only one of -z|--compress and -d|--decompress can be given\n", stderr);
 			/* error got probably printed already */
 			continue;
 		} else if (UNLIKELY((hdl = ute_open(fn, fl | opfl)) == NULL)) {
-			error(0, "cannot open file `%s'", fn);
+			error("cannot open file `%s'", fn);
 			res = 1;
 			continue;
 		}
@@ -633,7 +602,7 @@ only one of -z|--compress and -d|--decompress can be given\n", stderr);
 			res = 1;
 
 			if (argi->little_endian_given) {
-				error(0, "\
+				error("\
 cannot convert file with issues `%s', rerun conversion later", fn);
 			}
 		} else if (ctx->outctx != NULL) {
@@ -691,7 +660,7 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 			/* dry mode, do fuck all */
 			goto out;
 		} else if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
-			error(0, "cannot open file `%s'", fn);
+			error("cannot open file `%s'", fn);
 			res = 1;
 			goto out;
 		} else if (ctx->tgtend == UTE_ENDIAN_LITTLE) {

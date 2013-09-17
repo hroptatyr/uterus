@@ -83,27 +83,7 @@
 #endif	/* !ROUND */
 
 /* not the best of ideas to have output printing in a lib */
-#include <stdarg.h>
-#include <stdio.h>
-#include <errno.h>
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-
-	va_start(vap, fmt);
-	fputs("utefile.c: ", stderr);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
+#include "cmd-aux.c"
 
 #if defined scom_tick_size && defined DEBUG_FLAG
 static inline size_t
@@ -437,7 +417,7 @@ ute_encode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		error(0, "cannot deflate ticks: %u\n", rc);
+		error("cannot deflate ticks: %u", rc);
 		res = -1;
 	} else {
 		res = strm.next_out - (typeof(strm.next_out))tgt;
@@ -507,7 +487,7 @@ ute_decode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		error(0, "cannot inflate ticks: %u\n", rc);
+		error("cannot inflate ticks: %u", rc);
 		res = -1;
 	} else {
 		res = strm.next_out - (typeof(strm.next_out))tgt;
@@ -2026,11 +2006,11 @@ ute_add_tick(utectx_t ctx, scom_t t)
 
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
-		error(0, "\
+		error("\
 this version of uterus cannot cope with tick type %x", t->ttf);
 		return;
 	} else if (UNLIKELY(t->u == -1ULL)) {
-		error(0, "invalid tick");
+		error("invalid tick");
 	}
 
 	/* post tick inspection */
@@ -2073,11 +2053,11 @@ ute_add_tick_as(utectx_t ctx, scom_t t, scom_t h)
 
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((h->ttf & 0x30U) == 0x30U)) {
-		error(0, "\
+		error("\
 this version of uterus cannot cope with tick type %x", h->ttf);
 		return;
 	} else if (UNLIKELY(h->u == -1ULL)) {
-		error(0, "invalid tick");
+		error("invalid tick");
 	}
 
 	/* post tick inspection */

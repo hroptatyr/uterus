@@ -41,9 +41,7 @@
 #endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <time.h>
 #include <limits.h>
 
@@ -51,6 +49,8 @@
 #include "utefile-private.h"
 #include "date.h"
 #include "ute-print.h"
+
+#include "cmd-aux.c"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -94,23 +94,6 @@ struct slab_ctx_s {
 	uint32_t intv;
 	uint32_t last;
 };
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 /* bitsets */
 typedef struct bitset_s *bitset_t;
@@ -508,7 +491,7 @@ main(int argc, char *argv[])
 
 	/* check explosion options */
 	if (argi->explode_by_interval_given && argi->explode_by_symbol_given) {
-		error(0, "\
+		error("\
 only one of --explode-by-interval and --explode-by-symbol can be given\n\n\
 If you want to explode a file by both options, pick one option first, then\n\
 run the other option on the generated files\n");
@@ -519,7 +502,7 @@ run the other option on the generated files\n");
 	/* handle outfile */
 	ctx->outfl = UO_CREAT | UO_RDWR;
 	if (argi->output_given && argi->into_given) {
-		error(0, "only one of --output and --into can be given");
+		error("only one of --output and --into can be given");
 		res = 1;
 		goto out;
 	} else if (argi->output_given) {
@@ -544,7 +527,7 @@ run the other option on the generated files\n");
 		/* no file opening in advance in explosion mode */
 		ctx->out = NULL;
 	} else if ((ctx->out = open_out(ctx->outfn, ctx->outfl)) == NULL) {
-		error(0, "cannot open output file '%s'", ctx->outfn);
+		error("cannot open output file '%s'", ctx->outfn);
 		res = 1;
 		goto out;
 	} else if (ctx->outfn == NULL) {
@@ -559,7 +542,7 @@ run the other option on the generated files\n");
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
-			error(0, "cannot open file '%s'", fn);
+			error("cannot open file '%s'", fn);
 			continue;
 		}
 

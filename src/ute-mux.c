@@ -42,9 +42,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <unistd.h>
 #if defined HAVE_CONFIG_H
 # include "config.h"
@@ -56,6 +54,7 @@
 
 #include "utefile-private.h"
 #include "ute-mux.h"
+#include "cmd-aux.c"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -72,23 +71,6 @@
 typedef size_t index_t;
 #endif	/* !_INDEXT */
 
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
-
 
 /* standard mux function for ute files */
 static void
@@ -100,13 +82,18 @@ ute_mux(mux_ctx_t ctx)
 	utectx_t hdl;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
-		error(0, "cannot open file '%s'", fn);
+		error("cannot open file '%s'", fn);
 		return;
 	}
 	/* churn churn churn, steps here are
 	 * 1. check if the sluts coincide
 	 * 2.1. copy all tick pages
 	 * 2.2. go through the ticks and adapt tbl idxs if need be  */
+	if (!1/*sluts_compat_p(ctx->wrr, hdl)*/) {
+		error("sluts don't coincide '%s'", fn);
+		goto out;
+	}
+
 	for (size_t i = 0; i < ute_npages(hdl); i++) {
 		struct uteseek_s sk[2];
 		const size_t pgsz = UTE_BLKSZ * sizeof(*sk->sp);
@@ -119,7 +106,7 @@ ute_mux(mux_ctx_t ctx)
 			ute_add_ticks(ctx->wrr, sk->sp, nticks);
 		} else if (ute_extend(ctx->wrr, sk_sz) < 0) {
 			/* file extending fucked */
-			error(0, "cannot extend file");
+			error("cannot extend file");
 		} else {
 			/* just mmap into target space */
 			seek_page(sk + 1, ctx->wrr, wrr_npg++);
@@ -128,6 +115,7 @@ ute_mux(mux_ctx_t ctx)
 		}
 		flush_seek(sk);
 	}
+out:
 	/* and off we are */
 	ute_close(hdl);
 	return;
@@ -234,7 +222,7 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 		/* plain old mux */
 		;
 	} else {
-		error(0, "cannot open output file `%s'", outf);
+		error("cannot open output file `%s'", outf);
 		res = -1;
 	}
 	/* just make sure we dont accidentally use infd 0 (STDIN) */
@@ -393,7 +381,7 @@ muxer specific options given but cannot find muxer\n", stderr);
 				ctx->infn = f;
 				ctx->badfd = STDERR_FILENO;
 			} else {
-				error(0, "cannot open file '%s'", f);
+				error("cannot open file '%s'", f);
 				/* just try the next bloke */
 				continue;
 			}

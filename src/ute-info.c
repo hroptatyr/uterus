@@ -43,7 +43,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
@@ -59,6 +58,8 @@
 #undef DECLF
 #define DECLF		static
 #include "gbs.h"
+
+#include "cmd-aux.c"
 
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
@@ -98,38 +99,6 @@ struct info_ctx_s {
 
 /* holds the last time stamp */
 static time_t stmp;
-
-
-/* helper functions */
-static void
-__attribute__((format(printf, 1, 2), unused))
-verbprf(const char *UNUSED_nodbg(fmt), ...)
-{
-#if defined DEBUG_FLAG
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-#endif	/* DEBUG_FLAG */
-	return;
-}
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 
 static void
@@ -678,7 +647,7 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
-			error(0, "cannot open file `%s'", fn);
+			error("cannot open file `%s'", fn);
 			res = 1;
 			continue;
 		}

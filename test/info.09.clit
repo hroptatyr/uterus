@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux -f dukas "${srcdir}/mux.a.dukasq" -o "info.09.clit"
+$ ute info "info.09.clit" && rm -- "info.09.clit"
+0	tick_b	tick_a
+$
+
+## info.09.clit ends here

@@ -83,27 +83,7 @@
 #endif	/* !ROUND */
 
 /* not the best of ideas to have output printing in a lib */
-#include <stdarg.h>
-#include <stdio.h>
-#include <errno.h>
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-
-	va_start(vap, fmt);
-	fputs("utefile.c: ", stderr);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
+#include "cmd-aux.c"
 
 #if defined scom_tick_size && defined DEBUG_FLAG
 static inline size_t
@@ -437,7 +417,7 @@ ute_encode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		error(0, "cannot deflate ticks: %u\n", rc);
+		error("cannot deflate ticks: %u", rc);
 		res = -1;
 	} else {
 		res = strm.next_out - (typeof(strm.next_out))tgt;
@@ -507,7 +487,7 @@ ute_decode_raw(void *tgt, size_t tsz, const void *buf, const size_t bsz)
 
 	if (UNLIKELY((rc = lzma_code(&strm, LZMA_FINISH)) != LZMA_STREAM_END)) {
 		/* BUGGER, shall we signal an error? */
-		error(0, "cannot inflate ticks: %u\n", rc);
+		error("cannot inflate ticks: %u", rc);
 		res = -1;
 	} else {
 		res = strm.next_out - (typeof(strm.next_out))tgt;
@@ -2026,11 +2006,11 @@ ute_add_tick(utectx_t ctx, scom_t t)
 
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((t->ttf & 0x30U) == 0x30U)) {
-		error(0, "\
+		error("\
 this version of uterus cannot cope with tick type %x", t->ttf);
 		return;
 	} else if (UNLIKELY(t->u == -1ULL)) {
-		error(0, "invalid tick");
+		error("invalid tick");
 	}
 
 	/* post tick inspection */
@@ -2051,20 +2031,6 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 	return;
 }
 
-/* private version */
-void
-ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
-{
-	assert(tpc_active_p(ctx->tpc));
-	if (tpc_full_p(ctx->tpc)) {
-		/* oh current tpc is full, flush and start over */
-		ute_flush(ctx);
-	}
-	/* this needs looping! */
-	tpc_add(ctx->tpc, src, nticks);
-	return;
-}
-
 void
 ute_add_tick_as(utectx_t ctx, scom_t t, scom_t h)
 {
@@ -2073,11 +2039,11 @@ ute_add_tick_as(utectx_t ctx, scom_t t, scom_t h)
 
 	/* never trust your users, inspect the tick */
 	if (UNLIKELY((h->ttf & 0x30U) == 0x30U)) {
-		error(0, "\
+		error("\
 this version of uterus cannot cope with tick type %x", h->ttf);
 		return;
 	} else if (UNLIKELY(h->u == -1ULL)) {
-		error(0, "invalid tick");
+		error("invalid tick");
 	}
 
 	/* post tick inspection */
@@ -2233,7 +2199,7 @@ ute_tick2(utectx_t ctx, void *tgt, size_t tsz, sidx_t i)
 }
 
 /* slut accessors */
-uint16_t
+unsigned int
 ute_sym2idx(utectx_t ctx, const char *sym)
 {
 	if (UNLIKELY(sym == NULL)) {
@@ -2243,18 +2209,18 @@ ute_sym2idx(utectx_t ctx, const char *sym)
 }
 
 const char*
-ute_idx2sym(utectx_t ctx, uint16_t idx)
+ute_idx2sym(utectx_t ctx, unsigned int idx)
 {
-	return slut_idx2sym(ctx->slut, idx);
+	return slut_idx2sym(ctx->slut, (uint16_t)idx);
 }
 
-uint16_t
-ute_bang_symidx(utectx_t ctx, const char *sym, uint16_t idx)
+unsigned int
+ute_bang_symidx(utectx_t ctx, const char *sym, unsigned int idx)
 {
 	if (UNLIKELY(sym == NULL)) {
 		return 0;
 	}
-	return slut_bang(ctx->slut, sym, idx);
+	return slut_bang(ctx->slut, sym, (uint16_t)idx);
 }
 
 const char*

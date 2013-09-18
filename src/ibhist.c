@@ -231,7 +231,7 @@ inspect_con(utectx_t hdl, const char **attr)
 		}
 		*p = '\0';
 		/* just to speed up computing later on */
-		if ((idx = ute_sym2idx(hdl, tmp)) || idx == 0) {
+		if ((idx = (uint16_t)ute_sym2idx(hdl, tmp)) || idx == 0) {
 			scdl_set_tblidx(&cur_rsp.cdl, idx);
 		}
 	}

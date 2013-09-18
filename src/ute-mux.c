@@ -42,9 +42,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <unistd.h>
 #if defined HAVE_CONFIG_H
 # include "config.h"
@@ -53,39 +51,77 @@
 #include <limits.h>
 #include <string.h>
 #include "module.h"
+#include "nifty.h"
 
 #include "utefile-private.h"
 #include "ute-mux.h"
-
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-#if !defined countof
-# define countof(x)	(sizeof(x) / sizeof(*x))
-#endif	/* !countof */
+#include "cmd-aux.c"
 
 #if !defined _INDEXT
 # define _INDEXT
 typedef size_t index_t;
 #endif	/* !_INDEXT */
 
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
+typedef uint_fast16_t slutlut_t[65536U];
+
+
+static bool
+build_slutlut(slutlut_t x, utectx_t tgt, utectx_t src)
 {
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
+/* build a slut look-up table, to transition tblidxs from SRC to TGT. */
+	const size_t src_nsyms = ute_nsyms(src);
+	bool compatp = true;
+
+	for (size_t i = 1UL; i <= src_nsyms; i++) {
+		const char *sym = ute_idx2sym(src, i);
+
+		if (UNLIKELY(sym == NULL)) {
+			/* huh? */
+			x[i] = 0U;
+			compatp = false;
+		} else if ((x[i] = ute_sym2idx(tgt, sym)) != i) {
+			/* not coinciding */
+			compatp = false;
+		}
 	}
-	fputc('\n', stderr);
+	/* wipe the rest? */
+	memset(x + src_nsyms + 1U, 0, (65536U - (src_nsyms + 1U)) * sizeof(*x));
+	return compatp;
+}
+
+static void
+slutlut_massage_seek(void *tgt, size_t tsz, slutlut_t x)
+{
+#define scom_scom_size(t)	(scom_byte_size(t) / sizeof(*t))
+	const scom_t et = (const void*)((uint8_t*)tgt + tsz);
+
+	for (scom_thdr_t t = tgt; t < et; t += scom_scom_size(t)) {
+		scom_thdr_set_tblidx(t, x[scom_thdr_tblidx(t)]);
+	}
+	return;
+}
+
+static void
+add_ticks(utectx_t tgt, const void *t, size_t z)
+{
+	for (scom_t tp = t, et = tp + z / sizeof(*tp);
+	     tp < et; tp += scom_scom_size(tp)) {
+		ute_add_tick(tgt, tp);
+	}
+	return;
+}
+
+static void
+add_ticks_trnsl(utectx_t tgt, const void *t, size_t z, slutlut_t x)
+{
+	scidx_t cch[1];
+
+	for (scom_t tp = t, et = tp + z / sizeof(*tp);
+	     tp < et; tp += scom_scom_size(tp)) {
+		*cch = *AS_SCOM(tp);
+		scom_thdr_set_tblidx(cch, x[scom_thdr_tblidx(tp)]);
+		ute_add_tick_as(tgt, tp, cch);
+	}
 	return;
 }
 
@@ -94,19 +130,26 @@ error(int eno, const char *fmt, ...)
 static void
 ute_mux(mux_ctx_t ctx)
 {
+	static uint_fast16_t stt[65536U];
 	const int fl = UO_RDONLY;
 	const char *fn = ctx->infn;
 	size_t wrr_npg = ute_npages(ctx->wrr);
+	bool compatp = true;
 	utectx_t hdl;
 
 	if ((hdl = ute_open(fn, fl)) == NULL) {
-		error(0, "cannot open file '%s'", fn);
+		error("cannot open file '%s'", fn);
 		return;
 	}
 	/* churn churn churn, steps here are
 	 * 1. check if the sluts coincide
 	 * 2.1. copy all tick pages
 	 * 2.2. go through the ticks and adapt tbl idxs if need be  */
+	if (!(compatp = build_slutlut(stt, ctx->wrr, hdl))) {
+		errno = 0;
+		error("sluts don't coincide '%s'", fn);
+	}
+
 	for (size_t i = 0; i < ute_npages(hdl); i++) {
 		struct uteseek_s sk[2];
 		const size_t pgsz = UTE_BLKSZ * sizeof(*sk->sp);
@@ -115,19 +158,26 @@ ute_mux(mux_ctx_t ctx)
 		seek_page(sk, hdl, i);
 		if ((sk_sz = seek_byte_size(sk)) < pgsz) {
 			/* half page, just add it to the tpc */
-			const size_t nticks = sk_sz / sizeof(*sk->sp);
-			ute_add_ticks(ctx->wrr, sk->sp, nticks);
+			if (!compatp) {
+				add_ticks_trnsl(ctx->wrr, sk->sp, sk_sz, stt);
+			} else {
+				add_ticks(ctx->wrr, sk->sp, sk_sz);
+			}
 		} else if (ute_extend(ctx->wrr, sk_sz) < 0) {
 			/* file extending fucked */
-			error(0, "cannot extend file");
+			error("cannot extend file");
 		} else {
 			/* just mmap into target space */
 			seek_page(sk + 1, ctx->wrr, wrr_npg++);
 			memcpy(sk[1].sp, sk[0].sp, sk_sz);
+			if (!compatp) {
+				slutlut_massage_seek(sk[1].sp, sk_sz, stt);
+			}
 			flush_seek(sk + 1);
 		}
 		flush_seek(sk);
 	}
+
 	/* and off we are */
 	ute_close(hdl);
 	return;
@@ -234,7 +284,7 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 		/* plain old mux */
 		;
 	} else {
-		error(0, "cannot open output file `%s'", outf);
+		error("cannot open output file `%s'", outf);
 		res = -1;
 	}
 	/* just make sure we dont accidentally use infd 0 (STDIN) */
@@ -393,7 +443,7 @@ muxer specific options given but cannot find muxer\n", stderr);
 				ctx->infn = f;
 				ctx->badfd = STDERR_FILENO;
 			} else {
-				error(0, "cannot open file '%s'", f);
+				error("cannot open file '%s'", f);
 				/* just try the next bloke */
 				continue;
 			}

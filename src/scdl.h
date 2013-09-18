@@ -179,14 +179,14 @@ scdl_set_stmp_msec(scdl_t c, uint16_t ms)
 	return;
 }
 
-static inline uint16_t
+static inline unsigned int
 scdl_tblidx(const_scdl_t c)
 {
 	return scom_thdr_tblidx(c->hdr);
 }
 
 static inline void
-scdl_set_tblidx(scdl_t c, uint16_t i)
+scdl_set_tblidx(scdl_t c, unsigned int i)
 {
 	scom_thdr_set_tblidx(c->hdr, i);
 	return;

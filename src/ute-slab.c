@@ -41,9 +41,7 @@
 #endif	/* HAVE_CONFIG_H */
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <time.h>
 #include <limits.h>
 
@@ -51,6 +49,8 @@
 #include "utefile-private.h"
 #include "date.h"
 #include "ute-print.h"
+
+#include "cmd-aux.c"
 
 /* we're just as good as rudi, aren't we? */
 #if defined DEBUG_FLAG
@@ -94,23 +94,6 @@ struct slab_ctx_s {
 	uint32_t intv;
 	uint32_t last;
 };
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 /* bitsets */
 typedef struct bitset_s *bitset_t;
@@ -288,7 +271,7 @@ open_xplo(slab_ctx_t ctx, const char sym[static 1])
 static void
 slabt(slab_ctx_t ctx, scom_t ti, size_t max, bitset_t filtix, bitset_t copyix)
 {
-	uint16_t idx = scom_thdr_tblidx(ti);
+	unsigned int idx = scom_thdr_tblidx(ti);
 	time_t stmp = scom_thdr_sec(ti);
 
 	/* chain of filters, first one loses */
@@ -369,7 +352,7 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	/* set the bits from the idx */
 	for (size_t i = 0; i < ctx->nidxs; i++) {
 		/* it's unclear what the final name in the outfile should be */
-		uint16_t idx = (uint16_t)ctx->idxs[i];
+		unsigned int idx = ctx->idxs[i];
 		const char *sym = ute_idx2sym(hdl, idx);
 		bitset_set(filtix, idx);
 		ute_bang_symidx(ctx->out, sym, idx);
@@ -377,7 +360,7 @@ slab1(slab_ctx_t ctx, utectx_t hdl)
 	/* transform and set the rest */
 	for (size_t i = 0; i < ctx->nsyms; i++) {
 		const char *sym = ctx->syms[i];
-		uint16_t idx = ute_sym2idx(hdl, sym);
+		unsigned int idx = ute_sym2idx(hdl, sym);
 		bitset_set(filtix, idx);
 		ute_bang_symidx(ctx->out, sym, idx);
 	}
@@ -416,7 +399,7 @@ xplo1(slab_ctx_t ctx, utectx_t hdl)
 	/* generate the outfile */
 	for (size_t i = 1; i <= nsyms; i++) {
 		const char *sym = ute_idx2sym(hdl, (uint16_t)i);
-		uint16_t new_idx;
+		unsigned int new_idx;
 
 		/* open the new file */
 		if (UNLIKELY(sym == NULL)) {
@@ -508,7 +491,7 @@ main(int argc, char *argv[])
 
 	/* check explosion options */
 	if (argi->explode_by_interval_given && argi->explode_by_symbol_given) {
-		error(0, "\
+		error("\
 only one of --explode-by-interval and --explode-by-symbol can be given\n\n\
 If you want to explode a file by both options, pick one option first, then\n\
 run the other option on the generated files\n");
@@ -519,7 +502,7 @@ run the other option on the generated files\n");
 	/* handle outfile */
 	ctx->outfl = UO_CREAT | UO_RDWR;
 	if (argi->output_given && argi->into_given) {
-		error(0, "only one of --output and --into can be given");
+		error("only one of --output and --into can be given");
 		res = 1;
 		goto out;
 	} else if (argi->output_given) {
@@ -544,7 +527,7 @@ run the other option on the generated files\n");
 		/* no file opening in advance in explosion mode */
 		ctx->out = NULL;
 	} else if ((ctx->out = open_out(ctx->outfn, ctx->outfl)) == NULL) {
-		error(0, "cannot open output file '%s'", ctx->outfn);
+		error("cannot open output file '%s'", ctx->outfn);
 		res = 1;
 		goto out;
 	} else if (ctx->outfn == NULL) {
@@ -559,7 +542,7 @@ run the other option on the generated files\n");
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
-			error(0, "cannot open file '%s'", fn);
+			error("cannot open file '%s'", fn);
 			continue;
 		}
 

@@ -167,14 +167,14 @@ atl_set_ts_from_sns(ariva_tl_t l, const struct time_sns_s sns)
 	return;
 }
 
-static inline __attribute__((unused, pure)) uint16_t
+static inline __attribute__((unused, pure)) unsigned int
 atl_si(const struct ariva_tl_s *l)
 {
 	return scom_thdr_tblidx(AS_SCOM(l));
 }
 
 static inline void
-atl_set_si(ariva_tl_t l, uint16_t si)
+atl_set_si(ariva_tl_t l, unsigned int si)
 {
 	return scom_thdr_set_tblidx(AS_SCOM_THDR(l), si);
 }
@@ -515,7 +515,7 @@ static int
 parse_keyval(ariva_tl_t tgt, const char **p, const char *ep)
 {
 /* assumes tgt's si is set already */
-	uint16_t idx = atl_si(tgt);
+	unsigned int idx = atl_si(tgt);
 
 	if (**p == '\0') {
 		*p = NULL;
@@ -656,7 +656,7 @@ read_line(mux_ctx_t ctx, ariva_tl_t tl)
 	}
 	/* lookup the symbol (or create it) */
 	{
-		uint16_t symidx = ute_sym2idx(ctx->wrr, tl->symbuf);
+		unsigned int symidx = ute_sym2idx(ctx->wrr, tl->symbuf);
 		atl_set_si(tl, symidx);
 	}
 

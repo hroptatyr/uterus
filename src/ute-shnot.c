@@ -257,8 +257,8 @@ new_candle_p(shnot_ctx_t ctx, scom_t t)
 	return t2 >= t1;
 }
 
-static uint16_t
-copy_sym(shnot_ctx_t ctx, uint16_t cidx)
+static unsigned int
+copy_sym(shnot_ctx_t ctx, unsigned int cidx)
 {
 	const char *cur_sym = ute_idx2sym(ctx->rdr, cidx);
 	if (UNLIKELY(cur_sym == NULL)) {
@@ -268,11 +268,11 @@ copy_sym(shnot_ctx_t ctx, uint16_t cidx)
 }
 
 static void
-write_snap(shnot_ctx_t ctx, uint16_t cidx)
+write_snap(shnot_ctx_t ctx, unsigned int cidx)
 {
 	xsnap_t xn;
 	ssnp_t sn;
-	uint16_t nidx;
+	unsigned int nidx;
 	time_t ts;
 
 	if (xsnap_empty_p(ctx->bkt->snap + cidx)) {
@@ -304,7 +304,7 @@ new_candle(shnot_ctx_t ctx)
 	}
 
 	/* write all the snapshots so far */
-	for (uint16_t i = 0; i <= ctx->bkt->nsyms; i++) {
+	for (unsigned int i = 0; i <= ctx->bkt->nsyms; i++) {
 		write_snap(ctx, i);
 	}
 	return;
@@ -339,7 +339,7 @@ check_candle(shnot_ctx_t ctx, scom_t t)
 static void
 bucketiser(shnot_ctx_t ctx, scom_t t)
 {
-	uint16_t i = scom_thdr_tblidx(t);
+	unsigned int i = scom_thdr_tblidx(t);
 	xsnap_t b = ctx->bkt->snap + i;
 
 	check_candle(ctx, t);

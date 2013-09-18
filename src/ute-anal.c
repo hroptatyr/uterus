@@ -58,6 +58,8 @@
 # include <png.h>
 #endif	/* HAVE_PNG_H */
 
+#include "cmd-aux.c"
+
 #if !defined UNLIKELY
 # define UNLIKELY(_x)	__builtin_expect((_x), 0)
 #endif	/* !UNLIKELY */
@@ -87,38 +89,6 @@ struct anal_ctx_s {
 	int modu;
 	utectx_t u;
 };
-
-
-/* helper functions */
-static void
-__attribute__((format(printf, 1, 2), unused))
-verbprf(const char *UNUSED_nodbg(fmt), ...)
-{
-#if defined DEBUG_FLAG
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-#endif	/* DEBUG_FLAG */
-	return;
-}
-
-static void
-__attribute__((format(printf, 2, 3)))
-error(int eno, const char *fmt, ...)
-{
-	va_list vap;
-	va_start(vap, fmt);
-	vfprintf(stderr, fmt, vap);
-	va_end(vap);
-	if (eno || errno) {
-		fputc(':', stderr);
-		fputc(' ', stderr);
-		fputs(strerror(eno ?: errno), stderr);
-	}
-	fputc('\n', stderr);
-	return;
-}
 
 
 /* the actual anal'ing */
@@ -508,7 +478,7 @@ anal1(anal_ctx_t ctx)
 			rset_hmap();
 			for (scom_t ti; (ti = ute_iter(ctx->u)) != NULL;) {
 				/* now to what we always do */
-				uint16_t ttf = scom_thdr_tblidx(ti);
+				unsigned int ttf = scom_thdr_tblidx(ti);
 				time_t t = scom_thdr_sec(ti);
 
 				if (t >= ref && ttf == i) {
@@ -564,8 +534,8 @@ main(int argc, char *argv[])
 			ctx->modu = argi->modulus_arg;
 		}
 	} else if (argi->modulus_given) {
-		fputs("\
-warning: --modulus without --interval is not meaningful, ignored\n", stderr);
+		error("\
+warning: --modulus without --interval is not meaningful, ignored");
 	}
 
 	for (unsigned int j = 0; j < argi->inputs_num; j++) {
@@ -574,7 +544,7 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
-			error(0, "cannot open file `%s'", fn);
+			error("not open file `%s'", fn);
 			res = 1;
 			continue;
 		}

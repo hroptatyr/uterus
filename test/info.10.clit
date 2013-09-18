@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux --name 'TESJPY' -f dukas "${srcdir}/mux.a.dukasq" -o "info.10.ute"
+$ ute info "info.10.ute" && rm -- "info.10.ute"
+TESJPY	tick_b	tick_a
+$
+
+## info.10.clit ends here

@@ -253,7 +253,7 @@ parse_line(mux_ctx_t ctx, ff_msg_t msg)
 		sym[7 + (q - p)] = '\0';
 
 		/* little can go wrong from here, so just find the idx */
-		idx = ute_sym2idx(ctx->wrr, sym);
+		idx = (uint16_t)ute_sym2idx(ctx->wrr, sym);
 		ssnp_set_tblidx(msg->snp, idx);
 		ssnp_set_ttf(msg->snp, 0);
 	} else {

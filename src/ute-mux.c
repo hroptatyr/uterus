@@ -51,20 +51,11 @@
 #include <limits.h>
 #include <string.h>
 #include "module.h"
+#include "nifty.h"
 
 #include "utefile-private.h"
 #include "ute-mux.h"
 #include "cmd-aux.c"
-
-#if !defined UNLIKELY
-# define UNLIKELY(_x)	__builtin_expect((_x), 0)
-#endif	/* !UNLIKELY */
-#if !defined UNUSED
-# define UNUSED(_x)	__attribute__((unused)) _x
-#endif	/* !UNUSED */
-#if !defined countof
-# define countof(x)	(sizeof(x) / sizeof(*x))
-#endif	/* !countof */
 
 #if !defined _INDEXT
 # define _INDEXT

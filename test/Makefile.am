@@ -71,6 +71,7 @@ EXTRA_DIST += mux.j.uta
 EXTRA_DIST += mux.k.uta
 EXTRA_DIST += mux.l.uta
 EXTRA_DIST += mux.m.uta
+ut_tests += mux.22.clit
 
 EXTRA_DIST += mux.4.ref.ute
 EXTRA_DIST += mux.4.ref.beute

@@ -1,0 +1,18 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux --name 'TESJPY' -f dukas "${srcdir}/mux.a.dukasq" -o "mux.22.a.ute"
+$ ute mux --name 'TESUSD' -f dukas "${srcdir}/mux.a.dukasq" -o "mux.22.b.ute"
+$ ute mux -o "mux.22.ute" "mux.22.a.ute" "mux.22.b.ute" && \
+  rm -- "mux.22.a.ute" "mux.22.b.ute"
+$ ute print "mux.22.ute" && rm -- "mux.22.ute"
+TESJPY	2012-01-15T22:00:02.766+00:00	1	1	77.0560	1500000
+TESJPY	2012-01-15T22:00:02.766+00:00	1	2	77.0600	750000
+TESUSD	2012-01-15T22:00:02.766+00:00	2	1	77.0560	1500000
+TESUSD	2012-01-15T22:00:02.766+00:00	2	2	77.0600	750000
+TESJPY	2012-01-15T22:00:02.998+00:00	1	1	77.0550	750000
+TESJPY	2012-01-15T22:00:02.998+00:00	1	2	77.1000	1690000
+TESUSD	2012-01-15T22:00:02.998+00:00	2	1	77.0550	750000
+TESUSD	2012-01-15T22:00:02.998+00:00	2	2	77.1000	1690000
+$
+
+## mux.22.clit ends here

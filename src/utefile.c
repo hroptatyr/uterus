@@ -2031,20 +2031,6 @@ this version of uterus cannot cope with tick type %x", t->ttf);
 	return;
 }
 
-/* private version */
-void
-ute_add_ticks(utectx_t ctx, const void *src, size_t nticks)
-{
-	assert(tpc_active_p(ctx->tpc));
-	if (tpc_full_p(ctx->tpc)) {
-		/* oh current tpc is full, flush and start over */
-		ute_flush(ctx);
-	}
-	/* this needs looping! */
-	tpc_add(ctx->tpc, src, nticks);
-	return;
-}
-
 void
 ute_add_tick_as(utectx_t ctx, scom_t t, scom_t h)
 {

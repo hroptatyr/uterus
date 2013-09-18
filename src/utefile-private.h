@@ -126,9 +126,6 @@ extern int clone_page(uteseek_t sk, utectx_t ctx, uteseek_t src);
 
 extern void bump_header(struct utehdr2_s *hdr);
 
-/* add a whole bunch of ticks */
-extern void ute_add_ticks(utectx_t ctx, const void *p, size_t nticks);
-
 /**
  * Add the tick T to the ute context specified by CTX, using the header in H. */
 extern void ute_add_tick_as(utectx_t ctx, scom_t t, scom_t h);

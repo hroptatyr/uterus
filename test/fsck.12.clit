@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ cp "${srcdir}/mux.4.ref.beute" "fsck.12.ute"
+$ ute fsck --big-endian "fsck.12.ute"
+$ shack "fsck.12.ute" `shack "${srcdir}/mux.4.ref.beute"` && rm -- "fsck.12.ute"
+$
+
+## fsck.12.clit ends here

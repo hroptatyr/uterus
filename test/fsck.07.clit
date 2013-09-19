@@ -1,0 +1,6 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute fsck -n "${srcdir}/mux.6.ref.ute"
+$
+
+## fsck.07.clit ends here

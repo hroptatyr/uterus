@@ -1,0 +1,13 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## testing ex situ compression of compressed file
+$ if test "${endian}" = "big"; then \
+	cp "${srcdir}/fsck.17.ref.beute" "fsck.19.ref.ute"; \
+  elif test "${endian}" = "little"; then \
+	cp "${srcdir}/fsck.17.ref.leute" "fsck.19.ref.ute"; \
+  fi
+$ ute fsck --compress -o "fsck.19.ute" "fsck.19.ref.ute"
+$ hxdiff "fsck.19.ute" "fsck.19.ref.ute" && rm -- "fsck.19.ute" "fsck.19.ref.ute"
+$
+
+## fsck.19.clit ends here

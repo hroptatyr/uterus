@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ignore-output ?1 ute fsck -n "${srcdir}/fsck.b.ute"
+file `${srcdir}/fsck.b.ute' has no endianness indicator ...
+$
+
+## fsck.04.clit ends here

@@ -11,11 +11,14 @@ AM_CPPFLAGS += -I$(abs_top_srcdir)/src
 AM_LDFLAGS = -L$(abs_top_builddir)/src
 
 EXTRA_DIST = $(ut_tests) $(BUILT_SOURCES)
-TESTS = $(ut_tests) $(bin_tests)
+TESTS = $(ut_tests) $(bin_tests) $(XFAIL_TESTS)
+XFAIL_TESTS = $(ut_xtests) $(bin_xtests)
 BUILT_SOURCES =
 check_PROGRAMS =
 ut_tests =
+ut_xtests =
 bin_tests =
+bin_xtests =
 
 ## we used to provide a separate libm30 but that turned out to be bollocks
 m30_LIBS = $(uterus_LIBS)

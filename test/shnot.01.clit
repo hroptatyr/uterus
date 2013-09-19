@@ -1,6 +1,6 @@
 #!/usr/bin/clitoris ## -*- shell-script -*-
 
-$ if test "${endian}" = "big"; then \
+$ ignore if test "${endian}" = "big"; then \
 	ute fsck --big-endian "${srcdir}/print.c.ute" -o "shnot.01.inpute"; \
   elif test "${endian}" = "little"; then \
 	cp -a "${srcdir}/print.c.ute" "shnot.01.inpute"; \

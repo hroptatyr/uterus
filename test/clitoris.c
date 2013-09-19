@@ -49,6 +49,7 @@
 #include <sys/wait.h>
 #include <sys/epoll.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <pty.h>
 /* check for me */
@@ -89,14 +90,8 @@ struct clit_buf_s {
  * A clit bit can be an ordinary memory buffer (z > 0 && d),
  * a file descriptor (fd != 0 && d == NULL), or a file name (z == -1UL && fn) */
 struct clit_bit_s {
-	union {
-		size_t z;
-		int fd;
-	};
-	union {
-		const char *d;
-		const char *fn;
-	};
+	size_t z;
+	const char *d;
 };
 
 struct clit_chld_s {
@@ -108,6 +103,7 @@ struct clit_chld_s {
 
 	unsigned int verbosep:1;
 	unsigned int ptyp:1;
+	unsigned int keep_going_p:1;
 
 	unsigned int timeo;
 };
@@ -118,6 +114,15 @@ struct clit_tst_s {
 	clit_bit_t out;
 	clit_bit_t err;
 	clit_bit_t rest;
+
+	/* specific per-test flags */
+	/** don't fail when the actual output differs from th expected output */
+	unsigned int ign_out:1;
+	/** don't fail when the command returns non-SUCCESS */
+	unsigned int ign_ret:1;
+
+	/** expect this return code, or any but 0 if all bits are set */
+	unsigned int exp_ret:8;
 };
 
 
@@ -164,13 +169,13 @@ clit_bit_fn_p(clit_bit_t x)
 static inline clit_bit_t
 clit_make_fd(int fd)
 {
-	return (clit_bit_t){.fd = fd};
+	return (clit_bit_t){.z = fd};
 }
 
 static inline clit_bit_t
 clit_make_fn(const char *fn)
 {
-	return (clit_bit_t){.z = -1UL, .fn = fn};
+	return (clit_bit_t){.z = -1UL, .d = fn};
 }
 
 static const char*
@@ -350,6 +355,80 @@ eof:
 }
 
 static int
+find_ignore(struct clit_tst_s tst[static 1])
+{
+	with (const char *cmd = tst->cmd.d, *const ec = cmd + tst->cmd.z) {
+		static char tok_ign[] = "ignore";
+		static char tok_out[] = "output";
+		static char tok_ret[] = "return";
+
+		if (strncmp(cmd, tok_ign, sizeof(tok_ign) - 1U)) {
+			/* don't bother */
+			break;
+		}
+		/* fast-forward a little */
+		cmd += sizeof(tok_ign) - 1U;
+
+		if (isspace(*cmd)) {
+			/* it's our famous ignore token it seems */
+			tst->ign_out = tst->ign_ret = 1U;
+		} else if (*cmd++ != '-') {
+			/* unknown token then */
+			break;
+		} else if (!strncmp(cmd, tok_out, sizeof(tok_out) - 1U)) {
+			/* ignore-output it is */
+			tst->ign_out = 1U;
+			cmd += sizeof(tok_out) - 1U;
+		} else if (!strncmp(cmd, tok_ret, sizeof(tok_ret) - 1U)) {
+			/* ignore-return it is */
+			tst->ign_ret = 1U;
+			cmd += sizeof(tok_ret) - 1U;
+		} else {
+			/* don't know what's going on */
+			break;
+		}
+
+		/* now, fast-forward to the actual command, and reass */
+		while (++cmd < ec && isspace(*cmd));
+		tst->cmd.z -= (cmd - tst->cmd.d);
+		tst->cmd.d = cmd;
+	}
+	return 0;
+}
+
+static int
+find_negexp(struct clit_tst_s tst[static 1])
+{
+	with (const char *cmd = tst->cmd.d, *const ec = cmd + tst->cmd.z) {
+		unsigned int exp = 0U;
+
+		switch (*cmd++) {
+		case '!'/*NEG*/:
+			exp = 255U;
+			break;
+		case '?'/*EXP*/:;
+			char *p;
+			exp = strtoul(cmd, &p, 10);
+			cmd = cmd + (p - cmd);
+			break;
+		default:
+			return 0;
+		}
+
+		if (!isspace(*cmd)) {
+			return 0;
+		}
+
+		/* now, fast-forward to the actual command, and reass */
+		while (++cmd < ec && isspace(*cmd));
+		tst->cmd.z -= (cmd - tst->cmd.d);
+		tst->cmd.d = cmd;
+		tst->exp_ret = exp;
+	}
+	return 0;
+}
+
+static int
 find_tst(struct clit_tst_s tst[static 1], const char *bp, size_t bz)
 {
 	if (UNLIKELY(!(tst->cmd = find_cmd(bp, bz)).z)) {
@@ -381,6 +460,13 @@ find_tst(struct clit_tst_s tst[static 1], const char *bp, size_t bz)
 			tst->out = (clit_bit_t){.z = outz, bp};
 		}
 	}
+
+	/* oh let's see if we should ignore things */
+	find_ignore(tst);
+
+	/* check for expect and negate operators */
+	find_negexp(tst);
+
 	tst->err = (clit_bit_t){0U};
 	return 0;
 fail:
@@ -427,6 +513,8 @@ find_opt(struct clit_chld_s ctx[static 1], const char *bp, size_t bz)
 			if ((timeo = strtoul(arg, &p, 0), *p == '\n')) {
 				ctx->timeo = (unsigned int)timeo;
 			}
+		} else if (CMP(mp, "keep-going\n") == 0) {
+			ctx->keep_going_p = opt;
 		}
 #undef CMP
 	}
@@ -474,7 +562,7 @@ pipe_bits(int p[static 2], clit_bit_t b)
 	if (clit_bit_buf_p(b) && UNLIKELY(pipe(p)) < 0) {
 		return -1;
 	} else if (clit_bit_fd_p(b)) {
-		p[0] = b.fd;
+		p[0] = (int)b.z;
 		p[1] = -1;
 	} else if (clit_bit_fn_p(b)) {
 		p[0] = -1;
@@ -525,12 +613,12 @@ diff_bits(clit_bit_t exp, clit_bit_t is)
 		if (!clit_bit_fn_p(exp)) {
 			snprintf(fa, sizeof(fa), "/dev/fd/%d", *pin_a);
 		} else {
-			snprintf(fa, sizeof(fa), "%s", exp.fn);
+			snprintf(fa, sizeof(fa), "%s", exp.d);
 		}
 		if (!clit_bit_fn_p(is)) {
 			snprintf(fb, sizeof(fb), "/dev/fd/%d", *pin_b);
 		} else {
-			snprintf(fb, sizeof(fb), "%s", is.fn);
+			snprintf(fb, sizeof(fb), "%s", is.d);
 		}
 
 		execvp("diff", diff_opt);
@@ -677,12 +765,29 @@ run_tst(struct clit_chld_s ctx[static 1], struct clit_tst_s tst[static 1])
 	}
 
 	rc = diff_out(ctx, tst->out);
+	if (tst->ign_out) {
+		rc = 0;
+	}
 
 	while (waitpid(ctx->chld, &st, 0) != ctx->chld);
 	if (LIKELY(WIFEXITED(st))) {
-		rc = rc ?: WEXITSTATUS(st);
+		int tst_rc = WEXITSTATUS(st);
+
+		if (tst->exp_ret == tst_rc) {
+			tst_rc = 0;
+		} else if (tst->exp_ret == 255U && tst_rc) {
+			tst_rc = 0;
+		} else {
+			tst_rc = 1;
+		}
+
+		/* now assign */
+		rc = rc ?: tst_rc;
 	} else {
 		rc = 1;
+	}
+	if (tst->ign_ret) {
+		rc = 0;
 	}
 
 	if (UNLIKELY(ctx->ptyp)) {
@@ -771,6 +876,7 @@ prepend_path(const char *p)
 
 static int verbosep;
 static int ptyp;
+static int keep_going_p;
 static unsigned int timeo;
 
 static int
@@ -793,6 +899,9 @@ test_f(clitf_t tf)
 	if (ptyp) {
 		ctx->ptyp = 1U;
 	}
+	if (keep_going_p) {
+		ctx->keep_going_p = 1U;
+	}
 	ctx->timeo = timeo;
 
 	/* find options in the test script */
@@ -807,10 +916,13 @@ test_f(clitf_t tf)
 			fputs("$ ", stderr);
 			fwrite(tst->cmd.d, sizeof(char), tst->cmd.z, stderr);
 		}
-		if ((rc = run_tst(ctx, tst))) {
+		with (int tst_rc = run_tst(ctx, tst)) {
 			if (ctx->verbosep) {
-				fprintf(stderr, "$? %d\n", rc);
+				fprintf(stderr, "$? %d\n", tst_rc);
 			}
+			rc = rc ?: tst_rc;
+		}
+		if (rc && !ctx->keep_going_p) {
 			break;
 		}
 	}
@@ -894,6 +1006,9 @@ main(int argc, char *argv[])
 	}
 	if (argi->timeout_given) {
 		timeo = argi->timeout_arg;
+	}
+	if (argi->keep_going_given) {
+		keep_going_p = 1;
 	}
 
 	/* prepend our current directory and our argv[0] directory */

@@ -1,9 +1,0 @@
-## -*- shell-script -*-
-
-TOOL=ute
-INFILE="${srcdir}/mux.4.ref.ute"
-REFFILE="${srcdir}/mux.4.ref.ute"
-COMMENT="testing ex situ conversions"
-CMDLINE="fsck --little-endian '${INFILE}' -o '${TS_OUTFILE}'"
-
-## fsck.13.ut ends here

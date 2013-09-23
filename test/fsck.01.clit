@@ -1,0 +1,7 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ignore-output ?1 ute fsck -n "${srcdir}/print.a.ute"
+file `${srcdir}/print.a.ute' needs upgrading (ute format 0.1) ...
+$
+
+## fsck.01.clit ends here

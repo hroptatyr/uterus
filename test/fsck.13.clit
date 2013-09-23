@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## testing ex situ conversions
+$ ute fsck --little-endian -o "fsck.13.ute" "${srcdir}/mux.4.ref.ute"
+$ @hxdiff "${srcdir}/mux.4.ref.ute" "fsck.13.ute" && rm -- "fsck.13.ute"
+$
+
+## fsck.13.clit ends here

@@ -11,24 +11,24 @@ AM_CPPFLAGS += -I$(abs_top_srcdir)/src
 AM_LDFLAGS = -L$(abs_top_builddir)/src
 
 EXTRA_DIST = $(ut_tests) $(BUILT_SOURCES)
-TESTS = $(ut_tests) $(bin_tests)
+TESTS = $(ut_tests) $(bin_tests) $(XFAIL_TESTS)
+XFAIL_TESTS = $(ut_xtests) $(bin_xtests)
 BUILT_SOURCES =
 check_PROGRAMS =
 ut_tests =
+ut_xtests =
 bin_tests =
+bin_xtests =
 
 ## we used to provide a separate libm30 but that turned out to be bollocks
 m30_LIBS = $(uterus_LIBS)
 uterus_LIBS = $(abs_top_builddir)/src/libuterus.la
 
-TEST_EXTENSIONS = .ut .clit
+TEST_EXTENSIONS = .clit
 AM_LOG_COMPILER = false
 
-UT_LOG_COMPILER = $(builddir)/ut-test
-AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
-
 CLIT_LOG_COMPILER = $(builddir)/clitoris
-AM_CLIT_LOG_FLAGS = -v --builddir $(top_builddir)/src
+AM_CLIT_LOG_FLAGS = -v -k --builddir $(top_builddir)/src
 
 ut_tests += mux.01.clit
 ut_tests += mux.02.clit
@@ -117,36 +117,36 @@ ut_tests += chndl.01.clit
 ut_tests += chndl.02.clit
 EXTRA_DIST += chndl.2.ref.ute
 
-ut_tests += fsck.1.ut
-ut_tests += fsck.2.ut
-ut_tests += fsck.3.ut
-ut_tests += fsck.4.ut
-ut_tests += fsck.5.ut
-ut_tests += fsck.6.ut
-ut_tests += fsck.7.ut
-ut_tests += fsck.8.ut
-ut_tests += fsck.9.ut
-ut_tests += fsck.10.ut
-ut_tests += fsck.11.ut
-ut_tests += fsck.12.ut
-ut_tests += fsck.13.ut
-ut_tests += fsck.14.ut
-ut_tests += fsck.15.ut
-ut_tests += fsck.16.ut
+ut_tests += fsck.01.clit
+ut_tests += fsck.02.clit
+ut_tests += fsck.03.clit
+ut_tests += fsck.04.clit
+ut_tests += fsck.05.clit
+ut_tests += fsck.06.clit
+ut_tests += fsck.07.clit
+ut_tests += fsck.08.clit
+ut_tests += fsck.09.clit
+ut_tests += fsck.10.clit
+ut_tests += fsck.11.clit
+ut_tests += fsck.12.clit
+ut_tests += fsck.13.clit
+ut_tests += fsck.14.clit
+ut_tests += fsck.15.clit
+ut_tests += fsck.16.clit
 if HAVE_LZMA
-ut_tests += fsck.17.ut
-ut_tests += fsck.18.ut
-ut_tests += fsck.19.ut
-ut_tests += fsck.20.ut
-ut_tests += fsck.21.ut
-ut_tests += fsck.22.ut
-ut_tests += fsck.23.ut
-ut_tests += fsck.24.ut
+ut_tests += fsck.17.clit
+ut_tests += fsck.18.clit
+ut_tests += fsck.19.clit
+ut_tests += fsck.20.clit
+ut_tests += fsck.21.clit
+ut_tests += fsck.22.clit
+ut_tests += fsck.23.clit
+ut_tests += fsck.24.clit
 endif  HAVE_LZMA
-ut_tests += fsck.25.ut
-ut_tests += fsck.26.ut
-ut_tests += fsck.27.ut
-ut_tests += fsck.28.ut
+ut_tests += fsck.25.clit
+ut_tests += fsck.26.clit
+ut_tests += fsck.27.clit
+ut_tests += fsck.28.clit
 EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 EXTRA_DIST += fsck.17.ref.leute
@@ -321,12 +321,6 @@ m62_10_LDFLAGS = $(AM_LDFLAGS) -static
 m62_10_LDADD = $(m30_LIBS)
 bin_tests += m62-10
 
-
-## the test suite code
-check_PROGRAMS += ut-test
-ut_test_LDADD = ../src/libversion.a
-BUILT_SOURCES += ut-test.x ut-test.h
-EXTRA_DIST += ut-test.sh
 
 ## our friendly helpers
 check_PROGRAMS += clitoris

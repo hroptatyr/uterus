@@ -1,0 +1,16 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## testing in situ conversions (on LE machine LE->LE, on BE machine BE->BE)
+$ if test "${endian}" = "big"; then \
+	cat "${srcdir}/mux.7.ref.beute" > "fsck.28.ute"; \
+	cat "${srcdir}/mux.7.ref.beute" > "fsck.28.ref.ute"; \
+  elif test "${endian}" = "little"; then \
+	cat "${srcdir}/mux.7.ref.ute" > "fsck.28.ute"; \
+	cat "${srcdir}/mux.7.ref.ute" > "fsck.28.ref.ute"; \
+  fi
+$ ute fsck "fsck.28.ute"
+$ hxdiff "fsck.28.ref.ute" "fsck.28.ute" && \
+	rm -- "fsck.28.ref.ute" "fsck.28.ute"
+$
+
+## fsck.28.clit ends here

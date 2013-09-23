@@ -1,0 +1,16 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## testing decomp/comp
+$ if test "${endian}" = "big"; then \
+	cat "${srcdir}/fsck.17.ref.beute" > "fsck.24.ute"; \
+  elif test "${endian}" = "little"; then \
+	cat "${srcdir}/fsck.17.ref.leute" > "fsck.24.ute"; \
+  fi
+$ cat "fsck.24.ute" > "fsck.24.ref.ute"
+$ ute fsck --decompress "fsck.24.ute"
+$ ute fsck --compress "fsck.24.ute"
+$ hxdiff "fsck.24.ref.ute" "fsck.24.ute" && \
+	rm -- "fsck.24.ute" "fsck.24.ref.ute"
+$
+
+## fsck.24.clit ends here

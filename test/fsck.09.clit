@@ -2,7 +2,7 @@
 
 $ cat "${srcdir}/mux.4.ref.beute" > "fsck.09.ute"
 $ ute fsck --little-endian "fsck.09.ute"
-$ shack "fsck.09.ute" `shack "${srcdir}/mux.4.ref.ute"` && rm -- "fsck.09.ute"
+$ @hxdiff "${srcdir}/mux.4.ref.ute" "fsck.09.ute" && rm -- "fsck.09.ute"
 $
 
 ## fsck.09.clit ends here

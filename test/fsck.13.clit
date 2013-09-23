@@ -2,7 +2,7 @@
 
 ## testing ex situ conversions
 $ ute fsck --little-endian -o "fsck.13.ute" "${srcdir}/mux.4.ref.ute"
-$ shack "fsck.13.ute" `shack "${srcdir}/mux.4.ref.ute"` && rm -- "fsck.13.ute"
+$ @hxdiff "${srcdir}/mux.4.ref.ute" "fsck.13.ute" && rm -- "fsck.13.ute"
 $
 
 ## fsck.13.clit ends here

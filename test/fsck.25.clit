@@ -2,11 +2,11 @@
 
 ## testing ex situ conversions (on LE machine BE->LE, on BE machine LE->BE
 $ if test "${endian}" = "big"; then \
-	cp "${srcdir}/mux.4.ref.ute" "fsck.25.ute"; \
-	cp "${srcdir}/mux.4.ref.beute" "fsck.25.ref.ute"; \
+	cat "${srcdir}/mux.4.ref.ute" > "fsck.25.ute"; \
+	cat "${srcdir}/mux.4.ref.beute" > "fsck.25.ref.ute"; \
   elif test "${endian}" = "little"; then \
-	cp "${srcdir}/mux.4.ref.beute" "fsck.25.ute"; \
-	cp "${srcdir}/mux.4.ref.ute" "fsck.25.ref.ute"; \
+	cat "${srcdir}/mux.4.ref.beute" > "fsck.25.ute"; \
+	cat "${srcdir}/mux.4.ref.ute" > "fsck.25.ref.ute"; \
   fi
 $ ute fsck "fsck.25.ute"
 $ hxdiff "fsck.25.ref.ute" "fsck.25.ute" && \

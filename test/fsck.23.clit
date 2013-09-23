@@ -2,9 +2,9 @@
 
 ## testing decomp/comp
 $ if test "${endian}" = "big"; then \
-	cp "${srcdir}/fsck.17.ref.beute" "fsck.23.ute"; \
+	cat "${srcdir}/fsck.17.ref.beute" > "fsck.23.ute"; \
   elif test "${endian}" = "little"; then \
-	cp "${srcdir}/fsck.17.ref.leute" "fsck.23.ute"; \
+	cat "${srcdir}/fsck.17.ref.leute" > "fsck.23.ute"; \
   fi
 $ ute fsck --decompress "fsck.23.ute" -o "fsck.23.d.ute"
 $ ute fsck --compress "fsck.23.d.ute"

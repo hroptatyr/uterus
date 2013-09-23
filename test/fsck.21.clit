@@ -2,11 +2,11 @@
 
 ## testing ex situ decompression of compressed file
 $ if test "${endian}" = "big"; then \
-	cp "${srcdir}/fsck.17.ref.beute" "fsck.21.ute"; \
+	cat "${srcdir}/fsck.17.ref.beute" > "fsck.21.ute"; \
 	ute fsck --big-endian "${srcdir}/mux.7.ref.ute" -o "fsck.21.ref.ute"; \
   elif test "${endian}" = "little"; then \
-	cp "${srcdir}/fsck.17.ref.leute" "fsck.21.ute"; \
-	cp "${srcdir}/mux.7.ref.ute" "fsck.21.ref.ute"; \
+	cat "${srcdir}/fsck.17.ref.leute" > "fsck.21.ute"; \
+	cat "${srcdir}/mux.7.ref.ute" > "fsck.21.ref.ute"; \
   fi
 $ ute fsck --decompress "fsck.21.ute" -o "fsck.21.out.ute"
 $ hxdiff "fsck.21.out.ute" "fsck.21.ref.ute" && \

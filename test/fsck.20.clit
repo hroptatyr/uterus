@@ -2,11 +2,11 @@
 
 ## testing in situ compression of compressed file
 $ if test "${endian}" = "big"; then \
-	cp "${srcdir}/fsck.17.ref.beute" "fsck.20.ute"; \
-	cp "${srcdir}/fsck.17.ref.beute" "fsck.20.ref.ute"; \
+	cat "${srcdir}/fsck.17.ref.beute" > "fsck.20.ute"; \
+	cat "${srcdir}/fsck.17.ref.beute" > "fsck.20.ref.ute"; \
   elif test "${endian}" = "little"; then \
-	cp "${srcdir}/fsck.17.ref.leute" "fsck.20.ute"; \
-	cp "${srcdir}/fsck.17.ref.leute" "fsck.20.ref.ute"; \
+	cat "${srcdir}/fsck.17.ref.leute" > "fsck.20.ute"; \
+	cat "${srcdir}/fsck.17.ref.leute" > "fsck.20.ref.ute"; \
   fi
 $ ute fsck --compress "fsck.20.ute"
 $ hxdiff "fsck.20.ute" "fsck.20.ref.ute" && rm -- "fsck.20.ute" "fsck.20.ref.ute"

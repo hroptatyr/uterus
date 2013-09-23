@@ -1,6 +1,6 @@
 #!/usr/bin/clitoris ## -*- shell-script -*-
 
-$ cp "${srcdir}/mux.4.ref.beute" "fsck.09.ute"
+$ cat "${srcdir}/mux.4.ref.beute" > "fsck.09.ute"
 $ ute fsck --little-endian "fsck.09.ute"
 $ shack "fsck.09.ute" `shack "${srcdir}/mux.4.ref.ute"` && rm -- "fsck.09.ute"
 $

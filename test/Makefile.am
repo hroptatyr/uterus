@@ -24,11 +24,8 @@ bin_xtests =
 m30_LIBS = $(uterus_LIBS)
 uterus_LIBS = $(abs_top_builddir)/src/libuterus.la
 
-TEST_EXTENSIONS = .ut .clit
+TEST_EXTENSIONS = .clit
 AM_LOG_COMPILER = false
-
-UT_LOG_COMPILER = $(builddir)/ut-test
-AM_UT_LOG_FLAGS = --builddir $(top_builddir)/src
 
 CLIT_LOG_COMPILER = $(builddir)/clitoris
 AM_CLIT_LOG_FLAGS = -v -k --builddir $(top_builddir)/src
@@ -324,12 +321,6 @@ m62_10_LDFLAGS = $(AM_LDFLAGS) -static
 m62_10_LDADD = $(m30_LIBS)
 bin_tests += m62-10
 
-
-## the test suite code
-check_PROGRAMS += ut-test
-ut_test_LDADD = ../src/libversion.a
-BUILT_SOURCES += ut-test.x ut-test.h
-EXTRA_DIST += ut-test.sh
 
 ## our friendly helpers
 check_PROGRAMS += clitoris

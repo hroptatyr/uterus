@@ -328,21 +328,21 @@ clitoris_CPPFLAGS = $(AM_CPPFLAGS)
 clitoris_CPPFLAGS += -D_GNU_SOURCE
 clitoris_LDFLAGS = $(AM_LDFLAGS) -static
 clitoris_LDADD = -lutil
-BUILT_SOURCES += clitoris.x clitoris.h
+BUILT_SOURCES += clitoris.x clitoris.xh
 
 check_PROGRAMS += shack
-BUILT_SOURCES += shack.x shack.h
+BUILT_SOURCES += shack.x shack.xh
 
 check_PROGRAMS += hxdiff
-BUILT_SOURCES += hxdiff.x hxdiff.h
+BUILT_SOURCES += hxdiff.x hxdiff.xh
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull
 %.x %.h: %.ggo
-	$(AM_V_GEN) gengetopt -F $* -c x -i $<
+	$(AM_V_GEN) gengetopt -F $* -c x -H xh -i $<
 	@sed -e 's,_PARSER_VERSION VERSION,_PARSER_VERSION "$(VERSION)",g' \
-	     $*.h > $*.h-t \
-	&& mv $*.h-t $*.h
+	     $*.xh > $*.xh-t \
+	&& mv $*.xh-t $*.xh
 
 clean-local:
 	-rm -rf *.tmpd

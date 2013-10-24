@@ -1,0 +1,8 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ cat "${srcdir}/mux.4.ref.ute" > "fsck.10.ute"
+$ ute fsck --little-endian "fsck.10.ute"
+$ @hxdiff "${srcdir}/mux.4.ref.ute" "fsck.10.ute" && rm -- "fsck.10.ute"
+$
+
+## fsck.10.clit ends here

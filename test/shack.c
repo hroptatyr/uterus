@@ -298,7 +298,7 @@ sha_chunk(const uint32_t b32[static 16], sha_t old)
 }
 
 static sha_t
-sha_fin(const uint32_t b32[static 1], sha_t old, size_t fz/*in bytes*/)
+sha_fin(const uint32_t b32[static 16U], sha_t old, size_t fz/*in bytes*/)
 {
 	uint32_t l[16U];
 	size_t fz512 = fz % 64U;
@@ -349,7 +349,7 @@ shaf(sha_t *tgt, const char *fn)
 
 	/* get the file size */
 	if ((fz = st.st_size) == 0U) {
-		h = sha_fin(NULL, h, 0U);
+		h = sha_fin((uint32_t[16U]){}, h, 0U);
 		goto out;
 	}
 	/* now map considerable portions of the file and process */
@@ -518,7 +518,7 @@ nibble:
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "shack.h"
+#include "shack.xh"
 #include "shack.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
@@ -533,7 +533,7 @@ main(int argc, char *argv[])
 
 	if (cmdline_parser(argc, argv, argi)) {
 		goto out;
-	} else if (argi->inputs_num < 1) {
+	} else if (argi->inputs_num < 1U) {
 		print_help_common();
 		goto out;
 	}
@@ -550,7 +550,7 @@ main(int argc, char *argv[])
 
 		/* default for now is ret code 1 */
 		rc = 1;
-		for (unsigned int i = 1; i < argi->inputs_num; i++) {
+		for (unsigned int i = 1U; i < argi->inputs_num; i++) {
 			const char *arg = argi->inputs[i];
 			sha_t x = str_to_sha(arg);
 

@@ -1,0 +1,14 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## testing ex situ compression
+$ ute fsck --compress -o "fsck.17.ute" "${srcdir}/mux.7.ref.ute"
+$ if test "${endian}" = "big"; then \
+	hxdiff "fsck.17.ute" "${srcdir}/fsck.17.ref.beute"; \
+  elif test "${endian}" = "little"; then \
+	hxdiff "fsck.17.ute" "${srcdir}/fsck.17.ref.leute"; \
+  else \
+	false; \
+  fi && rm -- "fsck.17.ute"
+$
+
+## fsck.17.clit ends here

@@ -49,6 +49,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <errno.h>
+#include <poll.h>
 
 #if !defined LIKELY
 # define LIKELY(_x)	__builtin_expect((_x), 1)
@@ -84,8 +85,11 @@ struct clit_buf_s {
 };
 
 struct clit_chld_s {
-	int fd_df1;
-	int fd_df2;
+	const char *fn1;
+	const char *fn2;
+
+	int fd1;
+	int fd2;
 	pid_t chld;
 
 	unsigned int verbosep:1;
@@ -127,6 +131,21 @@ unblock_sigs(void)
 	return;
 }
 
+static void
+setsock_nonblock(int sock)
+{
+	int opts;
+
+	/* get former options */
+	opts = fcntl(sock, F_GETFL);
+	if (opts < 0) {
+		return;
+	}
+	opts |= O_NONBLOCK;
+	(void)fcntl(sock, F_SETFL, opts);
+	return;
+}
+
 
 static int
 init_chld(struct clit_chld_s UNUSED(ctx)[static 1])
@@ -150,18 +169,34 @@ fini_chld(struct clit_chld_s UNUSED(ctx)[static 1])
 	return 0;
 }
 
+static void
+mkfifofn(char *restrict buf, size_t bsz, const char *fn)
+{
+	static char i = '1';
+	const char *tmp;
+
+	if ((tmp = strrchr(fn, '/')) != NULL) {
+		fn = tmp + 1U;
+	}
+	snprintf(buf, bsz, "hex output for FILE%c (%s)", i++, fn);
+	return;
+}
+
 static int
 init_diff(struct clit_chld_s ctx[static 1])
 {
-	int p_exp[2];
-	int p_is[2];
-	pid_t diff;
+	static char expfn[PATH_MAX];
+	static char actfn[PATH_MAX];
+	pid_t diff = -1;
 
-	/* expected and is pipes for diff */
-	if (pipe(p_exp) < 0) {
-		return -1;
-	} else if (pipe(p_is) < 0) {
-		goto clo_exp;
+	if (mkfifofn(expfn, sizeof(expfn), ctx->fn1),
+	    mkfifo(expfn, 0666) < 0) {
+		error("cannot create fifo `%s'", expfn);
+		goto out;
+	} else if (mkfifofn(actfn, sizeof(actfn), ctx->fn2),
+		   mkfifo(actfn, 0666) < 0) {
+		error("cannot create fifo `%s'", actfn);
+		goto out;
 	}
 
 	block_sigs();
@@ -169,27 +204,18 @@ init_diff(struct clit_chld_s ctx[static 1])
 	case -1:
 		/* i am an error */
 		unblock_sigs();
-		goto clo;
+		error("vfork failed");
+		break;
 
 	case 0:;
 		/* i am the child */
-		static char fa[64];
-		static char fb[64];
 		static char *const diff_opt[] = {
 			"diff",
-			"-u", "--label=expected", "--label=actual",
-			fa, fb, NULL,
+			"-u",
+			expfn, actfn, NULL,
 		};
 
 		unblock_sigs();
-
-		close(STDIN_FILENO);
-		/* kick the write ends of our pipes */
-		close(p_exp[1]);
-		close(p_is[1]);
-
-		snprintf(fa, sizeof(fa), "/dev/fd/%d", *p_exp);
-		snprintf(fb, sizeof(fb), "/dev/fd/%d", *p_is);
 
 		execvp("diff", diff_opt);
 		error("execlp failed");
@@ -197,27 +223,34 @@ init_diff(struct clit_chld_s ctx[static 1])
 
 	default:;
 		/* i am the parent */
+		int expfd;
+		int actfd;
 
-		/* clean up descriptors */
-		close(*p_exp);
-		close(*p_is);
+		expfd = open(expfn, O_WRONLY);
+		actfd = open(actfn, O_WRONLY);
 
 		/* and put result descriptors in output args */
-		ctx->fd_df1 = p_exp[1];
-		ctx->fd_df2 = p_is[1];
+		ctx->fd1 = expfd;
+		ctx->fd2 = actfd;
 		ctx->chld = diff;
+
+		/* make out descriptors non-blocking */
+		setsock_nonblock(ctx->fd1);
+		setsock_nonblock(ctx->fd2);
 
 		/* diff's stdout can just go straight there */
 		break;
 	}
-	return 0;
-clo:
-	close(p_is[0]);
-	close(p_is[1]);
-clo_exp:
-	close(p_exp[0]);
-	close(p_exp[1]);
-	return -1;
+out:
+	/* clean up our fifo files, let's hope there's no other files
+	 * with that name, innit? */
+	if (*expfn) {
+		(void)unlink(expfn);
+	}
+	if (*actfn) {
+		(void)unlink(actfn);
+	}
+	return diff;
 }
 
 static int
@@ -340,6 +373,125 @@ hexlify(const char *src, size_t ssz, off_t off)
 	return (clit_buf_t){.z = bp - buf, .d = buf};
 }
 
+static unsigned int
+pollpair(int fds[static 2U])
+{
+/* find the pairings of fd1 in/out, return bitmask
+ * iohhee meaning input possible, output possible, hup, hup, err, err */
+#define PIO	(POLLIN | POLLOUT)
+	struct pollfd pfds[] = {
+		{
+			.fd = fds[0],
+			.events = POLLIN,
+		}, {
+			.fd = fds[1],
+			.events = POLLOUT,
+		}
+	};
+	int npl = 0;
+
+	if (poll(pfds, countof(pfds), 1) <= 0) {
+		return 0;
+	}
+	if ((pfds[0].revents | pfds[1].revents) & POLLIN) {
+		npl |= 1;
+	}
+	if ((pfds[0].revents | pfds[1].revents) & POLLOUT) {
+		npl |= 2;
+	}
+	if (pfds[0].revents & POLLHUP) {
+		npl |= 1 << 2U;
+	}
+	if (pfds[1].revents & POLLHUP) {
+		npl |= 2 << 2U;
+	}
+	if (pfds[0].revents & (POLLERR | POLLNVAL)) {
+		npl |= 1 << 4U;
+	}
+	if (pfds[1].revents & (POLLERR | POLLNVAL)) {
+		npl |= 2 << 4U;
+	}
+	return npl;
+}
+
+struct fan_s {
+	char buf[4096U];
+	size_t tot;
+	ssize_t nrd;
+	ssize_t nwr;
+	int f;
+	int of;
+};
+
+static size_t
+fanout1(struct fan_s f[static 1U])
+{
+	unsigned int npl = pollpair((int[]){!f->nrd ? f->f : -1, f->of});
+	size_t res = 0U;
+
+	if (!f->nrd && npl & 1U) {
+		/* reader coru*/
+		if ((f->nrd = read(f->f, f->buf, sizeof(f->buf))) > 0) {
+			goto wr;
+		} else if (f->nrd == 0) {
+			f->f = -1;
+		}
+	}
+	if (f->nwr > 0 && (npl & 2U)) {
+		/* writer coru */
+		clit_buf_t hx;
+		ssize_t nwr;
+
+	wr:
+		hx = hexlify(f->buf, f->nrd, f->tot);
+		if (UNLIKELY(!f->nwr)) {
+			f->nwr = hx.z;
+		} else {
+			hx.d += (hx.z - f->nwr);
+		}
+		if ((nwr = write(f->of, hx.d, f->nwr)) > 0 &&
+		    (f->nwr -= nwr) == 0U) {
+			/* ah finished writing, innit? */
+			f->tot += (res = f->nrd);
+			f->nrd = 0U;
+		}
+	}
+	return res;
+}
+
+static int
+fanout(struct clit_chld_s ctx[static 1], int f1, size_t z1, int f2, size_t z2)
+{
+	struct fan_s fans[] = {
+		{
+			.f = f1,
+			.of = ctx->fd1,
+		}, {
+			.f = f2,
+			.of = ctx->fd2,
+		}
+	};
+	size_t tot1 = 0U;
+	size_t tot2 = 0U;
+
+	while (tot1 < z1 || tot2 < z2) {
+		if (LIKELY(tot1 < z1)) {
+			if (UNLIKELY((tot1 += fanout1(fans + 0U)) >= z1)) {
+				close(fans[0U].of);
+				fans[0U].of = -1;
+			}
+		}
+
+		if (LIKELY(tot2 < z2)) {
+			if (UNLIKELY((tot2 += fanout1(fans + 1U)) >= z2)) {
+				close(fans[1U].of);
+				fans[1U].of = -1;
+			}
+		}
+	}
+	return 0;
+}
+
 
 static int
 hxdiff(const char *file1, const char *file2)
@@ -358,18 +510,23 @@ hxdiff(const char *file1, const char *file2)
 	} else if ((fd2 = open(file2, O_RDONLY)) < 0) {
 		error("Error: cannot open file `%s'", file2);
 		goto clo;
-	} else if (fstat(fd1, &st) < 0) {
-		error("Error: cannot stat file `%s'", file1);
-		goto clo;
-	} else if ((fz1 = st.st_size, 0)) {
-		/* optimised out */
-	} else if (fstat(fd2, &st) < 0) {
-		error("Error: cannot stat file `%s'", file2);
-		goto clo;
-	} else if ((fz2 = st.st_size, 0)) {
-		/* optimised out */
 	}
 
+	if (fstat(fd1, &st) < 0) {
+		error("Error: cannot stat file `%s'", file1);
+		goto clo;
+	}
+	fz1 = st.st_size;
+
+	if (fstat(fd2, &st) < 0) {
+		error("Error: cannot stat file `%s'", file2);
+		goto clo;
+	}
+	fz2 = st.st_size;
+
+	/* assign file names (for init_diff) */
+	ctx->fn1 = file1;
+	ctx->fn2 = file2;
 	if (UNLIKELY(init_chld(ctx) < 0)) {
 		goto clo;
 	} else if (UNLIKELY(init_diff(ctx) < 0)) {
@@ -378,37 +535,7 @@ hxdiff(const char *file1, const char *file2)
 
 	/* now, we read a bit of fd1, hexdump it, feed it to diff's fd1
 	 * then read a bit of fd2, hexdump it, feed it to diff's fd2 */
-	{
-		char buf[4096U];
-		size_t tot1 = 0U;
-		size_t tot2 = 0U;
-		ssize_t nrd;
-
-		do {
-			if (UNLIKELY(tot1 >= fz1)) {
-				/* nothing coming from fd1 anymore */
-				;
-			} else if ((nrd = read(fd1, buf, sizeof(buf))) > 0) {
-				clit_buf_t hx = hexlify(buf, nrd, tot1);
-
-				write(ctx->fd_df1, hx.d, hx.z);
-				if (UNLIKELY((tot1 += nrd) >= fz1)) {
-					close(ctx->fd_df1);
-				}
-			}
-			if (UNLIKELY(tot2 >= fz2)) {
-				/* nothing coming from fd2 anymore */
-				;
-			} else if ((nrd = read(fd2, buf, sizeof(buf))) > 0) {
-				clit_buf_t hx = hexlify(buf, nrd, tot2);
-
-				write(ctx->fd_df2, hx.d, hx.z);
-				if (UNLIKELY((tot2 += nrd) >= fz2)) {
-					close(ctx->fd_df2);
-				}
-			}
-		} while (tot1 < fz1 || tot2 < fz2);
-	}
+	fanout(ctx, fd1, fz1, fd2, fz2);
 
 	/* get the diff tool's exit status et al */
 	rc = fini_diff(ctx);
@@ -429,7 +556,7 @@ out:
 # pragma warning (disable:593)
 # pragma warning (disable:181)
 #endif	/* __INTEL_COMPILER */
-#include "hxdiff.h"
+#include "hxdiff.xh"
 #include "hxdiff.x"
 #if defined __INTEL_COMPILER
 # pragma warning (default:593)
@@ -444,7 +571,7 @@ main(int argc, char *argv[])
 
 	if (cmdline_parser(argc, argv, argi)) {
 		goto out;
-	} else if (argi->inputs_num != 2) {
+	} else if (argi->inputs_num != 2U) {
 		print_help_common();
 		goto out;
 	}

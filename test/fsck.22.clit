@@ -1,0 +1,20 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+## testing ex situ decompression of compressed file
+$ if test "${endian}" = "big"; then \
+	cat "${srcdir}/fsck.17.ref.beute" > "fsck.22.ute"; \
+	ute fsck --big-endian "${srcdir}/mux.7.ref.ute" -o "fsck.22.ref.ute"; \
+  elif test "${endian}" = "little"; then \
+	cat "${srcdir}/fsck.17.ref.leute" > "fsck.22.ute"; \
+	cat "${srcdir}/mux.7.ref.ute" > "fsck.22.ref.ute"; \
+  fi
+$ ute fsck --decompress "fsck.22.ute"
+$ ## truncate and overwrite ftr fields, HARDCODING ALARM
+$ ignore dd if='/dev/zero' of='fsck.22.ute' ibs=4 obs=4 seek=6 count=2 conv=notrunc
+$ head -c 68720 "fsck.22.ute" > "fsck.22.t.ute" && \
+  mv "fsck.22.t.ute" "fsck.22.ute"
+$ hxdiff "fsck.22.ute" "fsck.22.ref.ute" && \
+	rm -- "fsck.22.ute" "fsck.22.ref.ute"
+$
+
+## fsck.22.clit ends here

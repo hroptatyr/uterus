@@ -27,9 +27,7 @@ endif  !HAVE_YUCK
 EXTRA_DIST = yuck.yucc yuck.m4i
 DISTCLEANFILES = yuck.m4i yuck.yucc
 
-## airport -> zoneinfo goodness
-noinst_SCRIPTS = snarf-iata.sh
-EXTRA_DIST += snarf-iata.sh
+M4 ?= m4
 
 ## yuck rules
 yuck.m4i: yuck.yuck

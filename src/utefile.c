@@ -312,14 +312,21 @@ cache_hdr(utectx_t ctx)
 	/* we just use max size here */
 	const size_t sz = sizeof(*ctx->hdrc);
 	struct utehdr2_s *res;
+	int hprot = PROT_READ;
 
 	/* check if the file's big enough */
 	if (ctx->fsz < sz) {
 		/* must be a mistake then */
 		goto err_out;
 	}
-	/* just map the first sizeof(struct bla) bytes */
-	res = mmap(NULL, sz, PROT_READ, MAP_SHARED, ctx->fd, 0);
+
+	if (ctx->oflags & UO_STREAM) {
+		/* set up a rdwr header */
+		hprot |= PROT_WRITE;
+	}
+
+	/* map the header, rdonly for non streams, rdwr for streams */
+	res = mmap(NULL, sz, hprot, MAP_SHARED, ctx->fd, 0);
 	if (UNLIKELY(res == MAP_FAILED)) {
 		/* it failed, it failed, who cares why */
 		goto err_out;
@@ -1682,6 +1689,12 @@ load_last_tpc(utectx_t ctx)
 		/* bit of rinsing */
 		ctx->lvtd = ctx->tpc->least = 0;
 		ctx->tpc->last = 0;
+
+		/* set up the header and bang to tpc */
+		ctx->hdrc->ploff = hdroff;
+		ctx->hdrc->flags |= UTEHDR_FLAG_STREAM;
+		flush_slut(ctx);
+		memcpy((char*)ctx->hdrp, ctx->hdrc, hdroff);
 	} else {
 		make_tpc(ctx->tpc, page_sizet(ctx, 0));
 

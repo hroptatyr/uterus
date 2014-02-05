@@ -48,6 +48,7 @@ typedef const struct utehdr2_s *utehdr2_t;
 #define UTEHDR_FLAG_TRNGTBL	4
 #define UTEHDR_FLAG_COMPRESSED	8
 #define UTEHDR_FLAG_DIRTY	16
+#define UTEHDR_FLAG_STREAM	16
 
 struct utehdr2_s {
 	char magic[4];

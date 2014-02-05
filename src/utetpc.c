@@ -151,12 +151,12 @@ make_tpc(utetpc_t tpc, size_t nsndwchs)
 	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
 		tpc->sk.szrw = sz;
 		tpc->sk.si = 0;
-		/* we (ab)use the pg slot for the sandwich count */
-		tpc->sk.pg = nsndwchs;
+		/* set the capacity */
+		tpc->cap = nsndwchs;
 	} else {
 		tpc->sk.szrw = 0;
 		tpc->sk.si = -1;
-		tpc->sk.cap = 0;
+		tpc->cap = 0;
 	}
 	return;
 }
@@ -173,7 +173,7 @@ free_tpc(utetpc_t tpc)
 	tpc->sk.si = -1;
 	tpc->sk.szrw = 0;
 	tpc->sk.sp = NULL;
-	tpc->sk.cap = 0;
+	tpc->cap = 0;
 	return;
 }
 

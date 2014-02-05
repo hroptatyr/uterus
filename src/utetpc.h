@@ -90,12 +90,10 @@ struct uteseek_s {
 	};
 	/** the actual page data */
 	struct sndwch_s *sp;
-	union {
-		/** page we're on */
-		uint32_t pg;
-		/** in the context of tpcs this is the tick capacity */
-		uint32_t cap;
-	};
+
+	/** page we're on */
+	uint32_t pg;
+
 	/**
 	 * general page flags
 	 * See TPC_FL_* below.
@@ -114,6 +112,10 @@ struct utetpc_s {
 	/** any key must be at least this, after the instantiation of a
 	 * tpc this will point to the largest key that has been flushed */
 	uint64_t least;
+
+	/**
+	 * Capacity of the tick page in sandwiches */
+	uint32_t cap;
 };
 
 #define TPC_FL_UNSORTED		0x01
@@ -213,14 +215,14 @@ tpc_has_ticks_p(utetpc_t tpc)
 static inline bool
 tpc_full_p(utetpc_t tpc)
 {
-	return tpc->sk.si >= tpc->sk.cap;
+	return tpc->sk.si >= tpc->cap;
 }
 
 static inline bool
 tpc_can_hold_p(utetpc_t tpc, size_t nt)
 {
 /* whether there's space for NT more sandwiches in TPC */
-	return tpc->sk.si + nt <= tpc->sk.cap;
+	return tpc->sk.si + nt <= tpc->cap;
 }
 
 /**

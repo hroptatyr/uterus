@@ -338,7 +338,7 @@ BUILT_SOURCES += hxdiff.x hxdiff.xh
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull
-%.x %.h: %.ggo
+%.x %.xh: %.ggo
 	$(AM_V_GEN) gengetopt -F $* -c x -H xh -i $<
 	@sed -e 's,_PARSER_VERSION VERSION,_PARSER_VERSION "$(VERSION)",g' \
 	     $*.xh > $*.xh-t \

@@ -64,6 +64,7 @@ main(int argc, char *argv[])
 	}
 	ute_free(ctx);
 	puts(fn);
+	unlink(fn);
 	free(fn);
 out:
 	return res;

@@ -122,7 +122,7 @@ mmap_pgsz(void)
 	return pgsz;
 }
 
-static char*
+static void*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
 	size_t pgsz = mmap_pgsz();
@@ -132,11 +132,11 @@ mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 }
 
 static void
-munmap_any(char *map, off_t off, size_t len)
+munmap_any(void *map, off_t off, size_t len)
 {
 	size_t pgsz = mmap_pgsz();
 	sidx_t ofi = off % pgsz;
-	munmap(map - ofi, len + ofi);
+	munmap((char*)map - ofi, len + ofi);
 	return;
 }
 

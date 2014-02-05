@@ -14,6 +14,7 @@ main(void)
 
 	ute_free(ctx);
 	puts(fn);
+	unlink(fn);
 	free(fn);
 	return 0;
 }

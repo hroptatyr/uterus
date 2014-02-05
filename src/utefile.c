@@ -953,6 +953,27 @@ free_tpc(utetpc_t tpc)
 	return;
 }
 
+static void
+make_stpc(utetpc_t tpc, int fd, off_t fdoff, size_t nsndwchs)
+{
+/* like make_tpc() but map straight into the file */
+	/* this should really be the next UTE_BLKSZ multiple of NSNDWCHS */
+	size_t sz = nsndwchs * sizeof(*tpc->sk.sp);
+
+	tpc->sk.sp = mmap_any(fd, PROT_FLUSH, MAP_SHARED, fdoff, sz);
+	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
+		tpc->sk.szrw = sz;
+		tpc->sk.si = 0;
+		/* set the capacity */
+		tpc->cap = nsndwchs;
+	} else {
+		tpc->sk.szrw = 0;
+		tpc->sk.si = -1;
+		tpc->cap = 0;
+	}
+	return;
+}
+
 static void MAYBE_NOINLINE
 flush_tpc(utectx_t ctx)
 {
@@ -1628,7 +1649,9 @@ static void MAYBE_NOINLINE
 load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file
- * accordingly, this is in a way a reverse flush_tpc() */
+ * accordingly, this is in a way a reverse flush_tpc()
+ * in UO_STREAM mode the file will be extended to the next multiple
+ * of UTE_BLKSZ, and that page is mapped into tpc space */
 	size_t lpg = ute_npages(ctx);
 	struct uteseek_s sk[1];
 
@@ -1649,8 +1672,19 @@ load_last_tpc(utectx_t ctx)
 		flush_seek(sk);
 		/* update page counter, this isn't an official page anymore */
 		ctx->npages--;
+	} else if (ctx->oflags & UO_STREAM) {
+		const size_t tgtz = UTE_BLKSZ;
+		const size_t hdroff = sizeof(*ctx->hdrc);
+
+		ute_trunc(ctx, tgtz * sizeof(*sk->sp));
+		make_stpc(ctx->tpc, ctx->fd, hdroff, tgtz);
+
+		/* bit of rinsing */
+		ctx->lvtd = ctx->tpc->least = 0;
+		ctx->tpc->last = 0;
 	} else {
 		make_tpc(ctx->tpc, page_sizet(ctx, 0));
+
 		/* bit of rinsing */
 		ctx->lvtd = ctx->tpc->least = 0;
 		ctx->tpc->last = 0;

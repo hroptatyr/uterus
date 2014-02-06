@@ -1524,7 +1524,7 @@ lzma_comp(utectx_t ctx)
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
-			UDEBUG("mmapping [%ld,%ld]\n", fo, fo + fz);
+			UDEBUG("mmapping [%ld,%lu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fz);
 			if (UNLIKELY(p == NULL)) {
@@ -1610,7 +1610,7 @@ lzma_decomp(utectx_t ctx)
 		 * mmap from FO to FO + FZ
 		 * if FSZ < FO + FZ, extend the file */
 		tz = page_size(tgt, i);
-		UDEBUG("mmapping [%ld,%ld]\n", fo, fo + tz);
+		UDEBUG("mmapping [%ld,%lu]\n", fo, fo + tz);
 		if (UNLIKELY(ute_trunc(tgt, fo + tz) < 0)) {
 			UDEBUG("can't truncate, skipping page %zu\n", i);
 			goto next;

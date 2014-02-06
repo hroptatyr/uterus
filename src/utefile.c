@@ -2435,6 +2435,12 @@ ute_set_endianness(utectx_t ctx, ute_end_t en)
 	return;
 }
 
+bool
+ute_stream_p(utectx_t ctx)
+{
+	return utehdr_stream_p(ctx->hdrc);
+}
+
 /* programmatic iterator */
 scom_t
 ute_iter(utectx_t hdl)
@@ -2443,6 +2449,14 @@ ute_iter(utectx_t hdl)
 #define si	(hdl->iter_si)
 #define tmp	(hdl->iter_tmp)
 	scom_t ti;
+
+	if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
+		st = 0;
+		return NULL;
+	} else if (ute_stream_p(hdl) && UNLIKELY(ti->u == 0U)) {
+		/* we're looking at the end of ticks in a growing file */
+		return NULL;
+	}
 
 	switch (st) {
 	case 0:
@@ -2453,11 +2467,6 @@ ute_iter(utectx_t hdl)
 			/* we need to flip the ti */
 			size_t bz;
 			size_t tz;
-
-			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
-				st = 0;
-				break;
-			}
 
 			/* promote the old header, copy to tmp buffer BUF */
 			scom_promote_v01(tmp.scom, ti);
@@ -2475,11 +2484,6 @@ ute_iter(utectx_t hdl)
 		case 2:;
 			/* properly padded for big-e and little-e */
 			size_t tz;
-
-			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
-				st = 0;
-				break;
-			}
 
 			/* swap ti into buf */
 			tmp.scom->u = htooe64(ti->u);
@@ -2508,10 +2512,6 @@ ute_iter(utectx_t hdl)
 		} else {
 			st = 1;
 		case 1:
-			if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
-				st = 0U;
-				break;
-			}
 			/* inc the counter */
 			si += scom_tick_size(ti);
 			/* yield */
@@ -2525,7 +2525,6 @@ ute_iter(utectx_t hdl)
 #undef tmp
 #undef si
 #undef st
-	return NULL;
 }
 
 

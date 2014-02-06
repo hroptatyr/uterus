@@ -870,7 +870,14 @@ store_lvtd(utectx_t ctx)
 static void
 store_slut(utectx_t ctx, size_t sluz)
 {
-	struct utehdr2_s *h = ctx->hdrc;
+	struct utehdr2_s *h;
+
+	if (!(ctx->oflags & UO_STREAM)) {
+		h = ctx->hdrc;
+	} else {
+		/* just use the mapped header in streaming mode */
+		h = ctx->hdrp;
+	}
 
 	switch (utehdr_endianness(h)) {
 	case UTE_ENDIAN_UNK:

@@ -322,6 +322,11 @@ m62_10_LDADD = $(m30_LIBS)
 bin_tests += m62-10
 
 
+check_PROGRAMS += stream-01
+stream_01_LDFLAGS = $(AM_LDFLAGS) -static
+stream_01_LDADD = $(m30_LIBS)
+
+
 ## our friendly helpers
 check_PROGRAMS += clitoris
 clitoris_CPPFLAGS = $(AM_CPPFLAGS)

@@ -140,43 +140,6 @@ __local_scom_byte_size(scom_t t)
 }
 #endif	/* scom_tick_size */
 
-/* calloc like signature */
-DEFUN void
-make_tpc(utetpc_t tpc, size_t nsndwchs)
-{
-	/* this should really be the next UTE_BLKSZ multiple of NSNDWCHS */
-	size_t sz = UTE_BLKSZ * sizeof(*tpc->sk.sp);
-
-	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, -1, 0);
-	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
-		tpc->sk.szrw = sz;
-		tpc->sk.si = 0;
-		/* we (ab)use the pg slot for the sandwich count */
-		tpc->sk.pg = nsndwchs;
-	} else {
-		tpc->sk.szrw = 0;
-		tpc->sk.si = -1;
-		tpc->sk.cap = 0;
-	}
-	return;
-}
-
-DEFUN void
-free_tpc(utetpc_t tpc)
-{
-	if (tpc_active_p(tpc)) {
-		/* seek points to something -> munmap first
-		 * we should probably determine the size of the tpc using the
-		 * CAP slot and round it to the next UTE_BLKSZ multiple */
-		munmap(tpc->sk.sp, UTE_BLKSZ);
-	}
-	tpc->sk.si = -1;
-	tpc->sk.szrw = 0;
-	tpc->sk.sp = NULL;
-	tpc->sk.cap = 0;
-	return;
-}
-
 DEFUN void
 clear_tpc(utetpc_t tpc)
 {

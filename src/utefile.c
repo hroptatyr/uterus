@@ -122,7 +122,7 @@ mmap_pgsz(void)
 	return pgsz;
 }
 
-static char*
+static void*
 mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 {
 	size_t pgsz = mmap_pgsz();
@@ -132,11 +132,11 @@ mmap_any(int fd, int prot, int flags, off_t off, size_t len)
 }
 
 static void
-munmap_any(char *map, off_t off, size_t len)
+munmap_any(void *map, off_t off, size_t len)
 {
 	size_t pgsz = mmap_pgsz();
 	sidx_t ofi = off % pgsz;
-	munmap(map - ofi, len + ofi);
+	munmap((char*)map - ofi, len + ofi);
 	return;
 }
 
@@ -312,14 +312,21 @@ cache_hdr(utectx_t ctx)
 	/* we just use max size here */
 	const size_t sz = sizeof(*ctx->hdrc);
 	struct utehdr2_s *res;
+	int hprot = PROT_READ;
 
 	/* check if the file's big enough */
 	if (ctx->fsz < sz) {
 		/* must be a mistake then */
 		goto err_out;
 	}
-	/* just map the first sizeof(struct bla) bytes */
-	res = mmap(NULL, sz, PROT_READ, MAP_SHARED, ctx->fd, 0);
+
+	if (ctx->oflags & UO_STREAM) {
+		/* set up a rdwr header */
+		hprot |= PROT_WRITE;
+	}
+
+	/* map the header, rdonly for non streams, rdwr for streams */
+	res = mmap(NULL, sz, hprot, MAP_SHARED, ctx->fd, 0);
 	if (UNLIKELY(res == MAP_FAILED)) {
 		/* it failed, it failed, who cares why */
 		goto err_out;
@@ -916,68 +923,89 @@ store_ftrz(utectx_t ctx, size_t z)
 
 #define MARKER_TICK	(-1)
 
-static void MAYBE_NOINLINE
-flush_tpc(utectx_t ctx)
+/* calloc like signature */
+static void
+make_tpc(utetpc_t tpc, size_t nsndwchs)
 {
-	size_t sz = tpc_byte_size(ctx->tpc);
-	sidx_t si = ctx->tpc->sk.si;
-	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
-	const size_t hdrz = ute_hdrz(ctx);
-	size_t fsz = ctx->fsz;
+	/* this should really be the next UTE_BLKSZ multiple of NSNDWCHS */
+	size_t sz = UTE_BLKSZ * sizeof(*tpc->sk.sp);
 
-#if defined DEBUG_FLAG
-	/* tpc should be sorted now and contain no randomised data */
-	{
-		uint64_t thresh = 0;
-		uteseek_t sk = &ctx->tpc->sk;
+	tpc->sk.sp = mmap(NULL, sz, PROT_MEM, MAP_MEM, -1, 0);
+	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
+		tpc->sk.szrw = sz;
+		tpc->sk.si = 0;
+		/* set the capacity */
+		tpc->cap = nsndwchs;
+	} else {
+		tpc->sk.szrw = 0;
+		tpc->sk.si = -1;
+		tpc->cap = 0;
+	}
+	return;
+}
 
-		for (sidx_t i = 0, tsz; i < si; i += tsz) {
-			scom_t t = AS_SCOM(sk->sp + i);
+static void
+free_tpc(utetpc_t tpc)
+{
+	if (tpc_active_p(tpc)) {
+		/* seek points to something -> munmap first
+		 * we should probably determine the size of the tpc using the
+		 * CAP slot and round it to the next UTE_BLKSZ multiple */
+		munmap(tpc->sk.sp, UTE_BLKSZ);
+	}
+	tpc->sk.si = -1;
+	tpc->sk.szrw = 0;
+	tpc->sk.sp = NULL;
+	tpc->cap = 0;
+	return;
+}
 
-			assert((t->ttf & 0x30U) != 0x30U);
-			assert(thresh <= t->u);
-			thresh = t->u;
-			tsz = scom_tick_size(t);
+static void
+make_stpc(utetpc_t tpc, int fd, uint32_t pg)
+{
+/* like make_tpc() but map straight into the file */
+	size_t pz = UTE_BLKSZ * sizeof(*tpc->sk.sp);
+	const off_t fdoff = pg * pz;
+
+	tpc->sk.sp = mmap(NULL, pz, PROT_FLUSH, MAP_SHARED, fd, fdoff);
+	if (LIKELY(tpc->sk.sp != MAP_FAILED)) {
+		if (!pg) {
+			const size_t hdroff = sizeof(struct utehdr2_s);
+			tpc->sk.sp += hdroff / sizeof(*tpc->sk.sp);
+			pz -= hdroff;
 		}
+		tpc->sk.szrw = pz;
+		tpc->sk.si = 0;
+		/* set the capacity */
+		tpc->cap = pz / sizeof(*tpc->sk.sp);
+	} else {
+		tpc->sk.szrw = 0;
+		tpc->sk.si = -1;
+		tpc->cap = 0;
 	}
-#endif	/* DEBUG_FLAG */
-	assert(sisz <= sz);
+	return;
+}
 
-	/* make sure we start behind the header */
-	if (UNLIKELY(fsz < hdrz)) {
-		ute_trunc(ctx, hdrz);
-		fsz = hdrz;
-	}
+static void
+free_stpc(utetpc_t tpc)
+{
+	const size_t pz = UTE_BLKSZ * sizeof(*tpc->sk.sp);
+	const size_t pgsz = mmap_pgsz();
 
-	/* extend to take SZ additional bytes */
-	if (!__rdwrp(ctx) || ute_extend(ctx, sz) < 0) {
+	if (UNLIKELY(tpc->sk.sp == MAP_FAILED)) {
 		return;
+	} else if ((uintptr_t)tpc->sk.sp % pgsz) {
+		/* must rewind the pointer a notch */
+		uintptr_t sp = (uintptr_t)tpc->sk.sp;
+		tpc->sk.sp = (void*)(sp - (uintptr_t)tpc->sk.sp % pgsz);
 	}
-	/* span a map covering the SZ new bytes */
-	{
-		char *p;
-
-		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, sz);
-		if (UNLIKELY(p == NULL)) {
-			return;
-		}
-		memcpy(p, ctx->tpc->sk.sp, sisz);
-		/* memset the rest with the marker tick */
-		if (sisz < sz) {
-			memset(p + sisz, MARKER_TICK, sz - sisz);
-		}
-		munmap_any(p, fsz, sz);
-		/* up the npages counter */
-		ctx->npages++;
-	}
-
-	/* store the largest-value-to-date */
-	store_lvtd(ctx);
-
-	/* munmap the tpc? */
-	clear_tpc(ctx->tpc);
-	/* ah, this also means we can now use the full capacity */
-	ctx->tpc->sk.cap = UTE_BLKSZ;
+	/* definitely always munmap */
+	munmap(tpc->sk.sp, pz);
+	/* and invalidate the counters */
+	tpc->sk.si = -1;
+	tpc->sk.szrw = 0;
+	tpc->sk.sp = NULL;
+	tpc->cap = 0;
 	return;
 }
 
@@ -1052,6 +1080,96 @@ flush_hdr(utectx_t ctx)
 
 	/* that's it */
 	munmap(p, sizeof(*ctx->hdrp));
+	return;
+}
+
+static void MAYBE_NOINLINE
+flush_tpc(utectx_t ctx)
+{
+	size_t sz = tpc_byte_size(ctx->tpc);
+	sidx_t si = ctx->tpc->sk.si;
+	size_t sisz = si * sizeof(*ctx->tpc->sk.sp);
+	const size_t hdrz = ute_hdrz(ctx);
+	size_t fsz = ctx->fsz;
+
+#if defined DEBUG_FLAG
+	/* tpc should be sorted now and contain no randomised data */
+	{
+		uint64_t thresh = 0;
+		uteseek_t sk = &ctx->tpc->sk;
+
+		for (sidx_t i = 0, tsz; i < si; i += tsz) {
+			scom_t t = AS_SCOM(sk->sp + i);
+
+			assert((t->ttf & 0x30U) != 0x30U);
+			assert(thresh <= t->u);
+			thresh = t->u;
+			tsz = scom_tick_size(t);
+		}
+	}
+#endif	/* DEBUG_FLAG */
+	assert(sisz <= sz);
+
+	/* make sure we start behind the header */
+	if (UNLIKELY(fsz < hdrz)) {
+		ute_trunc(ctx, hdrz);
+		fsz = hdrz;
+	}
+
+	/* extend to take SZ additional bytes */
+	if (!__rdwrp(ctx)) {
+		return;
+	} else if (ctx->oflags & UO_STREAM) {
+		/* just create a new tpc behind the current one */
+		char *p = (char*)ctx->tpc->sk.sp;
+
+		/* in stream mode the tpc was mapped all along,
+		 * no need to copy anything, but we might want to set
+		 * marker ticks */
+		if (sisz < sz) {
+			memset(p + sisz, MARKER_TICK, sz - sisz);
+		}
+		free_stpc(ctx->tpc);
+		/* up the npages counter */
+		ctx->hdrp->npages++;
+		ctx->npages++;
+
+		/* extend the file so it can take a new tpc */
+		with (const size_t tz = UTE_BLKSZ * sizeof(*ctx->tpc->sk.sp)) {
+			ute_trunc(ctx, tz * ctx->npages);
+		}
+		/* make a new tpc behind the materialised one */
+		make_stpc(ctx->tpc, ctx->fd, ctx->npages - 1U);
+		/* and flush the slut again */
+		flush_slut(ctx);
+
+	} else if (ute_extend(ctx, sz) < 0) {
+		/* in non-live mode we need to extend the file */
+		return;
+	} else {
+		char *p;
+
+		p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, fsz, sz);
+		if (UNLIKELY(p == NULL)) {
+			return;
+		}
+		memcpy(p, ctx->tpc->sk.sp, sisz);
+		/* memset the rest with the marker tick */
+		if (sisz < sz) {
+			memset(p + sisz, MARKER_TICK, sz - sisz);
+		}
+		munmap_any(p, fsz, sz);
+		/* up the npages counter */
+		ctx->npages++;
+	}
+
+	/* store the largest-value-to-date */
+	store_lvtd(ctx);
+
+	/* munmap the tpc? */
+	clear_tpc(ctx->tpc);
+	/* ah, this also means we can now use the full capacity */
+	ctx->tpc->cap = UTE_BLKSZ;
 	return;
 }
 
@@ -1406,7 +1524,7 @@ lzma_comp(utectx_t ctx)
 
 			/* pi is private (i.e. COW) so copy to the real file
 			 * mmap from FO to FO + FZ */
-			UDEBUG("mmapping [%ld,%ld]\n", fo, fo + fz);
+			UDEBUG("mmapping [%ld,%lu]\n", fo, fo + fz);
 			p = (void*)mmap_any(
 				ctx->fd, pflags, MAP_SHARED, fo, fz);
 			if (UNLIKELY(p == NULL)) {
@@ -1492,7 +1610,7 @@ lzma_decomp(utectx_t ctx)
 		 * mmap from FO to FO + FZ
 		 * if FSZ < FO + FZ, extend the file */
 		tz = page_size(tgt, i);
-		UDEBUG("mmapping [%ld,%ld]\n", fo, fo + tz);
+		UDEBUG("mmapping [%ld,%lu]\n", fo, fo + tz);
 		if (UNLIKELY(ute_trunc(tgt, fo + tz) < 0)) {
 			UDEBUG("can't truncate, skipping page %zu\n", i);
 			goto next;
@@ -1591,7 +1709,9 @@ static void MAYBE_NOINLINE
 load_last_tpc(utectx_t ctx)
 {
 /* take the last page in CTX and make a tpc from it, trunc the file
- * accordingly, this is in a way a reverse flush_tpc() */
+ * accordingly, this is in a way a reverse flush_tpc()
+ * in UO_STREAM mode the file will be extended to the next multiple
+ * of UTE_BLKSZ, and that page is mapped into tpc space */
 	size_t lpg = ute_npages(ctx);
 	struct uteseek_s sk[1];
 
@@ -1612,8 +1732,29 @@ load_last_tpc(utectx_t ctx)
 		flush_seek(sk);
 		/* update page counter, this isn't an official page anymore */
 		ctx->npages--;
+	} else if (ctx->oflags & UO_STREAM) {
+		const size_t tgtz = UTE_BLKSZ * sizeof(*sk->sp);
+		const size_t hdroff = sizeof(*ctx->hdrc);
+
+		ute_trunc(ctx, tgtz);
+		make_stpc(ctx->tpc, ctx->fd, 0);
+
+		/* bit of rinsing */
+		ctx->lvtd = ctx->tpc->least = 0;
+		ctx->tpc->last = 0;
+
+		/* set up the header and bang to tpc */
+		ctx->hdrc->ploff = hdroff;
+		ctx->hdrc->flags |= UTEHDR_FLAG_STREAM;
+		/* up the npages counter */
+		ctx->hdrc->npages = 1U;
+		ctx->npages = 1U;
+
+		flush_slut(ctx);
+		memcpy((char*)ctx->hdrp, ctx->hdrc, hdroff);
 	} else {
 		make_tpc(ctx->tpc, page_sizet(ctx, 0));
+
 		/* bit of rinsing */
 		ctx->lvtd = ctx->tpc->least = 0;
 		ctx->tpc->last = 0;
@@ -1918,8 +2059,24 @@ ute_free(utectx_t ctx)
 void
 ute_close(utectx_t ctx)
 {
-	/* first make sure we write the stuff */
-	ute_flush(ctx);
+	if (!(ctx->oflags & UO_STREAM)) {
+		/* make sure we materialise the (in-memory) tpc */
+		ute_flush(ctx);
+	} else {
+		/* in stream mode the tpc is visible on the disk all along
+		 * however the tpc may have more space than necessary
+		 * just shrink it to the right size now */
+		const size_t tpcz = tpc_byte_size(ctx->tpc);
+		const size_t tpcc = tpc_max_size(ctx->tpc);
+		const size_t ublk = UTE_BLKSZ * sizeof(*ctx->tpc->sk.sp);
+
+		/* round down to multiples of UTE_BLKSZ */
+		ctx->fsz -= ctx->fsz % ublk;
+		/* now take off tpcc - tpcz bytes */
+		ctx->fsz -= tpcc - tpcz;
+
+		ute_trunc(ctx, ctx->fsz);
+	}
 	if (!ute_sorted_p(ctx)) {
 #if defined USE_UTE_SORT
 		ute_prep_sort(ctx);
@@ -1946,8 +2103,14 @@ ute_close(utectx_t ctx)
 	flush_slut(ctx);
 	/* serialise the footer */
 	flush_ftr(ctx);
-	/* serialise the cached header */
-	flush_hdr(ctx);
+	if (!(ctx->oflags & UO_STREAM)) {
+		/* serialise the cached header,
+		 * in stream mode this was seralised all along*/
+		flush_hdr(ctx);
+	} else {
+		/* we're going closed, so kill the STREAM flag */
+		ctx->hdrp->flags &= ~UTEHDR_FLAG_STREAM;
+	}
 
 	/* just destroy the rest */
 	ute_free(ctx);
@@ -1973,6 +2136,7 @@ ute_flush(utectx_t ctx)
 		merge_tpc(ctx, ctx->tpc);
 #endif	/* USE_UTE_SORT */
 	}
+	/* materialise the tpc */
 	flush_tpc(ctx);
 	return;
 }

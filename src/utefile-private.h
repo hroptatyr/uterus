@@ -76,7 +76,7 @@ struct utectx_s {
 	/* header cache */
 	struct utehdr2_s hdrc[1];
 	/* the header on the disk */
-	const struct utehdr2_s *hdrp;
+	struct utehdr2_s *restrict hdrp;
 	/* tick pages cache */
 	struct utetpc_s tpc[1];
 	/* page size */

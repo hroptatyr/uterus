@@ -98,6 +98,10 @@ typedef void *utectx_t;
 #define UO_NO_LOAD_TPC	(040)
 /* when used in conjunction with UO_CREAT no initial TPC will be created */
 #define UO_NO_CREAT_TPC	(040)
+/* open a file for streaming writes, i.e. the file is open for a long
+ * time and written to occasionally allowing for it to be opened `live'
+ * this coincides with O_SYNC */
+#define UO_STREAM	(010000)
 
 /**
  * Open the file in PATH and create a ute context.

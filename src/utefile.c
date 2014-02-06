@@ -1117,11 +1117,10 @@ flush_tpc(utectx_t ctx)
 	}
 
 	/* extend to take SZ additional bytes */
-	if (!__rdwrp(ctx) || ute_extend(ctx, sz) < 0) {
+	if (!__rdwrp(ctx)) {
 		return;
-	}
-	/* span a map covering the SZ new bytes */
-	if (ctx->oflags & UO_STREAM) {
+	} else if (ctx->oflags & UO_STREAM) {
+		/* just create a new tpc behind the current one */
 		char *p = (char*)ctx->tpc->sk.sp;
 
 		/* in stream mode the tpc was mapped all along,
@@ -1134,10 +1133,19 @@ flush_tpc(utectx_t ctx)
 		/* up the npages counter */
 		ctx->hdrp->npages++;
 		ctx->npages++;
-		/* map the next tpc */
-		make_stpc(ctx->tpc, ctx->fd, ctx->npages);
+
+		/* extend the file so it can take a new tpc */
+		with (const size_t tz = UTE_BLKSZ * sizeof(*ctx->tpc->sk.sp)) {
+			ute_trunc(ctx, tz * ctx->npages);
+		}
+		/* make a new tpc behind the materialised one */
+		make_stpc(ctx->tpc, ctx->fd, ctx->npages - 1U);
 		/* and flush the slut again */
 		flush_slut(ctx);
+
+	} else if (ute_extend(ctx, sz) < 0) {
+		/* in non-live mode we need to extend the file */
+		return;
 	} else {
 		char *p;
 
@@ -1738,6 +1746,10 @@ load_last_tpc(utectx_t ctx)
 		/* set up the header and bang to tpc */
 		ctx->hdrc->ploff = hdroff;
 		ctx->hdrc->flags |= UTEHDR_FLAG_STREAM;
+		/* up the npages counter */
+		ctx->hdrc->npages = 1U;
+		ctx->npages = 1U;
+
 		flush_slut(ctx);
 		memcpy((char*)ctx->hdrp, ctx->hdrc, hdroff);
 	} else {

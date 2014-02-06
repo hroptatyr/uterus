@@ -2453,6 +2453,9 @@ ute_iter(utectx_t hdl)
 	if (UNLIKELY((ti = ute_seek(hdl, si)) == NULL)) {
 		st = 0;
 		return NULL;
+	} else if (ute_stream_p(hdl) && UNLIKELY(ti->u == 0U)) {
+		/* we're looking at the end of ticks in a growing file */
+		return NULL;
 	}
 
 	switch (st) {

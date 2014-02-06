@@ -2059,8 +2059,24 @@ ute_free(utectx_t ctx)
 void
 ute_close(utectx_t ctx)
 {
-	/* first make sure we write the stuff */
-	ute_flush(ctx);
+	if (!(ctx->oflags & UO_STREAM)) {
+		/* make sure we materialise the (in-memory) tpc */
+		ute_flush(ctx);
+	} else {
+		/* in stream mode the tpc is visible on the disk all along
+		 * however the tpc may have more space than necessary
+		 * just shrink it to the right size now */
+		const size_t tpcz = tpc_byte_size(ctx->tpc);
+		const size_t tpcc = tpc_max_size(ctx->tpc);
+		const size_t ublk = UTE_BLKSZ * sizeof(*ctx->tpc->sk.sp);
+
+		/* round down to multiples of UTE_BLKSZ */
+		ctx->fsz -= ctx->fsz % ublk;
+		/* now take off tpcc - tpcz bytes */
+		ctx->fsz -= tpcc - tpcz;
+
+		ute_trunc(ctx, ctx->fsz);
+	}
 	if (!ute_sorted_p(ctx)) {
 #if defined USE_UTE_SORT
 		ute_prep_sort(ctx);
@@ -2087,8 +2103,14 @@ ute_close(utectx_t ctx)
 	flush_slut(ctx);
 	/* serialise the footer */
 	flush_ftr(ctx);
-	/* serialise the cached header */
-	flush_hdr(ctx);
+	if (!(ctx->oflags & UO_STREAM)) {
+		/* serialise the cached header,
+		 * in stream mode this was seralised all along*/
+		flush_hdr(ctx);
+	} else {
+		/* we're going closed, so kill the STREAM flag */
+		ctx->hdrp->flags &= ~UTEHDR_FLAG_STREAM;
+	}
 
 	/* just destroy the rest */
 	ute_free(ctx);
@@ -2114,6 +2136,7 @@ ute_flush(utectx_t ctx)
 		merge_tpc(ctx, ctx->tpc);
 #endif	/* USE_UTE_SORT */
 	}
+	/* materialise the tpc */
 	flush_tpc(ctx);
 	return;
 }

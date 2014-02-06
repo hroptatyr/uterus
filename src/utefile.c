@@ -870,7 +870,14 @@ store_lvtd(utectx_t ctx)
 static void
 store_slut(utectx_t ctx, size_t sluz)
 {
-	struct utehdr2_s *h = ctx->hdrc;
+	struct utehdr2_s *h;
+
+	if (!(ctx->oflags & UO_STREAM)) {
+		h = ctx->hdrc;
+	} else {
+		/* just use the mapped header in streaming mode */
+		h = ctx->hdrp;
+	}
 
 	switch (utehdr_endianness(h)) {
 	case UTE_ENDIAN_UNK:
@@ -1016,7 +1023,7 @@ flush_slut(utectx_t ctx)
 	void *stbl = NULL;
 	size_t stsz = 0;
 	size_t hdrz = ute_hdrz(ctx);
-	sidx_t off = ctx->fsz;
+	size_t off = ctx->fsz;
 
 	/* dont try at all in read-only mode */
 	if (UNLIKELY(!__rdwrp(ctx))) {
@@ -1033,13 +1040,14 @@ flush_slut(utectx_t ctx)
 	}
 	/* make sure we start behind the header */
 	if (UNLIKELY(off < hdrz)) {
-		ute_trunc(ctx, hdrz);
-		off = hdrz;
+		ute_trunc(ctx, off = hdrz);
 	}
 	/* extend to take STSZ (plus alignment) additional bytes */
 	if (ute_extend(ctx, stsz) < 0) {
 		goto out;
 	}
+	/* store the aligned number of bytes just extended */
+	ctx->sluz = ctx->fsz - off;
 	/* align to multiples of page size */
 	if ((p = mmap_any(ctx->fd, PROT_FLUSH, MAP_FLUSH, off, stsz)) == NULL) {
 		goto out;
@@ -2366,10 +2374,20 @@ ute_tick2(utectx_t ctx, void *tgt, size_t tsz, sidx_t i)
 unsigned int
 ute_sym2idx(utectx_t ctx, const char *sym)
 {
+	const size_t nsyms = ctx->slut->nsyms;
+	unsigned int res;
+
 	if (UNLIKELY(sym == NULL)) {
-		abort();
+		return 0U;
 	}
-	return slut_sym2idx(ctx->slut, sym);
+	res = slut_sym2idx(ctx->slut, sym);
+	if ((ctx->oflags & UO_STREAM) && ctx->slut->nsyms > nsyms) {
+		/* new sym created, in stream mode */
+		UDEBUG("new sym in stream mode, flushing slut\n");
+		ute_shrink(ctx, ctx->sluz);
+		flush_slut(ctx);
+	}
+	return res;
 }
 
 const char*
@@ -2381,10 +2399,19 @@ ute_idx2sym(utectx_t ctx, unsigned int idx)
 unsigned int
 ute_bang_symidx(utectx_t ctx, const char *sym, unsigned int idx)
 {
+	unsigned int res;
+
 	if (UNLIKELY(sym == NULL)) {
 		return 0;
 	}
-	return slut_bang(ctx->slut, sym, (uint16_t)idx);
+	res = slut_bang(ctx->slut, sym, (uint16_t)idx);
+	if (ctx->oflags & UO_STREAM) {
+		/* banged sym in stream mode */
+		UDEBUG("banged sym in stream mode, flushing slut\n");
+		ute_shrink(ctx, ctx->sluz);
+		flush_slut(ctx);
+	}
+	return res;
 }
 
 const char*

@@ -326,6 +326,10 @@ check_PROGRAMS += stream-01
 stream_01_LDFLAGS = $(AM_LDFLAGS) -static
 stream_01_LDADD = $(m30_LIBS)
 
+check_PROGRAMS += stream-02
+stream_02_LDFLAGS = $(AM_LDFLAGS) -static
+stream_02_LDADD = $(m30_LIBS)
+
 
 ## our friendly helpers
 check_PROGRAMS += clitoris

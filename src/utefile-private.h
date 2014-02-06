@@ -92,6 +92,8 @@ struct utectx_s {
 
 	/* symbol table, idx->sym and sym->idx */
 	struct uteslut_s slut[1];
+	/* real slut size in bytes (including alignment) */
+	size_t sluz;
 
 	/* number of pages, native endianness */
 	size_t npages;

@@ -42,10 +42,11 @@ main(void)
 		ute_add_tick(ctx, AS_SCOM(&t2));
 		t1.hdr->sec++;
 		t2.hdr->sec++;
+		usleep(1000);
 	}
 
 	/* just quit */
-	ute_free(ctx);
+	ute_close(ctx);
 	return 0;
 }
 

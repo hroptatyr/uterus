@@ -120,4 +120,12 @@ extern int utehdr_check_magic(utehdr2_t hdr);
  * Check the endianness of HDR.  Return -1 if it doesn't match. */
 extern int utehdr_check_endianness(utehdr2_t hdr);
 
+/**
+ * Return true if file is a stream. */
+static inline bool
+utehdr_stream_p(utehdr2_t hdr)
+{
+	return hdr->flags & UTEHDR_FLAG_STREAM;
+}
+
 #endif	/* INCLUDED_utehdr_h_ */

@@ -2435,6 +2435,12 @@ ute_set_endianness(utectx_t ctx, ute_end_t en)
 	return;
 }
 
+bool
+ute_stream_p(utectx_t ctx)
+{
+	return utehdr_stream_p(ctx->hdrc);
+}
+
 /* programmatic iterator */
 scom_t
 ute_iter(utectx_t hdl)

@@ -244,6 +244,10 @@ extern int ute_check_endianness(utectx_t ctx);
  * Set the endianness used in the file associated with CTX. */
 extern void ute_set_endianness(utectx_t ctx, ute_end_t);
 
+/**
+ * Return true if file associated with CTX is a stream. */
+extern bool ute_stream_p(utectx_t ctx);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

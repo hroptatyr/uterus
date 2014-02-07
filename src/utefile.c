@@ -1945,6 +1945,11 @@ make_utectx(const char *fn, int fd, int oflags)
 		 * it's probably fucked */
 		free(res);
 		return NULL;
+	} else if (__rdwrp(res) && ute_stream_p(res)) {
+		/* opening a dirty file for writing? aint gonna happen
+		 * otoh, what if this is fsck? */
+		free(res);
+		return NULL;
 	}
 	/* to avoid more complicated free'ing strdup strings here */
 	if (!(oflags & O_EXCL)) {

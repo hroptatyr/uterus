@@ -278,12 +278,11 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 		res = -1;
 
 	} else if ((opts->flags & OUTFILE_IS_INTO) &&
-		   (ctx->wrr = ute_open(outf, UO_CREAT | UO_RDWR))) {
-		;
-	} else if ((ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC))) {
-		/* plain old mux */
-		;
-	} else {
+		   (ctx->wrr = ute_open(outf, UO_CREAT | UO_RDWR)) == NULL) {
+		error("cannot open output file `%s' for appending", outf);
+		res = -1;
+	} else if (!(opts->flags & OUTFILE_IS_INTO) &&
+		   (ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC)) == NULL) {
 		error("cannot open output file `%s'", outf);
 		res = -1;
 	}

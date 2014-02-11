@@ -125,13 +125,11 @@ uterus_LIBS = libuterus.la
 uterus_LIBS += libversion.a
 
 bin_PROGRAMS += ute
-ute_SOURCES =
-EXTRA_ute_SOURCES =
-ute_SOURCES += ute.c
+ute_SOURCES = ute.c ute.yuck
 ute_LDADD = $(uterus_LIBS)
 ute_CPPFLAGS = $(AM_CPPFLAGS) -DUTEDIR=\"$(utedir)\"
 ute_LDFLAGS = $(AM_LDFLAGS) -static
-
+BUILT_SOURCES += ute.yucc
 
 UTE_CMD_CPPFLAGS = -DSTANDALONE
 
@@ -279,6 +277,12 @@ version.c: version.c.in $(top_builddir)/version.mk
 	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
 	  $*.xh >$*.xh-t \
 	&& mv $*.xh-t $*.xh
+
+## yuck suffix recipe
+SUFFIXES = .yuck .yucc
+.yuck.yucc:
+	$(AM_V_GEN) PATH=$(top_builddir)/build-aux:"$${PATH}" \
+		yuck$(EXEEXT) gen -o $@ $< || { rm -f $@; false; }
 
 ## for dist or dist check we need binaries, so help2man can work
 dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)

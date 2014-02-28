@@ -264,8 +264,12 @@ ute_LTLIBRARIES += fxstreet.la
 fxstreet_la_SOURCES = fxstreet.c
 fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
-version.c: version.c.in $(top_builddir)/version.mk
-	sed -e 's,[@]VERSION[@],$(VERSION),g' <$(srcdir)/$@.in >$@
+## version rules
+version.c: version.c.in $(top_builddir)/.version
+	$(AM_V_GEN) PATH="$(top_builddir)/build-aux:$${PATH}" \
+		yuck$(EXEEXT) scmver --ignore-noscm --force -o $@ \
+			--use-reference --reference $(top_builddir)/.version \
+			$(srcdir)/version.c.in
 
 ## gengetopt rule with sed hack to avoid using VERSION and config.h
 ## depend on Makefile.am to survive a git pull

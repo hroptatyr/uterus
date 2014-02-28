@@ -1,7 +1,6 @@
 AC_PREREQ([2.63])
 
-## t.i.n.a.v = this is not a version, never use it!
-AC_INIT([uterus], [t.i.n.a.v], [https://github.com/hroptatyr/uterus])
+AC_INIT([uterus], [0.2.7.GIT], [https://github.com/hroptatyr/uterus])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([src/config.h])
@@ -25,7 +24,7 @@ AC_COPYRIGHT(
 AM_INIT_AUTOMAKE([foreign dist-xz color-tests parallel-tests subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-GIT_VERSION_MAGIC
+AX_YUCK_SCMVER([version.mk])
 AC_CONFIG_LINKS([GNUmakefile:GNUmakefile])
 
 ## the build chain
@@ -150,7 +149,8 @@ AS_HELP_STRING([--with-R], [Build R contribs, default: no.])],
         ], [with_R="no"])
 AM_CONDITIONAL([BUILD_RCLI], [test "${with_R}" = "yes"])
 
-AX_CHECK_YUCK
+## check for yuck helper
+AX_CHECK_YUCK([with_included_yuck="yes"])
 
 ## libtool goddess^Wgoodness
 ## has to be down here as we're turning -Werror'ing off

@@ -148,7 +148,7 @@ ute_chndl_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-chndl.yucc
 
 ute_PROGRAMS += ute-print
-ute_print_SOURCES = ute-print.c ute-print.h ute-print.ggo
+ute_print_SOURCES = ute-print.c ute-print.h ute-print.yuck
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_print_CPPFLAGS += $(LTDLINCL)
@@ -156,7 +156,7 @@ ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_print_LDADD = $(uterus_LIBS)
 ute_print_LDADD += $(LIBLTDL)
 EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
-BUILT_SOURCES += ute-print.x ute-print.xh
+BUILT_SOURCES += ute-print.yucc
 
 ute_PROGRAMS += ute-mux
 ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux.yuck

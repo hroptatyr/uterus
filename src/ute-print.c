@@ -1,6 +1,6 @@
 /*** ute-print.c -- ute tick printer
  *
- * Copyright (C) 2010-2013 Sebastian Freundt
+ * Copyright (C) 2010-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -212,59 +212,39 @@ get_slut_sz(utehdr2_t p)
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-print.xh"
-#include "ute-print.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#define yuck_post_help	yuck_post_help
+#include "ute-print.yucc"
+
+static void yuck_post_help(const yuck_t UNUSED(src[static 1U]))
+{
+	print_mudems();
+	return;
+}
 
 int
 main(int argc, char *argv[])
 {
-	struct print_args_info argi[1];
-	struct print_parser_params parm = {
-		.override = 1,
-		.initialize = 1,
-		.check_required = 1,
-		.check_ambiguity = 0,
-		.print_errors = 0,
-	};
+	yuck_t argi[1U];
 	struct pr_ctx_s ctx[1] = {{0}};
 	struct pr_opt_s opt[1] = {{0}};
 	struct printer_s prer;
 	int printer_specific_options_p = 0;
 	const char *fmt;
-	int res = 0;
+	int rc = 0;
 
-	if (print_parser_ext(argc, argv, argi, &parm)) {
-		/* maybe we've got as far as to parse --format already */
-		if (argi->format_arg == NULL) {
-			res = 1;
-			goto out;
-		}
-		/* otherwise try the printer initialiser */
-		printer_specific_options_p = 1;
-	} else if (argi->help_given && argi->format_arg == NULL) {
-		print_parser_print_help();
-		fputc('\n', stdout);
-		print_mudems();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
-	if (!argi->format_given) {
+	if (!argi->format_arg) {
 		/* superseding rudi's fave format */
 		fmt = "uta";
 	} else {
 		fmt = argi->format_arg;
 	}
 
-	if (argi->output_given) {
+	if (argi->output_arg) {
 		opt->outfile = argi->output_arg;
 	}
 
@@ -274,21 +254,21 @@ main(int argc, char *argv[])
 	if (UNLIKELY((prer = find_printer(fmt), prer.prf == NULL))) {
 		/* we need a printer, so piss off here */
 		fputs("printer format unknown\n", stderr);
-		res = 1;
+		rc = 1;
 		goto out;
 	} else if (printer_specific_options_p && prer.init_main_f == NULL) {
 		fputs("\
 printer specific options given but cannot find printer\n", stderr);
-		res = 1;
+		rc = 1;
 		goto out;
 	}
-	if (argi->output_given) {
+	if (argi->output_arg) {
 		const int oflags = O_CREAT | O_TRUNC | O_RDWR;
 
 		/* store a copy of the file name */
 		opt->outfile = argi->output_arg;
 		if ((ctx->outfd = open(argi->output_arg, oflags, 0644)) < 0) {
-			res = 1;
+			rc = 1;
 			fputs("cannot open output file\n", stderr);
 			goto out;
 		}
@@ -302,12 +282,12 @@ printer specific options given but cannot find printer\n", stderr);
 
 	/* check and call initialiser if any */
 	if (prer.init_main_f != NULL) {
-		if ((res = prer.init_main_f(ctx, argc, argv))) {
-			if (res < 0) {
-				res = 1;
+		if ((rc = prer.init_main_f(ctx, argc, argv))) {
+			if (rc < 0) {
+				rc = 1;
 			} else {
 				/* we don't consider it an error */
-				res = 0;
+				rc = 0;
 			}
 			goto clo_out;
 		}
@@ -315,7 +295,7 @@ printer specific options given but cannot find printer\n", stderr);
 		prer.initf(ctx);
 	}
 
-	if (argi->inputs_num == 0 && !isatty(STDIN_FILENO)) {
+	if (argi->nargs == 0U && !isatty(STDIN_FILENO)) {
 		/* operate on pages */
 		char pg[4096];
 		/* slut size */
@@ -341,8 +321,8 @@ printer specific options given but cannot find printer\n", stderr);
 		}
 
 	} else {
-		for (unsigned int j = 0; j < argi->inputs_num; j++) {
-			pr1(ctx, argi->inputs[j], prer.prf);
+		for (size_t j = 0U; j < argi->nargs; j++) {
+			pr1(ctx, argi->args[j], prer.prf);
 		}
 	}
 
@@ -358,8 +338,8 @@ clo_out:
 out:
 	unfind_printer(prer);
 	ute_module_fini();
-	print_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

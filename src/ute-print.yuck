@@ -1,0 +1,7 @@
+Usage: ute print FILEs...
+
+Print the contents of an ute file.
+
+  -f, --format=FORMAT   Use the specified parser, see below for a list.
+  -o, --output=FILE     Write result to specified output file FILE,
+                        or stdout if omitted.

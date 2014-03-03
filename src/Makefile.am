@@ -192,12 +192,12 @@ ute_slab_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-slab.x ute-slab.xh
 
 ute_PROGRAMS += ute-info
-ute_info_SOURCES = ute-info.c ute-info.ggo
+ute_info_SOURCES = ute-info.c ute-info.yuck
 ute_info_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_info_LDFLAGS = $(AM_LDFLAGS) -static
 ute_info_LDADD = $(uterus_LIBS)
 EXTRA_ute_info_SOURCES = gbs.c gbs.h
-BUILT_SOURCES += ute-info.x ute-info.xh
+BUILT_SOURCES += ute-info.yucc
 
 ute_PROGRAMS += ute-anal
 ute_anal_SOURCES = ute-anal.c ute-anal.yuck

@@ -1,6 +1,6 @@
 /*** ute-slut.c -- symbol look-up table viewer and editor
  *
- * Copyright (C) 2012 Sebastian Freundt
+ * Copyright (C) 2012-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -309,57 +309,44 @@ out:
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-slut.xh"
-#include "ute-slut.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "ute-slut.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct slut_args_info argi[1];
-	int res = 0;
+	yuck_t argi[1U];
+	int rc = 0;
 
-	if (slut_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		slut_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
-	for (unsigned int i = 0; i < argi->inputs_num; i++) {
+	for (size_t i = 0U; i < argi->nargs; i++) {
 		/* just quickly do it here */
-		const char *fn = argi->inputs[i];
-		const int editp = argi->edit_given;
+		const char *fn = argi->args[i];
+		const int editp = argi->edit_flag;
 		const int fl = editp ? UO_RDWR : UO_RDONLY;
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
 			error("cannot open file '%s'", fn);
 			continue;
-		} else if (argi->inputs_num > 1) {
+		} else if (argi->nargs > 1) {
 			/* print file names when more than 1 */
 			puts(fn);
 		}
 
 		/* process this file */
-		slut1(hdl, argi->edit_given);
+		slut1(hdl, argi->edit_flag);
 
 		/* we worship the ute god by giving back what belongs to him */
 		ute_close(hdl);
 	}
 
 out:
-	slut_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

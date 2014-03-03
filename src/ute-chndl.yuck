@@ -1,0 +1,11 @@
+Usage: ute chndl FILEs...
+
+Generate bid and ask candles from ute files.
+
+A candle at a time T of length L covers the quotes that occurred between T - L
+and T.
+
+  -o, --output=FILE    Write result to specified output file
+  -i, --interval=SECS  Draw a candle every SECS seconds (default: 300)
+  -m, --modulus=SECS   Start SECS seconds past midnight (default 0)
+  -z, --zone=NAME      Use time zone NAME for DST switches, etc. (default UTC)

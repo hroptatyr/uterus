@@ -141,11 +141,11 @@ ute_shnot_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-shnot.x ute-shnot.xh
 
 ute_PROGRAMS += ute-chndl
-ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl.ggo
+ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl.yuck
 ute_chndl_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_chndl_LDFLAGS = $(AM_LDFLAGS) -static
 ute_chndl_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-chndl.x ute-chndl.xh
+BUILT_SOURCES += ute-chndl.yucc
 
 ute_PROGRAMS += ute-print
 ute_print_SOURCES = ute-print.c ute-print.h ute-print.ggo

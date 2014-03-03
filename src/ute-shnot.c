@@ -1,6 +1,6 @@
 /*** ute-shnot.c -- snapshooting from ute files
  *
- * Copyright (C) 2008-2013 Sebastian Freundt
+ * Copyright (C) 2008-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -438,56 +438,46 @@ fini_buckets(shnot_ctx_t ctx)
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-shnot.xh"
-#include "ute-shnot.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "ute-shnot.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct shnot_args_info argi[1];
-	struct shnot_ctx_s ctx[1] = {{0}};
-	struct shnot_opt_s opt[1] = {{0}};
-	struct bkts_s bkt[1] = {{0}};
-	int res = 0;
+	yuck_t argi[1U];
+	struct shnot_ctx_s ctx[1U] = {{0}};
+	struct shnot_opt_s opt[1U] = {{0}};
+	struct bkts_s bkt[1U] = {{0}};
+	int rc = 0;
 
-	/* set default values */
-	argi->interval_arg = 300;
-	argi->modulus_arg = 0;
-	argi->zone_arg = NULL;
-
-	if (shnot_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		shnot_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
 	/* set up our option struct, just to decouple from gengetopt's struct */
-	if (argi->output_given) {
+	if (argi->output_arg) {
 		opt->outfile = argi->output_arg;
 	}
 
-	if (argi->zone_given) {
+	if (argi->zone_arg) {
 		opt->z = zif_read_inst(argi->zone_arg);
 	}
-	opt->interval = argi->interval_arg;
-	opt->offset = argi->modulus_arg;
+	if (argi->interval_arg) {
+		opt->interval = strtoul(argi->interval_arg, NULL, 10);
+	} else {
+		opt->interval = 300;
+	}
+	if (argi->modulus_arg) {
+		opt->offset = strtoul(argi->modulus_arg, NULL, 10);
+	} else {
+		opt->offset = 0;
+	}
 
 	/* initialise context */
 	init(ctx, opt);
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *f = argi->inputs[j];
+	for (size_t j = 0U; j < argi->nargs; j++) {
+		const char *f = argi->args[j];
 		void *hdl;
 
 		if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
@@ -515,8 +505,8 @@ out:
 	if (opt->z != NULL) {
 		zif_free(opt->z);
 	}
-	shnot_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

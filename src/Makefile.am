@@ -134,11 +134,11 @@ BUILT_SOURCES += ute.yucc
 UTE_CMD_CPPFLAGS = -DSTANDALONE
 
 ute_PROGRAMS += ute-shnot
-ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot.ggo
+ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot.yuck
 ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_shnot_LDFLAGS = $(AM_LDFLAGS) -static
 ute_shnot_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-shnot.x ute-shnot.xh
+BUILT_SOURCES += ute-shnot.yucc
 
 ute_PROGRAMS += ute-chndl
 ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl.yuck

@@ -415,7 +415,7 @@ muxer specific options given but cannot find muxer\n", stderr);
 	}
 	/* prefer the fully fledged version */
 	if (mxer.mux_main_f != NULL) {
-		rc = mxer.mux_main_f(ctx, argc, argv);
+		rc = mxer.mux_main_f(ctx, argi->nargs + 1U, argi->args - 1);
 	} else {
 		for (size_t j = 0; j < argi->nargs; j++) {
 			const char *f = argi->args[j];

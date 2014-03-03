@@ -1,4 +1,6 @@
 Usage: ute mux FILEs...
+setopt allow-unknown-dash-options
+setopt allow-unknown-dashdash-options
 
 Generate an ute file from a tick or candle source.
 

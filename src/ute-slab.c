@@ -1,6 +1,6 @@
 /*** ute-slab.c -- cut slabs of tick types, symbols or stamp ranges
  *
- * Copyright (C) 2012 Sebastian Freundt
+ * Copyright (C) 2012-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -429,53 +429,45 @@ xplo1(slab_ctx_t ctx, utectx_t hdl)
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-slab.xh"
-#include "ute-slab.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "ute-slab.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct slab_args_info argi[1];
-	struct slab_ctx_s ctx[1] = {{0}};
-	int res = 0;
+	yuck_t argi[1U];
+	struct slab_ctx_s ctx[1U] = {{0}};
+	int rc = 0;
+	unsigned int *idxs = NULL;
 
-	if (slab_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		slab_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
-	if (argi->extract_symbol_given) {
-		ctx->syms = (const char*const*)argi->extract_symbol_arg;
-		/* quick count */
-		for (const char *const *p = ctx->syms; *p; p++, ctx->nsyms++);
+	if (argi->extract_symbol_nargs) {
+		ctx->syms = (const char*const*)argi->extract_symbol_args;
+		ctx->nsyms = argi->extract_symbol_nargs;
 	}
-	if (argi->extract_symidx_given) {
-		ctx->idxs = (unsigned int*)argi->extract_symidx_arg;
-		/* quick count */
-		for (const unsigned int *p = ctx->idxs; *p; p++, ctx->nidxs++);
+	if (argi->extract_symidx_nargs) {
+		ctx->nidxs = argi->extract_symidx_nargs;
+		idxs = malloc(ctx->nidxs * sizeof(*idxs));
+
+		for (size_t i = 0U; i < ctx->nidxs; i++) {
+			const char *idx = argi->extract_symidx_args[i];
+			idxs[i] = strtoul(idx, NULL, 10);
+		}
+		ctx->idxs = idxs;
 	}
 
 	/* time based extraction */
-	if (argi->extract_day_given) {
+	if (argi->extract_day_arg) {
 		ctx->from = get_date(argi->extract_day_arg);
 		ctx->till = ctx->from + 86400;
 	}
-	if (argi->extract_from_given) {
+	if (argi->extract_from_arg) {
 		ctx->from = get_stamp(argi->extract_from_arg);
 	}
-	if (argi->extract_till_given) {
+	if (argi->extract_till_arg) {
 		ctx->till = get_stamp(argi->extract_till_arg);
 	}
 	/* set defaults */
@@ -485,33 +477,33 @@ main(int argc, char *argv[])
 	if (ctx->till == 0) {
 		ctx->till = 2147483647;
 	}
-	if (argi->explode_by_interval_given) {
-		ctx->intv = argi->explode_by_interval_arg;
+	if (argi->explode_by_interval_arg) {
+		ctx->intv = strtoul(argi->explode_by_interval_arg, NULL, 10);
 	}
 
 	/* check explosion options */
-	if (argi->explode_by_interval_given && argi->explode_by_symbol_given) {
+	if (argi->explode_by_interval_arg && argi->explode_by_symbol_flag) {
 		error("\
 only one of --explode-by-interval and --explode-by-symbol can be given\n\n\
 If you want to explode a file by both options, pick one option first, then\n\
 run the other option on the generated files\n");
-		res = 1;
+		rc = 1;
 		goto out;
 	}
 
 	/* handle outfile */
 	ctx->outfl = UO_CREAT | UO_RDWR;
-	if (argi->output_given && argi->into_given) {
+	if (argi->output_arg && argi->into_arg) {
 		error("only one of --output and --into can be given");
-		res = 1;
+		rc = 1;
 		goto out;
-	} else if (argi->output_given) {
+	} else if (argi->output_arg) {
 		ctx->outfn = argi->output_arg;
 		ctx->outfl |= UO_TRUNC;
-	} else if (argi->into_given) {
+	} else if (argi->into_arg) {
 		ctx->outfn = argi->into_arg;
-	} else if (argi->explode_by_interval_given ||
-		   argi->explode_by_symbol_given) {
+	} else if (argi->explode_by_interval_arg ||
+		   argi->explode_by_symbol_flag) {
 		/* generate a nice prefix */
 		static char prfx[] = "xplo_XXXXXX";
 
@@ -522,22 +514,22 @@ run the other option on the generated files\n");
 		ctx->outfn = NULL;
 	}
 
-	if (argi->explode_by_interval_given ||
-	    argi->explode_by_symbol_given) {
+	if (argi->explode_by_interval_arg ||
+	    argi->explode_by_symbol_flag) {
 		/* no file opening in advance in explosion mode */
 		ctx->out = NULL;
 	} else if ((ctx->out = open_out(ctx->outfn, ctx->outfl)) == NULL) {
 		error("cannot open output file '%s'", ctx->outfn);
-		res = 1;
+		rc = 1;
 		goto out;
 	} else if (ctx->outfn == NULL) {
 		/* inform the user about our filename decision */
 		puts(ute_fn(ctx->out));
 	}
 
-	for (unsigned int i = 0; i < argi->inputs_num; i++) {
+	for (size_t i = 0U; i < argi->nargs; i++) {
 		/* just quickly do it here */
-		const char *fn = argi->inputs[i];
+		const char *fn = argi->args[i];
 		const int fl = UO_RDONLY;
 		utectx_t hdl;
 
@@ -546,7 +538,7 @@ run the other option on the generated files\n");
 			continue;
 		}
 
-		if (!argi->explode_by_symbol_given) {
+		if (!argi->explode_by_symbol_flag) {
 			/* slab some stuff out of hdl */
 			slab1(ctx, hdl);
 		} else {
@@ -557,14 +549,17 @@ run the other option on the generated files\n");
 		ute_close(hdl);
 	}
 
-	/* clear out resources */
+	/* clear out rcources */
 	if (ctx->out != NULL) {
 		ute_close(ctx->out);
 	}
 
 out:
-	slab_parser_free(argi);
-	return res;
+	if (idxs) {
+		free(idxs);
+	}
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

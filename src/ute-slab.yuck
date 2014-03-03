@@ -1,0 +1,18 @@
+Usage: ute slab FILEs...
+
+Cut slabs of tick types, symbols or stamp ranges.
+
+  -o, --output=FILE             Write result to specified output file
+      --into=FILE               Write result into ute file FILE
+
+      --extract-symbol=SYM...  Extract ticks regarding SYM, can be
+                               comma-separated list or used multiple times
+      --extract-symidx=IDX...  Extract ticks with index IDX, can be
+                                  comma-separated list or used multiple times
+      --extract-from=STMP      Extract all ticks younger than STMP.
+      --extract-till=STMP      Extract all ticks older than STMP.
+      --extract-day=DATE       Short for --extract-from='DATE'
+                               --extract-till='DATE'
+      --explode-by-symbol      Extract all symbols into their own files.
+      --explode-by-interval=SECS
+                               Extract all intervals into their own files.

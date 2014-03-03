@@ -185,11 +185,11 @@ ute_slut_LDADD = $(uterus_LIBS)
 BUILT_SOURCES += ute-slut.x ute-slut.xh
 
 ute_PROGRAMS += ute-slab
-ute_slab_SOURCES = ute-slab.c ute-slab.ggo
+ute_slab_SOURCES = ute-slab.c ute-slab.yuck
 ute_slab_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slab_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slab_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-slab.x ute-slab.xh
+BUILT_SOURCES += ute-slab.yucc
 
 ute_PROGRAMS += ute-info
 ute_info_SOURCES = ute-info.c ute-info.yuck

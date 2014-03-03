@@ -232,12 +232,12 @@ mat_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
-hdf5_la_SOURCES = hdf5.c hdf5.ggo
+hdf5_la_SOURCES = hdf5.c hdf5.yuck
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LIBADD = libversion.a
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
 endif  ## HAVE_HDF5
-BUILT_SOURCES += hdf5.x hdf5.xh
+BUILT_SOURCES += hdf5.yucc
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c

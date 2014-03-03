@@ -171,11 +171,11 @@ EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-mux.x ute-mux.xh
 
 ute_PROGRAMS += ute-fsck
-ute_fsck_SOURCES = ute-fsck.c ute-fsck.ggo
+ute_fsck_SOURCES = ute-fsck.c ute-fsck.yuck
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_fsck_LDFLAGS = $(AM_LDFLAGS) -static
 ute_fsck_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-fsck.x ute-fsck.xh
+BUILT_SOURCES += ute-fsck.yucc
 
 ute_PROGRAMS += ute-slut
 ute_slut_SOURCES = ute-slut.c ute-slut.ggo

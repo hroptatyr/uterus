@@ -8,6 +8,7 @@ LC_ALL=C
 
 BUILT_SOURCES =
 EXTRA_DIST = $(BUILT_SOURCES)
+SUFFIXES =
 
 info_TEXINFOS = uterus.texi
 uterus_TEXINFOS =
@@ -44,25 +45,25 @@ built_infos += ute-slut.texi
 
 dist_noinst_SCRIPTS = gentexi.sh
 
-## help2man helpers
-my_bld_man = $(__bld_man_$(V))
-__bld_man_ = $(__bld_man_$(AM_DEFAULT_VERBOSITY))
-__bld_man_0 = @echo "  HELP2MAN" $*;
-%.man: $(top_srcdir)/src/%.ggo $(top_srcdir)/configure $(top_builddir)/version.mk
-	$(my_bld_man) $(HELP2MAN) -S "$(PACKAGE_STRING)" -p "($(PACKAGE))$*" \
-		-I "$(srcdir)/author.h2m" \
-		-o $@ $(top_builddir)/src/$*
+## man gen helpers
+SUFFIXES += .yuck
+SUFFIXES += .man
 
-ute.man: $(top_srcdir)/src/ute.c $(top_srcdir)/configure $(top_builddir)/version.mk
-	$(my_bld_man) $(HELP2MAN) -S "$(PACKAGE_STRING)" -p "($(PACKAGE))$*" \
-		-I "$(srcdir)/author.h2m" \
-		-o $@ $(top_builddir)/src/ute
+VPATH += @top_srcdir@/src
+
+.yuck.man:
+	$(AM_V_GEN) PATH="$(top_builddir)/build-aux:$${PATH}" \
+		yuck$(EXEEXT) genman \
+			--package "$(PACKAGE_NAME)" \
+			-i "$(srcdir)/author.h2m" \
+			-o $@ --version-string "$(VERSION)" $<
 
 my_bld_texi = $(__bld_texi_$(V))
 __bld_texi_ = $(__bld_texi_$(AM_DEFAULT_VERBOSITY))
 __bld_texi_0 = @echo "  GENTEXI " $*;
-%.texi: $(top_srcdir)/src/%.ggo $(top_builddir)/version.mk
+SUFFIXES += .texi
+.yuck.texi:
 	$(my_bld_texi) ${SHELL} \
 		$(srcdir)/gentexi.sh $(top_builddir)/src/$* \
-		$($*_EXAMPLES) > $@ || rm -f -- $@
+		$($*_EXAMPLES) > $@ || { rm -f -- $@; false; }
 

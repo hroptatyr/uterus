@@ -159,7 +159,7 @@ EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
 BUILT_SOURCES += ute-print.x ute-print.xh
 
 ute_PROGRAMS += ute-mux
-ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux.ggo
+ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux.yuck
 ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_CPPFLAGS += -DUTEDIR=\"$(utedir)\"
@@ -168,7 +168,7 @@ ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_mux_LDADD = $(uterus_LIBS)
 ute_mux_LDADD += $(LIBLTDL)
 EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
-BUILT_SOURCES += ute-mux.x ute-mux.xh
+BUILT_SOURCES += ute-mux.yucc
 
 ute_PROGRAMS += ute-fsck
 ute_fsck_SOURCES = ute-fsck.c ute-fsck.yuck

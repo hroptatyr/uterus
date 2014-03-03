@@ -1,0 +1,18 @@
+Usage: ute mux FILEs...
+
+Generate an ute file from a tick or candle source.
+
+  -f, --format=FORMAT   Use the specified parser, see below for a list.
+  -o, --output=FILE             Write result to specified output file.
+      --into=FILE               Write result into ute file FILE.
+
+      --name=NAME       For single-security files use NAME as security symbol
+  -z, --zone=NAME       Treat dates/times as in time zone NAME (default UTC)
+      --refdate=STAMP   Use STAMP as reference point for time values
+                        instead of epoch
+      --flavour=F       Data flavour (bid, ask, trade) for flavour-agnostic
+                        formats  (possible values="b", "a", "t")
+      --multiplier=INT  Multiply price values by INT
+                        for fractions also use --magnifier
+      --magnifier=INT   Price values are regarded as if multiplied by INT,
+                        for better divisibility consider --multiplier

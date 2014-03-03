@@ -282,7 +282,7 @@ printer specific options given but cannot find printer\n", stderr);
 
 	/* check and call initialiser if any */
 	if (prer.init_main_f != NULL) {
-		if ((rc = prer.init_main_f(ctx, argc, argv))) {
+		if ((rc = prer.init_main_f(ctx, argi->nargs + 1U, argi->args - 1))) {
 			if (rc < 0) {
 				rc = 1;
 			} else {

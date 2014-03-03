@@ -1,4 +1,6 @@
 Usage: ute print FILEs...
+setopt allow-unknown-dash-options
+setopt allow-unknown-dashdash-options
 
 Print the contents of an ute file.
 

@@ -1,6 +1,6 @@
 /*** dukas.c -- dukascopy muxer
  *
- * Copyright (C) 2009-2013 Sebastian Freundt
+ * Copyright (C) 2009-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -607,38 +607,25 @@ mux(mux_ctx_t ctx)
 	return;
 }
 
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "dukas.xh"
-#include "dukas.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "dukas.yucc"
 
 int
 mux_main(mux_ctx_t ctx, int argc, char *argv[])
 {
-	static struct mux_ctx_s __ctx[1];
-	static struct sumux_opt_s __opts[1];
-	struct dukas_args_info argi[1];
-	int res = 0;
+	static struct mux_ctx_s __ctx[1U];
+	static struct sumux_opt_s __opts[1U];
+	yuck_t argi[1U];
+	int rc = 0;
 
-	if (dukas_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		dukas_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	} else if (UNLIKELY(ctx == NULL)) {
 		ctx = __ctx;
 		ctx->opts = __opts;
 	}
 
-	if (argi->human_readable_given) {
+	if (argi->human_readable_flag) {
 		/* wipe off the stuff ute-mux prepared for us */
 		const char *fn;
 
@@ -650,12 +637,12 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			ctx->wrr = NULL;
 		}
 	}
-	if (argi->all_given) {
+	if (argi->all_flag) {
 		ctx->opts->flags |= SUMUX_FLAG_ALL_TICKS;
 	}
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *f = argi->inputs[j];
+	for (size_t j = 0U; j < argi->nargs; j++) {
+		const char *f = argi->args[j];
 		int fd;
 
 		/* open the infile ... */
@@ -668,7 +655,7 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			error("cannot open file '%s'", f);
 			/* just try the next bloke */
 			continue;
-		} else if (argi->guess_given && guess(ctx, f) < 0) {
+		} else if (argi->guess_flag && guess(ctx, f) < 0) {
 			error("cannot guess info from '%s'", f);
 			/* well try to do the actual muxing anyway */
 			;
@@ -679,7 +666,7 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 			ctx->badfd = STDERR_FILENO;
 		}
 		/* ... and now mux it */
-		if (argi->human_readable_given) {
+		if (argi->human_readable_flag) {
 			dump_l1bi5(ctx);
 		} else {
 			mux(ctx);
@@ -689,8 +676,8 @@ mux_main(mux_ctx_t ctx, int argc, char *argv[])
 	}
 
 out:
-	dukas_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 
 

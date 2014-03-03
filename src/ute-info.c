@@ -1,6 +1,6 @@
 /*** ute-info.c -- ute file checker
  *
- * Copyright (C) 2012 Sebastian Freundt
+ * Copyright (C) 2012-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -593,62 +593,49 @@ info1(info_ctx_t ctx, const char *UNUSED(fn))
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-info.xh"
-#include "ute-info.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "ute-info.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct info_args_info argi[1];
-	struct info_ctx_s ctx[1] = {0};
-	int res = 0;
+	yuck_t argi[1U];
+	struct info_ctx_s ctx[1U] = {0};
+	int rc = 0;
 
-	if (info_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		info_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
-	if (argi->interval_given) {
-		ctx->intv = argi->interval_arg;
-		if (argi->modulus_given) {
-			ctx->modu = argi->modulus_arg;
+	if (argi->interval_arg) {
+		ctx->intv = strtoul(argi->interval_arg, NULL, 10);
+		if (argi->modulus_arg) {
+			ctx->modu = strtoul(argi->modulus_arg, NULL, 10);
 		}
-	} else if (argi->modulus_given) {
+	} else if (argi->modulus_arg) {
 		fputs("\
 warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 	}
 
-	/* copy interesting stuff into our own context */
-	if (argi->verbose_given) {
+	/* copy intercting stuff into our own context */
+	if (argi->verbose_flag) {
 		ctx->verbp = true;
 	}
-	if (argi->guess_given) {
+	if (argi->guess_flag) {
 		ctx->guessp = true;
 	}
-	if (argi->files_given) {
+	if (argi->files_flag) {
 		ctx->filesp = true;
 	}
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *fn = argi->inputs[j];
+	for (size_t j = 0U; j < argi->nargs; j++) {
+		const char *fn = argi->args[j];
 		const int fl = UO_RDONLY | UO_NO_LOAD_TPC;
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
 			error("cannot open file `%s'", fn);
-			res = 1;
+			rc = 1;
 			continue;
 		}
 
@@ -656,15 +643,15 @@ warning: --modulus without --interval is not meaningful, ignored\n", stderr);
 		ctx->u = hdl;
 		ctx->fn = fn;
 		if (info1(ctx, fn)) {
-			res = 1;
+			rc = 1;
 		}
 
 		/* and that's us */
 		ute_close(hdl);
 	}
 out:
-	info_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

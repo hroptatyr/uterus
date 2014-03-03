@@ -1,6 +1,6 @@
 /*** ute-mux.c -- muxing external sources
  *
- * Copyright (C) 2009-2013 Sebastian Freundt
+ * Copyright (C) 2009-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -310,53 +310,34 @@ deinit_ticks(mux_ctx_t ctx)
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-mux.xh"
-#include "ute-mux.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#define yuck_post_help	yuck_post_help
+#include "ute-mux.yucc"
+
+static void yuck_post_help(const yuck_t UNUSED(src[static 1U]))
+{
+	print_muxers();
+	return;
+}
 
 int
 main(int argc, char *argv[])
 {
-	struct mux_args_info argi[1];
-	struct mux_parser_params parm = {
-		.override = 1,
-		.initialize = 1,
-		.check_required = 1,
-		.check_ambiguity = 0,
-		.print_errors = 0,
-	};
-	struct sumux_opt_s opts[1] = {{0}};
-	struct mux_ctx_s ctx[1] = {{0}};
+	yuck_t argi[1U];
+	struct sumux_opt_s opts[1U] = {{0}};
+	struct mux_ctx_s ctx[1U] = {{0}};
 	struct muxer_s mxer;
 	int muxer_specific_options_p = 0;
-	int res = 0;
+	int rc = 0;
 
-	if (mux_parser_ext(argc, argv, argi, &parm)) {
+	if (yuck_parse(argi, argc, argv)) {
 		/* maybe we've got as far as to parse --format|-f already */
-		if (argi->format_arg == NULL) {
-			res = 1;
-			goto out;
-		}
-		/* otherwise we could try forming ute-mux-<MUXER> as cmd */
-		muxer_specific_options_p = 1;
-	} else if (argi->help_given && argi->format_arg == NULL) {
-		mux_parser_print_help();
-		fputs("\n", stdout);
-		print_muxers();
-		res = 0;
+		rc = 1;
 		goto out;
 	}
 
-	if (argi->output_given && argi->into_given) {
+	if (argi->output_arg && argi->into_arg) {
 		fputs("only one of --output and --into can be given\n", stderr);
-		res = 1;
+		rc = 1;
 		goto out;
 	}
 
@@ -367,69 +348,77 @@ main(int argc, char *argv[])
 		      mxer.muxf == NULL && mxer.mux_main_f == NULL))) {
 		/* piss off, we need a mux function */
 		fputs("format unknown\n", stderr);
-		res = 1;
+		rc = 1;
 		goto out;
 	} else if (muxer_specific_options_p && mxer.mux_main_f == NULL) {
 		fputs("\
 muxer specific options given but cannot find muxer\n", stderr);
-		res = 1;
+		rc = 1;
 		goto out;
 	}
 
-	if (argi->name_given) {
+	if (argi->name_arg) {
 		opts->sname = argi->name_arg;
 	}
 
-	if (argi->output_given) {
+	if (argi->output_arg) {
 		opts->outfile = argi->output_arg;
-	} else if (argi->into_given) {
+	} else if (argi->into_arg) {
 		opts->outfile = argi->into_arg;
 		opts->flags |= OUTFILE_IS_INTO;
 	}
 
-	if (argi->refdate_given) {
+	if (argi->refdate_arg) {
 		/* for simplicity expect unix epoch stamp for now */
-		opts->tsoff = argi->refdate_arg;
+		opts->tsoff = strtol(argi->refdate_arg, NULL, 10);
 	}
 
-	switch (argi->flavour_arg) {
+	if (!argi->flavour_arg) {
+		goto dflt_tt;
+	}
+	switch (*argi->flavour_arg) {
 	default:
-	case flavour__NULL:
+	dflt_tt:
 		opts->tt = SCOM_TTF_UNK;
 		break;
-	case flavour_arg_b:
+	case 'b':
+	case 'B':
 		opts->tt = SL1T_TTF_BID;
 		break;
-	case flavour_arg_a:
+	case 'a':
+	case 'A':
 		opts->tt = SL1T_TTF_ASK;
 		break;
-	case flavour_arg_t:
+	case 't':
+	case 'T':
 		opts->tt = SL1T_TTF_TRA;
 		break;
 	}
 
-	if (!argi->multiplier_given) {
+	if (!argi->multiplier_arg) {
+		/* default value */
 		opts->mul = 1;
 	} else {
-		opts->mul = argi->multiplier_arg;
+		opts->mul = strtoul(argi->multiplier_arg, NULL, 10);
 	}
-	if (!argi->magnifier_given) {
+	if (!argi->magnifier_arg) {
+		/* default value */
 		opts->mag = 1;
 	} else {
-		opts->mag = argi->magnifier_arg;
+		opts->mag = strtoul(argi->magnifier_arg, NULL, 10);
 	}
 
 	/* the actual muxing step */
 	if (init_ticks(ctx, opts) < 0) {
-		res = 1;
+		rc = 1;
 		goto out;
 	}
 	/* prefer the fully fledged version */
 	if (mxer.mux_main_f != NULL) {
-		res = mxer.mux_main_f(ctx, argc, argv);
+		rc = mxer.mux_main_f(ctx, argi->nargs + 1U, argi->args - 1);
 	} else {
-		for (unsigned int j = 0; j < argi->inputs_num; j++) {
-			const char *f = argi->inputs[j];
+		for (size_t j = 0; j < argi->nargs; j++) {
+			const char *f = argi->args[j];
 			int fd;
 
 			/* open the infile ... */
@@ -457,8 +446,8 @@ muxer specific options given but cannot find muxer\n", stderr);
 out:
 	unfind_muxer(mxer);
 	ute_module_fini();
-	mux_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

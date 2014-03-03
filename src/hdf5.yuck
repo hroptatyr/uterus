@@ -1,0 +1,7 @@
+Usage ute print -f hdf5 FILEs...
+
+Dump ute files in HDF5 format.
+
+  --compound            Use the compound data type to tightly couple
+                        timestamps and values.
+  --matlab              Make the generated file easy to read with matlab.

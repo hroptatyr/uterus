@@ -501,66 +501,53 @@ anal1(anal_ctx_t ctx)
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-anal.xh"
-#include "ute-anal.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "ute-anal.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct anal_args_info argi[1];
+	yuck_t argi[1U];
 	struct anal_ctx_s ctx[1] = {0};
-	int res = 0;
+	int rc = 0;
 
-	if (anal_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		anal_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
-	if (argi->interval_given) {
-		ctx->intv = argi->interval_arg;
-		if (argi->modulus_given) {
-			ctx->modu = argi->modulus_arg;
+	if (argi->interval_arg) {
+		ctx->intv = strtoul(argi->interval_arg, NULL, 10);
+		if (argi->modulus_arg) {
+			ctx->modu = strtoul(argi->modulus_arg, NULL, 10);
 		}
-	} else if (argi->modulus_given) {
+	} else if (argi->modulus_arg) {
 		error("\
 warning: --modulus without --interval is not meaningful, ignored");
 	}
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *fn = argi->inputs[j];
+	for (size_t j = 0U; j < argi->nargs; j++) {
+		const char *fn = argi->args[j];
 		const int fl = UO_RDONLY | UO_NO_LOAD_TPC;
 		utectx_t hdl;
 
 		if ((hdl = ute_open(fn, fl)) == NULL) {
 			error("not open file `%s'", fn);
-			res = 1;
+			rc = 1;
 			continue;
 		}
 
 		/* the actual checking */
 		ctx->u = hdl;
 		if (anal1(ctx)) {
-			res = 1;
+			rc = 1;
 		}
 
 		/* and that's us */
 		ute_close(hdl);
 	}
 out:
-	anal_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

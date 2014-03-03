@@ -22,7 +22,7 @@ AC_COPYRIGHT(
 ###     autoreconf -i
 ])
 
-AM_INIT_AUTOMAKE([foreign dist-xz color-tests parallel-tests])
+AM_INIT_AUTOMAKE([foreign dist-xz color-tests parallel-tests subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 GIT_VERSION_MAGIC
@@ -134,7 +134,7 @@ AS_HELP_STRING([--with-matlab], [Build matlab contribs, default: no.])],
         ], [with_matlab="no"])
 AM_CONDITIONAL([BUILD_MATCLI], [test "${with_matlab}" = "yes"])
 
-## check for matlab
+## check for R
 AC_ARG_WITH([R], [
 AS_HELP_STRING([--with-R], [Build R contribs, default: no.])],
         [dnl
@@ -149,6 +149,8 @@ AS_HELP_STRING([--with-R], [Build R contribs, default: no.])],
 		fi
         ], [with_R="no"])
 AM_CONDITIONAL([BUILD_RCLI], [test "${with_R}" = "yes"])
+
+AX_CHECK_YUCK
 
 ## libtool goddess^Wgoodness
 ## has to be down here as we're turning -Werror'ing off
@@ -165,6 +167,7 @@ AC_SUBST([utedir])
 
 ## output
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([build-aux/Makefile])
 AC_CONFIG_FILES([libltdl/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([aux/Makefile])

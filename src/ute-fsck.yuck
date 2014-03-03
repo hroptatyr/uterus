@@ -1,0 +1,13 @@
+Usage: ute fsck FILEs...
+
+Check ute file for consistency.
+
+  -z, --compress        Compress all ticks (only if lzma support is available).
+      --compression-level=INT  Use different compression presets, 
+                               1 is fast, 9 is best.  (Default: 6)
+  -d, --decompress             Decompress all ticks.
+  -n, --dry-run                Do not actually change the files.
+  -v, --verbose                Print some additional info.
+  -o, --output=FILE            Output to FILE, leave original file untouched.
+      --little-endian   Convert ute file to little endian representation.
+      --big-endian             Convert ute file to big endian representation.

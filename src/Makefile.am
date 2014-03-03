@@ -125,32 +125,30 @@ uterus_LIBS = libuterus.la
 uterus_LIBS += libversion.a
 
 bin_PROGRAMS += ute
-ute_SOURCES =
-EXTRA_ute_SOURCES =
-ute_SOURCES += ute.c
+ute_SOURCES = ute.c ute.yuck
 ute_LDADD = $(uterus_LIBS)
 ute_CPPFLAGS = $(AM_CPPFLAGS) -DUTEDIR=\"$(utedir)\"
 ute_LDFLAGS = $(AM_LDFLAGS) -static
-
+BUILT_SOURCES += ute.yucc
 
 UTE_CMD_CPPFLAGS = -DSTANDALONE
 
 ute_PROGRAMS += ute-shnot
-ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot.ggo
+ute_shnot_SOURCES = ute-shnot.c ute-shnot.h ute-shnot.yuck
 ute_shnot_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_shnot_LDFLAGS = $(AM_LDFLAGS) -static
 ute_shnot_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-shnot.x ute-shnot.xh
+BUILT_SOURCES += ute-shnot.yucc
 
 ute_PROGRAMS += ute-chndl
-ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl.ggo
+ute_chndl_SOURCES = ute-chndl.c ute-chndl.h ute-chndl.yuck
 ute_chndl_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_chndl_LDFLAGS = $(AM_LDFLAGS) -static
 ute_chndl_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-chndl.x ute-chndl.xh
+BUILT_SOURCES += ute-chndl.yucc
 
 ute_PROGRAMS += ute-print
-ute_print_SOURCES = ute-print.c ute-print.h ute-print.ggo
+ute_print_SOURCES = ute-print.c ute-print.h ute-print.yuck
 ute_print_SOURCES += module.c module.h
 ute_print_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_print_CPPFLAGS += $(LTDLINCL)
@@ -158,10 +156,10 @@ ute_print_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_print_LDADD = $(uterus_LIBS)
 ute_print_LDADD += $(LIBLTDL)
 EXTRA_ute_print_DEPENDENCIES = $(LTDLDEPS)
-BUILT_SOURCES += ute-print.x ute-print.xh
+BUILT_SOURCES += ute-print.yucc
 
 ute_PROGRAMS += ute-mux
-ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux.ggo
+ute_mux_SOURCES = ute-mux.c ute-mux.h ute-mux.yuck
 ute_mux_SOURCES += module.c module.h
 ute_mux_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_CPPFLAGS += -DUTEDIR=\"$(utedir)\"
@@ -170,46 +168,46 @@ ute_mux_LDFLAGS = $(AM_LDFLAGS) $(LD_EXPORT_DYNAMIC)
 ute_mux_LDADD = $(uterus_LIBS)
 ute_mux_LDADD += $(LIBLTDL)
 EXTRA_ute_mux_DEPENDENCIES = $(LTDLDEPS)
-BUILT_SOURCES += ute-mux.x ute-mux.xh
+BUILT_SOURCES += ute-mux.yucc
 
 ute_PROGRAMS += ute-fsck
-ute_fsck_SOURCES = ute-fsck.c ute-fsck.ggo
+ute_fsck_SOURCES = ute-fsck.c ute-fsck.yuck
 ute_fsck_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_fsck_LDFLAGS = $(AM_LDFLAGS) -static
 ute_fsck_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-fsck.x ute-fsck.xh
+BUILT_SOURCES += ute-fsck.yucc
 
 ute_PROGRAMS += ute-slut
-ute_slut_SOURCES = ute-slut.c ute-slut.ggo
+ute_slut_SOURCES = ute-slut.c ute-slut.yuck
 ute_slut_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slut_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slut_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-slut.x ute-slut.xh
+BUILT_SOURCES += ute-slut.yucc
 
 ute_PROGRAMS += ute-slab
-ute_slab_SOURCES = ute-slab.c ute-slab.ggo
+ute_slab_SOURCES = ute-slab.c ute-slab.yuck
 ute_slab_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_slab_LDFLAGS = $(AM_LDFLAGS) -static
 ute_slab_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-slab.x ute-slab.xh
+BUILT_SOURCES += ute-slab.yucc
 
 ute_PROGRAMS += ute-info
-ute_info_SOURCES = ute-info.c ute-info.ggo
+ute_info_SOURCES = ute-info.c ute-info.yuck
 ute_info_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_info_LDFLAGS = $(AM_LDFLAGS) -static
 ute_info_LDADD = $(uterus_LIBS)
 EXTRA_ute_info_SOURCES = gbs.c gbs.h
-BUILT_SOURCES += ute-info.x ute-info.xh
+BUILT_SOURCES += ute-info.yucc
 
 ute_PROGRAMS += ute-anal
-ute_anal_SOURCES = ute-anal.c ute-anal.ggo
+ute_anal_SOURCES = ute-anal.c ute-anal.yuck
 ute_anal_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_anal_LDFLAGS = $(AM_LDFLAGS) -static
 if HAVE_LIBPNG
 ute_anal_LDFLAGS += -lpng
 endif  HAVE_LIBPNG
 ute_anal_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += ute-anal.x ute-anal.xh
+BUILT_SOURCES += ute-anal.yucc
 
 ## muxer/demuxer DSOs
 ute_LTLIBRARIES += uta.la
@@ -222,11 +220,11 @@ dukas_la_LIBADD = libversion.a
 dukas_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 ## dukas has a binary too
 noinst_PROGRAMS += ute-mux-dukas
-ute_mux_dukas_SOURCES = dukas.c dukas.ggo
+ute_mux_dukas_SOURCES = dukas.c dukas.yuck
 ute_mux_dukas_CPPFLAGS = $(AM_CPPFLAGS) $(UTE_CMD_CPPFLAGS)
 ute_mux_dukas_LDFLAGS = $(AM_LDFLAGS)
 ute_mux_dukas_LDADD = $(uterus_LIBS)
-BUILT_SOURCES += dukas.x dukas.xh
+BUILT_SOURCES += dukas.yucc
 
 ute_LTLIBRARIES += mat.la
 mat_la_SOURCES = mat.c
@@ -234,12 +232,12 @@ mat_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
 if HAVE_HDF5
 ute_LTLIBRARIES += hdf5.la
-hdf5_la_SOURCES = hdf5.c hdf5.ggo
+hdf5_la_SOURCES = hdf5.c hdf5.yuck
 hdf5_la_CPPFLAGS = $(AM_CPPFLAGS) $(HDF5_CPPFLAGS)
 hdf5_la_LIBADD = libversion.a
 hdf5_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS) $(HDF5_LDFLAGS)
 endif  ## HAVE_HDF5
-BUILT_SOURCES += hdf5.x hdf5.xh
+BUILT_SOURCES += hdf5.yucc
 
 ute_LTLIBRARIES += ariva.la
 ariva_la_SOURCES = ariva.c
@@ -279,6 +277,12 @@ version.c: version.c.in $(top_builddir)/version.mk
 	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
 	  $*.xh >$*.xh-t \
 	&& mv $*.xh-t $*.xh
+
+## yuck suffix recipe
+SUFFIXES = .yuck .yucc
+.yuck.yucc:
+	$(AM_V_GEN) PATH=$(top_builddir)/build-aux:"$${PATH}" \
+		yuck$(EXEEXT) gen -o $@ $< || { rm -f $@; false; }
 
 ## for dist or dist check we need binaries, so help2man can work
 dist-hook: $(bin_PROGRAMS) $(ute_PROGRAMS)

@@ -1,6 +1,6 @@
 /*** ute-fsck.c -- ute file checker
  *
- * Copyright (C) 2012 Sebastian Freundt
+ * Copyright (C) 2012-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -511,38 +511,25 @@ file_flags(fsck_ctx_t ctx, const char *fn)
 
 
 #if defined STANDALONE
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "ute-fsck.xh"
-#include "ute-fsck.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "ute-fsck.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct fsck_args_info argi[1];
-	struct fsck_ctx_s ctx[1] = {0};
-	int res = 0;
+	yuck_t argi[1U];
+	struct fsck_ctx_s ctx[1U] = {0};
+	int rc = 0;
 
-	if (fsck_parser(argc, argv, argi)) {
-		res = 1;
-		goto out;
-	} else if (argi->help_given) {
-		fsck_parser_print_help();
-		res = 0;
+	if (yuck_parse(argi, argc, argv)) {
+		rc = 1;
 		goto out;
 	}
 
-	/* copy interesting stuff into our own context */
-	if (argi->dry_run_given) {
+	/* copy intercting stuff into our own context */
+	if (argi->dry_run_flag) {
 		ctx->a_dryp = true;
 	}
-	if (argi->verbose_given) {
+	if (argi->verbose_flag) {
 		ctx->verbp = true;
 	}
 
@@ -552,38 +539,44 @@ main(int argc, char *argv[])
 #else  /* !WORDS_BIGENDIAN */
 	ctx->natend = UTE_ENDIAN_LITTLE;
 #endif	/* WORDS_BIGENDIAN */
-	if (argi->little_endian_given) {
+	if (argi->little_endian_flag) {
 		ctx->tgtend = UTE_ENDIAN_LITTLE;
-	} else if (argi->big_endian_given) {
+	} else if (argi->big_endian_flag) {
 		ctx->tgtend = UTE_ENDIAN_BIG;
 	} else {
 		/* use native endianness */
 		ctx->tgtend = ctx->natend;
 	}
 
-	/* set the compression level in either case */
-	ute_encode_clevel = argi->compression_level_arg;
+	/* set the comprcsion level in either case */
+	if (argi->compression_level_arg) {
+		ute_encode_clevel =
+			strtoul(argi->compression_level_arg, NULL, 10);
+	} else {
+		/* default value */
+		ute_encode_clevel = 6;
+	}
 
-	if (!argi->dry_run_given && argi->output_given) {
+	if (!argi->dry_run_flag && argi->output_arg) {
 		const int fl = UO_RDWR | UO_CREAT | UO_TRUNC;
 		const char *fn = argi->output_arg;
 
 		if ((ctx->outctx = ute_open(fn, fl)) == NULL) {
 			error("cannot open output file `%s'", fn);
-			res = -1;
+			rc = -1;
 			goto out;
 		}
 	}
 
-	if (argi->compress_given && argi->decompress_given) {
+	if (argi->compress_flag && argi->decompress_flag) {
 		fputs("\
 only one of -z|--compress and -d|--decompress can be given\n", stderr);
-		res = 1;
+		rc = 1;
 		goto out;
 	}
 
-	for (unsigned int j = 0; j < argi->inputs_num; j++) {
-		const char *fn = argi->inputs[j];
+	for (size_t j = 0U; j < argi->nargs; j++) {
+		const char *fn = argi->args[j];
 		const int fl = file_flags(ctx, fn);
 		const int opfl = UO_NO_LOAD_TPC;
 		utectx_t hdl;
@@ -593,15 +586,15 @@ only one of -z|--compress and -d|--decompress can be given\n", stderr);
 			continue;
 		} else if (UNLIKELY((hdl = ute_open(fn, fl | opfl)) == NULL)) {
 			error("cannot open file `%s'", fn);
-			res = 1;
+			rc = 1;
 			continue;
 		}
 
 		/* the actual checking */
 		if (fsck1(ctx, hdl, fn)) {
-			res = 1;
+			rc = 1;
 
-			if (argi->little_endian_given) {
+			if (argi->little_endian_flag) {
 				error("\
 cannot convert file with issues `%s', rerun conversion later", fn);
 			}
@@ -627,9 +620,9 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 			/* make sure we set the new endianness */
 			ute_set_endianness(hdl, ctx->tgtend);
 
-			if (argi->compress_given) {
+			if (argi->compress_flag) {
 				ute_compress(hdl);
-			} else if (argi->decompress_given) {
+			} else if (argi->decompress_flag) {
 				ute_decompress(hdl);
 			}
 		}
@@ -651,9 +644,9 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		/* care about conversions now */
 		if (0) {
 			/* cosmetics */
-		} else if (!argi->little_endian_given &&
-			   !argi->big_endian_given &&
-			   !argi->compress_given) {
+		} else if (!argi->little_endian_flag &&
+			   !argi->big_endian_flag &&
+			   !argi->compress_flag) {
 			/* nothing to do */
 			goto out;
 		} else if (ctx->dryp) {
@@ -661,7 +654,7 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 			goto out;
 		} else if ((hdl = ute_open(fn, fl | opfl)) == NULL) {
 			error("cannot open file `%s'", fn);
-			res = 1;
+			rc = 1;
 			goto out;
 		} else if (ctx->tgtend == UTE_ENDIAN_LITTLE) {
 			/* inplace little endian conversion */
@@ -673,22 +666,22 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		/* make sure it's the right endianness */
 		ute_set_endianness(hdl, ctx->tgtend);
 
-		if (argi->compress_given) {
+		if (argi->compress_flag) {
 			ute_compress(hdl);
-		} else if (argi->decompress_given) {
+		} else if (argi->decompress_flag) {
 			ute_decompress(hdl);
 		}
 		/* and close the whole shebang again */
 		ute_close(hdl);
 	}
 
-	if (argi->compress_given) {
+	if (argi->compress_flag) {
 		(void)ute_encode(NULL, NULL, 0);
 		(void)ute_decode(NULL, NULL, 0);
 	}
 out:
-	fsck_parser_free(argi);
-	return res;
+	yuck_free(argi);
+	return rc;
 }
 #endif	/* STANDALONE */
 

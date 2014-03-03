@@ -1,0 +1,10 @@
+Usage: ute shnot FILEs...
+
+Generate all-level snapshots from ute files.
+
+A snapshot at a time T comprises the quotes that last occurred before T.
+
+  -o, --output=FILE    Write result to specified output file
+  -i, --interval=SECS  Make a snapshot every SECS seconds (default: 300)
+  -m, --modulus=SECS   Start SECS seconds past midnight (default 0)
+  -z, --zone=NAME      Use time zone NAME for tty output (default UTC)

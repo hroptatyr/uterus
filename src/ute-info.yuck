@@ -1,0 +1,13 @@
+Usage: ute info FILEs
+
+Print a terse summary of file contents.
+
+  -v, --verbose         Print some additional info.
+  -i, --interval=SECS   Reset the statistic (and print it) every SECS
+                        seconds (default: 0)
+  -m, --modulus=SECS    Start SECS seconds past midnight (default 0)
+      --guess           Do some guess work for candles and snapshots without
+                         interval information.  The interval sequence is
+                         defined as 1,5,10,30,... except for the hour scale,
+                         where only 1h intervals exist.
+      --files          Repeat the file names afront lines

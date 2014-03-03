@@ -1,6 +1,6 @@
 /*** hdf5.c -- hdf5 file muxer
  *
- * Copyright (C) 2012  Sebastian Freundt
+ * Copyright (C) 2012-2014  Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -748,37 +748,24 @@ bang_idx(mctx_t ctx, unsigned int idx, struct atom_s val)
 /* public demuxer */
 static struct mctx_s __gmctx[1];
 
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "hdf5.xh"
-#include "hdf5.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "hdf5.yucc"
 
 int
 init_main(pr_ctx_t pctx, int argc, char *argv[])
 {
-	struct hdf5_args_info argi[1];
+	yuck_t argi[1U];
 	bool my_fn;
 	char *fn;
 	int res = 0;
 
-	if (hdf5_parser(argc, argv, argi)) {
+	if (yuck_parse(argi, argc, argv)) {
 		res = -1;
-		goto out;
-	} else if (argi->help_given) {
-		hdf5_parser_print_help();
-		res = 1;
 		goto out;
 	}
 
-	if (argi->matlab_given) {
+	if (argi->matlab_flag) {
 		h5cb = &h5_mlab_cb;
-	} else if (argi->compound_given) {
+	} else if (argi->compound_flag) {
 		h5cb = &h5_comp_cb;
 	} else {
 		/* we have nothing else really */
@@ -818,7 +805,7 @@ init_main(pr_ctx_t pctx, int argc, char *argv[])
 	}
 
 out:
-	hdf5_parser_free(argi);
+	yuck_free(argi);
 	return res;
 }
 

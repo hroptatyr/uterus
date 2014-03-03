@@ -1,0 +1,7 @@
+Usage: ute-anal FILE...
+
+Analyse FILEs and print perceptual hash for each time series.
+
+  -i, --interval=SECS  Reset the statistic (and print it) every SECS seconds
+                         (default: 0)
+  -m, --modulus=SECS   Start SECS seconds past midnight (default 0)

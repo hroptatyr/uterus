@@ -1,0 +1,9 @@
+Usage: ute print FILEs...
+setopt allow-unknown-dash-options
+setopt allow-unknown-dashdash-options
+
+Print the contents of an ute file.
+
+  -f, --format=FORMAT   Use the specified parser, see below for a list.
+  -o, --output=FILE     Write result to specified output file FILE,
+                        or stdout if omitted.

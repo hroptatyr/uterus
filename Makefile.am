@@ -46,6 +46,7 @@ CLEANFILES =
 DISTCLEANFILES =
 
 SUBDIRS =
+SUBDIRS += build-aux
 if DESCEND_LIBLTDL
 SUBDIRS += libltdl
 endif

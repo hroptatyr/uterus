@@ -52,11 +52,9 @@ ute_LTLIBRARIES =
 lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
-EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
+EXTRA_DIST = $(BUILT_SOURCES)
 CLEANFILES =
-
 BUILT_SOURCES =
-GGO_HELPERS = common.ggo.in
 
 DSO_LDFLAGS = -shared -avoid-version -module
 
@@ -270,17 +268,6 @@ version.c: version.c.in $(top_builddir)/.version
 		yuck$(EXEEXT) scmver --ignore-noscm --force -o $@ \
 			--use-reference --reference $(top_builddir)/.version \
 			$(srcdir)/version.c.in
-
-## gengetopt rule with sed hack to avoid using VERSION and config.h
-## depend on Makefile.am to survive a git pull
-%.x %.xh: %.ggo $(GGO_HELPERS) Makefile.am
-	$(M4) -I $(srcdir) common.ggo.in $< | \
-	gengetopt --no-help -c x -H xh -l -F $* \
-	&& sed \
-	  -e 's,config.h,version.h,g' \
-	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
-	  $*.xh >$*.xh-t \
-	&& mv $*.xh-t $*.xh
 
 ## yuck suffix recipe
 SUFFIXES = .yuck .yucc

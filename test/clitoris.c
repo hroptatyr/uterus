@@ -1,6 +1,6 @@
 /*** clitoris.c -- command-line-interface tester or is it?
  *
- * Copyright (C) 2013 Sebastian Freundt
+ * Copyright (C) 2013-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -37,11 +37,10 @@
 #if defined HAVE_CONFIG_H
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
-#define _ALL_SOURCE
-#define _NETBSD_SOURCE
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
@@ -78,6 +77,9 @@
 # define with(args...)	for (args, *__ep__ = (void*)1; __ep__; __ep__ = 0)
 #endif	/* !with */
 
+#if !defined PATH_MAX
+# define PATH_MAX	256U
+#endif	/* !PATH_MAX */
 
 typedef struct clitf_s clitf_t;
 typedef struct clit_buf_s clit_buf_t;
@@ -146,6 +148,9 @@ struct clit_tst_s {
 
 static sigset_t fatal_signal_set[1];
 static sigset_t empty_signal_set[1];
+
+static const char dflt_diff[] = "diff";
+static const char *cmd_diff = dflt_diff;
 
 
 static void
@@ -719,7 +724,7 @@ differ(struct clit_chld_s ctx[static 1], clit_bit_t exp)
 		/* close all other descriptors */
 		xclosefrom(STDOUT_FILENO + 1);
 
-		execvp("diff", diff_opt);
+		execvp(cmd_diff, diff_opt);
 		error("execlp failed");
 		_exit(EXIT_FAILURE);
 
@@ -976,7 +981,7 @@ prepend_path(const char *p)
 		size_t envz = strlen(envp);
 
 		/* get us a nice big cushion */
-		pathz = ((envz + pz + 1U) / 256U + 1) * 256U;
+		pathz = ((envz + pz + 1U) / 256U + 2U) * 256U;
 		paths = malloc(pathz);
 		/* glue the current path at the end of the array */
 		pp = (paths + pathz) - (envz + 1U);
@@ -988,14 +993,14 @@ prepend_path(const char *p)
 
 	if (UNLIKELY(pp < paths)) {
 		/* awww, not enough space, is there */
-		off_t ppoff = paths + pathz - pp;
-		size_t newsz = ((pathz + pz + 1U) / 256U + 1) * 256U;
+		ptrdiff_t ppoff = pp - paths;
+		size_t newsz = ((pathz + pz + 1U) / 256U + 1U) * 256U;
 
 		paths = realloc(paths, newsz);
 		/* memmove to the back */
 		memmove(paths + (newsz - pathz), paths, pathz);
 		/* recalc paths pointer */
-		pp = paths + ppoff;
+		pp = paths + (newsz - pathz) + ppoff;
 		pathz = newsz;
 	}
 
@@ -1095,53 +1100,49 @@ out:
 }
 
 
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "clitoris.xh"
-#include "clitoris.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "clitoris.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct gengetopt_args_info argi[1];
+	yuck_t argi[1U];
 	int rc = 99;
 
-	if (cmdline_parser(argc, argv, argi)) {
+	if (yuck_parse(argi, argc, argv)) {
 		goto out;
-	} else if (argi->inputs_num != 1) {
-		print_help_common();
+	} else if (argi->nargs != 1U) {
+		yuck_auto_help(argi);
 		goto out;
 	}
 
-	if (argi->builddir_given) {
+	if (argi->builddir_arg) {
 		setenv("builddir", argi->builddir_arg, 1);
 	}
-	if (argi->srcdir_given) {
+	if (argi->srcdir_arg) {
 		setenv("srcdir", argi->srcdir_arg, 1);
 	}
-	if (argi->hash_given) {
+	if (argi->hash_arg) {
 		setenv("hash", argi->hash_arg, 1);
 	}
-	if (argi->husk_given) {
+	if (argi->husk_arg) {
 		setenv("husk", argi->husk_arg, 1);
 	}
-	if (argi->verbose_given) {
-		verbosep = 1;
+	if (argi->verbose_flag) {
+		verbosep = 1U;
 	}
-	if (argi->pseudo_tty_given) {
-		ptyp = 1;
+	if (argi->pseudo_tty_flag) {
+		ptyp = 1U;
 	}
-	if (argi->timeout_given) {
-		timeo = argi->timeout_arg;
+	if (argi->timeout_arg) {
+		timeo = strtoul(argi->timeout_arg, NULL, 10);
 	}
-	if (argi->keep_going_given) {
-		keep_going_p = 1;
+	if (argi->keep_going_flag) {
+		keep_going_p = 1U;
+	}
+	if (argi->diff_arg) {
+		cmd_diff = argi->diff_arg;
+	} else if (getenv("DIFF") != NULL) {
+		cmd_diff = getenv("DIFF");
 	}
 
 	/* prepend our current directory and our argv[0] directory */
@@ -1167,14 +1168,14 @@ main(int argc, char *argv[])
 	setenv("endian", "little", 1);
 #endif	/* WORDS_BIGENDIAN */
 
-	if ((rc = test(argi->inputs[0])) < 0) {
+	if ((rc = test(argi->args[0U])) < 0) {
 		rc = 99;
 	}
 
 	/* resource freeing */
 	free_path();
 out:
-	cmdline_parser_free(argi);
+	yuck_free(argi);
 	return rc;
 }
 

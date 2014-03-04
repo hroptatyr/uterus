@@ -8,7 +8,6 @@ before_install:
   - sudo apt-get -qq update
 
 install:
-  - sudo apt-get install -qq gengetopt
   - sudo apt-get install -qq help2man
   - sudo apt-get install -qq texinfo
   - sudo apt-get install -qq texlive
@@ -18,8 +17,9 @@ before_script:
   - autoreconf -vfi
 
 script:
-  - ./configure CPPFLAGS="-DDEBUG_FLAG" &&
-    make clean all check distcheck || (cat test/test-suite.log && /bin/false)
+  - ./configure CPPFLAGS="-DDEBUG_FLAG" || { cat config.log; false; }
+  - make clean all check || { cat test/test-suite.log; false; }
+  - make distcheck
 
 ## whitelist
 branches:

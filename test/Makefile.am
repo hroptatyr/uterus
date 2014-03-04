@@ -14,6 +14,7 @@ EXTRA_DIST = $(ut_tests) $(BUILT_SOURCES)
 TESTS = $(ut_tests) $(bin_tests) $(XFAIL_TESTS)
 XFAIL_TESTS = $(ut_xtests) $(bin_xtests)
 BUILT_SOURCES =
+SUFFIXES =
 check_PROGRAMS =
 ut_tests =
 ut_xtests =
@@ -333,25 +334,27 @@ stream_02_LDADD = $(m30_LIBS)
 
 ## our friendly helpers
 check_PROGRAMS += clitoris
+clitoris_SOURCES = clitoris.c clitoris.yuck
 clitoris_CPPFLAGS = $(AM_CPPFLAGS)
 clitoris_CPPFLAGS += -D_GNU_SOURCE
 clitoris_LDFLAGS = $(AM_LDFLAGS) -static
 clitoris_LDADD = -lutil
-BUILT_SOURCES += clitoris.x clitoris.xh
+BUILT_SOURCES += clitoris.yucc
 
 check_PROGRAMS += shack
-BUILT_SOURCES += shack.x shack.xh
+shack_SOURCES = shack.c shack.yuck
+BUILT_SOURCES += shack.yucc
 
 check_PROGRAMS += hxdiff
-BUILT_SOURCES += hxdiff.x hxdiff.xh
+hxdiff_SOURCES = hxdiff.c hxdiff.yuck
+BUILT_SOURCES += hxdiff.yucc
 
-## gengetopt rule with sed hack to avoid using VERSION and config.h
-## depend on Makefile.am to survive a git pull
-%.x %.xh: %.ggo
-	$(AM_V_GEN) gengetopt -F $* -c x -H xh -i $<
-	@sed -e 's,_PARSER_VERSION VERSION,_PARSER_VERSION "$(VERSION)",g' \
-	     $*.xh > $*.xh-t \
-	&& mv $*.xh-t $*.xh
+## yuck rule
+SUFFIXES += .yuck
+SUFFIXES += .yucc
+.yuck.yucc:
+	$(AM_V_GEN) PATH=$(top_builddir)/build-aux:"$${PATH}" \
+		yuck$(EXEEXT) gen -o $@ $<
 
 clean-local:
 	-rm -rf *.tmpd

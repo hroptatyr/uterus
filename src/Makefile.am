@@ -61,10 +61,7 @@ DSO_LDFLAGS = -shared -avoid-version -module
 ## version stuff
 noinst_LIBRARIES += libversion.a
 libversion_a_SOURCES =
-libversion_a_SOURCES += version.h
-nodist_libversion_a_SOURCES = version.c
-CLEANFILES += version.c
-EXTRA_DIST += version.c.in
+libversion_a_SOURCES += version.c version.h version.c.in
 
 ## the main thing
 lib_LTLIBRARIES += libuterus.la

@@ -1,6 +1,6 @@
 /*** hxdiff.c -- diffing hexdumps
  *
- * Copyright (C) 2013 Sebastian Freundt
+ * Copyright (C) 2013-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -552,38 +552,29 @@ out:
 }
 
 
-#if defined __INTEL_COMPILER
-# pragma warning (disable:593)
-# pragma warning (disable:181)
-#endif	/* __INTEL_COMPILER */
-#include "hxdiff.xh"
-#include "hxdiff.x"
-#if defined __INTEL_COMPILER
-# pragma warning (default:593)
-# pragma warning (default:181)
-#endif	/* __INTEL_COMPILER */
+#include "hxdiff.yucc"
 
 int
 main(int argc, char *argv[])
 {
-	struct gengetopt_args_info argi[1];
+	yuck_t argi[1U];
 	int rc = 99;
 
-	if (cmdline_parser(argc, argv, argi)) {
+	if (yuck_parse(argi, argc, argv)) {
 		goto out;
-	} else if (argi->inputs_num != 2U) {
-		print_help_common();
+	} else if (argi->nargs != 2U) {
+		yuck_auto_help(argi);
 		goto out;
 	}
 
-	with (const char *f1 = argi->inputs[0U], *f2 = argi->inputs[1U]) {
+	with (const char *f1 = argi->args[0U], *f2 = argi->args[1U]) {
 		if ((rc = hxdiff(f1, f2)) < 0) {
 			rc = 99;
 		}
 	}
 
 out:
-	cmdline_parser_free(argi);
+	yuck_free(argi);
 	return rc;
 }
 

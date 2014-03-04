@@ -41,11 +41,12 @@ LANG = C
 LC_ALL = C
 
 ACLOCAL_AMFLAGS = -I m4
-EXTRA_DIST =
+EXTRA_DIST = $(BUILT_SOURCES)
 CLEANFILES =
 DISTCLEANFILES =
-
+BUILT_SOURCES =
 SUBDIRS =
+
 SUBDIRS += build-aux
 if DESCEND_LIBLTDL
 SUBDIRS += libltdl
@@ -58,11 +59,15 @@ pkgconfig_DATA += uterus.pc
 EXTRA_DIST += uterus.pc.in
 CLEANFILES += uterus.pc
 
-EXTRA_DIST += build-aux/git-version-gen
 EXTRA_DIST += uterus.magic
 EXTRA_DIST += README.md
 
 DISTCLEANFILES += version.mk
+EXTRA_DIST += version.mk.in
+BUILT_SOURCES += .version
+
+doc_DATA = README.md
+EXTRA_DIST += $(doc_DATA)
 
 if HAVE_FILE
 pkgdata_DATA = uterus.mgc
@@ -70,23 +75,20 @@ endif  HAVE_FILE
 
 CLEANFILES += $(pkgdata_DATA)
 
-# do_subst, inspired by the automake project
-do_subst = ( sed \
-  -e 's,[@]VERSION[@],$(VERSION),g' \
-  -e 's,[@]PACKAGE_VERSION[@],$(PACKAGE_VERSION),g' \
-  -e 's,[@]PACKAGE_STRING[@],$(PACKAGE_STRING),g' \
-  | $(SHELL) ./config.status --file=- \
-  )
-
-uterus.pc: uterus.pc.in
-uterus.pc: version.mk
-	rm -f $@ $@-t
-	$(do_subst) <$(srcdir)/$@.in >$@-t
-	mv -f $@-t $@
+uterus.pc: .version uterus.pc.in
+	$(AM_V_GEN) PATH="$(top_builddir)/build-aux:$${PATH}" \
+		yuck$(EXEEXT) scmver -n \
+			--reference .version $(srcdir)/uterus.pc.in | \
+		$(SHELL) "$(builddir)/config.status" --file=- > $@
 
 uterus.mgc: uterus.magic
 	$(FILE) -C -m $(srcdir)/uterus.magic && mv $(builddir)/uterus.magic.mgc $@
 
+.version:
+	$(AM_V_GEN) echo "v$(VERSION)" > $@
+
+## make sure .version is read-only in the dist
 dist-hook:
-	echo $(VERSION) > $(distdir)/version \
-	&& touch -r $(top_builddir)/version.mk $(distdir)/version
+	chmod ugo-w $(distdir)/.version
+
+## Makefile.am ends here

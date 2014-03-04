@@ -52,21 +52,16 @@ ute_LTLIBRARIES =
 lib_LTLIBRARIES =
 header_HEADERS =
 noinst_LIBRARIES =
-EXTRA_DIST = $(BUILT_SOURCES) $(GGO_HELPERS)
+EXTRA_DIST = $(BUILT_SOURCES)
 CLEANFILES =
-
 BUILT_SOURCES =
-GGO_HELPERS = common.ggo.in
 
 DSO_LDFLAGS = -shared -avoid-version -module
 
 ## version stuff
 noinst_LIBRARIES += libversion.a
 libversion_a_SOURCES =
-libversion_a_SOURCES += version.h
-nodist_libversion_a_SOURCES = version.c
-CLEANFILES += version.c
-EXTRA_DIST += version.c.in
+libversion_a_SOURCES += version.c version.h version.c.in
 
 ## the main thing
 lib_LTLIBRARIES += libuterus.la
@@ -264,19 +259,12 @@ ute_LTLIBRARIES += fxstreet.la
 fxstreet_la_SOURCES = fxstreet.c
 fxstreet_la_LDFLAGS = $(DSO_LDFLAGS) $(XCCLDFLAGS)
 
-version.c: version.c.in $(top_builddir)/version.mk
-	sed -e 's,[@]VERSION[@],$(VERSION),g' <$(srcdir)/$@.in >$@
-
-## gengetopt rule with sed hack to avoid using VERSION and config.h
-## depend on Makefile.am to survive a git pull
-%.x %.xh: %.ggo $(GGO_HELPERS) Makefile.am
-	$(M4) -I $(srcdir) common.ggo.in $< | \
-	gengetopt --no-help -c x -H xh -l -F $* \
-	&& sed \
-	  -e 's,config.h,version.h,g' \
-	  -e 's,\(.*\)_PARSER_VERSION VERSION,\1_PARSER_VERSION $(PACKAGE)_version_string,g' \
-	  $*.xh >$*.xh-t \
-	&& mv $*.xh-t $*.xh
+## version rules
+version.c: version.c.in $(top_builddir)/.version
+	$(AM_V_GEN) PATH="$(top_builddir)/build-aux:$${PATH}" \
+		yuck$(EXEEXT) scmver --ignore-noscm --force -o $@ \
+			--use-reference --reference $(top_builddir)/.version \
+			$(srcdir)/version.c.in
 
 ## yuck suffix recipe
 SUFFIXES = .yuck .yucc

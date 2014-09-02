@@ -76,7 +76,6 @@ Fingers crossed it works innit?
 ])
 fi
 
-AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 
 ## ute can do with lzma
 PKG_CHECK_MODULES([lzma], [liblzma], [have_lzma="yes"], [have_lzma="no"])

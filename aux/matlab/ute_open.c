@@ -38,8 +38,12 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <stdint.h>
+#include <stdbool.h>
 /* matlab stuff */
 #include <mex.h>
+#if defined HAVE_CURL_CURL_H
+# include <curl/curl.h>
+#endif	/* HAVE_CURL_CURL_H */
 /* our stuff */
 #include "uterus.h"
 #include "nifty.h"
@@ -48,13 +52,84 @@
 static char*
 snarf_fname(const mxArray *fn)
 {
-	return mxArrayToString(fn);
+	char *tmp = mxArrayToString(fn);
+	char *res = strdup(tmp);
+	mxFree(tmp);
+	return res;
+}
+
+static bool
+remote_fname_p(const char *fn)
+{
+	if (!strncmp(fn, "http://", 7U)) {
+		return true;
+	}
+	return false;
+}
+
+static char*
+recv_remote_fname(char *uri)
+{
+#if defined HAVE_CURL_CURL_H
+	static char tmpf[] = ".ute_remote.XXXXXXXX";
+	CURL *cctx;
+	char *fn = NULL;
+	int fd;
+	FILE *fp;
+	int rc;
+
+	if (UNLIKELY((cctx = curl_easy_init()) == NULL)) {
+		goto out;
+	} else if (UNLIKELY((fd = mkstemp(tmpf)) < 0)) {
+		goto out;
+	}
+
+	/* hand-over to libcurl */
+	if (LIKELY((fp = fdopen(fd, "w+")) != NULL)) {
+		curl_easy_setopt(cctx, CURLOPT_URL, uri);
+		curl_easy_setopt(cctx, CURLOPT_WRITEDATA, fp);
+		curl_easy_setopt(cctx, CURLOPT_NOSIGNAL, 1);
+		curl_easy_setopt(cctx, CURLOPT_TIMEOUT, 10/*seconds*/);
+		curl_easy_setopt(cctx, CURLOPT_ENCODING, "gzip");
+		rc = curl_easy_perform(cctx);
+
+		/* definitely close the file */
+		fclose(fp);
+	}
+
+	if (rc == CURLE_OK) {
+		/* celebrate success */
+		fn = strdup(tmpf);
+	} else {
+		/* prepare for unlink */
+		close(fd);
+		fd = -1;
+	}
+
+out:
+	/* kill original uri, in either case */
+	mxFree(uri);
+
+	if (UNLIKELY(fd < 0)) {
+		/* already unlink the guy as later we won't
+		 * have the file name handy anymore */
+		(void)unlink(fn);
+	}
+	if (LIKELY(cctx != NULL)) {
+		curl_easy_cleanup(cctx);
+	}
+	return fn;
+#else  /* !HAVE_CURL_CURL_H */
+	(void)uri;
+	return NULL;
+#endif	/* HAVE_CURL_CURL_H */
 }
 
 
 void
 mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
+	bool remotep;
 	utectx_t hdl;
 	char *fn;
 
@@ -64,12 +139,20 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	} else if ((fn = snarf_fname(prhs[0])) == NULL) {
 		mexErrMsgTxt("cannot determine file name to open");
 		return;
+	} else if ((remotep = remote_fname_p(fn)) &&
+		   (fn = recv_remote_fname(fn)) == NULL) {
+		mexErrMsgTxt("cannot download remote resource");
+		return;
 	} else if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
 		mexErrMsgTxt("could not open ute file");
 		return;
 	}
+	/* unlink file name in case of remotes */
+	if (remotep) {
+		(void)unlink(fn);
+	}
 	/* free file name */
-	mxFree(fn);
+	free(fn);
 	/* otherwise just assign the handle */
 	plhs[0] = make_umx_handle();
 	umx_put_handle(plhs[0], hdl);

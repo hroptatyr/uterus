@@ -1,6 +1,6 @@
 AC_PREREQ([2.63])
 
-AC_INIT([uterus], [0.2.7], [https://github.com/hroptatyr/uterus])
+AC_INIT([uterus], [0.2.8.GIT], [https://github.com/hroptatyr/uterus])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([src/config.h])
@@ -76,7 +76,6 @@ Fingers crossed it works innit?
 ])
 fi
 
-AM_MISSING_PROG([HELP2MAN], [help2man], ["${missing_dir}"])
 
 ## ute can do with lzma
 PKG_CHECK_MODULES([lzma], [liblzma], [have_lzma="yes"], [have_lzma="no"])

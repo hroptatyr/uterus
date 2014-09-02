@@ -76,6 +76,19 @@ Fingers crossed it works innit?
 ])
 fi
 
+## check for libcurl (critical for gandapi)
+PKG_CHECK_MODULES([curl], [libcurl >= 7.0.0], [have_curl="yes"], [have_curl="no"])
+if test "${have_curl}" = "yes"; then
+	save_CPPFLAGS="${CPPFLAGS}"
+	CPPFLAGS="${curl_CFLAGS} ${CPPFLAGS}"
+	AC_CHECK_HEADERS([curl/curl.h])
+	CPPFLAGS="${save_CPPFLAGS}"
+
+	if test "${ac_cv_header_curl_curl_h}" != "yes"; then
+		have_curl="no"
+	fi
+fi
+AM_CONDITIONAL([HAVE_CURL], [test "${have_curl}" = "yes"])
 
 ## ute can do with lzma
 PKG_CHECK_MODULES([lzma], [liblzma], [have_lzma="yes"], [have_lzma="no"])

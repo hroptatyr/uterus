@@ -150,7 +150,7 @@ AC_ARG_WITH([R], [
 AS_HELP_STRING([--with-R], [Build R contribs, default: no.])],
         [dnl
 		if test "${withval}" = "yes"; then
-			PKG_CHECK_MODULES([R], [libR], [>= 2.0.0], [
+			PKG_CHECK_MODULES([R], [libR >= 2.0.0], [
 				with_R="yes"
 			], [
 				with_R="no"

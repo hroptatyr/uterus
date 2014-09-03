@@ -141,10 +141,13 @@ recv_remote_fname(char *uri)
 	/* definitely close the file */
 	close(fd);
 
-	if (rc == CURLE_OK) {
+	switch (rc) {
+	case CURLE_OK:
 		/* celebrate success */
 		fn = strdup(tmpf);
-	} else {
+		break;
+	default:
+		mexWarnMsgTxt("connection error");
 		/* prepare for unlink */
 		fd = -1;
 	}
@@ -187,7 +190,7 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		mexErrMsgTxt("cannot download remote resource");
 		return;
 	} else if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
-		mexErrMsgTxt("could not open ute file");
+		mexWarnMsgTxt("file does not seem to be an ute file");
 	} else {
 		/* otherwise just assign the handle */
 		plhs[0] = make_umx_handle();

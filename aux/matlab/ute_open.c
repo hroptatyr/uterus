@@ -145,17 +145,18 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		return;
 	} else if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
 		mexErrMsgTxt("could not open ute file");
-		return;
+	} else {
+		/* otherwise just assign the handle */
+		plhs[0] = make_umx_handle();
+		umx_put_handle(plhs[0], hdl);
 	}
+
 	/* unlink file name in case of remotes */
 	if (remotep) {
 		(void)unlink(fn);
 	}
 	/* free file name */
 	free(fn);
-	/* otherwise just assign the handle */
-	plhs[0] = make_umx_handle();
-	umx_put_handle(plhs[0], hdl);
 	return;
 }
 

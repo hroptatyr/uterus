@@ -22,6 +22,10 @@ ute_open_la_CPPFLAGS += -I$(top_builddir)/src
 ute_open_la_LDFLAGS = $(AM_LDFLAGS)
 ute_open_la_LDFLAGS += $(MEX_LDFLAGS)
 ute_open_la_LDFLAGS += $(XCCLDFLAGS)
+if HAVE_CURL
+ute_open_la_CPPFLAGS += $(curl_CFLAGS)
+ute_open_la_LDFLAGS += $(curl_LIBS)
+endif  HAVE_CURL
 ute_open_la_LIBADD = $(top_builddir)/src/libuterus.la
 
 mex_LTLIBRARIES += ute_close.la

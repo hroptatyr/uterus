@@ -67,6 +67,17 @@ remote_fname_p(const char *fn)
 	return false;
 }
 
+#if defined HAVE_CURL_CURL_H
+static size_t
+_data_cb(void *buf, size_t chrz, size_t nchr, void *clo)
+{
+	const int fd = (intptr_t)clo;
+
+	return write(fd, buf, chrz * nchr);
+}
+#endif	/* HAVE_CURL_CURL_H */
+
+
 static char*
 recv_remote_fname(char *uri)
 {
@@ -75,8 +86,7 @@ recv_remote_fname(char *uri)
 	CURL *cctx;
 	char *fn = NULL;
 	int fd;
-	FILE *fp;
-	int rc;
+	CURLcode rc = CURL_LAST;
 
 	if (UNLIKELY((cctx = curl_easy_init()) == NULL)) {
 		goto out;
@@ -85,24 +95,22 @@ recv_remote_fname(char *uri)
 	}
 
 	/* hand-over to libcurl */
-	if (LIKELY((fp = fdopen(fd, "w+")) != NULL)) {
-		curl_easy_setopt(cctx, CURLOPT_URL, uri);
-		curl_easy_setopt(cctx, CURLOPT_WRITEDATA, fp);
-		curl_easy_setopt(cctx, CURLOPT_NOSIGNAL, 1);
-		curl_easy_setopt(cctx, CURLOPT_TIMEOUT, 10/*seconds*/);
-		curl_easy_setopt(cctx, CURLOPT_ENCODING, "gzip");
-		rc = curl_easy_perform(cctx);
+	curl_easy_setopt(cctx, CURLOPT_URL, uri);
+	curl_easy_setopt(cctx, CURLOPT_WRITEFUNCTION, _data_cb);
+	curl_easy_setopt(cctx, CURLOPT_WRITEDATA, (intptr_t)fd);
+	curl_easy_setopt(cctx, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(cctx, CURLOPT_TIMEOUT, 10/*seconds*/);
+	curl_easy_setopt(cctx, CURLOPT_ENCODING, "gzip");
+	rc = curl_easy_perform(cctx);
 
-		/* definitely close the file */
-		fclose(fp);
-	}
+	/* definitely close the file */
+	close(fd);
 
 	if (rc == CURLE_OK) {
 		/* celebrate success */
 		fn = strdup(tmpf);
 	} else {
 		/* prepare for unlink */
-		close(fd);
 		fd = -1;
 	}
 

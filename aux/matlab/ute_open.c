@@ -38,7 +38,6 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <stdint.h>
-#include <stdbool.h>
 /* matlab stuff */
 #include <mex.h>
 #if defined HAVE_CURL_CURL_H

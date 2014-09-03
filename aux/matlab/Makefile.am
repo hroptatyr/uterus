@@ -97,6 +97,14 @@ ute_tick_la_LDFLAGS += $(MEX_LDFLAGS)
 ute_tick_la_LDFLAGS += $(XCCLDFLAGS)
 ute_tick_la_LIBADD = $(top_builddir)/src/libuterus.la
 
+
+## matlab needs mexa64, octave needs mex
+install-data-hook:
+	-cd $(DESTDIR)$(mexdir) && mv -f tzconv.mex tzconv.$(MEXEXT)
+
+uninstall-hook:
+	-$(RM) -- $(DESTDIR)$(mexdir)/tzconv.$(MEXEXT)
+
 # 
 # Help the developers get nice post-processed source files
 

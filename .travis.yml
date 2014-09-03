@@ -12,7 +12,7 @@ install:
   - sudo apt-get install -qq texinfo
   - sudo apt-get install -qq texlive
   - sudo apt-get install -qq liblzma-dev
-  - sudo apt-get install -qq octave-dev
+  - sudo apt-get install -qq liboctave-dev
 
 before_script:
   - autoreconf -vfi

@@ -12,12 +12,13 @@ install:
   - sudo apt-get install -qq texinfo
   - sudo apt-get install -qq texlive
   - sudo apt-get install -qq liblzma-dev
+  - sudo apt-get install -qq octave-dev
 
 before_script:
   - autoreconf -vfi
 
 script:
-  - ./configure CPPFLAGS="-DDEBUG_FLAG" || { cat config.log; false; }
+  - ./configure CPPFLAGS="-DDEBUG_FLAG" --with-octave || { cat config.log; false; }
   - make clean all check || { cat test/test-suite.log; false; }
   - make distcheck
 

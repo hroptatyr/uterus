@@ -121,7 +121,7 @@ out:
 	if (UNLIKELY(fd < 0)) {
 		/* already unlink the guy as later we won't
 		 * have the file name handy anymore */
-		(void)unlink(fn);
+		(void)unlink(tmpf);
 	}
 	if (LIKELY(cctx != NULL)) {
 		curl_easy_cleanup(cctx);

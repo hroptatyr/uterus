@@ -1,6 +1,6 @@
 /*** ute_close.c -- ute bottle lid for matlab
  *
- * Copyright (C) 2013 Sebastian Freundt
+ * Copyright (C) 2013-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -51,23 +51,47 @@ wipe_handle(const mxArray *arr)
 	return;
 }
 
+static int
+ute_close1(const mxArray *mxhdl)
+{
+	utectx_t hdl;
+
+	if ((hdl = umx_get_handle(mxhdl)) == NULL) {
+		mexWarnMsgTxt("ute handle seems buggered");
+		return -1;
+	}
+	ute_close(hdl);
+	wipe_handle(mxhdl);
+	return 0;
+}
+
 
 void
 mexFunction(
 	int UNUSED(nlhs), mxArray *UNUSED(plhs[]),
 	int nrhs, const mxArray *prhs[])
 {
-	utectx_t hdl;
-
 	if (nrhs != 1) {
 		mexErrMsgTxt("invalid usage, see `help ute_close'");
 		return;
-	} else if ((hdl = umx_get_handle(prhs[0])) == NULL) {
-		mexErrMsgTxt("ute handle seems buggered");
+	}
+
+	if (LIKELY(!mxIsCell(*prhs))) {
+		if (UNLIKELY(ute_close1(*prhs) < 0)) {
+			mexErrMsgTxt("");
+		}
 		return;
 	}
-	ute_close(hdl);
-	wipe_handle(prhs[0]);
+
+	/* otherwise loop over the cell array */
+	const mxArray **rhs = mxGetData(*prhs);
+	const size_t nfn = mxGetNumberOfElements(*prhs);
+
+	for (size_t i = 0U; i < nfn; i++) {
+		if (LIKELY(rhs[i] != NULL)) {
+			(void)ute_close1(rhs[i]);
+		}
+	}
 	return;
 }
 

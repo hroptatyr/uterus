@@ -1,6 +1,6 @@
 /*** ute_open.c -- ute bottle opener for matlab
  *
- * Copyright (C) 2013 Sebastian Freundt
+ * Copyright (C) 2013-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -52,9 +52,19 @@
 static char*
 snarf_fname(const mxArray *fn)
 {
-	char *tmp = mxArrayToString(fn);
-	char *res = strdup(tmp);
-	mxFree(tmp);
+	char *res = NULL;
+
+	if (UNLIKELY(!mxIsChar(fn))) {
+		/* big bugger */
+		;
+	} else if (UNLIKELY((res = mxArrayToString(fn)) == NULL)) {
+		/* huh? */
+		;
+	} else {
+		char *tmp = strdup(res);
+		mxFree(res);
+		res = tmp;
+	}
 	return res;
 }
 
@@ -171,30 +181,28 @@ out:
 #endif	/* HAVE_CURL_CURL_H */
 }
 
-
-void
-mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+static mxArray*
+ute_open1(const mxArray *mxfn)
 {
 	bool remotep;
 	utectx_t hdl;
 	char *fn;
+	mxArray *res = NULL;
 
-	if (nrhs != 1 || nlhs != 1) {
-		mexErrMsgTxt("invalid usage, see `help ute_open'");
-		return;
-	} else if ((fn = snarf_fname(prhs[0])) == NULL) {
-		mexErrMsgTxt("cannot determine file name to open");
-		return;
+	if ((fn = snarf_fname(mxfn)) == NULL) {
+		mexWarnMsgTxt("cannot determine file name to open");
+		return NULL;
 	} else if ((remotep = remote_fname_p(fn)) &&
 		   (fn = recv_remote_fname(fn)) == NULL) {
-		mexErrMsgTxt("cannot download remote resource");
-		return;
+		mexWarnMsgTxt("cannot download remote resource");
+		return NULL;
 	} else if ((hdl = ute_open(fn, UO_RDONLY)) == NULL) {
-		mexWarnMsgTxt("file does not seem to be an ute file");
+		mexPrintf("file `%s' does not seem to be an ute file\n", fn);
+		res = NULL;
 	} else {
 		/* otherwise just assign the handle */
-		plhs[0] = make_umx_handle();
-		umx_put_handle(plhs[0], hdl);
+		res = make_umx_handle();
+		umx_put_handle(res, hdl);
 	}
 
 	/* unlink file name in case of remotes */
@@ -203,6 +211,38 @@ mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	}
 	/* free file name */
 	free(fn);
+	return res;
+}
+
+
+void
+mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+{
+	if (nrhs < 1 || nlhs != 1) {
+		mexErrMsgTxt("invalid usage, see `help ute_open'");
+		return;
+	}
+
+	/* now either prhs[0] is a string or a cell array of strings */
+	if (LIKELY(!mxIsCell(*prhs))) {
+		if (UNLIKELY((*plhs = ute_open1(*prhs)) == NULL)) {
+			mexErrMsgTxt("");
+		}
+		return;
+	}
+
+	/* otherwise loop over the cell array */
+	const mxArray **rhs = mxGetData(*prhs);
+	const size_t nfn = mxGetNumberOfElements(*prhs);
+	size_t nhdl = 0U;
+
+	/* just create a nfn-by-1 cell array now */
+	*plhs = mxCreateCellMatrix(nfn, 1U);
+	for (size_t i = 0U; i < nfn; i++) {
+		mxArray *tmp = ute_open1(rhs[i]);
+
+		mxSetCell(*plhs, nhdl++, tmp);
+	}
 	return;
 }
 

@@ -52,9 +52,19 @@
 static char*
 snarf_fname(const mxArray *fn)
 {
-	char *tmp = mxArrayToString(fn);
-	char *res = strdup(tmp);
-	mxFree(tmp);
+	char *res = NULL;
+
+	if (UNLIKELY(!mxIsChar(fn))) {
+		/* big bugger */
+		;
+	} else if (UNLIKELY((res = mxArrayToString(fn)) == NULL)) {
+		/* huh? */
+		;
+	} else {
+		char *tmp = strdup(res);
+		mxFree(res);
+		res = tmp;
+	}
 	return res;
 }
 

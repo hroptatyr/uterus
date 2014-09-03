@@ -116,7 +116,7 @@ recv_remote_fname(char *uri)
 
 out:
 	/* kill original uri, in either case */
-	mxFree(uri);
+	free(uri);
 
 	if (UNLIKELY(fd < 0)) {
 		/* already unlink the guy as later we won't

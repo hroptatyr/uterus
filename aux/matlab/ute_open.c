@@ -71,7 +71,7 @@ static char*
 recv_remote_fname(char *uri)
 {
 #if defined HAVE_CURL_CURL_H
-	static char tmpf[] = ".ute_remote.XXXXXXXX";
+	char tmpf[] = P_tmpdir "/" ".ute_remote.XXXXXXXX";
 	CURL *cctx;
 	char *fn = NULL;
 	int fd;

@@ -75,6 +75,40 @@ _data_cb(void *buf, size_t chrz, size_t nchr, void *clo)
 
 	return write(fd, buf, chrz * nchr);
 }
+
+static int
+mktempp(char *restrict tmpl[static 1U], int prefixlen)
+{
+	static mode_t umsk;
+	char *bp = *tmpl + prefixlen;
+	char *const ep = *tmpl + strlen(*tmpl);
+	mode_t m;
+	int fd;
+
+	if (UNLIKELY(!umsk)) {
+		umsk = umask(0022);
+	}
+	if (ep[-6] != 'X' || ep[-5] != 'X' || ep[-4] != 'X' ||
+	    ep[-3] != 'X' || ep[-2] != 'X' || ep[-1] != 'X') {
+		if ((fd = open(bp, O_RDWR | O_CREAT | O_EXCL, 0666)) < 0 &&
+		    (bp -= prefixlen,
+		     fd = open(bp, O_RDWR | O_CREAT | O_EXCL, 0666)) < 0) {
+			/* fuck that then */
+			return -1;
+		}
+	} else if (m = umask(S_IXUSR | S_IRWXG | S_IRWXO),
+		   UNLIKELY((fd = mkstemp(bp), umask(m), fd < 0)) &&
+		   UNLIKELY((bp -= prefixlen,
+			     /* reset to XXXXXX */
+			     memset(ep - 6, 'X', 6U),
+			     fd = mkstemp(bp)) < 0)) {
+		/* at least we tried */
+		return -1;
+	}
+	/* store result */
+	*tmpl = bp;
+	return fd;
+}
 #endif	/* HAVE_CURL_CURL_H */
 
 
@@ -82,7 +116,8 @@ static char*
 recv_remote_fname(char *uri)
 {
 #if defined HAVE_CURL_CURL_H
-	char tmpf[] = P_tmpdir "/" ".ute_remote.XXXXXXXX";
+	char _tmpf[] = P_tmpdir "/" ".ute_remote.XXXXXXXX";
+	char *tmpf = _tmpf;
 	CURL *cctx;
 	char *fn = NULL;
 	int fd;
@@ -90,7 +125,7 @@ recv_remote_fname(char *uri)
 
 	if (UNLIKELY((cctx = curl_easy_init()) == NULL)) {
 		goto out;
-	} else if (UNLIKELY((fd = mkstemp(tmpf)) < 0)) {
+	} else if (UNLIKELY((fd = mktempp(&tmpf, sizeof(P_tmpdir))) < 0)) {
 		goto out;
 	}
 

@@ -279,7 +279,7 @@ mux(mux_ctx_t ctx)
 	/* init reader, we use prchunk here */
 	ctx->rdr = init_prchunk(ctx->infd);
 	/* intitialise the CET zone */
-	z_cet = zif_read_inst(cet);
+	z_cet = zif_open(cet);
 
 	/* main loop */
 	while (fetch_lines(ctx)) {

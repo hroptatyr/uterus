@@ -64,17 +64,17 @@ union m62_u {
 	struct {
 #if defined WORDS_BIGENDIAN
 		uint64_t mant_lower:32;
-		uint8_t expo:2;
+		uint64_t expo:2;
 		int64_t mant_upper:30;
 #else  /* !WORDS_BIGENDIAN */
 		int64_t mant_lu:62;
-		uint8_t expo:2;
+		uint64_t expo:2;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed));
+	};
 
 	struct {
-		uint32_t lower;
-		uint32_t upper;
+		uint64_t lower:32;
+		uint64_t upper:32;
 	};
 } __attribute__((transparent_union));
 

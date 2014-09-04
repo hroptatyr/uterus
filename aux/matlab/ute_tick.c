@@ -1,6 +1,6 @@
 /*** ute_tick.c -- take a sip of an ute bottle
  *
- * Copyright (C) 2013 Sebastian Freundt
+ * Copyright (C) 2013-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -38,7 +38,11 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 /* matlab stuff */
-#include <mex.h>
+#if defined HAVE_OCTAVE_MEX_H
+# include <octave/mex.h>
+#else  /* !HAVE_OCTAVE_MEX_H */
+# include <mex.h>
+#endif	/* HAVE_OCTAVE_MEX_H */
 /* our stuff */
 #include "uterus.h"
 #include "sl1t.h"

@@ -37,9 +37,16 @@
 #if !defined INCLUDED_ute_handle_h_
 #define INCLUDED_ute_handle_h_
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <stdbool.h>
 /* matlab stuff */
-#include <mex.h>
+#if defined HAVE_OCTAVE_MEX_H
+# include <octave/mex.h>
+#else  /* !HAVE_OCTAVE_MEX_H */
+# include <mex.h>
+#endif	/* HAVE_OCTAVE_MEX_H */
 /* our stuff */
 #include "uterus.h"
 #include "nifty.h"

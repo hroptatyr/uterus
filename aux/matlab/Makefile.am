@@ -12,13 +12,13 @@ mex_LTLIBRARIES =
 mex_DATA =
 
 if BUILD_MATCLI
-mexdir = $(MATLABPATH)/uterus/
+mexdir = $(MATLABPATH)/uterus
 octlab_CFLAGS = -DMATLAB_MEX_FILE $(matlab_CFLAGS)
 else  !BUILD_MATCLI
 
 ## backup plan is to use octave to build the mex file
 if BUILD_OCTCLI
-mexdir = $(OCTAVEPATH)/uterus/
+mexdir = $(OCTAVEPATH)/uterus
 octlab_CFLAGS = -DOCTAVE_MEX_FILE $(octave_CFLAGS)
 
 else  !BUILD_OCTCLI

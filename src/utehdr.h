@@ -1,6 +1,6 @@
 /*** utehdr.h -- header handling for ute files
  *
- * Copyright (C) 2009-2013 Sebastian Freundt
+ * Copyright (C) 2009-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -57,7 +57,7 @@ struct utehdr2_s {
 	union {
 		uint16_t endin;
 		char endia[sizeof(uint16_t) / sizeof(char)];
-	} __attribute__((packed));
+	};
 	uint8_t flags;
 	uint8_t moreflags;
 	/* payload offset, if 0=4096 */

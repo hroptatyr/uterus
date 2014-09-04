@@ -770,9 +770,9 @@ mux(mux_ctx_t ctx)
 {
 	/* open our timezone definition */
 	if (ctx->opts->zone != NULL) {
-		z = zif_read_inst(ctx->opts->zone);
+		z = zif_open(ctx->opts->zone);
 	} else {
-		z = zif_read_inst(ariva_zone);
+		z = zif_open(ariva_zone);
 	}
 	/* init reader, we use prchunk here */
 	ctx->rdr = init_prchunk(ctx->infd);
@@ -786,7 +786,7 @@ mux(mux_ctx_t ctx)
 	/* free prchunk resources */
 	free_prchunk(ctx->rdr);
 	if (z != NULL) {
-		zif_free(z);
+		zif_close(z);
 	}
 	return;
 }

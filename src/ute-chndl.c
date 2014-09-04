@@ -586,7 +586,7 @@ main(int argc, char *argv[])
 	}
 
 	if (argi->zone_arg) {
-		opt->z = zif_read_inst(argi->zone_arg);
+		opt->z = zif_open(argi->zone_arg);
 	}
 
 	if (argi->interval_arg) {
@@ -632,7 +632,7 @@ main(int argc, char *argv[])
 
 out:
 	if (opt->z != NULL) {
-		zif_free(opt->z);
+		zif_close(opt->z);
 	}
 	yuck_free(argi);
 	return rc;

@@ -399,9 +399,9 @@ mux(mux_ctx_t ctx)
 {
 	/* open our timezone definition */
 	if (ctx->opts->zone != NULL) {
-		z = zif_read_inst(ctx->opts->zone);
+		z = zif_open(ctx->opts->zone);
 	} else {
-		z = zif_read_inst(ibhist_zone);
+		z = zif_open(ibhist_zone);
 	}
 
 	/* init reader, we use prchunk here */
@@ -413,7 +413,7 @@ mux(mux_ctx_t ctx)
 	/* free prchunk resources */
 	free_expobuf(ctx->rdr);
 	if (z != NULL) {
-		zif_free(z);
+		zif_close(z);
 	}
 	return;
 }

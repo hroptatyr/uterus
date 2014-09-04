@@ -74,7 +74,7 @@ union m30_u {
 		int32_t mant:30;
 		uint8_t expo:2;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed));
+	};
 } __attribute__((transparent_union));
 
 /* bug in gcc needs this BEHIND the actual union definition */

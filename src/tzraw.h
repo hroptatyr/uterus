@@ -1,6 +1,6 @@
 /*** tzraw.h -- reader for olson database zoneinfo files
  *
- * Copyright (C) 2009-2013 Sebastian Freundt
+ * Copyright (C) 2009-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -153,7 +153,7 @@ struct zrng_s {
 	int32_t prev, next;
 	signed int offs:24;
 	unsigned int trno:8;
-} __attribute__((packed));
+};
 
 /* leap second support missing */
 struct zif_s {

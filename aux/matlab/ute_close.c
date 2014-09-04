@@ -38,7 +38,11 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 /* matlab stuff */
-#include <mex.h>
+#if defined HAVE_OCTAVE_MEX_H
+# include <octave/mex.h>
+#else  /* !HAVE_OCTAVE_MEX_H */
+# include <mex.h>
+#endif	/* HAVE_OCTAVE_MEX_H */
 /* our stuff */
 #include "uterus.h"
 #include "nifty.h"

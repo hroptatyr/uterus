@@ -39,7 +39,11 @@
 #endif	/* HAVE_CONFIG_H */
 #include <stdint.h>
 /* matlab stuff */
-#include <mex.h>
+#if defined HAVE_OCTAVE_MEX_H
+# include <octave/mex.h>
+#else  /* !HAVE_OCTAVE_MEX_H */
+# include <mex.h>
+#endif	/* HAVE_OCTAVE_MEX_H */
 #if defined HAVE_CURL_CURL_H
 # include <curl/curl.h>
 #endif	/* HAVE_CURL_CURL_H */

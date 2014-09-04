@@ -1,6 +1,6 @@
 /*** scommon.h -- common definitions for sparse storage
  *
- * Copyright (C) 2009-2013 Sebastian Freundt
+ * Copyright (C) 2009-2014 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -76,91 +76,91 @@ union scom_thdr_u {
 	struct {
 #if defined WORDS_BIGENDIAN
 		/* secs first */
-		uint32_t sec;
+		uint64_t sec:32;
 		/* millisecs is the standard these days */
-		uint32_t msec:10;
+		uint64_t msec:10;
 		/* an index back into the symtbl */
-		uint32_t idx:16;
+		uint64_t idx:16;
 		/* tick type and flags */
-		uint32_t ttf:6;
+		uint64_t ttf:6;
 #else  /* !WORDS_BIGENDIAN */
 		/* tick type and flags */
-		uint32_t ttf:6;
+		uint64_t ttf:6;
 		/* an index back into the symtbl */
-		uint32_t idx:16;
+		uint64_t idx:16;
 		/* millisecs is the standard these days */
-		uint32_t msec:10;
+		uint64_t msec:10;
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed));
+	};
 
 	/* microsecond resolution, can only store up to 64 securities */
 	struct {
 #if defined WORDS_BIGENDIAN
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 		/* microseconds */
-		uint32_t usec:20;
+		uint64_t usec:20;
 		/* an index back into the symtbl */
-		uint32_t idx:6;
+		uint64_t idx:6;
 		/* tick type and flags */
-		uint32_t ttf:6;
+		uint64_t ttf:6;
 #else  /* !WORDS_BIGENDIAN */
 		/* tick type and flags */
-		uint32_t ttf:6;
+		uint64_t ttf:6;
 		/* an index back into the symtbl */
-		uint32_t idx:6;
+		uint64_t idx:6;
 		/* microseconds */
-		uint32_t usec:20;
+		uint64_t usec:20;
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed)) us;
+	} us;
 
 	/* nanosecond resolution, can only store one security and
 	 * only the tick types bid, ask and tra */
 	struct {
 #if defined WORDS_BIGENDIAN
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 		/* nano-seconds */
-		uint32_t nsec:30;
+		uint64_t nsec:30;
 		/* tick type and flags */
-		uint32_t ttf:2;
+		uint64_t ttf:2;
 #else  /* !WORDS_BIGENDIAN */
 		/* tick type and flags */
-		uint32_t ttf:2;
+		uint64_t ttf:2;
 		/* nano-seconds */
-		uint32_t nsec:30;
+		uint64_t nsec:30;
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed)) ns;
+	} ns;
 
 	/* seeing as that we're a union now ...
 	 * stuff this thing with the 0.1 version of the header */
 	struct {
 #if defined WORDS_BIGENDIAN
 		/* an index back into the symtbl */
-		uint16_t idx;
+		uint64_t idx:16;
 		/* tick type and flags */
-		uint16_t ttf:6;
+		uint64_t ttf:6;
 		/* millisecs is the standard these days */
-		uint16_t msec:10;
+		uint64_t msec:10;
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 #else  /* !WORDS_BIGENDIAN */
 		/* +64 */
-		uint32_t sec;
+		uint64_t sec:32;
 		/* millisecs is the standard these days */
-		uint16_t msec:10;
+		uint64_t msec:10;
 		/* tick type and flags */
-		uint16_t ttf:6;
+		uint64_t ttf:6;
 		/* an index back into the symtbl */
-		uint16_t idx;
+		uint64_t idx:16;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed)) v01;
+	} v01;
 } __attribute__((transparent_union));
 
 /* just so nobody has to include sl1t.h to get the sandwich size */
@@ -448,12 +448,10 @@ scom_promote_v01(scom_thdr_t tgt, scom_t t)
 	return;
 }
 
-static inline scidx_t
+static inline __attribute__((pure, const)) scidx_t
 make_scidx(scom_t t)
 {
-	scidx_t res;
-	res.u = t->u;
-	return res;
+	return *t;
 }
 
 #ifdef __cplusplus

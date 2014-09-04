@@ -71,7 +71,19 @@ struct time_range_s {
 };
 
 union scom_thdr_u {
+#if !defined __clang__
 	uint64_t u;
+#else  /* __clang__ */
+	struct {
+#if defined WORDS_BIGENDIAN
+		uint32_t upper;
+		uint32_t lower;
+#else  /* !WORDS_BIGENDIAN */
+		uint32_t lower;
+		uint32_t upper;
+#endif	/* WORDS_BIGENDIAN */
+	};
+#endif	/* !__clang__ */
 	/* struct in order of significance */
 	struct {
 #if defined WORDS_BIGENDIAN
@@ -93,7 +105,7 @@ union scom_thdr_u {
 		/* +64 */
 		uint32_t sec;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed));
+	};
 
 	/* microsecond resolution, can only store up to 64 securities */
 	struct {
@@ -116,7 +128,7 @@ union scom_thdr_u {
 		/* +64 */
 		uint32_t sec;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed)) us;
+	} us;
 
 	/* nanosecond resolution, can only store one security and
 	 * only the tick types bid, ask and tra */
@@ -136,31 +148,31 @@ union scom_thdr_u {
 		/* +64 */
 		uint32_t sec;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed)) ns;
+	} ns;
 
 	/* seeing as that we're a union now ...
 	 * stuff this thing with the 0.1 version of the header */
 	struct {
 #if defined WORDS_BIGENDIAN
 		/* an index back into the symtbl */
-		uint16_t idx;
+		uint32_t idx:16;
 		/* tick type and flags */
-		uint16_t ttf:6;
+		uint32_t ttf:6;
 		/* millisecs is the standard these days */
-		uint16_t msec:10;
+		uint32_t msec:10;
 		/* +64 */
 		uint32_t sec;
 #else  /* !WORDS_BIGENDIAN */
 		/* +64 */
 		uint32_t sec;
 		/* millisecs is the standard these days */
-		uint16_t msec:10;
+		uint32_t msec:10;
 		/* tick type and flags */
-		uint16_t ttf:6;
+		uint32_t ttf:6;
 		/* an index back into the symtbl */
-		uint16_t idx;
+		uint32_t idx:16;
 #endif	/* WORDS_BIGENDIAN */
-	} __attribute__((packed)) v01;
+	} v01;
 } __attribute__((transparent_union));
 
 /* just so nobody has to include sl1t.h to get the sandwich size */
@@ -448,11 +460,27 @@ scom_promote_v01(scom_thdr_t tgt, scom_t t)
 	return;
 }
 
-static inline scidx_t
+static inline __attribute__((pure, const)) uint64_t
+scom_to_u64(scom_t t)
+{
+#if !defined __clang__
+	return t->u;
+#else  /* __clang__ :( */
+/* clang is an alignment fascist, so glue the slots together here manually */
+	return ((uint64_t)t->upper << 32U) | (uint64_t)t->lower;
+#endif	/* !__clang__ */
+}
+
+static inline __attribute__((pure, const)) scidx_t
 make_scidx(scom_t t)
 {
 	scidx_t res;
-	res.u = t->u;
+#if !defined __clang__
+	res.u = scom_to_u64(t);
+#else  /* __clang__ :( */
+	res.upper = t->upper;
+	res.lower = t->lower;
+#endif	/* !__clang__ */
 	return res;
 }
 

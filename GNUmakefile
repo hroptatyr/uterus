@@ -12,12 +12,13 @@ include Makefile
 # update the included makefile snippet which sets VERSION variables
 version.mk: .version version.mk.in FORCE
 	-$(AM_V_GEN) \
-	if test -w $<; then \
-		if test -n "$(_dist-target_p)"; then \
-			$(MAKE) -C "$(top_builddir)/build-aux"; \
-		fi; \
+	if test -w $< -a "$(MAKECMDGOALS)" != "am--refresh"; then \
+		$(MAKE) -C "$(top_builddir)/build-aux"; \
 		PATH="$(top_builddir)/build-aux:$${PATH}" \
 			yuck scmver --ignore-noscm -o $@ --reference $^; \
+		if test $$? -eq 3 -a -n "$(_dist-target_p)"; then \
+			exec $(MAKE) $(MAKECMDGOALS); \
+		fi; \
 	fi
 
 else
@@ -28,7 +29,7 @@ $(MAKECMDGOALS): abort-due-to-no-makefile
 abort-due-to-no-makefile:
 	@echo There seems to be no Makefile in this directory.   1>&2
 	@echo "You must run ./configure before running 'make'." 1>&2
-	@exit 1
+	exit 1
 
 endif
 

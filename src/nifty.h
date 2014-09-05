@@ -34,7 +34,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ***/
-
 #if !defined INCLUDED_nifty_h_
 #define INCLUDED_nifty_h_
 
@@ -57,8 +56,36 @@
 # define countof(x)	(sizeof(x) / sizeof(*x))
 #endif	/* !countof */
 
+#define _paste(x, y)	x ## y
+#define paste(x, y)	_paste(x, y)
+
 #if !defined with
-# define with(args...)	for (args, *__ep__ = (void*)1; __ep__; __ep__ = 0)
+# define with(args...)							\
+	for (args, *paste(__ep, __LINE__) = (void*)1;			\
+	     paste(__ep, __LINE__); paste(__ep, __LINE__)= 0)
 #endif	/* !with */
+
+#if !defined if_with
+# define if_with(init, args...)					\
+	for (init, *paste(__ep, __LINE__) = (void*)1;			\
+	     paste(__ep, __LINE__) && (args); paste(__ep, __LINE__)= 0)
+#endif	/* !if_with */
+
+#define once					\
+	static int paste(__, __LINE__);		\
+	if (!paste(__, __LINE__)++)
+#define but_first				\
+	static int paste(__, __LINE__);		\
+	if (paste(__, __LINE__)++)
+
+static __inline void*
+deconst(const void *cp)
+{
+	union {
+		const void *c;
+		void *p;
+	} tmp = {cp};
+	return tmp.p;
+}
 
 #endif	/* INCLUDED_nifty_h_ */

@@ -119,7 +119,7 @@ struct mat_s {
 struct matdat_s {
 	uint32_t dty;
 	uint32_t nby;
-	void *data[];
+	void *data[0U];
 };
 
 struct matarr_flag_s {

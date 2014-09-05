@@ -48,14 +48,6 @@
 /* snapshots */
 #include "ssnp.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /* nothing to see here */
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif	/* INCLUDED_uterus_h_ */

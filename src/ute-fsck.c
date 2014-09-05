@@ -676,8 +676,8 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 	}
 
 	if (argi->compress_flag) {
-		(void)ute_encode(NULL, NULL, 0);
-		(void)ute_decode(NULL, NULL, 0);
+		ute_encode_free();
+		ute_decode_free();
 	}
 out:
 	yuck_free(argi);

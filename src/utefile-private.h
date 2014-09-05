@@ -238,4 +238,20 @@ ute_unset_unsorted(utectx_t ctx)
 	return;
 }
 
+static inline void
+ute_encode_free(void)
+{
+	void *unused;
+	(void)ute_encode(&unused, NULL, 0UL);
+	return;
+}
+
+static inline void
+ute_decode_free(void)
+{
+	void *unused;
+	(void)ute_decode(&unused, NULL, 0UL);
+	return;
+}
+
 #endif	/* INCLUDED_utefile_private_h_ */

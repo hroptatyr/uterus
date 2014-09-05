@@ -182,12 +182,6 @@ static const char coord_zones[][4] = {
 	"GPS",
 };
 
-static void*
-deconst(const void *ptr)
-{
-	return (char*)1 + ((const char*)ptr - (char*)1U);
-}
-
 /**
  * Return the total number of transitions in zoneinfo file Z. */
 DEFUN inline size_t

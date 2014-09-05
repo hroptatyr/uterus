@@ -133,7 +133,7 @@ recv_remote_fname(char *uri)
 	char *tmpf = _tmpf;
 	CURL *cctx;
 	char *fn = NULL;
-	int fd;
+	int fd = -1;
 	CURLcode rc = CURL_LAST;
 
 	if (UNLIKELY((cctx = curl_easy_init()) == NULL)) {
@@ -170,9 +170,11 @@ out:
 	free(uri);
 
 	if (UNLIKELY(fd < 0)) {
-		/* already unlink the guy as later we won't
-		 * have the file name handy anymore */
-		(void)unlink(tmpf);
+		if (tmpf != NULL) {
+			/* already unlink the guy as later we won't
+			 * have the file name handy anymore */
+			(void)unlink(tmpf);
+		}
 	}
 	if (LIKELY(cctx != NULL)) {
 		curl_easy_cleanup(cctx);

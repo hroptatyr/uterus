@@ -100,10 +100,14 @@ ute_tick_la_LIBADD = $(top_builddir)/src/libuterus.la
 
 ## matlab needs mexa64, octave needs mex
 install-data-hook:
-	-cd $(DESTDIR)$(mexdir) && mv -f tzconv.mex tzconv.$(MEXEXT)
+	-for i in ute_tick ute_nticks ute_slut ute_open ute_close; do \
+		cd $(DESTDIR)$(mexdir) && mv -f $${i}.mex $${i}.$(MEXEXT); \
+	done
 
 uninstall-hook:
-	-$(RM) -- $(DESTDIR)$(mexdir)/tzconv.$(MEXEXT)
+	-for i in ute_tick ute_nticks ute_slut ute_open ute_close; do \
+		$(RM) -- $(DESTDIR)$(mexdir)/$${i}.$(MEXEXT); \
+	done
 
 # 
 # Help the developers get nice post-processed source files

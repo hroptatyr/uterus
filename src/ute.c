@@ -87,7 +87,7 @@ DEFCMD(sort)(int UNUSED(argc), char *argv[])
 
 DEFCMD(version)(int UNUSED(argc), char *UNUSED(argv)[])
 {
-	printf("ute %s\n", uterus_version_string);
+	puts(uterus_version_string);
 	return 0;
 }
 

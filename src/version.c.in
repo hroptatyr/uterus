@@ -1,4 +1,4 @@
 /* -*- c -*- */
 #include "version.h"
 
-const char uterus_version_string[] = "YUCK_SCMVER_VERSION";
+const char uterus_version_string[] = "uterus YUCK_SCMVER_VERSION";

@@ -98,11 +98,7 @@ DEFCMD(help)(int UNUSED(argc), char *UNUSED(argv)[])
 		printf("  %-20s " line "\n", #x);	\
 	} while (0)
 
-	/* output version first */
-	ute_cmd_version(0, NULL);
-
 	puts("\
-\n\
 Usage: ute [OPTION]... COMMAND ARGS...\n\
 \n\
 Create, access and modify ute files.\n\

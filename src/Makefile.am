@@ -39,6 +39,7 @@ include $(top_builddir)/version.mk
 
 AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DDEBUG -DTIMESTAMPS
+AM_CPPFLAGS += -DHAVE_VERSION_H
 AM_LDFLAGS = $(XCCLDFLAGS)
 
 ## headerdir and utedir are defined in c.ac

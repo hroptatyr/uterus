@@ -44,9 +44,6 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <unistd.h>
-#if defined HAVE_CONFIG_H
-# include "config.h"
-#endif	/* HAVE_CONFIG_H */
 #include <math.h>
 #include <limits.h>
 #include <string.h>

@@ -542,7 +542,7 @@ optionp(const char *line, size_t llen)
 			sp += 7U;
 		}
 	}
-	if ((sp - line >= 8 || sp - line >= 1 && *sp != '-') &&
+	if ((sp - line >= 8 || (sp - line >= 1 && *sp != '-')) &&
 	    (cur_opt.sopt || cur_opt.lopt)) {
 		/* should be description */
 		goto desc;
@@ -1227,7 +1227,7 @@ unmassage_fd(int tgtfd, int srcfd)
 
 
 static char *m4_cmdline[16U] = {
-	"m4",
+	YUCK_M4,
 };
 static size_t cmdln_idx;
 
@@ -1584,7 +1584,7 @@ wr_version(const struct yuck_version_s *v, const char *vlit)
 		fprintf(outf, "define([YUCK_SCMVER_SCM], [%s])\n", yscm);
 		fprintf(outf, "define([YUCK_SCMVER_DIST], [%u])\n", v->dist);
 		fprintf(outf, "define([YUCK_SCMVER_RVSN], [%0*x])\n",
-			(int)(v->rvsn & 0b111), v->rvsn >> 4U);
+			(int)(v->rvsn & 0x07U), v->rvsn >> 4U);
 		if (!v->dirty) {
 			fputs("define([YUCK_SCMVER_FLAG_CLEAN])\n", outf);
 		} else {
@@ -1599,7 +1599,7 @@ wr_version(const struct yuck_version_s *v, const char *vlit)
 			fputs(yscm_strs[v->scm], outf);
 			fprintf(outf, "%u.%0*x",
 				v->dist,
-				(int)(v->rvsn & 0b111), v->rvsn >> 4U);
+				(int)(v->rvsn & 0x07U), v->rvsn >> 4U);
 		}
 		if (v->dirty) {
 			fputs(".dirty", outf);
@@ -1925,7 +1925,7 @@ flag -n|--use-reference requires -r|--reference parameter");
 			fputs(yscm_strs[v->scm], stdout);
 			fprintf(stdout, "%u.%0*x",
 				v->dist,
-				(int)(v->rvsn & 0b111), v->rvsn >> 4U);
+				(int)(v->rvsn & 0x07U), v->rvsn >> 4U);
 		}
 		if (v->dirty) {
 			fputs(".dirty", stdout);
@@ -1937,6 +1937,24 @@ flag -n|--use-reference requires -r|--reference parameter");
 	fputs("scmver support not built in\n", stderr);
 	return argi->cmd == YUCK_CMD_SCMVER;
 #endif	/* WITH_SCMVER */
+}
+
+static int
+cmd_config(const struct yuck_cmd_config_s argi[static 1U])
+{
+	const char *const fn = argi->output_arg;
+	FILE *of = stdout;
+
+	if (fn != NULL && (of = fopen(fn, "w")) == NULL) {
+		error("cannot open file `%s'", fn);
+		return -1;
+	}
+
+	if (argi->m4_flag) {
+		fputs(YUCK_M4, of);
+		fputc('\n', of);
+	}
+	return fclose(of);
 }
 
 int
@@ -1974,6 +1992,11 @@ See --help to obtain a list of available commands.\n", stderr);
 		break;
 	case YUCK_CMD_SCMVER:
 		if ((rc = cmd_scmver((const void*)argi)) < 0) {
+			rc = 1;
+		}
+		break;
+	case YUCK_CMD_CONFIG:
+		if ((rc = cmd_config((const void*)argi)) < 0) {
 			rc = 1;
 		}
 		break;

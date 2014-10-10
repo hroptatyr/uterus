@@ -1,6 +1,6 @@
 AC_PREREQ([2.63])
 
-AC_INIT([uterus], [0.2.8], [https://github.com/hroptatyr/uterus])
+AC_INIT([uterus], [0.2.9.GIT], [https://github.com/hroptatyr/uterus])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([src/config.h])

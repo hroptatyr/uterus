@@ -57,7 +57,7 @@ pkgconfigdir = @libdir@/pkgconfig
 pkgconfig_DATA =
 pkgconfig_DATA += uterus.pc
 EXTRA_DIST += uterus.pc.in
-CLEANFILES += uterus.pc
+DISTCLEANFILES += $(pkgconfig_DATA)
 
 EXTRA_DIST += uterus.magic
 EXTRA_DIST += README.md
@@ -73,8 +73,8 @@ if HAVE_FILE
 pkgdata_DATA = uterus.mgc
 endif  HAVE_FILE
 
-CLEANFILES += $(pkgdata_DATA)
 
+## pkg-config rule
 uterus.pc: .version uterus.pc.in
 	$(AM_V_GEN) PATH="$(top_builddir)/build-aux:$${PATH}" \
 		yuck$(EXEEXT) scmver -n \

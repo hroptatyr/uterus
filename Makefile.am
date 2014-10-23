@@ -72,6 +72,7 @@ EXTRA_DIST += $(doc_DATA)
 if HAVE_FILE
 pkgdata_DATA = uterus.mgc
 endif  HAVE_FILE
+DISTCLEANFILES += $(pkgdata_DATA)
 
 
 ## pkg-config rule

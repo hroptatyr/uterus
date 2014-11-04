@@ -13,6 +13,7 @@ AM_LDFLAGS = -L$(abs_top_builddir)/src
 EXTRA_DIST = $(ut_tests) $(BUILT_SOURCES)
 TESTS = $(ut_tests) $(bin_tests) $(XFAIL_TESTS)
 XFAIL_TESTS = $(ut_xtests) $(bin_xtests)
+TEST_EXTENSIONS =
 BUILT_SOURCES =
 SUFFIXES =
 check_PROGRAMS =
@@ -25,11 +26,9 @@ bin_xtests =
 m30_LIBS = $(uterus_LIBS)
 uterus_LIBS = $(abs_top_builddir)/src/libuterus.la
 
-TEST_EXTENSIONS = .clit
-AM_LOG_COMPILER = false
-
-CLIT_LOG_COMPILER = $(builddir)/clitoris
-AM_CLIT_LOG_FLAGS = -v -k --builddir $(top_builddir)/src
+## summon our helper
+include clitoris.am
+AM_CLIT_LOG_FLAGS = --builddir $(top_builddir)/src --verbose --keep-going
 
 ut_tests += mux.01.clit
 ut_tests += mux.02.clit
@@ -331,15 +330,6 @@ check_PROGRAMS += stream-02
 stream_02_LDFLAGS = $(AM_LDFLAGS) -static
 stream_02_LDADD = $(m30_LIBS)
 
-
-## our friendly helpers
-check_PROGRAMS += clitoris
-clitoris_SOURCES = clitoris.c clitoris.yuck
-clitoris_CPPFLAGS = $(AM_CPPFLAGS)
-clitoris_CPPFLAGS += -D_GNU_SOURCE
-clitoris_LDFLAGS = $(AM_LDFLAGS) -static
-clitoris_LDADD = -lutil
-BUILT_SOURCES += clitoris.yucc
 
 check_PROGRAMS += shack
 shack_SOURCES = shack.c shack.yuck

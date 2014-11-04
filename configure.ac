@@ -32,7 +32,6 @@ AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC
 AC_C_BIGENDIAN
 SXE_CHECK_CFLAGS
-AC_CHECK_TOOLS([AR], [xiar ar], [false])
 
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])

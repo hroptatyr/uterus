@@ -105,6 +105,9 @@ AC_DEFUN([SXE_CHECK_OCTAVE], [dnl
 	unset ac_cv_header_mex_h
 	CPPFLAGS="${save_CPPFLAGS}"
 
+	MEXEXT="mex"
+	AC_SUBST([MEXEXT])
+
 	if test "${sxe_cv_octave_mex_h}" = "yes"; then
 		have_octave="yes"
 	else

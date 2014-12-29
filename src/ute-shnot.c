@@ -352,7 +352,7 @@ bucketiser(shnot_ctx_t ctx, scom_t t)
 /* simple bucket sort */
 #include <stdio.h>
 
-static void
+static int
 init(shnot_ctx_t ctx, shnot_opt_t opt)
 {
 	const char *outf = opt->outfile;
@@ -370,12 +370,12 @@ init(shnot_ctx_t ctx, shnot_opt_t opt)
 		/* bad idea */
 		ctx->wrr = NULL;
 		fputs("This is binary data, cannot dump to stdout\n", stderr);
-		exit(1);
+		return -1;
 	} else if ((ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC)) == NULL) {
 		error("cannot open `%s' for output", outf);
-		exit(1);
+		return -1;
 	}
-	return;
+	return 0;
 }
 
 static void
@@ -476,7 +476,10 @@ main(int argc, char *argv[])
 	}
 
 	/* initialise context */
-	init(ctx, opt);
+	if (init(ctx, opt) < 0) {
+		rc = 1;
+		goto out;
+	}
 
 	for (size_t j = 0U; j < argi->nargs; j++) {
 		const char *f = argi->args[j];

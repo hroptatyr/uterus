@@ -60,6 +60,7 @@
 #include "mem.h"
 /* our own goodness */
 #include "ute-shnot.h"
+#include "cmd-aux.c"
 
 /* we need to look into ticks and tick packets */
 #include "sl1t.h"
@@ -370,8 +371,9 @@ init(shnot_ctx_t ctx, shnot_opt_t opt)
 		ctx->wrr = NULL;
 		fputs("This is binary data, cannot dump to stdout\n", stderr);
 		exit(1);
-	} else {
-		ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC);
+	} else if ((ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC)) == NULL) {
+		error("cannot open `%s' for output", outf);
+		exit(1);
 	}
 	return;
 }

@@ -290,15 +290,21 @@ init_ticks(mux_ctx_t ctx, sumux_opt_t opts)
 }
 
 static void
-deinit_ticks(mux_ctx_t ctx)
+deinit_ticks(mux_ctx_t ctx, size_t nsucc)
 {
 	if (ctx->wrr) {
 		/* check if we wrote to a tmp file */
 		if (ctx->opts->outfile == NULL) {
 			const char *fn;
-			if ((fn = ute_fn(ctx->wrr))) {
+			if ((fn = ute_fn(ctx->wrr)) && nsucc) {
 				puts(fn);
+			} else if (fn &&
+				   !(ctx->opts->flags & OUTFILE_IS_INTO)) {
+				/* better unlink outfile */
+				(void)unlink(fn);
 			}
+		} else if (!nsucc && !(ctx->opts->flags & OUTFILE_IS_INTO)) {
+			(void)unlink(ctx->opts->outfile);
 		}
 		ute_close(ctx->wrr);
 	}
@@ -324,6 +330,7 @@ main(int argc, char *argv[])
 	struct mux_ctx_s ctx[1U] = {{0}};
 	struct muxer_s mxer;
 	int muxer_specific_options_p = 0;
+	size_t nsucc = 0U;
 	int rc = 0;
 
 	if (yuck_parse(argi, argc, argv)) {
@@ -413,6 +420,7 @@ muxer specific options given but cannot find muxer\n", stderr);
 	/* prefer the fully fledged version */
 	if (mxer.mux_main_f != NULL) {
 		rc = mxer.mux_main_f(ctx, argi->nargs + 1U, argi->args - 1);
+		nsucc++;
 	} else {
 		for (size_t j = 0; j < argi->nargs; j++) {
 			const char *f = argi->args[j];
@@ -428,7 +436,8 @@ muxer specific options given but cannot find muxer\n", stderr);
 				ctx->infn = f;
 				ctx->badfd = STDERR_FILENO;
 			} else {
-				error("cannot open file '%s'", f);
+				error("cannot open file `%s'", f);
+				rc = 2;
 				/* just try the next bloke */
 				continue;
 			}
@@ -436,9 +445,11 @@ muxer specific options given but cannot find muxer\n", stderr);
 			mxer.muxf(ctx);
 			/* close the infile */
 			close(fd);
+			/* great success innit? */
+			nsucc++;
 		}
 	}
-	deinit_ticks(ctx);
+	deinit_ticks(ctx, nsucc);
 
 out:
 	unfind_muxer(mxer);

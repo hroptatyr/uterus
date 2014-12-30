@@ -60,6 +60,7 @@
 #include "mem.h"
 /* our own goodness */
 #include "ute-chndl.h"
+#include "cmd-aux.c"
 
 /* we need to look into ticks and tick packets */
 #include "sl1t.h"
@@ -477,7 +478,7 @@ bucketiser(chndl_ctx_t ctx, scom_t t)
 /* simple bucket sort */
 #include <stdio.h>
 
-static void
+static int
 init(chndl_ctx_t ctx, chndl_opt_t opt)
 {
 	const char *outf = opt->outfile;
@@ -495,11 +496,12 @@ init(chndl_ctx_t ctx, chndl_opt_t opt)
 		/* bad idea */
 		ctx->wrr = NULL;
 		fputs("This is binary data, cannot dump to stdout\n", stderr);
-		exit(1);
-	} else {
-		ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC);
+		return -1;
+	} else if ((ctx->wrr = ute_open(outf, UO_CREAT | UO_TRUNC)) == NULL) {
+		error("cannot open `%s' for output", outf);
+		return -1;
 	}
-	return;
+	return 0;
 }
 
 static void
@@ -603,7 +605,10 @@ main(int argc, char *argv[])
 	}
 
 	/* initialise context */
-	init(ctx, opt);
+	if (init(ctx, opt) < 0) {
+		rc = 1;
+		goto out;
+	}
 
 	for (size_t j = 0U; j < argi->nargs; j++) {
 		const char *f = argi->args[j];

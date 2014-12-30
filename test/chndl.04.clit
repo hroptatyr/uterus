@@ -1,5 +1,5 @@
 #!/usr/bin/clitoris  ## -*- shell-script -*-
 
 ## input path doesn't exist
-$ ?1 ute chndl -o "/tmp/test.ute" "/madeupdir/print.a.ute"
+$ ?2 ute chndl -o "/tmp/test.ute" "/madeupdir/print.a.ute"
 $

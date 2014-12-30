@@ -57,6 +57,7 @@
 #include "module.h"
 
 #include "ute-print.h"
+#include "cmd-aux.c"
 
 #include "scommon.h"
 #include "sl1t.h"
@@ -164,7 +165,7 @@ pr1(pr_ctx_t ctx, const char *f, int(*prf)(pr_ctx_t, scom_t))
 	utectx_t hdl;
 
 	if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
-		fprintf(stderr, "cannot open file '%s'\n", f);
+		error("cannot open file `%s'", f);
 		return;
 	}
 	/* otherwise print all them ticks */

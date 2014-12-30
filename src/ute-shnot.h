@@ -38,7 +38,7 @@
 #define INCLUDED_ute_shnot_h_
 
 typedef struct shnot_ctx_s *shnot_ctx_t;
-typedef struct shnot_opt_s *shnot_opt_t;
+typedef const struct shnot_opt_s *shnot_opt_t;
 
 struct shnot_ctx_s {
 	/* contains the currently processed ute file */

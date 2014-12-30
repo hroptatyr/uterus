@@ -46,7 +46,7 @@
 #define MAX_LINE_LEN		512
 
 typedef struct pr_ctx_s *pr_ctx_t;
-typedef struct pr_opt_s *pr_opt_t;
+typedef const struct pr_opt_s *pr_opt_t;
 
 struct pr_ctx_s {
 	/** file index for bad ticks */

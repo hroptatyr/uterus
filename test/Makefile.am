@@ -85,6 +85,8 @@ EXTRA_DIST += mux.10.ref.ute
 EXTRA_DIST += mux.11.ref.ute
 EXTRA_DIST += mux.12.ref.ute
 EXTRA_DIST += mux.13.ref.ute
+ut_tests += mux.23.clit
+ut_tests += mux.24.clit
 
 if WORDS_BIGENDIAN
 else
@@ -107,15 +109,21 @@ EXTRA_DIST += print.e.ute
 EXTRA_DIST += print.e.beute
 EXTRA_DIST += print.f.ute
 EXTRA_DIST += print.f.beute
+ut_tests += print.11.clit
+ut_tests += print.12.clit
 
 ut_tests += shnot.01.clit
 ut_tests += shnot.02.clit
 EXTRA_DIST += shnot.1.ref.ute
 EXTRA_DIST += shnot.2.ref.ute
+ut_tests += shnot.03.clit
+ut_tests += shnot.04.clit
 
 ut_tests += chndl.01.clit
 ut_tests += chndl.02.clit
 EXTRA_DIST += chndl.2.ref.ute
+ut_tests += chndl.03.clit
+ut_tests += chndl.04.clit
 
 ut_tests += fsck.01.clit
 ut_tests += fsck.02.clit
@@ -151,6 +159,8 @@ EXTRA_DIST += fsck.a.ute
 EXTRA_DIST += fsck.b.ute
 EXTRA_DIST += fsck.17.ref.leute
 EXTRA_DIST += fsck.17.ref.beute
+ut_tests += fsck.29.clit
+ut_tests += fsck.30.clit
 
 ut_tests += slut.01.clit
 ut_tests += slut.02.clit

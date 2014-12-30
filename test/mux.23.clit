@@ -1,0 +1,5 @@
+#!/usr/bin/clitoris  ## -*- shell-script -*-
+
+## input path doesn't exist
+$ ?1 ute mux -o "/tmp/test.ute" "/madeupdir/print.a.ute"
+$

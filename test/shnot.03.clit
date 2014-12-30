@@ -1,0 +1,5 @@
+#!/usr/bin/clitoris  ## -*- shell-script -*-
+
+## output path doesn't exist
+$ ?1 ute shnot -o "/madeupdir/test.ute" "${srcdir}/print.a.ute"
+$

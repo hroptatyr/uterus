@@ -57,6 +57,7 @@
 #include "module.h"
 
 #include "ute-print.h"
+#include "cmd-aux.c"
 
 #include "scommon.h"
 #include "sl1t.h"
@@ -158,14 +159,14 @@ print_mudems(void)
 	return;
 }
 
-static void MAYBE_NOINLINE
+static int MAYBE_NOINLINE
 pr1(pr_ctx_t ctx, const char *f, int(*prf)(pr_ctx_t, scom_t))
 {
 	utectx_t hdl;
 
 	if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
-		fprintf(stderr, "cannot open file '%s'\n", f);
-		return;
+		error("cannot open file `%s'", f);
+		return -1;
 	}
 	/* otherwise print all them ticks */
 	ctx->uctx = hdl;
@@ -178,7 +179,7 @@ pr1(pr_ctx_t ctx, const char *f, int(*prf)(pr_ctx_t, scom_t))
 
 	/* oh right, close the handle */
 	ute_close(hdl);
-	return;
+	return 0;
 }
 
 static ssize_t
@@ -230,6 +231,7 @@ main(int argc, char *argv[])
 	struct printer_s prer;
 	int printer_specific_options_p = 0;
 	const char *fmt;
+	size_t nsucc = 0U;
 	int rc = 0;
 
 	if (yuck_parse(argi, argc, argv)) {
@@ -319,10 +321,16 @@ printer specific options given but cannot find printer\n", stderr);
 			}
 			prpg(ctx, pg, nrd, prer.prf);
 		}
+		nsucc++;
 
 	} else {
 		for (size_t j = 0U; j < argi->nargs; j++) {
-			pr1(ctx, argi->args[j], prer.prf);
+			if (pr1(ctx, argi->args[j], prer.prf) < 0) {
+				rc = 2;
+				continue;
+			}
+			/* otherwise it's been a full success */
+			nsucc++;
 		}
 	}
 
@@ -334,6 +342,10 @@ fina:
 clo_out:
 	/* close the output file */
 	close(ctx->outfd);
+	if (!nsucc && opt->outfile) {
+		/* unlink output file */
+		(void)unlink(opt->outfile);
+	}
 
 out:
 	unfind_printer(prer);

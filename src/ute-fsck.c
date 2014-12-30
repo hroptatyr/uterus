@@ -564,7 +564,7 @@ main(int argc, char *argv[])
 
 		if ((ctx->outctx = ute_open(fn, fl)) == NULL) {
 			error("cannot open output file `%s'", fn);
-			rc = -1;
+			rc = 1;
 			goto out;
 		}
 	}

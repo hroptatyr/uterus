@@ -505,15 +505,20 @@ init(chndl_ctx_t ctx, chndl_opt_t opt)
 }
 
 static void
-deinit(chndl_ctx_t ctx)
+deinit(chndl_ctx_t ctx, size_t nsucc)
 {
 	if (ctx->wrr) {
 		/* check if we wrote to a tmp file */
 		if (ctx->opts->outfile == NULL) {
 			const char *fn;
-			if ((fn = ute_fn(ctx->wrr))) {
+			if ((fn = ute_fn(ctx->wrr)) && nsucc) {
 				puts(fn);
+			} else if (fn) {
+				(void)unlink(fn);
 			}
+		} else if (!nsucc) {
+			/* better delete the outfile again */
+			(void)unlink(ctx->opts->outfile);
 		}
 		/* writing those ticks to the disk is paramount */
 		ute_close(ctx->wrr);
@@ -575,6 +580,7 @@ main(int argc, char *argv[])
 	struct chndl_ctx_s ctx[1U] = {{0}};
 	struct chndl_opt_s opt[1U] = {{0}};
 	struct bkts_s bkt[1U] = {{0}};
+	size_t nsucc = 0U;
 	int rc = 0;
 
 	if (yuck_parse(argi, argc, argv)) {
@@ -615,6 +621,7 @@ main(int argc, char *argv[])
 		void *hdl;
 
 		if ((hdl = ute_open(f, UO_RDONLY)) == NULL) {
+			rc = 2;
 			continue;
 		}
 		/* (re)initialise our buckets */
@@ -631,9 +638,11 @@ main(int argc, char *argv[])
 		fini_buckets(ctx);
 		/* oh right, close the handle */
 		ute_close(hdl);
+		/* count this run as success */
+		nsucc++;
 	}
 	/* leave a footer and finish the chndl series */
-	deinit(ctx);
+	deinit(ctx, nsucc);
 
 out:
 	if (opt->z != NULL) {

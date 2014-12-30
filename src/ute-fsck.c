@@ -518,6 +518,7 @@ main(int argc, char *argv[])
 {
 	yuck_t argi[1U];
 	struct fsck_ctx_s ctx[1U] = {0};
+	size_t nsucc;
 	int rc = 0;
 
 	if (yuck_parse(argi, argc, argv)) {
@@ -629,9 +630,14 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 
 		/* and that's us */
 		ute_close(hdl);
+		/* count this as success */
+		nsucc++;
 	}
 
-	if (ctx->outctx != NULL) {
+	if (ctx->outctx != NULL && !nsucc) {
+		/* none succeeded? short-circuit here */
+		(void)unlink(argi->output_arg);
+	} else if (ctx->outctx != NULL) {
 		/* re-open the file */
 		const int fl = UO_RDWR;
 		const int opfl = UO_NO_LOAD_TPC;

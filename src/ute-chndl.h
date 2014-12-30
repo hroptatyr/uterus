@@ -38,7 +38,7 @@
 #define INCLUDED_ute_chndl_h_
 
 typedef struct chndl_ctx_s *chndl_ctx_t;
-typedef struct chndl_opt_s *chndl_opt_t;
+typedef const struct chndl_opt_s *chndl_opt_t;
 
 struct chndl_ctx_s {
 	/* contains the currently processed ute file */

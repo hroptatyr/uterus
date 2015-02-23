@@ -1,6 +1,6 @@
 /*** ute-shnot.h -- snapshooting from ute files
  *
- * Copyright (C) 2008-2013 Sebastian Freundt
+ * Copyright (C) 2008-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

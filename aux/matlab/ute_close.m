@@ -8,6 +8,6 @@
 %   HANDLE    - as previously obtained by ute_open
 %   {HANDLES} - cell array of handles as previously obtained by ute_open
 %
-% Copyright (C) 2013-2014  Sebastian Freundt <freundt@ga-group.nl>
+% Copyright (C) 2013-2015 Sebastian Freundt <freundt@ga-group.nl>
 %
 % This file is part of uterus

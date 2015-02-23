@@ -10,7 +10,7 @@
 
 This manual documents the uterus package.
 
-Copyright @copyright{} 2009-2012 Sebastian Freundt.
+Copyright @copyright{} 2009-2015 Sebastian Freundt.
 
 Permission is granted to copy, distribute and/or modify this
 document under the terms of the GNU Free Documentation License,

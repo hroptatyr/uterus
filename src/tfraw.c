@@ -1,6 +1,6 @@
 /*** tfraw.c -- tenfore options quotes file parser
  *
- * Copyright (C) 2010  Sebastian Freundt
+ * Copyright (C) 2010-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

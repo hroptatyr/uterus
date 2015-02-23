@@ -1,6 +1,6 @@
 /*** module.c -- the module loader
  *
- * Copyright (C) 2005-2013 Sebastian Freundt
+ * Copyright (C) 2005-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

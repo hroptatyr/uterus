@@ -1,6 +1,6 @@
 /*** truefx.c -- truefx log parser
  *
- * Copyright (C) 2010-2013  Sebastian Freundt
+ * Copyright (C) 2010-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

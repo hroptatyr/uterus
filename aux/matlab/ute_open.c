@@ -38,6 +38,7 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <stdint.h>
+#include <sys/stat.h>
 /* matlab stuff */
 #if defined HAVE_OCTAVE_MEX_H
 # include <octave/mex.h>

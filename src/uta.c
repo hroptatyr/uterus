@@ -1,6 +1,6 @@
 /*** uta.c -- ute ascii format
  *
- * Copyright (C) 2012  Sebastian Freundt
+ * Copyright (C) 2012-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

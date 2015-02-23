@@ -1,6 +1,6 @@
 /*** utefile.c -- high level interface to ute files (r/w)
  *
- * Copyright (C) 2010-2013 Sebastian Freundt
+ * Copyright (C) 2010-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

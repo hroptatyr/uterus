@@ -1,6 +1,6 @@
 /*** gesmes.c -- generic statistical message format
  *
- * Copyright (C) 2010  Sebastian Freundt
+ * Copyright (C) 2010-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

@@ -9,6 +9,6 @@
 % Output Arguments:
 %   N         - the number of ticks in the file
 %
-% Copyright (C) 2013  Sebastian Freundt <freundt@ga-group.nl>
+% Copyright (C) 2013-2015 Sebastian Freundt <freundt@ga-group.nl>
 %
 % This file is part of uterus

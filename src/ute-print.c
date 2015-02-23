@@ -1,6 +1,6 @@
 /*** ute-print.c -- ute tick printer
  *
- * Copyright (C) 2010-2014 Sebastian Freundt
+ * Copyright (C) 2010-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

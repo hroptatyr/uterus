@@ -1,6 +1,6 @@
 /*** hdf5.c -- hdf5 file muxer
  *
- * Copyright (C) 2012-2014  Sebastian Freundt
+ * Copyright (C) 2012-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *

@@ -1109,6 +1109,8 @@ flush_tpc(utectx_t ctx)
 		for (sidx_t i = 0, tsz; i < si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
 
+			assert(t->u);
+			assert(t->u != -1ULL);
 			assert((t->ttf & 0x30U) != 0x30U);
 			assert(thresh <= t->u);
 			thresh = t->u;

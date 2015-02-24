@@ -265,7 +265,7 @@ ute_trunc(utectx_t ctx, size_t sz)
 	return 0;
 }
 
-int
+static int
 ute_extend(utectx_t ctx, ssize_t z)
 {
 /* extend ute file by at least Z bytes */
@@ -783,51 +783,6 @@ make_page(uteseek_t sk, utectx_t ctx, uint32_t pg)
 	return clone_page(sk, ctx, sk);
 }
 
-#if !defined USE_UTE_SORT
-static inline size_t
-page_size(utectx_t ctx, uint32_t page)
-{
-/* Return the size (in bytes) of the PAGE-th page in CTX. */
-	const size_t pgsz = UTE_BLKSZ * sizeof(*ctx->seek->sp);
-	const size_t tot = page * pgsz;
-
-	if (LIKELY(tot + pgsz <= ctx->fsz)) {
-		return pgsz;
-	}
-	/* otherwise check if the page is beyond eof */
-	if (LIKELY(tot + pgsz >= ctx->fsz)) {
-		return ctx->fsz - tot;
-	}
-	/* otherwise the page is beyond */
-	return 0;
-}
-
-static void
-seek_tmppage(uteseek_t sk, utectx_t ctx, uint32_t pg)
-{
-	const int MAP_MEM = MAP_SHARED | MAP_ANONYMOUS;
-	const int PROT_MEM = PROT_READ | PROT_WRITE;
-	size_t psz = page_size(ctx, pg);
-	void *tmp;
-
-	/* create a new seek */
-	tmp = mmap(NULL, psz, PROT_MEM, MAP_MEM, -1, 0);
-	if (UNLIKELY(tmp == MAP_FAILED)) {
-		return;
-	}
-	sk->sp = tmp;
-	if (pg == 0) {
-		sk->si = sizeof(*ctx->hdrp) / sizeof(*ctx->seek->sp);
-	} else {
-		sk->si = 0;
-	}
-	sk->sz = psz;
-	sk->pg = pg;
-	sk->fl = 0;
-	return;
-}
-#endif	/* USE_UTE_SORT */
-
 /* seek to */
 scom_t
 ute_seek(utectx_t ctx, sidx_t i)
@@ -1109,6 +1064,8 @@ flush_tpc(utectx_t ctx)
 		for (sidx_t i = 0, tsz; i < si; i += tsz) {
 			scom_t t = AS_SCOM(sk->sp + i);
 
+			assert(t->u);
+			assert(t->u != -1ULL);
 			assert((t->ttf & 0x30U) != 0x30U);
 			assert(thresh <= t->u);
 			thresh = t->u;
@@ -1273,70 +1230,7 @@ out:
 }
 
 
-/* tpc glue */
-#if !defined USE_UTE_SORT
-static void
-merge_tpc(utectx_t ctx, utetpc_t tpc)
-{
-/* assume all tick pages in CTX are sorted except for TPC
- * now merge-sort those with TPC */
-	size_t npg = ute_npages(ctx);
-	struct uteseek_s sk[2];
-	/* page indicator */
-	size_t pg;
-	/* index keys */
-	scidx_t ti;
-
-	/* set up seeker through tpc */
-	ti = make_scidx(tpc_first_scom(tpc));
-
-	for (pg = 0; pg < npg; pg++) {
-		/* seek to the i-th page */
-		seek_page(sk, ctx, pg);
-		/* use bin-srch to find an offending tick */
-		if (seek_key(sk, ti)) {
-			goto mrg;
-		}
-		/* no need for this page */
-		flush_seek(sk);
-	}
-	return;
-
-mrg:
-	/* get a temporary tpc page (where the merges go) */
-	seek_tmppage(sk + 1, ctx, pg);
-	sk[1].si = sk->si;
-	memcpy(sk[1].sp, sk[0].sp, sk->si * sizeof(*sk->sp));
-
-	do {
-		merge_2tpc(sk + 1, sk + 0, tpc);
-		/* tpc might have become unsorted, sort it now */
-		tpc_sort(tpc);
-		/* copy the tmp page back */
-		memcpy(sk[0].sp, sk[1].sp, sk[1].si * sizeof(*sk->sp));
-		/* after this, sk[0] will be empty and we can proceed
-		 * with another seek/page */
-		flush_seek(sk);
-	} while (++pg < npg && (
-			 /* load next page */
-			 seek_page(sk, ctx, pg),
-			 /* reset the tmp page counters */
-			 sk[1].si = 0,
-			 1
-			 ));
-	/* update ctx's lvtd and tpc's least */
-	{
-		scom_t last = seek_last_scom(sk + 1);
-		tpc->least = ctx->lvtd = last->u;
-	}
-	/* flush the tmp seek too */
-	flush_seek(sk + 1);
-	/* unset the need merge flag */
-	unset_tpc_needmrg(tpc);
-	return;
-}
-#endif	/* USE_UTE_SORT */
-
+/* tilman compression */
 #if defined AUTO_TILMAN_COMP
 static bool
 seek_eof_p(uteseek_t sk)
@@ -2034,7 +1928,6 @@ ute_mktemp(int oflags)
 	return make_utectx(tmpfn, resfd, oflags);
 }
 
-#if defined USE_UTE_SORT
 static void
 ute_prep_sort(utectx_t ctx)
 {
@@ -2043,7 +1936,6 @@ ute_prep_sort(utectx_t ctx)
 	unlink(ctx->fname);
 	return;
 }
-#endif	/* USE_UTE_SORT */
 
 void
 ute_free(utectx_t ctx)
@@ -2091,10 +1983,8 @@ ute_close(utectx_t ctx)
 		ute_trunc(ctx, ctx->fsz);
 	}
 	if (!ute_sorted_p(ctx)) {
-#if defined USE_UTE_SORT
 		ute_prep_sort(ctx);
 		ute_sort(ctx);
-#endif	/* USE_UTE_SORT */
 		ute_unset_unsorted(ctx);
 	}
 #if defined AUTO_TILMAN_COMP
@@ -2144,10 +2034,6 @@ ute_flush(utectx_t ctx)
 		/* special case when the page cache has detected
 		 * a major violation */
 		ute_set_unsorted(ctx);
-#if !defined USE_UTE_SORT
-		/* since ute_sort() doesn't work, just use merge_tcp() */
-		merge_tpc(ctx, ctx->tpc);
-#endif	/* USE_UTE_SORT */
 	}
 	/* materialise the tpc */
 	flush_tpc(ctx);

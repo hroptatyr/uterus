@@ -1,6 +1,6 @@
 /*** yuck-scmver.c -- snarf versions off project cwds
  *
- * Copyright (C) 2013-2014 Sebastian Freundt
+ * Copyright (C) 2013-2015 Sebastian Freundt
  *
  * Author:  Sebastian Freundt <freundt@ga-group.nl>
  *
@@ -593,7 +593,7 @@ git_version(struct yuck_version_s v[static 1U])
 	int rc = 0;
 
 	if ((chld = run(fd, "git", "describe",
-			"--match=v[0-9]*",
+			"--tags", "--match=v[0-9]*",
 			"--abbrev=8", "--dirty", NULL)) < 0) {
 		return -1;
 	}

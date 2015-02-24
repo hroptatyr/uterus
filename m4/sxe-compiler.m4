@@ -1,6 +1,6 @@
 dnl compiler.m4 --- compiler magic
 dnl
-dnl Copyright (C) 2005-2014 Sebastian Freundt
+dnl Copyright (C) 2005-2015 Sebastian Freundt
 dnl Copyright (c) 2005 Steven G. Johnson
 dnl Copyright (c) 2005 Matteo Frigo
 dnl
@@ -780,6 +780,7 @@ dnl defines sxe_cv_feat_cilk to "yes" if applicable, "no" otherwise
 dnl also AC_DEFINEs HAVE_CILK
 	AC_CHECK_HEADERS([cilk/cilk.h])
 
+	save_CFLAGS="${CFLAGS}"
 	SXE_CHECK_COMPILER_FLAG([-fcilkplus], [CFLAGS="${CFLAGS} -fcilkplus"])
 
 	AC_MSG_CHECKING([whether Cilk+ keywords work])
@@ -815,6 +816,7 @@ cilk_for(j = 0; j < 8; j++) {
 	sxe_cv_feat_cilk="yes"
 	$1
 ], [
+	CFLAGS="${save_CFLAGS}"
 	sxe_cv_feat_cilk="no"
 	$2
 ])

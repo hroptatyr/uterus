@@ -265,7 +265,7 @@ ute_trunc(utectx_t ctx, size_t sz)
 	return 0;
 }
 
-int
+static int
 ute_extend(utectx_t ctx, ssize_t z)
 {
 /* extend ute file by at least Z bytes */

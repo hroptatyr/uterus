@@ -149,10 +149,6 @@ extern uint32_t ute_encode_clevel;
  * Return the number of tick pages in CTX. */
 extern size_t ute_npages(utectx_t ctx);
 
-/**
- * Extend (or shrink) the ute file in CTX by SZ bytes. */
-extern int ute_extend(utectx_t ctx, ssize_t sz);
-
 
 /* inlines */
 static inline __attribute__((pure)) size_t

@@ -180,7 +180,9 @@ seek_rewind(uteseek_t sk, size_t nticks)
 {
 /* consider SK rewound by NTICKS ticks */
 	/* make sure it's just 15 ticks max */
-	nticks &= 0xfU;
+	if (UNLIKELY(nticks >= 16U)) {
+		return;
+	}
 	sk->szrw -= nticks * sizeof(*sk->sp);
 	sk->szrw = seek_set_rewound(sk, nticks);
 	return;

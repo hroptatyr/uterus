@@ -114,7 +114,7 @@ snodup(const void *in)
 #  define MAP_ANON		(0x1000U)
 # endif	/* MAP_ANON->MAP_ANONYMOUS */
 # if !defined MAP_MEM
-#  define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)
+#  define MAP_MEM		(MAP_PRIVATE | MAP_ANON)
 # endif	 /* !MAP_MEM */
 # if !defined PROT_MEM
 #  define PROT_MEM		(PROT_READ | PROT_WRITE)

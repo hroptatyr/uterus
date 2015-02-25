@@ -37,6 +37,9 @@
 #if !defined INCLUDED_ute_print_h_
 #define INCLUDED_ute_print_h_
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
 #include <string.h>
 /* for ssize_t */
 #include <unistd.h>
@@ -85,14 +88,22 @@ pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 {
 	struct tm tm;
 	int h, m, off;
+
 	ffff_localtime(&tm, sec, z);
 	ffff_strftime(buf, 32, &tm, sep);
 	buf[19] = '.';
 	buf[20] = (char)(((msec / 100) % 10) + '0');
 	buf[21] = (char)(((msec / 10) % 10) + '0');
 	buf[22] = (char)(((msec / 1) % 10) + '0');
+
+#if defined HAVE_STRUCT_TM_TM_GMTOFF
+	off = tm.tm_gmtoff;
+#else  /* !HAVE_STRUCT_TM_TM_GMTOFF */
+	off = 0;
+#endif	/* HAVE_STRUCT_TM_TM_GMTOFF */
+
 	/* compute offset as HHMM */
-	if ((off = tm.tm_gmtoff) == 0) {;
+	if (off == 0) {;
 		buf[23] = '+';
 		buf[24] = '0';
 		buf[25] = '0';

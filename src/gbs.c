@@ -53,13 +53,11 @@
 # define UNUSED(_x)	_x __attribute__((unused))
 #endif	/* !UNUSED */
 
-#if !defined MAP_ANON && defined MAP_ANONYMOUS
-# define MAP_ANON	MAP_ANONYMOUS
-#elif defined MAP_ANON
-/* all's good */
-#else  /* !MAP_ANON && !MAP_ANONYMOUS */
-# define MAP_ANON	(0U)
-#endif	/* !MAP_ANON && MAP_ANONYMOUS */
+# if !defined MAP_ANONYMOUS && defined MAP_ANON
+#  define MAP_ANONYMOUS		(MAP_ANON)
+# elif !defined MAP_ANON
+#  define MAP_ANON		(0x1000U)
+# endif	/* MAP_ANON->MAP_ANONYMOUS */
 
 #if !defined MAP_MEM
 # define MAP_MEM	(MAP_ANON | MAP_PRIVATE)

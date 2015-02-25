@@ -53,6 +53,7 @@
 #include "utefile.h"
 #include "ute-mux.h"
 #include "nifty.h"
+#include "nifty.c"
 #define DEFINE_GORY_STUFF
 #include "m30.h"
 #include "m62.h"
@@ -181,7 +182,7 @@ read_line(mux_ctx_t ctx, ff_msg_t msg)
 	llen -= cursor - line;
 
 	/* message types */
-	if ((p = memmem(cursor, llen, cmd_pmsg, cmd_pmsg_sz))) {
+	if ((p = xmemmem(cursor, llen, cmd_pmsg, cmd_pmsg_sz))) {
 		msg->ty = FF_MSG_JSON;
 		msg->chan = p + cmd_pmsg_sz + 1;
 

@@ -119,7 +119,9 @@ ffff_localtime(struct tm *tm, time_t t, zif_t z)
 {
 	int32_t new_t = zif_local_time(z, t);
 	ffff_gmtime(tm, new_t);
+#if defined HAVE_STRUCT_TM_TM_GMTOFF
 	tm->tm_gmtoff = new_t - t;
+#endif	/* HAVE_STRUCT_TM_TM_GMTOFF */
 	return;
 }
 

@@ -37,7 +37,7 @@
 
 include $(top_builddir)/version.mk
 
-AM_CPPFLAGS = -D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
+AM_CPPFLAGS = -D_BSD_SOURCE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=201001L
 AM_CPPFLAGS += -DTIMESTAMPS
 AM_CPPFLAGS += -DHAVE_VERSION_H
 AM_LDFLAGS = $(XCCLDFLAGS)
@@ -115,6 +115,7 @@ EXTRA_libuterus_la_SOURCES += tail.c tail.h
 EXTRA_libuterus_la_SOURCES += fmcmb.h
 EXTRA_libuterus_la_SOURCES += intvtree.c intvtree.h
 EXTRA_libuterus_la_SOURCES += nifty.h
+EXTRA_libuterus_la_SOURCES += nifty.c
 EXTRA_libuterus_la_SOURCES += cmd-aux.c
 
 uterus_LIBS = libuterus.la

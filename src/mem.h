@@ -128,12 +128,15 @@ mremap(void *old, size_t ol_sz, size_t nu_sz, int flags)
 /* impl'd only for memory maps */
 	void *new;
 
-	if (!(flags & MREMAP_MAYMOVE)) {
-		return NULL;
+	if (ol_sz == nu_sz) {
+		return old;
+	} else if (!(flags & MREMAP_MAYMOVE)) {
+		return MAP_FAILED;
 	}
 	new = mmap(NULL, nu_sz, PROT_MEM, MAP_MEM, -1, 0);
 	if (new != MAP_FAILED) {
-		memcpy(new, old, ol_sz);
+		const size_t cp_sz = ol_sz < nu_sz ? ol_sz : nu_sz;
+		memcpy(new, old, cp_sz);
 		munmap(old, ol_sz);
 	}
 	return new;

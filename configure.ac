@@ -58,7 +58,12 @@ AX_ZONEINFO([right])
 save_CPPFLAGS="${CPPFLAGS}"
 CPPFLAGS="-D_BSD_SOURCE"
 AC_STRUCT_TIMEZONE
-AC_CHECK_MEMBER([struct tm.tm_gmtoff], [], [], [[#include <time.h>]])
+AC_CHECK_HEADERS([time.h])
+AC_CHECK_MEMBERS([struct tm.tm_gmtoff], [], [], [[
+#ifdef HAVE_TIME_H
+# include <time.h>
+#endif
+]])
 CPPFLAGS="${save_CPPFLAGS}"
 
 ## check for working c1x features

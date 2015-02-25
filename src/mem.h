@@ -110,6 +110,8 @@ snodup(const void *in)
 /* ah, sys/mman.h was inc'd */
 # if !defined MAP_ANONYMOUS && defined MAP_ANON
 #  define MAP_ANONYMOUS		(MAP_ANON)
+# elif !defined MAP_ANON
+#  define MAP_ANON		(0x1000U)
 # endif	/* MAP_ANON->MAP_ANONYMOUS */
 # if !defined MAP_MEM
 #  define MAP_MEM		(MAP_PRIVATE | MAP_ANONYMOUS)

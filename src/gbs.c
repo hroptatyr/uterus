@@ -55,10 +55,8 @@
 
 #if !defined MAP_ANON && defined MAP_ANONYMOUS
 # define MAP_ANON	MAP_ANONYMOUS
-#elif defined MAP_ANON
-/* all's good */
-#else  /* !MAP_ANON && !MAP_ANONYMOUS */
-# define MAP_ANON	(0U)
+#elif !defined MAP_ANON
+# define MAP_ANON		(0x1000U)
 #endif	/* !MAP_ANON && MAP_ANONYMOUS */
 
 #if !defined MAP_MEM

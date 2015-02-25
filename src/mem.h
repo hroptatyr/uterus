@@ -129,8 +129,10 @@ mremap(void *old, size_t ol_sz, size_t nu_sz, int flags)
 	void *new;
 
 	if (!(flags & MREMAP_MAYMOVE)) {
-		new = NULL;
-	} else if ((new = mmap(old, nu_sz, PROT_MEM, MAP_MEM, -1, 0)) != old) {
+		return NULL;
+	}
+	new = mmap(NULL, nu_sz, PROT_MEM, MAP_MEM, -1, 0);
+	if (new != MAP_FAILED) {
 		memcpy(new, old, ol_sz);
 		munmap(old, ol_sz);
 	}

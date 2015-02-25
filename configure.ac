@@ -54,6 +54,9 @@ AC_CHECK_TYPES([ssize_t], [], [], [[
 
 ## check for tzfile.h
 AX_ZONEINFO([right])
+## check for struct tm goodness
+AC_STRUCT_TIMEZONE
+AC_CHECK_MEMBER([struct tm.tm_gmtoff], [], [], [[#include <time.h>]])
 
 ## check for working c1x features
 SXE_CHECK_ANON_STRUCTS_DECL

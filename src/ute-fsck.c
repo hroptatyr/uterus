@@ -681,7 +681,7 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 		ute_close(hdl);
 	}
 
-	if (argi->compress_flag) {
+	if (argi->compress_flag || argi->decompress_flag) {
 		ute_encode_free();
 		ute_decode_free();
 	}

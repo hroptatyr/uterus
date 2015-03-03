@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "utefile-private.h"
@@ -80,6 +81,8 @@ struct fsck_ctx_s {
 	bool verbp:1;
 	/* dryp from command line */
 	bool a_dryp:1;
+	/* compress or decompress using temporaries */
+	bool zp:1;
 	ute_end_t tgtend;
 	ute_end_t natend;
 	utectx_t outctx;
@@ -494,7 +497,7 @@ file_flags(fsck_ctx_t ctx, const char *fn)
 {
 	struct stat st;
 
-	if (ctx->outctx != NULL) {
+	if (ctx->outctx != NULL || ctx->zp) {
 		return UO_RDONLY;
 	} else if (UNLIKELY(stat(fn, &st) < 0)) {
 		/* we don't want to know what's wrong here */
@@ -507,6 +510,18 @@ file_flags(fsck_ctx_t ctx, const char *fn)
 		return UO_RDONLY;
 	}
 	return UO_RDWR;
+}
+
+static char*
+file_tmpnam(const char *fn)
+{
+/* generate a temporary file name that looks like FN */
+	size_t fz = strlen(fn);
+	char *res = malloc(fz + 3U/*.xz*/ + 1U/*\0*/);
+
+	memcpy(res, fn, fz);
+	memcpy(res + fz, ".xz", sizeof(".xz"));
+	return res;
 }
 
 
@@ -574,6 +589,9 @@ main(int argc, char *argv[])
 only one of -z|--compress and -d|--decompress can be given\n", stderr);
 		rc = 1;
 		goto out;
+	} else if (!argi->output_arg &&
+		   (argi->compress_flag || argi->decompress_flag)) {
+		ctx->zp = true;
 	}
 
 	for (size_t j = 0U; j < argi->nargs; j++) {
@@ -581,6 +599,7 @@ only one of -z|--compress and -d|--decompress can be given\n", stderr);
 		const int fl = file_flags(ctx, fn);
 		const int opfl = UO_NO_LOAD_TPC;
 		utectx_t hdl;
+		char *zfn;
 
 		if (UNLIKELY(fl < 0)) {
 			/* error got probably printed already */
@@ -589,6 +608,35 @@ only one of -z|--compress and -d|--decompress can be given\n", stderr);
 			error("cannot open file `%s'", fn);
 			rc = 1;
 			continue;
+		}
+
+		if (ctx->zp) {
+			/* we'll pretend we've passed -o|--output
+			 * lest we disrupt the original */
+			const int zfl = UO_RDWR | UO_CREAT | UO_TRUNC;
+			struct stat st;
+
+			if ((zfn = file_tmpnam(fn)) == NULL) {
+				errno = 0, error("\
+cannot construct temporary file name for `%s'", fn);
+				rc = 1;
+				continue;
+			} else if (stat(zfn, &st) != -1) {
+				errno = 0, error("\
+temporary file name `%s' already exists", zfn);
+				rc = 1;
+				continue;
+			} else if (errno != ENOENT) {
+				errno = 0, error("\
+cannot stat temporary file name `%s'", zfn);
+				rc = 1;
+				continue;
+			} else if ((ctx->outctx = ute_open(zfn, zfl)) == NULL) {
+				error("\
+cannot open temporary file `%s'", zfn);
+				rc = 1;
+				continue;
+			}
 		}
 
 		/* the actual checking */
@@ -630,6 +678,28 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 
 		/* and that's us */
 		ute_close(hdl);
+
+		/* move temporaries */
+		if (ctx->zp) {
+			/* make sure we set the new endianness */
+			ute_set_endianness(ctx->outctx, ctx->tgtend);
+
+			if (argi->compress_flag) {
+				ute_compress(ctx->outctx);
+			} else if (argi->decompress_flag) {
+				ute_decompress(ctx->outctx);
+			}
+
+			/* now close and rename the guy */
+			ute_close(ctx->outctx);
+			if (rename(zfn, fn) < 0) {
+				error("\
+temporary file cannot be renamed to `%s'", fn);
+			}
+			ctx->outctx = NULL;
+			free(zfn);
+		}
+
 		/* count this as success */
 		nsucc++;
 	}

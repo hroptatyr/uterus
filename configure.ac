@@ -24,9 +24,6 @@ AC_COPYRIGHT(
 AM_INIT_AUTOMAKE([foreign dist-xz color-tests parallel-tests subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-AX_YUCK_SCMVER([version.mk])
-AC_CONFIG_LINKS([GNUmakefile:GNUmakefile])
-
 ## the build chain
 AC_PROG_CC([icc gcc tcc cc])
 SXE_CHECK_CC
@@ -36,6 +33,11 @@ SXE_CHECK_CFLAGS
 SXE_CHECK_COMPILER_FLAG([-msse2], [
 	CFLAGS="${CFLAGS} -msse2"
 ])
+
+## yuck helper
+AX_YUCK_SCMVER([version.mk])
+AX_CHECK_YUCK([with_included_yuck="yes"])
+AC_CONFIG_LINKS([GNUmakefile:GNUmakefile])
 
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])
@@ -192,9 +194,6 @@ AS_HELP_STRING([--with-R], [Build R contribs, default: no.])],
 		fi
         ], [with_R="no"])
 AM_CONDITIONAL([BUILD_RCLI], [test "${with_R}" = "yes"])
-
-## check for yuck helper
-AX_CHECK_YUCK([with_included_yuck="yes"])
 
 ## libtool goddess^Wgoodness
 ## has to be down here as we're turning -Werror'ing off

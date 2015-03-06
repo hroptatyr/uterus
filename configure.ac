@@ -39,6 +39,9 @@ AX_YUCK_SCMVER([version.mk])
 AX_CHECK_YUCK([with_included_yuck="yes"])
 AC_CONFIG_LINKS([GNUmakefile:GNUmakefile])
 
+## clitoris helper
+AX_CHECK_CLITORIS
+
 ## check for byteorder utils
 AC_CHECK_HEADERS([endian.h sys/endian.h machine/endian.h byteorder.h])
 AC_CHECK_HEADERS([byteswap.h])

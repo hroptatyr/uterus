@@ -41,10 +41,9 @@ LANG = C
 LC_ALL = C
 
 ACLOCAL_AMFLAGS = -I m4
-EXTRA_DIST = $(BUILT_SOURCES)
+EXTRA_DIST = $(DISTCLEANFILES)
 CLEANFILES =
 DISTCLEANFILES =
-BUILT_SOURCES =
 SUBDIRS =
 
 SUBDIRS += build-aux
@@ -63,8 +62,8 @@ EXTRA_DIST += uterus.magic
 EXTRA_DIST += README.md
 
 DISTCLEANFILES += version.mk
+DISTCLEANFILES += .version
 EXTRA_DIST += version.mk.in
-BUILT_SOURCES += .version
 
 doc_DATA = README.md
 EXTRA_DIST += $(doc_DATA)
@@ -84,9 +83,6 @@ uterus.pc: .version uterus.pc.in
 
 uterus.mgc: uterus.magic
 	$(FILE) -C -m $(srcdir)/uterus.magic && mv $(builddir)/uterus.magic.mgc $@
-
-.version:
-	$(AM_V_GEN) echo "v$(VERSION)" > $@
 
 ## make sure .version is read-only in the dist
 dist-hook:

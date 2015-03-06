@@ -71,6 +71,10 @@ AC_CHECK_MEMBERS([struct tm.tm_gmtoff], [], [], [[
 ]])
 CPPFLAGS="${save_CPPFLAGS}"
 
+## check for routines to set file times
+# Find the best function to set timestamps.
+AC_CHECK_FUNCS([futimens futimes futimesat utimes utime])
+
 ## check for working c1x features
 SXE_CHECK_ANON_STRUCTS_DECL
 SXE_CHECK_ANON_STRUCTS_INIT

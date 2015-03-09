@@ -74,6 +74,11 @@ CPPFLAGS="${save_CPPFLAGS}"
 ## check for routines to set file times
 # Find the best function to set timestamps.
 AC_CHECK_FUNCS([futimens futimes futimesat utimes utime])
+AC_CHECK_MEMBERS([struct stat.st_atim.tv_nsec])
+AC_CHECK_MEMBERS([struct stat.st_atimespec.tv_nsec])
+AC_CHECK_MEMBERS([struct stat.st_atimensec])
+AC_CHECK_MEMBERS([struct stat.st_uatime])
+AC_CHECK_MEMBERS([struct stat.st_atim.st__tim.tv_nsec])
 
 ## check for working c1x features
 SXE_CHECK_ANON_STRUCTS_DECL

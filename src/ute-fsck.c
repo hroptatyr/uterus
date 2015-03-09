@@ -574,7 +574,7 @@ touchfn(const char *fn, struct stat st[static 1U])
 # if defined HAVE_UTIMENS
 		rc = utimens(fn, tv);
 # elif defined HAVE_UTIMENSAT
-		rc = utimensat(-1, fn, tv, 0);
+		rc = utimensat(AT_FDCWD, fn, tv, 0);
 # endif
 	}
 #elif defined HAVE_UTIMES

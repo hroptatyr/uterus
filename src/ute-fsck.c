@@ -45,6 +45,11 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#if defined(HAVE_FUTIMES) || defined(HAVE_FUTIMESAT) || defined(HAVE_UTIMES)
+# include <sys/time.h>
+#elif defined(HAVE_UTIME)
+# include <utime.h>
+#endif
 #include "utefile-private.h"
 #include "utefile.h"
 #include "scommon.h"
@@ -524,6 +529,100 @@ file_tmpnam(const char *fn)
 	return res;
 }
 
+static int
+touchfd(int fd, const char *fn, struct stat st[static 1U])
+{
+/* copy mtime and atime */
+	long atime_nsec;
+	long mtime_nsec;
+	int rc;
+
+	/* first off all, get the highres stamp (if any) */
+#if defined HAVE_STRUCT_STAT_ST_ATIM_TV_NSEC
+	atime_nsec = st->st_atim.tv_nsec;
+	mtime_nsec = st->st_mtim.tv_nsec;
+
+#elif defined HAVE_STRUCT_STAT_ST_ATIMESPEC_TV_NSEC
+	atime_nsec = st->st_atimespec.tv_nsec;
+	mtime_nsec = st->st_mtimespec.tv_nsec;
+
+#elif defined(HAVE_STRUCT_STAT_ST_ATIMENSEC)
+	atime_nsec = st->st_atimensec;
+	mtime_nsec = st->st_mtimensec;
+
+#elif defined(HAVE_STRUCT_STAT_ST_UATIME)
+	atime_nsec = st->st_uatime * 1000;
+	mtime_nsec = st->st_umtime * 1000;
+
+#elif defined(HAVE_STRUCT_STAT_ST_ATIM_ST__TIM_TV_NSEC)
+	atime_nsec = st->st_atim.st__tim.tv_nsec;
+	mtime_nsec = st->st_mtim.st__tim.tv_nsec;
+
+#else  /* none of the above */
+	atime_nsec = 0L;
+	mtime_nsec = 0L;
+#endif
+
+	/* now set */
+#if defined HAVE_FUTIMENS
+	{
+		struct timespec tv[2] = {
+			[0] = {.tv_sec = st->st_atime, .tv_nsec = atime_nsec},
+			[1] = {.tv_sec = st->st_mtime, .tv_nsec = mtime_nsec},
+		};
+
+		/* -warnings */
+		(void)fn;
+
+		rc = futimens(fd, tv);
+	}
+#elif defined HAVE_FUTIMES || defined HAVE_FUTIMESAT
+	/* use microsecond precision */
+	{
+		struct timeval tv[2] = {
+			[0] = {
+				.tv_sec = st->st_atime,
+				.tv_usec = atime_nsec / 1000
+			},
+			[1] = {
+				.tv_sec = st->st_mtime,
+				.tv_usec = mtime_nsec / 1000
+			}
+		};
+
+		/* -warnings */
+		(void)fd;
+		(void)fn;
+
+# if defined HAVE_FUTIMES
+		rc = futimes(fd, tv);
+# elif defined HAVE_FUTIMESAT
+		rc = futimesat(fd, NULL, tv);
+# else	/* none of the above */
+		/* resort to using the filename to set the timestamp */
+		rc = utimes(fn, tv);
+# endif
+	}
+
+#elif defined HAVE_UTIME
+	/* no high-res timestamps here */
+	{
+		struct utimbuf buf = {
+			.actime = st->st_atime,
+			.modtime = st->st_mtime,
+		};
+
+		/* -warnings */
+		(void)fd;
+		(void)atime_nsec;
+		(void)mtime_nsec;
+
+		rc = utime(fn, &buf);
+	}
+#endif
+	return rc;
+}
+
 
 #if defined STANDALONE
 #include "ute-fsck.yucc"
@@ -681,6 +780,8 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 
 		/* move temporaries */
 		if (ctx->zp) {
+			struct stat st;
+
 			/* make sure we set the new endianness */
 			ute_set_endianness(ctx->outctx, ctx->tgtend);
 
@@ -690,6 +791,12 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 				ute_decompress(ctx->outctx);
 			}
 
+			/* make the original timestamps stick */
+			if (UNLIKELY(stat(fn, &st) < 0) ||
+			    UNLIKELY(touchfd(ctx->outctx->fd, zfn, &st) < 0)) {
+				error("\
+warning: cannot preserve original time stamps");
+			}
 			/* now close and rename the guy */
 			ute_close(ctx->outctx);
 			if (rename(zfn, fn) < 0) {

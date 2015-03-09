@@ -72,13 +72,22 @@ AC_CHECK_MEMBERS([struct tm.tm_gmtoff], [], [], [[
 CPPFLAGS="${save_CPPFLAGS}"
 
 ## check for routines to set file times
-# Find the best function to set timestamps.
+AC_DEFUN([SXE_CHECK_STRUCT_STAT], [
+	AC_CHECK_MEMBERS([struct stat.$1], [], [], [dnl
+#define _XOPEN_SOURCE	600
+#define _BSD_SOURCE
+#define _POSIX_C_SOURCE	201001L
+AC_INCLUDES_DEFAULT
+])
+])dnl SXE_CHECK_STRUCT_STAT
+## find the best function to set timestamps
 AC_CHECK_FUNCS([futimens futimes futimesat utimes utime])
-AC_CHECK_MEMBERS([struct stat.st_atim.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_atimespec.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_atimensec])
-AC_CHECK_MEMBERS([struct stat.st_uatime])
-AC_CHECK_MEMBERS([struct stat.st_atim.st__tim.tv_nsec])
+## find slots of struct stat where high-res timestamps are stored
+SXE_CHECK_STRUCT_STAT([st_atim.tv_nsec])
+SXE_CHECK_STRUCT_STAT([st_atimespec.tv_nsec])
+SXE_CHECK_STRUCT_STAT([st_atimensec])
+SXE_CHECK_STRUCT_STAT([st_uatime])
+SXE_CHECK_STRUCT_STAT([st_atim.st__tim.tv_nsec])
 
 ## check for working c1x features
 SXE_CHECK_ANON_STRUCTS_DECL

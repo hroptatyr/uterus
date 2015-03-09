@@ -530,7 +530,7 @@ file_tmpnam(const char *fn)
 }
 
 static int
-touchfd(int fd, const char *fn, struct stat st[static 1U])
+touchfn(const char *fn, struct stat st[static 1U])
 {
 /* copy mtime and atime */
 	long atime_nsec;
@@ -564,19 +564,20 @@ touchfd(int fd, const char *fn, struct stat st[static 1U])
 #endif
 
 	/* now set */
-#if defined HAVE_FUTIMENS
+#if defined HAVE_UTIMENS || defined HAVE_UTIMENSAT
 	{
 		struct timespec tv[2] = {
 			[0] = {.tv_sec = st->st_atime, .tv_nsec = atime_nsec},
 			[1] = {.tv_sec = st->st_mtime, .tv_nsec = mtime_nsec},
 		};
 
-		/* -warnings */
-		(void)fn;
-
-		rc = futimens(fd, tv);
+# if defined HAVE_UTIMENS
+		rc = utimens(fn, tv);
+# elif defined HAVE_UTIMENSAT
+		rc = utimensat(-1, fn, tv, 0);
+# endif
 	}
-#elif defined HAVE_FUTIMES || defined HAVE_FUTIMESAT
+#elif defined HAVE_UTIMES
 	/* use microsecond precision */
 	{
 		struct timeval tv[2] = {
@@ -590,18 +591,7 @@ touchfd(int fd, const char *fn, struct stat st[static 1U])
 			}
 		};
 
-		/* -warnings */
-		(void)fd;
-		(void)fn;
-
-# if defined HAVE_FUTIMES
-		rc = futimes(fd, tv);
-# elif defined HAVE_FUTIMESAT
-		rc = futimesat(fd, NULL, tv);
-# else	/* none of the above */
-		/* resort to using the filename to set the timestamp */
 		rc = utimes(fn, tv);
-# endif
 	}
 
 #elif defined HAVE_UTIME
@@ -613,12 +603,15 @@ touchfd(int fd, const char *fn, struct stat st[static 1U])
 		};
 
 		/* -warnings */
-		(void)fd;
 		(void)atime_nsec;
 		(void)mtime_nsec;
 
 		rc = utime(fn, &buf);
 	}
+
+#else  /* just indicate failure */
+	errno = 0, rc = -1;
+
 #endif
 	return rc;
 }
@@ -791,14 +784,18 @@ cannot convert file with issues `%s', rerun conversion later", fn);
 				ute_decompress(ctx->outctx);
 			}
 
-			/* make the original timestamps stick */
-			if (UNLIKELY(stat(fn, &st) < 0) ||
-			    UNLIKELY(touchfd(ctx->outctx->fd, zfn, &st) < 0)) {
+			/* store timestamps in question for later use */
+			if (UNLIKELY(stat(fn, &st) < 0)) {
 				error("\
 warning: cannot preserve original time stamps");
 			}
 			/* now close and rename the guy */
 			ute_close(ctx->outctx);
+			/* make the original timestamps stick */
+			if (UNLIKELY(touchfn(zfn, &st) < 0)) {
+				error("\
+warning: cannot preserve original time stamps");
+			}
 			if (rename(zfn, fn) < 0) {
 				error("\
 temporary file cannot be renamed to `%s'", fn);

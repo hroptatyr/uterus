@@ -81,7 +81,7 @@ AC_INCLUDES_DEFAULT
 ])
 ])dnl SXE_CHECK_STRUCT_STAT
 ## find the best function to set timestamps
-AC_CHECK_FUNCS([futimens futimes futimesat utimes utime])
+AC_CHECK_FUNCS([utimens utimensat utimes utime])
 ## find slots of struct stat where high-res timestamps are stored
 SXE_CHECK_STRUCT_STAT([st_atim.tv_nsec])
 SXE_CHECK_STRUCT_STAT([st_atimespec.tv_nsec])

@@ -38,6 +38,7 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 /* matlab stuff */
 #include <mex.h>

@@ -133,6 +133,7 @@ extern mxArray *mxCreateNumericArray(mwSize ndim, const mwSize *dims, mxClassID 
 extern mxArray *mxCreateCharArray(mwSize ndim, const mwSize *dims);
 extern mxArray *mxCreateDoubleMatrix(mwSize m, mwSize n, mxComplexity flag);
 extern mxArray *mxCreateSparse(mwSize m, mwSize n, mwSize nzmax, mxComplexity flag);
+extern mxArray *mxCreateDoubleScalar(double value);
 
 extern char *mxArrayToString(const mxArray *pa);
 extern mxArray *mxCreateStringFromNChars(const char *str, mwSize n);

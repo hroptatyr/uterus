@@ -175,30 +175,13 @@ AM_CONDITIONAL([HAVE_FILE], [test -n "${FILE}"])
 AC_ARG_WITH([matlab], [
 AS_HELP_STRING([--with-matlab], [Build matlab contribs, default: no.])],
         [with_matlab="${withval}"], [with_matlab="no"])
-## and octave
-AC_ARG_WITH([octave], [
-AS_HELP_STRING([--with-octave], [Build octave contribs, default: yes.])],
-	[with_octave="${withval}"], [with_octave="yes"])
 
 ## the actual checks
 if test "${with_matlab}" = "yes"; then
 	SXE_CHECK_MATLAB
-	if test "${sxe_cv_matlab_mex_h}" = "yes"; then
-		have_matlab="yes"
-	else
-		have_matlab="no"
-	fi
-fi
-if test "${with_octave}" = "yes"; then
-	SXE_CHECK_OCTAVE
-	if test "${sxe_cv_octave_mex_h}" = "yes" -a -n "${OCTAVEPATH}"; then
-		have_octave="yes"
-	else
-		have_octave="no"
-	fi
+	have_matlab="yes"
 fi
 AM_CONDITIONAL([BUILD_MATCLI], [test "${have_matlab}" = "yes"])
-AM_CONDITIONAL([BUILD_OCTCLI], [test "${have_octave}" = "yes"])
 
 ## check for R
 AC_ARG_WITH([R], [

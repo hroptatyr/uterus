@@ -38,13 +38,10 @@
 # include "config.h"
 #endif	/* HAVE_CONFIG_H */
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 /* matlab stuff */
-#if defined HAVE_OCTAVE_MEX_H
-# include <octave/mex.h>
-#else  /* !HAVE_OCTAVE_MEX_H */
-# include <mex.h>
-#endif	/* HAVE_OCTAVE_MEX_H */
+#include <mex.h>
 #if defined HAVE_CURL_CURL_H
 # include <curl/curl.h>
 #endif	/* HAVE_CURL_CURL_H */

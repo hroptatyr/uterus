@@ -15,23 +15,15 @@ if BUILD_MATCLI
 mexdir = $(MATLABPATH)/uterus
 octlab_CFLAGS = -DMATLAB_MEX_FILE $(matlab_CFLAGS)
 else  !BUILD_MATCLI
-
-## backup plan is to use octave to build the mex file
-if BUILD_OCTCLI
-mexdir = $(OCTAVEPATH)/uterus
-octlab_CFLAGS = -DOCTAVE_MEX_FILE $(octave_CFLAGS)
-
-else  !BUILD_OCTCLI
 ## no idea what we're doing here
 mexdir = $(pkglibexecdir)
-
-endif  !BUILD_OCTCLI
 endif  !BUILD_MATCLI
 
 mex_LTLIBRARIES += ute_open.la
 mex_DATA += ute_open.m
 ute_open_la_SOURCES = ute_open.c
 ute_open_la_SOURCES += ute_handle.h
+ute_open_la_SOURCES += mex.h
 ute_open_la_CPPFLAGS = $(AM_CPPFLAGS)
 ute_open_la_CPPFLAGS += $(octlab_CFLAGS)
 ute_open_la_CPPFLAGS += -I$(top_srcdir)/src
@@ -49,6 +41,7 @@ mex_LTLIBRARIES += ute_close.la
 mex_DATA += ute_close.m
 ute_close_la_SOURCES = ute_close.c
 ute_close_la_SOURCES += ute_handle.h
+ute_close_la_SOURCES += mex.h
 ute_close_la_CPPFLAGS = $(AM_CPPFLAGS)
 ute_close_la_CPPFLAGS += $(octlab_CFLAGS)
 ute_close_la_CPPFLAGS += -I$(top_srcdir)/src
@@ -62,6 +55,7 @@ mex_LTLIBRARIES += ute_nticks.la
 mex_DATA += ute_nticks.m
 ute_nticks_la_SOURCES = ute_nticks.c
 ute_nticks_la_SOURCES += ute_handle.h
+ute_nticks_la_SOURCES += mex.h
 ute_nticks_la_CPPFLAGS = $(AM_CPPFLAGS)
 ute_nticks_la_CPPFLAGS += $(octlab_CFLAGS)
 ute_nticks_la_CPPFLAGS += -I$(top_srcdir)/src
@@ -75,6 +69,7 @@ mex_LTLIBRARIES += ute_slut.la
 mex_DATA += ute_slut.m
 ute_slut_la_SOURCES = ute_slut.c
 ute_slut_la_SOURCES += ute_handle.h
+ute_slut_la_SOURCES += mex.h
 ute_slut_la_CPPFLAGS = $(AM_CPPFLAGS)
 ute_slut_la_CPPFLAGS += $(octlab_CFLAGS)
 ute_slut_la_CPPFLAGS += -I$(top_srcdir)/src
@@ -88,6 +83,7 @@ mex_LTLIBRARIES += ute_tick.la
 mex_DATA += ute_tick.m
 ute_tick_la_SOURCES = ute_tick.c
 ute_tick_la_SOURCES += ute_handle.h
+ute_tick_la_SOURCES += mex.h
 ute_tick_la_CPPFLAGS = $(AM_CPPFLAGS)
 ute_tick_la_CPPFLAGS += $(octlab_CFLAGS)
 ute_tick_la_CPPFLAGS += -I$(top_srcdir)/src

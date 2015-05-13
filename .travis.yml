@@ -11,7 +11,6 @@ install:
   - sudo apt-get install -qq texinfo
   - sudo apt-get install -qq texlive
   - sudo apt-get install -qq liblzma-dev
-  - sudo apt-get install -qq octave3.2-headers
 
 before_script:
   - autoreconf -vfi

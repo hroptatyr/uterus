@@ -8,6 +8,9 @@ AC_DEFUN([SXE_CHECK_MATLAB], [dnl
 	AC_ARG_VAR([MATLABPATH], [path to matlab toolboxes])
 	sxe_cv_matlabpath="${MATLABPATH:-no}"
 
+	## matlab likes char16_t
+	AC_CHECK_HEADERS([uchar.h])
+
 	AC_MSG_CHECKING([for matlab root])
 	## assume no matlab
 	sxe_cv_matlabroot="no"

@@ -16,7 +16,7 @@ before_script:
   - autoreconf -vfi
 
 script:
-  - ./configure CPPFLAGS="-DDEBUG_FLAG" --with-octave || { cat config.log; false; }
+  - ./configure CPPFLAGS="-DDEBUG_FLAG" --with-matlab || { cat config.log; false; }
   - make clean all check || { cat test/test-suite.log; false; }
   - make distcheck
 

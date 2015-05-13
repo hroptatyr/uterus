@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <uchar.h>
+#if defined HAVE_UCHAR_H
+# include <uchar.h>
+#endif	/* HAVE_UCHAR_H */
 
 typedef struct impl_info_tag *MEX_impl_info;
 
@@ -15,7 +17,7 @@ typedef void (*mxFunctionPtr) (int nlhs, mxArray *plhs[], int nrhs, mxArray *prh
 
 typedef bool mxLogical;
 
-#if defined(__STDC_UTF_16__)
+#if defined __STDC_UTF_16__ && defined HAVE_UCHAR_H
 typedef char16_t CHAR16_T;
 #else
 typedef uint16_t CHAR16_T;

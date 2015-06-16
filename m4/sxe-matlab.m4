@@ -28,6 +28,7 @@ AC_DEFUN([SXE_CHECK_MATLAB], [dnl
 	if test -z "${sxe_cv_matlabpath}" \
 		-o "${sxe_cv_matlabpath}" = "no"; then
 		MATLABORIGPATH="${MATLABPATH}"
+		MATLABPATH="${libexecdir}"
 	else
 		MATLABORIGPATH="${MATLABPATH}"
 		MATLABPATH="${sxe_cv_matlabpath}"

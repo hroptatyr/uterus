@@ -208,7 +208,7 @@ SXE_CHECK_LIBLTDL
 
 ## offload some of the final targets here
 headerdir="${includedir}/uterus"
-utedir="${libexecdir}/ute"
+utedir="${libexecdir}/uterus"
 AC_SUBST([headerdir])
 AC_SUBST([utedir])
 

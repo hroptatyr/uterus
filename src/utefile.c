@@ -1996,7 +1996,7 @@ ute_close(utectx_t ctx)
 		/* final compression */
 		lzma_comp(ctx);
 	} else if (!(ctx->hdrc->flags & UTEHDR_FLAG_COMPRESSED) &&
-		   (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED) &&
+		   ctx->hdrp && (ctx->hdrp->flags & UTEHDR_FLAG_COMPRESSED) &&
 		   (ctx->hdrc->flags & UTEHDR_FLAG_DIRTY)) {
 		/* we're asked for decompression */
 		ctx->hdrc->flags |= UTEHDR_FLAG_COMPRESSED;

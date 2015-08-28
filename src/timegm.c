@@ -1,4 +1,4 @@
-/*** timegm.h -- faster date routines
+/*** timegm.c -- faster date routines
  *
  * Copyright (C) 2009-2015 Sebastian Freundt
  *
@@ -38,12 +38,6 @@
 #define INCL_TBLS
 #include "date.h"
 #include "nifty.h"
-
-#define HOURS_PER_DAY	(24)
-#define MINS_PER_HOUR	(60)
-#define SECS_PER_MINUTE	(60)
-#define SECS_PER_HOUR	(SECS_PER_MINUTE * MINS_PER_HOUR)
-#define SECS_PER_DAY	(SECS_PER_HOUR * HOURS_PER_DAY)
 
 time_t
 ffff_timegm(const struct tm *const tm)

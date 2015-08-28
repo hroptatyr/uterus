@@ -51,42 +51,48 @@ extern "C" {
 # endif
 #endif /* __cplusplus */
 
+#define HOURS_PER_DAY	(24)
+#define MINS_PER_HOUR	(60)
+#define SECS_PER_MINUTE	(60)
+#define SECS_PER_HOUR	(SECS_PER_MINUTE * MINS_PER_HOUR)
+#define SECS_PER_DAY	(SECS_PER_HOUR * HOURS_PER_DAY)
+
 /**
  * Like strptime() but sans the format specs argument and only for ISO
  * dates YYYY-MM-DD HH:MM:SS */
-extern void
-ffff_strptime(const char *buf, struct tm *restrict tm);
+extern size_t
+ffff_strptime(const char buf[static 19U], struct tm *restrict tm);
 
 /**
  * Like strptime() but sans the format specs argument and only for ISO
  * dates YYYYMMDDHHMMSS */
-extern void
-ffff_strptime_ISO(const char *buf, struct tm *restrict tm);
+extern size_t
+ffff_strptime_ISO(const char buf[static 14U], struct tm *restrict tm);
 /**
  * Like strptime() but sans the format specs argument but only for date
  * stamps and only for ISO dates YYYY-MM-DD,
  * the separator is actually ignored. */
-extern void
-ffff_strptime_Ymd(const char *buf, struct tm *restrict tm);
+extern size_t
+ffff_strptime_Ymd(const char buf[static 10U], struct tm *restrict tm);
 
 /**
  * Like strptime() but sans the format specs argument but only for date
  * stamps and only for dates in the DD-MM-YYYY format,
  * the separator is actually ignored. */
-extern void
-ffff_strptime_dmY(const char *buf, struct tm *restrict tm);
+extern size_t
+ffff_strptime_dmY(const char buf[static 10U], struct tm *restrict tm);
 
 /**
  * Like strptime() but sans the format specs argument but only for time
  * stamps in the HH:MM:SS format,
  * the separator is actually ignored. */
-extern void
-ffff_strptime_HMS(const char *buf, struct tm *restrict tm);
+extern size_t
+ffff_strptime_HMS(const char buf[static 8U], struct tm *restrict tm);
 
 /**
  * Like strftime() but sans the format specs argument and only for ISO
  * dates YYYY-MM-DD HH:MM:SS */
-extern void
+extern size_t
 ffff_strftime(char *restrict buf, size_t len, const struct tm *tm, char sep);
 
 /**

@@ -115,33 +115,33 @@ yday(int y, int m, int d)
 	return d + __mon_yday[__leapp(y)][m-1];
 }
 
-void
-ffff_strptime(const char *buf, struct tm *restrict tm)
+size_t
+ffff_strptime(const char buf[static 19U], struct tm *restrict tm)
 {
 	tm->tm_year = get_year(buf + 0);
 	tm->tm_mon = get_month(buf + 5) - 1;
 	tm->tm_mday = get_day(buf + 8);
-	if (LIKELY(buf[10U] == 'T')) {
-		tm->tm_hour = get_hour(buf + 11);
-		tm->tm_min = get_minute(buf + 14);
-		tm->tm_sec = get_second(buf + 17);
-	} else {
+	/* need set this as timegm makes use of it */
+	tm->tm_yday = yday(tm->tm_year, tm->tm_mon + 1, tm->tm_mday) - 1;
+	if (UNLIKELY(buf[10U] != 'T')) {
 		tm->tm_hour = 24;
 		tm->tm_min = 0;
 		tm->tm_sec = 0;
+		return 10U;
 	}
-	/* need set this as timegm makes use of it */
-	tm->tm_yday = yday(tm->tm_year, tm->tm_mon + 1, tm->tm_mday) - 1;
-	return;
+	tm->tm_hour = get_hour(buf + 11);
+	tm->tm_min = get_minute(buf + 14);
+	tm->tm_sec = get_second(buf + 17);
+	return 19U;
 }
 
-void
-ffff_strptime_ISO(const char *buf, struct tm *restrict tm)
+size_t
+ffff_strptime_ISO(const char buf[static 14U], struct tm *restrict tm)
 {
 	int y = get_year(buf + 0);
 	if (UNLIKELY(y < __JAN01_WDAY_BEG - 1900 ||
 		     y >= __JAN01_WDAY_END - 1900)) {
-		return;
+		return 0U;
 	}
 	tm->tm_year = y;
 	tm->tm_mon = get_month(buf + 4) - 1;
@@ -152,11 +152,11 @@ ffff_strptime_ISO(const char *buf, struct tm *restrict tm)
 	/* need set this as timegm makes use of it */
 	tm->tm_yday = yday(tm->tm_year, tm->tm_mon + 1, tm->tm_mday) - 1;
 	tm->tm_wday = (tm->tm_yday + jan01_wday[tm->tm_year - 70]) % 7;
-	return;
+	return 14U;
 }
 
-void
-ffff_strptime_Ymd(const char *buf, struct tm *restrict tm)
+size_t
+ffff_strptime_Ymd(const char buf[static 10U], struct tm *restrict tm)
 {
 /* like strptime() with %Y-%m-%d as format */
 	tm->tm_year = get_year(buf + 0);
@@ -164,11 +164,11 @@ ffff_strptime_Ymd(const char *buf, struct tm *restrict tm)
 	tm->tm_mday = get_day(buf + 8);
 	/* need set this as timegm makes use of it */
 	tm->tm_yday = yday(tm->tm_year, tm->tm_mon + 1, tm->tm_mday) - 1;
-	return;
+	return 10U;
 }
 
-void
-ffff_strptime_dmY(const char *buf, struct tm *restrict tm)
+size_t
+ffff_strptime_dmY(const char buf[static 10U], struct tm *restrict tm)
 {
 /* like strptime() with %d-%m-%Y as format */
 	tm->tm_mday = get_day(buf + 0);
@@ -176,17 +176,17 @@ ffff_strptime_dmY(const char *buf, struct tm *restrict tm)
 	tm->tm_year = get_year(buf + 6);
 	/* need set this as timegm makes use of it */
 	tm->tm_yday = yday(tm->tm_year, tm->tm_mon + 1, tm->tm_mday) - 1;
-	return;
+	return 10U;
 }
 
-void
-ffff_strptime_HMS(const char *buf, struct tm *restrict tm)
+size_t
+ffff_strptime_HMS(const char buf[static 8U], struct tm *restrict tm)
 {
 /* like strptime() with %H:%M:%S as format */
 	tm->tm_hour = get_hour(buf + 0);
 	tm->tm_min = get_minute(buf + 3);
 	tm->tm_sec = get_second(buf + 6);
-	return;
+	return 8U;
 }
 
 /* strptime.c ends here */

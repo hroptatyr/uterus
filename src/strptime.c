@@ -121,9 +121,15 @@ ffff_strptime(const char *buf, struct tm *restrict tm)
 	tm->tm_year = get_year(buf + 0);
 	tm->tm_mon = get_month(buf + 5) - 1;
 	tm->tm_mday = get_day(buf + 8);
-	tm->tm_hour = get_hour(buf + 11);
-	tm->tm_min = get_minute(buf + 14);
-	tm->tm_sec = get_second(buf + 17);
+	if (LIKELY(buf[10U] == 'T')) {
+		tm->tm_hour = get_hour(buf + 11);
+		tm->tm_min = get_minute(buf + 14);
+		tm->tm_sec = get_second(buf + 17);
+	} else {
+		tm->tm_hour = 24;
+		tm->tm_min = 0;
+		tm->tm_sec = 0;
+	}
 	/* need set this as timegm makes use of it */
 	tm->tm_yday = yday(tm->tm_year, tm->tm_mon + 1, tm->tm_mday) - 1;
 	return;

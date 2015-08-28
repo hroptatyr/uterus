@@ -37,21 +37,35 @@
 
 #define INCL_TBLS
 #include "date.h"
+#include "nifty.h"
+
+#define HOURS_PER_DAY	(24)
+#define MINS_PER_HOUR	(60)
+#define SECS_PER_MINUTE	(60)
+#define SECS_PER_HOUR	(SECS_PER_MINUTE * MINS_PER_HOUR)
+#define SECS_PER_DAY	(SECS_PER_HOUR * HOURS_PER_DAY)
 
 time_t
-ffff_timegm(register const struct tm *const tm)
+ffff_timegm(const struct tm *const tm)
 {
 	long int days = tm->tm_yday +
 		365 * (tm->tm_year - 70) +
 		/* number of leap years */
 		__nleap_years(tm->tm_year + 1900);
-	return days * 86400 + tm->tm_hour * 3600 + tm->tm_min * 60 + tm->tm_sec;
-}
+	time_t res;
 
-/* stolen from ffff_date_dse_to_tm() */
-#define SECS_PER_MINUTE	(60)
-#define SECS_PER_HOUR	(SECS_PER_MINUTE * 60)
-#define SECS_PER_DAY	(SECS_PER_HOUR * 24)
+	/* newton adding up the result */
+	res = days;
+		res = res * HOURS_PER_DAY + tm->tm_hour;
+		res = res * MINS_PER_HOUR + tm->tm_min;
+		res = res * SECS_PER_MINUTE + tm->tm_sec;
+	if (UNLIKELY(tm->tm_hour >= HOURS_PER_DAY ||
+		     tm->tm_sec >= SECS_PER_MINUTE)) {
+		/* leap second or military midnight */
+		res--;
+	}
+	return res;
+}
 
 void
 ffff_gmtime(struct tm *tm, time_t t)

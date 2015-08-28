@@ -625,7 +625,7 @@ main(int argc, char *argv[])
 {
 	yuck_t argi[1U];
 	struct fsck_ctx_s ctx[1U] = {0};
-	size_t nsucc;
+	size_t nsucc = 0U;
 	int rc = 0;
 
 	if (yuck_parse(argi, argc, argv)) {

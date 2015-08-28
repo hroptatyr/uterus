@@ -189,10 +189,11 @@ parse_rcv_stmp(scom_thdr_t thdr, const char **cursor)
 	stamp = ffff_timegm(&tm);
 	cp += 10/*YYYY-MM-DD*/ + 1/*T*/ + 8/*HH:MM:SS*/;
 	if (UNLIKELY(*cp++ != '.')) {
-		return -1;
+		msec = 0;
+	} else {
+		/* get the millisecs */
+		msec = (int)ffff_strtol(cp, cursor, 0);
 	}
-	/* get the millisecs */
-	msec = (int)ffff_strtol(cp, cursor, 0);
 
 	/* get time zone info */
 	zoff = parse_zoff(*cursor, cursor);

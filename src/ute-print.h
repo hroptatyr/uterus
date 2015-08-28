@@ -90,6 +90,11 @@ pr_tsmstz(char *restrict buf, uint32_t sec, uint32_t msec, zif_t z, char sep)
 	int h, m, off;
 
 	ffff_localtime(&tm, sec, z);
+	if (UNLIKELY(msec == SCOM_MSEC_VALI)) {
+		tm.tm_hour = 24;
+		tm.tm_min = 0;
+		tm.tm_sec = 0;
+	}
 	ffff_strftime(buf, 32, &tm, sep);
 	buf[19] = '.';
 	buf[20] = (char)(((msec / 100) % 10) + '0');

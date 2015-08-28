@@ -88,6 +88,15 @@ EXTRA_DIST += mux.13.ref.ute
 ut_tests += mux.23.clit
 ut_tests += mux.24.clit
 
+EXTRA_DIST += mux.n.uta
+EXTRA_DIST += mux.o.uta
+EXTRA_DIST += mux.p.uta
+EXTRA_DIST += mux.q.uta
+ut_tests += mux.25.clit
+ut_tests += mux.26.clit
+ut_tests += mux.27.clit
+ut_tests += mux.28.clit
+
 if WORDS_BIGENDIAN
 else
 ut_tests += print.01.clit

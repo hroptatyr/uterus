@@ -1,0 +1,11 @@
+#!/usr/bin/clitoris ## -*- shell-script -*-
+
+$ ute mux -f uta -o "mux.26.ute" "${srcdir}/mux.o.uta"
+$ ute print "mux.26.ute" && rm -- "mux.26.ute"
+TESJPY	2012-01-15T22:00:02.000+00:00	1	1	77.0560	1500000
+TESJPY	2012-01-15T22:00:02.000+00:00	1	1	77.0550	750000
+TESJPY	2012-01-15T22:00:02.000+00:00	1	2	77.0600	750000
+TESJPY	2012-01-15T22:00:02.000+00:00	1	2	77.1000	1690000
+$
+
+## mux.26.clit ends here

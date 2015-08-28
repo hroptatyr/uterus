@@ -116,7 +116,7 @@ sprint_hour(char *restrict buf, const struct tm *restrict tm)
 		0x3035, 0x3036, 0x3037, 0x3038, 0x3039,
 		0x3130, 0x3131, 0x3132, 0x3133, 0x3134,
 		0x3135, 0x3136, 0x3137, 0x3138, 0x3139,
-		0x3230, 0x3231, 0x3232, 0x3233,
+		0x3230, 0x3231, 0x3232, 0x3233, 0x3234,
 	};
 	uint16_t h = hours[tm->tm_hour];
 	/* big endian copy */
@@ -144,7 +144,7 @@ sprint_second(char *restrict buf, const struct tm *restrict tm)
 	return;
 }
 
-void
+size_t
 ffff_strftime(char *restrict b, size_t UNUSED(l), const struct tm *tm, char sep)
 {
 	sprint_year(&b[0], tm);
@@ -160,7 +160,7 @@ ffff_strftime(char *restrict b, size_t UNUSED(l), const struct tm *tm, char sep)
 	b[16] = ':';
 	sprint_second(&b[17], tm);
 	b[19] = '\0';
-	return;
+	return 19U;
 }
 
 /* strftime.c ends here */
